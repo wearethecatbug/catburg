@@ -31,9 +31,10 @@ export default function Home() {
           height={38}
           priority
         />
+        <div>Turborepka</div>
         <ol>
           <li>
-            Get started by editing <code>apps/docs/app/page.tsx</code>
+            Get ended by editing <code>apps/docs/app/page.tsx</code>
           </li>
           <li>Save and see your changes instantly.</li>
         </ol>

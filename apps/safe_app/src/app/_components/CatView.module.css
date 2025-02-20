@@ -1,0 +1,8 @@
+.cat {
+    /*eslint-disable-next-line*/
+    --bgSrc: url('/clap.png');
+    width: 128px;
+    height: 128px;
+    background: var(--bgSrc) no-repeat;
+    background-size: contain;
+}

@@ -1,0 +1,24 @@
+.safeContainer {
+
+}
+
+.safeOpen {
+    width: 500px;
+    height: 460px;
+    background: url('/safe.png') -100px -80px;
+    background-repeat: no-repeat;
+}
+
+.safeClose {
+    width: 500px;
+    height: 460px;
+    background: url('/safe.png') -610px -80px;
+    background-repeat: no-repeat;
+}
+
+.catViewContainer {
+    float: left;
+    margin-left: 50%;
+    margin-top: -10%;
+    translate: -50%;
+}
