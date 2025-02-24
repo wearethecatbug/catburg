@@ -9,15 +9,19 @@ const menuButtons = [
     {name: 'LOG', className: styles.log},
     ];
 
-function ButtonsList() {
-    function onButtonClick(target) {
-        console.log('Button clicked', target);
+function ButtonsList({onShowLogIsClicked}) {
+    function onButtonClick(event) {
+        console.log('Button clicked', event.target);
+        if (event.target.id == "LOG") {
+            console.log('log is clicked');
+            onShowLogIsClicked();
+        }
     }
 
     function createButtons() {
         return menuButtons.map((button, index) => {
             return <ul key={index}>
-                <button onClick={(target) => onButtonClick(target)} type={'button'} className={[styles.menuButton, button.className].join(' ')}>{button.name}</button>
+                <button id={button.name} onClick={(target) => onButtonClick(target)} type={'button'} className={[styles.menuButton, button.className].join(' ')}>{button.name}</button>
             </ul>
         })
     }
@@ -29,11 +33,11 @@ function ButtonsList() {
     </div>
 }
 
-export default function SafeMenu() {
+export default function SafeMenu({onShowLogIsClicked}) {
 
     return (
         <div>
-            <ButtonsList/>
+            <ButtonsList onShowLogIsClicked={onShowLogIsClicked}/>
         </div>
     );
 }

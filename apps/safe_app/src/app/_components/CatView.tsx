@@ -14,7 +14,7 @@ export default function CatView() {
     useEffect(() => {
         const interval = setInterval(() => {
             changeSkin();
-        }, 1);
+        }, 5000);
 
         return () => clearInterval(interval);
     }, []);

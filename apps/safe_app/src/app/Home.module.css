@@ -5,22 +5,3 @@
   height: 100vh;
   width: 100vw;
 }
-
-.safeContainer {
-  justify-content: center;
-  align-items: center;
-  color: white;
-  display: flex;
-  flex-direction: column;
-}
-
-.safeAndMenuContainer {
-  display: flex;
-}
-
-.headerText {
-  color: #de778c;
-  font-size: 50px;
-  font-family: "Audiowide", sans-serif;
-  text-align: center;
-}
