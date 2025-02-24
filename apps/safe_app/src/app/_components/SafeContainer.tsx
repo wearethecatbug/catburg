@@ -17,11 +17,11 @@ export default function SafeContainer() {
     }
 
     function onNewGame() {
-
+        console.log('onNewGame click');
     }
 
     function onGiveUp() {
-
+        console.log('onGiveUp click');
     }
 
     function onShowHint() {
