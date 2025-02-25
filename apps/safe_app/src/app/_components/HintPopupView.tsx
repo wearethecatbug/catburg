@@ -1,23 +1,36 @@
 import styles from './HintPopupView.module.css'
 
-export default function HintPopupView() {
 
+
+
+export default function HintPopupView({ onCloseHint }) {
     function onOkButtonClick() {
+
+
+
+
+    }
+
+    function onCloseButtonClick() {
+        onCloseHint();
+        console.log("the hint is closed");
 
     }
 
     return <>
         <div className={styles.popupContainer}>
-            <div className={styles.closeButtonContainer}>
-                <button>[X]</button>
-            </div>
+
+            <button onClick={onCloseButtonClick} className={styles.closeButtonContainer}>
+            </button>
 
             <div className={styles.hintInputContainer}>
-                <div className={styles.textField}>10 + 8 = </div>
+                <div className={styles.textField}/>
+                <div className={styles.equalsSymbol}>=</div>
                 <input className={styles.textField} type={'text'}/>
             </div>
-
-            <button onClick={onOkButtonClick}>OK</button>
+            <div className={styles.okButtonContainer}>
+            <button onClick={onOkButtonClick}/>
+            </div>
         </div>
     </>
 }

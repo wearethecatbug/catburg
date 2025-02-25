@@ -9,14 +9,34 @@ const menuButtons = [
     {name: 'LOG', className: styles.log},
     ];
 
-function ButtonsList({onShowLogIsClicked}) {
+function ButtonsList({ onShowLogIsClicked, onNewGame, onGiveUp, onShowHint }) {
     function onButtonClick(event) {
         console.log('Button clicked', event.target);
-        if (event.target.id == "LOG") {
-            console.log('log is clicked');
-            onShowLogIsClicked();
+        const { id } = event.target;
+
+        switch ( id ) {
+            case "LOG":
+                console.log('log is clicked');
+                onShowLogIsClicked();
+                break;
+            case "New Game":
+                console.log('new game is clicked');
+                onNewGame();
+                break;
+            case "Give Up":
+                console.log('Give Up is clicked');
+                onGiveUp();
+                break;
+            case "Hint":
+                console.log('Hint is clicked');
+                onShowHint();
+                break;
+            default:
+                console.log('Unknown button clicked');
+                break;
         }
     }
+
 
     function createButtons() {
         return menuButtons.map((button, index) => {
@@ -33,11 +53,11 @@ function ButtonsList({onShowLogIsClicked}) {
     </div>
 }
 
-export default function SafeMenu({onShowLogIsClicked}) {
-
+export default function SafeMenu({onShowLogIsClicked, onNewGame, onGiveUp, onShowHint}) {
     return (
         <div>
-            <ButtonsList onShowLogIsClicked={onShowLogIsClicked}/>
+            <ButtonsList onShowLogIsClicked={onShowLogIsClicked} onNewGame={onNewGame} onGiveUp={onGiveUp} onShowHint={onShowHint}/>
         </div>
     );
+
 }

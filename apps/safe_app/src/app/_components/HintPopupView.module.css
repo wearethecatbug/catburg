@@ -1,36 +1,116 @@
 .popupContainer {
-    background-color: #ededed;
-    justify-content: center;
-    align-items: center;
+    background: url('/ragdollHintFon3.png') no-repeat center center;
+    background-size: contain;
+
+    justify-content: flex-start;
+    /*align-items: center;*/
     display: flex;
     flex-direction: column;
 
-    color: #0a0a0a;
-
-    max-width: 600px;
-    min-width: 600px;
+    max-width: 1000px;
+    min-width: 750px;
+    max-height: 1000px;
+    min-height: 800px;
 
     position: fixed;
-    top: 50%;
+    top: 49%;
     left: 50%;
     transform: translateX(-50%) translateY(-50%);
 }
 
 .textField {
-    max-width: 70px;
-    border: 1px black;
+    min-width: 170px;
+    min-height: 50px;
+    width: 100%;
+    border: 1px #ffffff;
+    outline: none;
     border-style: solid;
-
-    background-color: rgba(0, 0, 0, 0.5);
+    text-align: center;
+    line-height: 50px;
+    font-family: "Audiowide", sans-serif;
+    color: #ffffff;
+    background-color: rgb(52, 85, 50);
+    border-radius: 15px 15px ;
 }
 
+.equalsSymbol {
+    border: 1px #ffffff;
+    text-align: center;
+    line-height: 50px;
+    font-family: "Audiowide", sans-serif;
+    color: #ffffff;
+    background-color: transparent;
+}
 .hintInputContainer {
+    width: 60%;
+    top: 185px;
+    left: 110px;
     display: flex;
     flex-direction: row;
     align-content: space-between;
-    gap: 2px
+    gap: 5px;
+    position: relative;
+    overflow-y: auto;
 }
 
 .closeButtonContainer {
-    float: left;
+    background: url('/cancellButton1.jpg')  no-repeat center center;
+    background-size: contain;
+    display: inline-block;
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    top: 80px;
+    right: 15px;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out;
+    transform-origin: center;
+
+}
+.closeButtonContainer :hover {
+    transform: rotate(360deg);
+}
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.closeButtonContainer:hover {
+    animation: spin 1s linear infinite;
+}
+
+.okButtonContainer {
+    background: url("/sendButton.png")  no-repeat center center;
+    background-size: contain;
+    /*color: white;*/
+    width: 70px;
+    height: 70px;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    top: 170px;
+    right: 100px;
+    cursor: pointer;
+    display: inline-block;
+    position: absolute;
+    transition: transform 0.15s ease-in-out;
+
+    box-shadow: 2px 5px 17px rgba(0, 0, 0, 0.8);
+    border-radius: 25%;
+}
+
+
+.okButtonContainer:hover {
+    box-shadow: 0px 5px 17px rgba(0, 0, 0, 1);
+}
+
+.okButtonContainer:active{
+    transform: scale(0.9);
+    box-shadow: 0 3px 17px rgba(0, 0, 0, 1);
+    border-radius: 25%;
+    transition: null;
 }

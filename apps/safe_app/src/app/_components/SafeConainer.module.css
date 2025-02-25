@@ -23,3 +23,9 @@
 
     text-shadow: var(--shadowSize) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) calc(var(--shadowSize) * -1) 0 var(--shadowColor), calc(var(--shadowSize) * -1) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) var(--shadowSize)0 var(--shadowColor);
 }
+
+.AnswerInputContainer {
+    top: -90px;
+    position: relative;
+
+}
