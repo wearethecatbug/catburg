@@ -4,9 +4,11 @@ import styles from './SafeConainer.module.css';
 import SafeComponent from "@/app/_components/SafeComponent";
 import SafeMenu from "@/app/_components/SafeMenu";
 import LogView from "@/app/_components/LogView";
-import {use, useState} from "react";
+// import {use, useState} from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AnswerInputBox from "@/app/_components/AnswerInput";
 import HintPopupView from "@/app/_components/HintPopupView";
+
 
 
 export default function SafeContainer() {
@@ -14,6 +16,8 @@ export default function SafeContainer() {
     const [isHintIsVisible, setIsHintIsVisible] = useState(false);
     const [isNewGame, setIsNewGame] = useState(false);
     const [isGiveUp, setGiveUp] = useState(false);
+    const inputRefFocus = useRef<HTMLInputElement | null>(null);
+
 
     function onShowLogIsClicked() {
         setIsLogIsVisible((value) => !value);
@@ -31,10 +35,18 @@ export default function SafeContainer() {
 
     function onShowHint() {
         setIsHintIsVisible((value) => !value);
+
         console.log('onShowHint click');
     }
 
-
+    useEffect(() => {
+        if (isHintIsVisible) {
+            console.log(inputRefFocus.current); // null  лежит тут пока что
+            setTimeout(() => {
+                inputRefFocus.current?.focus();
+            }, 50); // Даем браузеру время обновить DOM
+        }
+    }, [isHintIsVisible]);
 
     return <div>
         <div className={styles.safeContainer}>
@@ -44,7 +56,7 @@ export default function SafeContainer() {
                     <SafeComponent/>
 
                     <div className={styles.AnswerInputContainer}>
-                        <AnswerInputBox/>
+                        <AnswerInputBox inputRef={inputRefFocus} />
                     </div>
                 </div>
                 <SafeMenu onShowLogIsClicked={onShowLogIsClicked} onNewGame={onNewGame} onGiveUp={onGiveUp}
@@ -57,13 +69,14 @@ export default function SafeContainer() {
         </div>
 
         {isHintIsVisible ?
-            <HintPopupView onCloseHint={onShowHint}/> : null}
+            <HintPopupView  inputRef={inputRefFocus} onCloseHint={onShowHint}/> : null}
         {/*{isNewGame ?*/}
         {/*    </> : null*/}
         {/*}*/}
         {/*{isGiveUp ?*/}
         {/*    </> : null*/}
         {/*}*/}
+
     </div>
 
 }

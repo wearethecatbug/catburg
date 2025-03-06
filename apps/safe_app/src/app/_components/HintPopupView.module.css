@@ -18,7 +18,12 @@
     transform: translateX(-50%) translateY(-50%);
 }
 
-.textField {
+.disabled {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.textInputField {
     min-width: 170px;
     min-height: 50px;
     width: 100%;
@@ -31,7 +36,27 @@
     color: #ffffff;
     background-color: rgb(52, 85, 50);
     border-radius: 15px 15px ;
+
+    appearance: textfield;
+    -moz-appearance: textfield; /* Firefox */
+    -webkit-appearance: textfield; /* Chrome, Safari */
+
+    transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
 }
+
+.textInputField::-webkit-outer-spin-button,
+.textInputField::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.valid {
+    background-color: #a0e083;
+}
+.invalid {
+    background-color: #e30b0b;
+}
+
 
 .equalsSymbol {
     border: 1px #ffffff;
@@ -86,7 +111,6 @@
 .okButtonContainer {
     background: url("/sendButton.png")  no-repeat center center;
     background-size: contain;
-    /*color: white;*/
     width: 70px;
     height: 70px;
     padding: 10px 20px;
@@ -113,4 +137,21 @@
     box-shadow: 0 3px 17px rgba(0, 0, 0, 1);
     border-radius: 25%;
     transition: null;
+}
+
+
+.hintMenuContainer {
+    position: absolute;
+    height: 300px;
+    width: 300px;
+    display: flex;
+    flex-wrap: wrap;
+
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    top: 53%;
+    left: 63%;
+    transform: translateX(-50%) translateY(-50%);
 }

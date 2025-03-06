@@ -17,6 +17,7 @@
     text-align: center;
     margin: 80px;
     max-width: 900px;
+    user-select: none;
 
     --shadowSize: 2px;
     --shadowColor: #FFFFFF;
