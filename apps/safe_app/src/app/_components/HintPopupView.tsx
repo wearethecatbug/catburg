@@ -64,7 +64,8 @@ const menuButtons: MenuConfiguration = {
     style: styles.menuButton
 }
 
-export default function HintPopupView({onCloseHintAction}: {
+export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
+    onAddLogAction: (log: string) => void,
     onCloseHintAction: () => void
 }) {
     const [question, setQuestion] = useState(() => generateQuestion());
@@ -86,7 +87,7 @@ export default function HintPopupView({onCloseHintAction}: {
     }, []);
 
     function onHintMenuClick(id: string) {
-        console.log('Give Up Hint is clicked', id);
+        onAddLogAction('Give Up Hint is clicked ' + id);
         switch ( id ) {
             case HintMenuButtons.GIVE_UP_HINT:
                 onGiveUpHint();
@@ -97,7 +98,7 @@ export default function HintPopupView({onCloseHintAction}: {
             case HintMenuButtons.SIGNS:
                 onShowSigns();
                 break;
-            default: console.log('Unknown button clicked');
+            default: onAddLogAction('Unknown button clicked');
                 break;
         }
     }
@@ -110,7 +111,7 @@ export default function HintPopupView({onCloseHintAction}: {
     }
 
     function onShowSigns() {
-        console.log("Show signs is clicked!");
+        onAddLogAction("Show signs is clicked!");
     }
 
     function onGiveUpHint() {
@@ -131,10 +132,10 @@ export default function HintPopupView({onCloseHintAction}: {
 
     function onOkButtonClick() {
         if (!inputRefAnswer.current) return;
-        console.log("Button OK is clicked!");
+        onAddLogAction("Button OK is clicked!");
         const userAnswer = parseFloat(inputRefAnswer.current.value);
         if (userAnswer === question.answer) {
-            console.log("The answer is correct!");
+            onAddLogAction("The answer is correct!");
             setIsValid(true);
             setIsDisabled(true);
             setTimeout(() => onCloseHintAction(), 3000); // Закрываем попап через секунду
@@ -147,11 +148,11 @@ export default function HintPopupView({onCloseHintAction}: {
 
     function onCloseButtonClick() {
         onCloseHintAction();
-        console.log("the hint is closed");
+        onAddLogAction("the hint is closed");
     }
 
     return (
-        <>
+        <div style={{backgroundColor: "red", position: "fixed", width: '100%', height: '100%'}}>
             <div className={getPopupContainerClass()}>
                 <button onClick={onCloseButtonClick} className={styles.closeButtonContainer}/>
                 <div className={styles.hintInputContainer}>
@@ -164,7 +165,7 @@ export default function HintPopupView({onCloseHintAction}: {
                     <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick}/>
                 </div>
             </div>
-        </>
+        </div>
     );
 }
 

@@ -30,6 +30,11 @@ export default function SafeContainer() {
     const [isHintIsVisible, setIsHintIsVisible] = useState(false);
     const [isNewGame, setIsNewGame] = useState(false);
     const [isGiveUp, setGiveUp] = useState(false);
+    const [logs, setLogs] = useState<string[]>([]);
+
+    function onAddLogAction(log: string) {
+        setLogs((logs) => [...logs, log]);
+    }
 
     function onMenuButtonClick(id: string) {
         console.log('Give Up Hint is clicked', id);
@@ -85,13 +90,13 @@ export default function SafeContainer() {
                 <Menu menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick}/>
             </div>
             {isLogIsVisible ?
-                <LogView/> : null
+                <LogView logs={logs}/> : null
             }
 
         </div>
 
         {isHintIsVisible ?
-            <HintPopupView onCloseHintAction={onShowHint}/> : null}
+            <HintPopupView onAddLogAction={onAddLogAction} onCloseHintAction={onShowHint}/> : null}
         {/*{isNewGame ?*/}
         {/*    </> : null*/}
         {/*}*/}
