@@ -1,11 +1,8 @@
 'use client'
 
 import styles from './HintPopupView.module.css'
-import React, {useState} from "react";
-import {useRef, useEffect} from 'react';
-import HintMenu from "@/app/_components/HintMenu";
-import HintContainer from "@/app/_components/HintContainer";
-
+import React, {useEffect, useRef, useState} from "react";
+import Menu, {MenuConfiguration} from "@/app/_components/Menu";
 
 type questionData = {
     answer: number;
@@ -21,8 +18,8 @@ function generateQuestion(): questionData {
         "/": (firstNumber, secondNumber) => secondNumber !== 0 ? firstNumber / secondNumber : firstNumber,
     }
 
-    function generateRandomNumberInRange(min: number = 0, max: number = 6, operator: string): [number, number]  {
-        if (operator  == "/") return getDivisibleNumbers(min, max);
+    function generateRandomNumberInRange(min: number = 0, max: number = 6, operator: string): [number, number] {
+        if (operator == "/") return getDivisibleNumbers(min, max);
         const num1 = Math.floor(Math.random() * (max - min + 1)) + min;
         const num2 = Math.floor(Math.random() * (max - min + 1)) + min;
         return [num1, num2];
@@ -34,7 +31,6 @@ function generateQuestion(): questionData {
         let dividend = divisor * quotient; // Получаем делимое
         return [dividend, divisor];
     }
-
 
     function randomOperator(): string {
         let operatorsKeys = Object.keys(operators);
@@ -53,32 +49,64 @@ function generateQuestion(): questionData {
     return {answer: correctAnswerNumber, questionParts: `${firstNumber} ${operator} ${secondNumber}`};
 }
 
+enum HintMenuButtons {
+    GIVE_UP_HINT = 'giveUpHint',
+    NEW_HINT = 'newHint',
+    SIGNS = 'signs',
+}
 
-export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: () => void,  inputRef: React.RefObject<HTMLInputElement> }) {
+const menuButtons: MenuConfiguration = {
+    buttons: [
+        {id: HintMenuButtons.GIVE_UP_HINT, name: 'Give Up Hint', className: styles.giveUpHint},
+        {id: HintMenuButtons.NEW_HINT, name: 'New Hint', className: styles.newHint},
+        {id: HintMenuButtons.SIGNS, name: 'Signs', className: styles.signs},
+    ],
+    style: styles.menuButton
+}
+
+export default function HintPopupView({onCloseHintAction}: {
+    onCloseHintAction: () => void
+}) {
     const [question, setQuestion] = useState(() => generateQuestion());
     const inputRefAnswer = useRef<HTMLInputElement | null>(null); // Создаём ref для инпута
     const [isValid, setIsValid] = useState<boolean | null>(null);
     const [isDisabled, setIsDisabled] = useState(false);
 
-    // useEffect(() => {
-    //     if (inputRefAnswer.current) {
-    //         inputRefAnswer.current.value = "";
-    //     }
-    // }, [question]);
-
     useEffect(() => {
-        if (inputRef.current) {
-            inputRef.current.value = "";
+        if (inputRefAnswer.current) {
+            inputRefAnswer.current.value = "";
+            inputRefAnswer.current.focus();
         }
     }, [question]);
 
+    useEffect(() => {
+        if (inputRefAnswer.current) {
+            inputRefAnswer.current.focus();
+        }
+    }, []);
+
+    function onHintMenuClick(id: string) {
+        console.log('Give Up Hint is clicked', id);
+        switch ( id ) {
+            case HintMenuButtons.GIVE_UP_HINT:
+                onGiveUpHint();
+                break;
+            case HintMenuButtons.NEW_HINT:
+                onNewHint();
+                break;
+            case HintMenuButtons.SIGNS:
+                onShowSigns();
+                break;
+            default: console.log('Unknown button clicked');
+                break;
+        }
+    }
+
     function onNewHint() {
-        console.log("New hint is clicked!");
         setQuestion(() => generateQuestion());
         if (inputRefAnswer.current) {
             inputRefAnswer.current.value = "";
         }
-
     }
 
     function onShowSigns() {
@@ -88,7 +116,6 @@ export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: (
     function onGiveUpHint() {
         if (inputRefAnswer.current == null) return;
         inputRefAnswer.current.value = question.answer.toString();
-        console.log("Give up hint is clicked!");
     }
 
     const getInputClass = () => {
@@ -98,10 +125,9 @@ export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: (
     };
 
     const getPopupContainerClass = () => {
-        if (isDisabled === true) return `${styles.popupContainer} ${styles.disabled}`;
+        if (isDisabled) return `${styles.popupContainer} ${styles.disabled}`;
         return styles.popupContainer; // Стандартный стиль
     };
-
 
     function onOkButtonClick() {
         if (!inputRefAnswer.current) return;
@@ -111,7 +137,7 @@ export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: (
             console.log("The answer is correct!");
             setIsValid(true);
             setIsDisabled(true);
-            setTimeout(() => onCloseHint(), 3000); // Закрываем попап через секунду
+            setTimeout(() => onCloseHintAction(), 3000); // Закрываем попап через секунду
         } else {
 
             setIsValid(false);
@@ -119,12 +145,10 @@ export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: (
 
     }
 
-
     function onCloseButtonClick() {
-        onCloseHint();
+        onCloseHintAction();
         console.log("the hint is closed");
     }
-
 
     return (
         <>
@@ -137,8 +161,7 @@ export default function HintPopupView({onCloseHint, inputRef }: { onCloseHint: (
                 </div>
                 <div onClick={onOkButtonClick} className={`${styles.okButtonContainer}`}/>
                 <div className={styles.hintMenuContainer}>
-                    <HintMenu onNewHint={onNewHint} onGiveUpHint={onGiveUpHint}
-                              onShowSigns={onShowSigns}/>
+                    <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick}/>
                 </div>
             </div>
         </>

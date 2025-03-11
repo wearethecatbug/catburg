@@ -23,6 +23,7 @@
     opacity: 0.8;
 }
 
+
 .textInputField {
     min-width: 170px;
     min-height: 50px;
@@ -154,4 +155,51 @@
     top: 53%;
     left: 63%;
     transform: translateX(-50%) translateY(-50%);
+}
+
+.menuButton {
+    width: 80px;
+    height: 80px;
+    border: none;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 12px;
+    margin: 10px;
+}
+
+.menuButton:hover {
+    transform: scale(1.1); /* Немного увеличиваем кнопку */
+    opacity: 0.9; /* Делаем немного прозрачнее */
+}
+
+.giveUpHint {
+    background: linear-gradient(145deg, #11335a, #379bf6); /* Светлый градиент */
+    box-shadow: 4px 4px 8px #050f3b, -4px -4px 8px #1d71cb; /* Тень для объема */
+    transition: all 0.2s ease-in-out;
+    color: #b8cdef;
+}
+.giveUpHint:hover {
+    box-shadow: 6px 6px 12px #050f3b, -6px -6px 12px #1d71cb;
+}
+
+.newHint {
+    background: linear-gradient(145deg, #b673e8, #350c5a); /* Светлый градиент */
+    box-shadow: 4px 4px 8px #280439, -4px -4px 8px #754ac1; /* Тень для объема */
+    transition: all 0.2s ease-in-out;
+    color: #ebd5f6;
+}
+.newHint:hover {
+    box-shadow: 6px 6px 12px #280439, -6px -6px 12px #754ac1;
+}
+
+.signs{
+    background: linear-gradient(145deg, #efefae, #bda80b); /* Светлый градиент */
+    box-shadow: 4px 4px 8px #2b2402, -4px -4px 8px #ffeb45; /* Тень для объема */
+    transition: all 0.2s ease-in-out;
+    color: #937511;
+    flex-basis: 100%;
+}
+.signs:hover {
+    box-shadow: 6px 6px 12px #2b2402, -6px -6px 12px #ffeb45;
 }
