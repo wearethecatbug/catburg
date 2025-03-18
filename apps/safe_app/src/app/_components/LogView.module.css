@@ -1,14 +1,74 @@
+
 .logViewContainer {
+    position: absolute; /* Чтобы перетаскивание не зависело от родителя */
     border: 1px solid black;
     padding: 10px;
-    max-height: 300px;
-    min-width: 300px;
+    width: 250px;
+    height: 150px;
+    min-width: 200px;
+    min-height: 100px;
     background-color: #ededed;
-    overflow-y: scroll;
+    font-family: "Audiowide", sans-serif;
+    /*touch-action: none;*/
+    overflow: auto;
+    word-wrap: break-word;
+    white-space: normal;
+    z-index: 1001; /* Выше, чем safeContainer */
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    resize: both;
+    pointer-events: auto;
 }
+
+
 
 .textStyle {
     color: #000000;
     font-size: 12px;
     font-family: "Audiowide", sans-serif;
+    min-width: 100%; /* Минимальная ширина, как у контейнера */
+    min-height: 100%; /* Минимальная высота, как у контейнера */
+    overflow: auto;
+    border: 1px solid #ccc;
+    padding: 8px;
+    background: #f9f9f9;
+    flex-grow: 1;
+}
+
+.drag-handle {
+    cursor: grab;
+    background: #ccc;
+    padding: 5px;
+    text-align: center;
+    user-select: none;
+}
+
+/*.resize-handle {*/
+/*    position: absolute;*/
+/*    bottom: 0;*/
+/*    right: 0;*/
+/*    width: 15px;*/
+/*    height: 15px;*/
+/*    background: #888;*/
+/*    cursor: se-resize;*/
+/*}*/
+
+.resizeHandle {
+    width: 15px;
+    height: 15px;
+    background: gray;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+.dragHandle {
+    cursor: grab;
+    background: #ddd;
+    padding: 8px;
+    position: sticky;
+    top: 0;
+    zIndex: 10;
 }

@@ -1,25 +1,55 @@
 'use client'
 
 import styles from './HintPopupView.module.css'
-import React, {useEffect, useRef, useState} from "react";
+import React, { useEffect, useRef, useState, createContext, useContext, useCallback } from "react";
 import Menu, {MenuConfiguration} from "@/app/_components/Menu";
+import SignsPopUpView from "@/app/_components/SignsMenuButtons";
+import { useSigns } from "@/app/_components/SignsMenuButtons";
+import { signsButtons } from "@/app/_components/SignsMenuButtons";
+
 
 type questionData = {
     answer: number;
     questionParts: string;
 }
 
-function generateQuestion(): questionData {
+const QuestionContext = createContext(null);
+export function QuestionProvider({ children }) {
+    const { activeSign } = useSigns(); // Получаем activeSign из контекста
+    const [question, setQuestion] = useState(() => generateQuestion(activeSign ));
+    function updateQuestion() {
+        setQuestion(generateQuestion(activeSign ));
+    }
+
+    return (
+        <QuestionContext.Provider value={{ question, updateQuestion }}>
+            {children}
+        </QuestionContext.Provider>
+    );
+}
+
+export function useQuestion() {
+    const context = useContext(QuestionContext);
+    if (!context) {
+        throw new Error("useQuestion must be used within a QuestionProvider");
+    }
+    return context;
+}
+
+
+function generateQuestion(activeSign: string): questionData  {
+
 
     const operators: Record<string, (a: number, b: number) => number> = {
         "+": (firstNumber, secondNumber) => firstNumber + secondNumber,
         "-": (firstNumber, secondNumber) => firstNumber - secondNumber,
         "*": (firstNumber, secondNumber) => firstNumber * secondNumber,
-        "/": (firstNumber, secondNumber) => secondNumber !== 0 ? firstNumber / secondNumber : firstNumber,
+        "÷": (firstNumber, secondNumber) => secondNumber !== 0 ? firstNumber / secondNumber : firstNumber,
     }
 
+
     function generateRandomNumberInRange(min: number = 0, max: number = 6, operator: string): [number, number] {
-        if (operator == "/") return getDivisibleNumbers(min, max);
+        if (operator == "÷") return getDivisibleNumbers(min, max);
         const num1 = Math.floor(Math.random() * (max - min + 1)) + min;
         const num2 = Math.floor(Math.random() * (max - min + 1)) + min;
         return [num1, num2];
@@ -32,46 +62,59 @@ function generateQuestion(): questionData {
         return [dividend, divisor];
     }
 
-    function randomOperator(): string {
-        let operatorsKeys = Object.keys(operators);
-        return operatorsKeys[Math.floor(Math.random() * operatorsKeys.length)];
+    function getOperator(): string {
+        if (!activeSign) {
+            let operatorsKeys = Object.keys(operators);
+            return operatorsKeys[Math.floor(Math.random() * operatorsKeys.length)];
 
+        }
+        return activeSign;
     }
+
 
     function calculate(num1: number, num2: number, operator: string): number {
         return operators[operator](num1, num2);
     }
 
-    const operator: string = randomOperator();
+    const operator = getOperator();
     const [firstNumber, secondNumber] = generateRandomNumberInRange(1, 100, operator);
     const correctAnswerNumber: number = calculate(firstNumber, secondNumber, operator);
 
     return {answer: correctAnswerNumber, questionParts: `${firstNumber} ${operator} ${secondNumber}`};
 }
 
+
 enum HintMenuButtons {
     GIVE_UP_HINT = 'giveUpHint',
     NEW_HINT = 'newHint',
     SIGNS = 'signs',
+
 }
 
 const menuButtons: MenuConfiguration = {
     buttons: [
-        {id: HintMenuButtons.GIVE_UP_HINT, name: 'Give Up Hint', className: styles.giveUpHint},
-        {id: HintMenuButtons.NEW_HINT, name: 'New Hint', className: styles.newHint},
-        {id: HintMenuButtons.SIGNS, name: 'Signs', className: styles.signs},
+        {id: HintMenuButtons.GIVE_UP_HINT, name: '', className: styles.giveUpHint},
+        {id: HintMenuButtons.SIGNS, name: '', className: styles.signs},
+        {id: HintMenuButtons.NEW_HINT, name: '', className: styles.newHint},
     ],
     style: styles.menuButton
 }
 
-export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
+export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, getButtonClass, onGiveUpHintChange  }: {
     onAddLogAction: (log: string) => void,
-    onCloseHintAction: () => void
+    onCloseHintAction: () => void,
+    getButtonClass: (buttonId: string) => string,
+    onGiveUpHintChange: (isActive: boolean) => void,
 }) {
-    const [question, setQuestion] = useState(() => generateQuestion());
+
+    const { question, updateQuestion } = useQuestion();
     const inputRefAnswer = useRef<HTMLInputElement | null>(null); // Создаём ref для инпута
     const [isValid, setIsValid] = useState<boolean | null>(null);
     const [isDisabled, setIsDisabled] = useState(false);
+    const [isGiveUpHint, setIsGiveUpHint] = useState(false);
+    const [isSignsVisible, setIsSignsVisible] = useState(false);
+    const [isGiveUpHintActive, setIsGiveUpHintActive] = useState(false);
+
 
     useEffect(() => {
         if (inputRefAnswer.current) {
@@ -87,7 +130,6 @@ export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
     }, []);
 
     function onHintMenuClick(id: string) {
-        onAddLogAction('Give Up Hint is clicked ' + id);
         switch ( id ) {
             case HintMenuButtons.GIVE_UP_HINT:
                 onGiveUpHint();
@@ -96,27 +138,39 @@ export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
                 onNewHint();
                 break;
             case HintMenuButtons.SIGNS:
+                console.log(HintMenuButtons.SIGNS + "clicked")
                 onShowSigns();
                 break;
-            default: onAddLogAction('Unknown button clicked');
+            default:
                 break;
-        }
-    }
-
-    function onNewHint() {
-        setQuestion(() => generateQuestion());
-        if (inputRefAnswer.current) {
-            inputRefAnswer.current.value = "";
         }
     }
 
     function onShowSigns() {
-        onAddLogAction("Show signs is clicked!");
+        console.log("onShowSigns active");
+        setIsSignsVisible((prev) => !prev);
     }
+
+
 
     function onGiveUpHint() {
         if (inputRefAnswer.current == null) return;
+        setIsGiveUpHintActive(true);
+        setIsGiveUpHint(true);
+        setIsValid(true);
         inputRefAnswer.current.value = question.answer.toString();
+        onGiveUpHintChange(true);
+    }
+
+    function onNewHint() {
+        updateQuestion();
+        setIsValid(null);
+        setIsGiveUpHint(false);
+        setIsGiveUpHintActive(false);
+        onGiveUpHintChange(false);
+        if (inputRefAnswer.current) {
+            inputRefAnswer.current.value = "";
+        }
     }
 
     const getInputClass = () => {
@@ -130,15 +184,18 @@ export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
         return styles.popupContainer; // Стандартный стиль
     };
 
+    const getShieldClass = () => {
+        if (isDisabled) return `${styles.shield}`;
+        return ``; // Стандартный стиль
+    };
+
     function onOkButtonClick() {
         if (!inputRefAnswer.current) return;
-        onAddLogAction("Button OK is clicked!");
         const userAnswer = parseFloat(inputRefAnswer.current.value);
         if (userAnswer === question.answer) {
-            onAddLogAction("The answer is correct!");
             setIsValid(true);
             setIsDisabled(true);
-            setTimeout(() => onCloseHintAction(), 3000); // Закрываем попап через секунду
+            setTimeout(() => onCloseHintAction(), 2000); // Закрываем попап через секунду
         } else {
 
             setIsValid(false);
@@ -146,26 +203,59 @@ export default function HintPopupView({onAddLogAction, onCloseHintAction}: {
 
     }
 
+
     function onCloseButtonClick() {
         onCloseHintAction();
-        onAddLogAction("the hint is closed");
+        if (safeCodeInputRef?.current) {
+            safeCodeInputRef.current.focus();
+        }
     }
 
-    return (
-        <div style={{backgroundColor: "red", position: "fixed", width: '100%', height: '100%'}}>
-            <div className={getPopupContainerClass()}>
-                <button onClick={onCloseButtonClick} className={styles.closeButtonContainer}/>
-                <div className={styles.hintInputContainer}>
-                    <div className={styles.textInputField}>{question.questionParts}</div>
-                    <div className={styles.equalsSymbol}>=</div>
-                    <input ref={inputRefAnswer} type="number" className={getInputClass()}/>
-                </div>
-                <div onClick={onOkButtonClick} className={`${styles.okButtonContainer}`}/>
-                <div className={styles.hintMenuContainer}>
-                    <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick}/>
-                </div>
+    const handleFocus = () => {
+        if (!isValid) {
+            setIsValid(null);
+            getInputClass();
+            inputRefAnswer.current.value = ""
+        }
+    }
+
+
+    function getOkButtonClass() {
+        if(isGiveUpHint) {
+            return `${styles.okButtonContainer} ${styles.okButtonDisabled}`;
+        }
+        return `${styles.okButtonContainer}`;
+    }
+
+    function getButtonClass(buttonId: string): string {
+        console.log(`getButtonClass вызван для: ${buttonId}`);
+
+        if (buttonId === HintMenuButtons.GIVE_UP_HINT &&  isGiveUpHintActive ) {
+            return `${styles.disabledButton}`;
+        }
+
+        return  `${styles.giveUpHint}` || ""; // Стандартные стили
+    }
+
+return (
+    <div className={getShieldClass()}>
+        <div className={getPopupContainerClass()}>
+            <button onClick={onCloseButtonClick} className={styles.closeButtonContainer} />
+            <div className={styles.hintInputContainer}>
+                <div className={styles.textInputField}>{question.questionParts}</div>
+                <div className={styles.equalsSymbol}>=</div>
+                <input ref={inputRefAnswer} type="number" className={getInputClass()}  onFocus={handleFocus}/>
+            </div>
+            <div onClick={onOkButtonClick}className={`${getOkButtonClass()} ${styles.okButtonContainer}`} />
+            <div className={styles.hintMenuContainer}>
+                <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick} getButtonClass={getButtonClass}/>
+            </div>
+            <div>
+                <SignsPopUpView getButtonClass={getButtonClass} isSignsVisible={isSignsVisible}/>
             </div>
         </div>
-    );
+    </div>
+);
 }
+
 

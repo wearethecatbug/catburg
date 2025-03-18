@@ -1,33 +1,62 @@
 import styles from "@/app/_components/CatView.module.css";
 import React, {useEffect, useState} from "react";
 
-const catState = ['clap', 'fail', 'long', 'pet', 'shocked', 'sleepy', 'thanks', 'thinking']
+interface CatViewState {
+    defaultState: string;
+    giveUpHint: string;
+    safeContainerNoAction: string;
+    hintPopupContainerGiveUp: string;
+    hintPopupViewOpen: string;
+    userWin: string;
+    petpet: string;
+    giveUpGame: string;
+    winHint: string;
+}
 
-export default function CatView() {
+export const initialCatViewState: Readonly<CatViewState> = {
+    defaultState: 'pet',
+    giveUpHint: 'fail',
+    safeContainerNoAction: 'sleepy',
+    hintPopupContainerGiveUp: 'confused',
+    hintPopupViewOpen: 'thinking',
+    userWin:  'shocked',
+    petpet: 'thanks',
+    giveUpGame: 'fail',
+    winHint: 'clap',
+} as const;
 
-    const [currentSkinState, setCurrentSkinState] = useState(0);
+interface CatViewProps {
+    isSafeComponentInitialized: boolean;
+    currentSkinCatViewState: keyof Readonly<CatViewState> | undefined; // Возможно, undefined
+    updateCatViewState: (newState: keyof Readonly<CatViewState>) => void;
+    onMouseEnter?: () => void;
+    onMouseLeave?: () => void;
+}
 
-    function getCatSkin() {
-        return {"--bgSrc": `url(/${catState[currentSkinState]}.png)`} as React.CSSProperties;
+export default function CatView({ isSafeComponentInitialized,currentSkinCatViewState,updateCatViewState, onMouseEnter,
+                                    onMouseLeave }: CatViewProps) {
+    console.log("currentSkinCatViewState передается в CatView:", currentSkinCatViewState);
+    // const validState = currentSkinCatViewState || 'defaultState';
+    if (!isSafeComponentInitialized || !currentSkinCatViewState) {
+        return <div className={styles.catContainerPlaceholder}></div>;
+    }
+    console.log(currentSkinCatViewState)
+    console.log(isSafeComponentInitialized)
+
+    function getCatSkin(currentSkinCatViewState: keyof CatViewState) {
+        return {"--bgSrc": `url(/${initialCatViewState[currentSkinCatViewState]}.png)`} as React.CSSProperties;
     }
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            changeSkin();
-        }, 5000);
+        if (!currentSkinCatViewState) {
+            console.warn("Некорректное состояние для currentSkinCatViewState, устанавливаем defaultState");
+            updateCatViewState("defaultState"); // Автоматически устанавливаем корректное состояние
+        }
+    }, [currentSkinCatViewState, updateCatViewState]);
 
-        return () => clearInterval(interval);
-    }, []);
 
-    function changeSkin() {
-        setCurrentSkinState((value) => {
-            if (value + 1 >= catState.length) {
-                return 0;
-            } else {
-                return value + 1;
-            }
-        });
-    }
+    return (
+        <div className={styles.catContainer} style={getCatSkin(currentSkinCatViewState)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}></div>
+    );
 
-    return <div style={getCatSkin()} onClick={() => changeSkin()} className={styles.cat}></div>;
 }

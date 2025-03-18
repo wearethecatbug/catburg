@@ -1,5 +1,7 @@
 .safeContainer {
-    position: relative;
+    display: flex;
+    justify-content: start;
+    align-items: center;
 }
 
 .safeOpen {
@@ -7,6 +9,7 @@
     height: 460px;
     background: url('/safe.png') -100px -80px;
     background-repeat: no-repeat;
+    animation: fadeIn 0.5s ease-in-out 0s; /* Задержка для сейфа */
 }
 
 .safeClose {
@@ -14,11 +17,32 @@
     height: 460px;
     background: url('/safe.png') -610px -80px;
     background-repeat: no-repeat;
+    animation: fadeIn 0.5s ease-in-out 0s; /* Задержка для сейфа */
 }
 
-.catViewContainer {
-    float: left;
-    margin-left: 50%;
-    margin-top: -18%;
-    translate: -50%;
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/*.catViewContainer {*/
+/*    position: absolute;*/
+/*    margin-left: 50%;*/
+/*    margin-top: -15%;*/
+
+/*}*/
+
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+}
+.safePlaceholder {
+    width: 500px; /* Размеры должны совпадать с .safeOpen и .safeClose */
+    height: 460px;
+    visibility: hidden; /* Делаем невидимым, но он занимает место */
 }

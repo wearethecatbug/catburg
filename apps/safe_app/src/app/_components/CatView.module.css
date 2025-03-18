@@ -1,8 +1,35 @@
-.cat {
-    /*eslint-disable-next-line*/
-    --bgSrc: url('/clap.png');
+.catContainer{
+    background-image: var(--bgSrc);
+    float: left;
     width: 128px;
     height: 128px;
     background: var(--bgSrc) no-repeat;
     background-size: contain;
+    animation: fadeIn 1.6s ease-in-out 0s; /* Задержка для сейфа */
+    min-width: 100px;
+    min-height: 100px;
+    max-width: 300px;
+    max-height: 300px;
+    /*display: flex;*/
+    /*top: 10%; !* Центрируем по вертикали *!*/
+    /*left: 180%; !* Центрируем по горизонтали *!*/
+    transform: translate(200%, -410%); /* Подгоняем к центру */
+    z-index: 1000;
+    display: flex;
+    position: relative;
+}
+
+.catContainerPlaceholder {
+    width: 128px;
+    height: 128px;
+    visibility: hidden;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }
