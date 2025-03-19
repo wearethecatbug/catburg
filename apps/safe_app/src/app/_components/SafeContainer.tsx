@@ -12,6 +12,7 @@ import { SignsProvider, useSigns } from "@/app/_components/SignsMenuButtons";
 import SafeSettings from "./SettingButtonView.tsx";
 import CatView, {initialCatViewState} from "./CatView";
 
+
 enum MenuButtons {
     ON_NEW_GAME = 'onNewGame',
     ON_GIVE_UP = 'onGiveUp',
@@ -109,8 +110,11 @@ export default function SafeContainer() {
     const logViewRef = useRef<HTMLInputElement | null>(null);
     const [currentSkinCatViewState, setCurrentSkinCatViewState] = useState<keyof typeof initialCatViewState>("defaultState");
     const [isGiveUpHintActive, setIsGiveUpHintActive] = useState(false);
-
-
+    const [safeCode, setSafeCode] = useState<number>(0)
+    const [firstNumberCodeRange, setFirstNumberCodeRange] = useState<number>(1);
+    const [secondNumberCodeRange, setSecondNumberCodeRange] = useState<number>(1000);
+    const [firstNumberHintRange, setFirstNumberHintRange] = useState(1);
+    const [secondNumberHintRange, setSecondNumberHintRange] = useState(1000);
 
     useEffect(() => {
             setSafeComponentInitialized(true);
@@ -127,7 +131,7 @@ export default function SafeContainer() {
 
 
     function handleMouseEnter() {
-        updateCatViewState("petpet"); // Задай нужный скин при наведении
+        updateCatViewState("petpet");
     }
 
     function handleMouseLeave() {
@@ -137,10 +141,11 @@ export default function SafeContainer() {
             } else if (state.isHintVisible){
                 updateCatViewState('hintPopupViewOpen');
             } else {
-                updateCatViewState('defaultState'); // Верни старый скин
+                updateCatViewState('defaultState');
             }
-        }, 1000); // Задержка в 500 мс (можно изменить)
+        }, 1000);
     }
+
     function onMenuButtonClick(id: string) {
         switch ( id ) {
             case MenuButtons.ON_NEW_GAME:
@@ -165,13 +170,18 @@ export default function SafeContainer() {
         dispatch({ type: 'TOGGLE_LOG' });
     }
 
+    function generateSafeCode(firstNumberCodeRange, secondNumberCodeRange) {
+        return  setSafeCode(Math.floor(Math.random() * secondNumberCodeRange) + firstNumberCodeRange) ;
+    }
+
     function onNewGame() {
-        const newCode = Math.floor(Math.random() * 1000) + 1;
-        dispatch({ type: 'NEW_GAME', payload: newCode });
+        generateSafeCode(firstNumberCodeRange, secondNumberCodeRange) ;
+        dispatch({ type: 'NEW_GAME', payload: safeCode });
         dispatch({ type: 'TOGGLE_SAFE', payload: false});
         safeCodeInputRef.current.focus();
         updateCatViewState('defaultState');
-        console.log("New game started with code:", newCode);
+        // console.log("New game started with code:", newCode);
+        console.log("New game started with code:",safeCode);
     }
 
 
@@ -263,7 +273,8 @@ export default function SafeContainer() {
 
         <div className={styles.safeContainer}>
             <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
-                <SafeSettings></SafeSettings>
+                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange,secondNumberCodeRange,setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
+
             <div className={styles.safeAndMenuContainer}>
 
                 <div>
@@ -273,10 +284,14 @@ export default function SafeContainer() {
                     <div className={styles.SafeCodeInputContainer}>
                         <SafeCodeInput ref={safeCodeInputRef} state={state} dispatch={dispatch} onOkButtonClick={onOkButtonClick} />
                         <SignsProvider>
-                            <QuestionProvider>
+                            <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
 
                                 {state.isHintVisible && (
-                                    <HintPopupView  onCloseHintAction={() => dispatch({ type: 'TOGGLE_HINT' })} safeCodeInputRef={safeCodeInputRef}  getButtonClass={getButtonClass} onGiveUpHintChange={setIsGiveUpHintActive}/>
+                                    <HintPopupView  onCloseHintAction={() => dispatch({ type: 'TOGGLE_HINT' })} safeCodeInputRef={safeCodeInputRef}  getButtonClass={getButtonClass}
+                                                    onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
+                                                    setFirstNumberHintRange={setFirstNumberHintRange}
+                                                    secondNumberHintRange={secondNumberHintRange}
+                                                    setSecondNumberHintRange={setSecondNumberHintRange} />
                                 )}
                             </QuestionProvider>
                         </SignsProvider>

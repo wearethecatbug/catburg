@@ -7,7 +7,7 @@ const LogView = forwardRef(function LogView({ logs,  }: { logs: string[]}, ref )
     const logRef = useRef<HTMLDivElement | null>(null);
     const [size, setSize] = useState({ width: 250, height: 150 });
     const [isResizing, setIsResizing] = useState(false);
-    const [position, setPosition] = useState({ x: 600, y: 710});
+    const [position, setPosition] = useState({ x: 740, y: 770});
 
 
     const startDrag = (event: React.MouseEvent) => {

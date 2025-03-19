@@ -1,28 +1,39 @@
 'use client'
 
 import styles from './HintPopupView.module.css'
-import React, { useEffect, useRef, useState, createContext, useContext, useCallback } from "react";
+import React, {useEffect, useRef, useState, createContext, useContext, useCallback} from "react";
 import Menu, {MenuConfiguration} from "@/app/_components/Menu";
 import SignsPopUpView from "@/app/_components/SignsMenuButtons";
-import { useSigns } from "@/app/_components/SignsMenuButtons";
-import { signsButtons } from "@/app/_components/SignsMenuButtons";
+import {useSigns} from "@/app/_components/SignsMenuButtons";
+import {signsButtons} from "@/app/_components/SignsMenuButtons";
+
 
 
 type questionData = {
     answer: number;
     questionParts: string;
+
 }
 
-const QuestionContext = createContext(null);
-export function QuestionProvider({ children }) {
-    const { activeSign } = useSigns(); // Получаем activeSign из контекста
-    const [question, setQuestion] = useState(() => generateQuestion(activeSign ));
+const QuestionContext = createContext<{
+    question: questionData;
+    updateQuestion: () => void;
+} | null>(null);
+
+export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}) {
+    const {activeSign} = useSigns();
+    const [question, setQuestion] = useState(() => generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
+
+    useEffect(() => {
+        setQuestion(generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
+    }, [activeSign, firstNumberHintRange, secondNumberHintRange]);
+
     function updateQuestion() {
-        setQuestion(generateQuestion(activeSign ));
+        setQuestion(generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
     }
 
     return (
-        <QuestionContext.Provider value={{ question, updateQuestion }}>
+        <QuestionContext.Provider value={{question, updateQuestion}}>
             {children}
         </QuestionContext.Provider>
     );
@@ -36,8 +47,7 @@ export function useQuestion() {
     return context;
 }
 
-
-function generateQuestion(activeSign: string): questionData  {
+function generateQuestion(activeSign: string, firstNumberHintRange: number, secondNumberHintRange: number): questionData {
 
 
     const operators: Record<string, (a: number, b: number) => number> = {
@@ -48,16 +58,16 @@ function generateQuestion(activeSign: string): questionData  {
     }
 
 
-    function generateRandomNumberInRange(min: number = 0, max: number = 6, operator: string): [number, number] {
-        if (operator == "÷") return getDivisibleNumbers(min, max);
-        const num1 = Math.floor(Math.random() * (max - min + 1)) + min;
-        const num2 = Math.floor(Math.random() * (max - min + 1)) + min;
+    function generateRandomNumberInRange(firstNumberHintRange, secondNumberHintRange, operator: string): [number, number] {
+        if (operator == "÷") return getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange);
+        const num1 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
+        const num2 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
         return [num1, num2];
     }
 
-    function getDivisibleNumbers(min = 1, max = 100): [number, number] {
-        let divisor = Math.floor(Math.random() * (max - min + 1)) + min; // Генерируем делитель
-        let quotient = Math.floor(Math.random() * (max / divisor)) + 1; // Выбираем случайный множитель
+    function getDivisibleNumbers(firstNumberHintRangein, secondNumberHintRange): [number, number] {
+        let divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRangein; // Генерируем делитель
+        let quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
         let dividend = divisor * quotient; // Получаем делимое
         return [dividend, divisor];
     }
@@ -77,7 +87,7 @@ function generateQuestion(activeSign: string): questionData  {
     }
 
     const operator = getOperator();
-    const [firstNumber, secondNumber] = generateRandomNumberInRange(1, 100, operator);
+    const [firstNumber, secondNumber] = generateRandomNumberInRange(firstNumberHintRange, secondNumberHintRange, operator);
     const correctAnswerNumber: number = calculate(firstNumber, secondNumber, operator);
 
     return {answer: correctAnswerNumber, questionParts: `${firstNumber} ${operator} ${secondNumber}`};
@@ -100,21 +110,23 @@ const menuButtons: MenuConfiguration = {
     style: styles.menuButton
 }
 
-export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, getButtonClass, onGiveUpHintChange  }: {
-    onAddLogAction: (log: string) => void,
+export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
+    setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange }: {
     onCloseHintAction: () => void,
     getButtonClass: (buttonId: string) => string,
     onGiveUpHintChange: (isActive: boolean) => void,
+    firstNumberHintRange: number,
+    setFirstNumberHintRange: React.Dispatch<React.SetStateAction<number>>,
+    secondNumberHintRange: number,
+    setSecondNumberHintRange: React.Dispatch<React.SetStateAction<number>>,
 }) {
-
-    const { question, updateQuestion } = useQuestion();
+    const {question, updateQuestion} = useQuestion();
     const inputRefAnswer = useRef<HTMLInputElement | null>(null); // Создаём ref для инпута
     const [isValid, setIsValid] = useState<boolean | null>(null);
     const [isDisabled, setIsDisabled] = useState(false);
     const [isGiveUpHint, setIsGiveUpHint] = useState(false);
     const [isSignsVisible, setIsSignsVisible] = useState(false);
     const [isGiveUpHintActive, setIsGiveUpHintActive] = useState(false);
-
 
     useEffect(() => {
         if (inputRefAnswer.current) {
@@ -130,7 +142,7 @@ export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, get
     }, []);
 
     function onHintMenuClick(id: string) {
-        switch ( id ) {
+        switch (id) {
             case HintMenuButtons.GIVE_UP_HINT:
                 onGiveUpHint();
                 break;
@@ -150,7 +162,6 @@ export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, get
         console.log("onShowSigns active");
         setIsSignsVisible((prev) => !prev);
     }
-
 
 
     function onGiveUpHint() {
@@ -221,7 +232,7 @@ export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, get
 
 
     function getOkButtonClass() {
-        if(isGiveUpHint) {
+        if (isGiveUpHint) {
             return `${styles.okButtonContainer} ${styles.okButtonDisabled}`;
         }
         return `${styles.okButtonContainer}`;
@@ -230,32 +241,35 @@ export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, get
     function getButtonClass(buttonId: string): string {
         console.log(`getButtonClass вызван для: ${buttonId}`);
 
-        if (buttonId === HintMenuButtons.GIVE_UP_HINT &&  isGiveUpHintActive ) {
+        if (buttonId === HintMenuButtons.GIVE_UP_HINT && isGiveUpHintActive) {
             return `${styles.disabledButton}`;
         }
 
-        return  `${styles.giveUpHint}` || ""; // Стандартные стили
+        return `${styles.giveUpHint}` || ""; // Стандартные стили
     }
 
-return (
-    <div className={getShieldClass()}>
-        <div className={getPopupContainerClass()}>
-            <button onClick={onCloseButtonClick} className={styles.closeButtonContainer} />
-            <div className={styles.hintInputContainer}>
-                <div className={styles.textInputField}>{question.questionParts}</div>
-                <div className={styles.equalsSymbol}>=</div>
-                <input ref={inputRefAnswer} type="number" className={getInputClass()}  onFocus={handleFocus}/>
+    return (
+        <>
+            <div className={getShieldClass()}>
+                <div className={getPopupContainerClass()}>
+                    <button onClick={onCloseButtonClick} className={styles.closeButtonContainer}/>
+                    <div className={styles.hintInputContainer}>
+                        <div className={styles.textInputField}>{question.questionParts}</div>
+                        <div className={styles.equalsSymbol}>=</div>
+                        <input ref={inputRefAnswer} type="number" className={getInputClass()} onFocus={handleFocus}/>
+                    </div>
+                    <div onClick={onOkButtonClick} className={`${getOkButtonClass()} ${styles.okButtonContainer}`}/>
+                    <div className={styles.hintMenuContainer}>
+                        <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick}
+                              getButtonClass={getButtonClass}/>
+                    </div>
+                    <div>
+                        <SignsPopUpView getButtonClass={getButtonClass} isSignsVisible={isSignsVisible}/>
+                    </div>
+                </div>
             </div>
-            <div onClick={onOkButtonClick}className={`${getOkButtonClass()} ${styles.okButtonContainer}`} />
-            <div className={styles.hintMenuContainer}>
-                <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick} getButtonClass={getButtonClass}/>
-            </div>
-            <div>
-                <SignsPopUpView getButtonClass={getButtonClass} isSignsVisible={isSignsVisible}/>
-            </div>
-        </div>
-    </div>
-);
+        </>
+    );
 }
 
 

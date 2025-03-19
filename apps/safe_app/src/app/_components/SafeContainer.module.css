@@ -1,13 +1,12 @@
 .safeContainer {
-    /*justify-content: center;*/
     align-items: center;
+    justify-content: center;
     color: white;
     display: flex;
     flex-direction: column;
-    position: relative;
-    top: 50%;  /* Центрируем */
+    position: relative; /* Абсолютное позиционирование */
+    top: 50%;
     left: 35%;
-    /*transform: translate(50%, 55%);*/
     width: 100%; /* Можно уменьшить, если контейнер слишком большой */
     max-width: 900px; /* Ограничение по ширине */
     min-height: 500px; /* Нужно, чтобы `.catContainer` не "уплывал" */
@@ -16,6 +15,8 @@
 
 .safeAndMenuContainer {
     display: flex;
+    transform: translate(20%, -70%);
+    justify-content: center;
 }
 
 .headerText {
@@ -24,7 +25,7 @@
     font-family: "Audiowide", sans-serif;
     text-align: center;
     margin: 80px;
-    max-width: 900px;
+    max-width: 700px;
     user-select: none;
     --shadowSize: 2px;
     --shadowColor: #FFFFFF;
@@ -56,12 +57,12 @@
 
 .menuButton {
     border-radius: 10px;
-    margin-top: 15px;
     width: 200px ;
     height: 60px;
     font-size: 20px;
     font-family: "Audiowide", sans-serif;
     cursor: pointer;
+    margin-top: 10%;
 
 }
 
@@ -92,15 +93,4 @@
     display: flex; /* Располагаем логи в ряд */
     touch-action: none;
 }
-
-/*.safeSettingsContainer {*/
-/*    position: absolute;*/
-/*    top: 5%;*/
-/*    left: 95%;*/
-/*    !*background:  url('/settings.png') no-repeat center center;*!*/
-/*    !*background-size: contain;*!*/
-/*    width: 100px;*/
-/*    height: 100px;*/
-/*}*/
-
 

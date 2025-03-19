@@ -1,6 +1,7 @@
 import styles from "./SignsMenuButtons.module.css";
 import React, {createContext, useContext, useCallback, useEffect, useState, ReactNode} from "react";
 import Menu, {MenuConfiguration} from "@/app/_components/Menu";
+import SafeSettings from "./SettingButtonView";
 
 
 enum HintSignsButtons {
@@ -8,7 +9,6 @@ enum HintSignsButtons {
     Signs_Minus = 'signsMinus',
     Signs_Multiple = 'signsMultiple',
     Signs_Devision = 'signsDevision',
-    // Signs_Any = 'signsAny',
 }
 
 export const signsButtons: MenuConfiguration = {
@@ -17,7 +17,6 @@ export const signsButtons: MenuConfiguration = {
         { id: HintSignsButtons.Signs_Minus, name: '-', className: styles.buttonMinus },
         { id: HintSignsButtons.Signs_Multiple, name: '*', className: styles.buttonMultiple },
         { id: HintSignsButtons.Signs_Devision, name: '÷', className: styles.buttonDevision },
-        // { id: HintSignsButtons.Signs_Any, name: '⊙', className: styles.buttonAny },
     ],
     style: styles.signsMenuButton
 };
@@ -54,12 +53,12 @@ export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { g
 
     const {activeSign, setActiveSign} = useSigns();
 
+
     const signHandlers = {
         [HintSignsButtons.Signs_Plus]: onSignPlus,
         [HintSignsButtons.Signs_Minus]: onSignMinus,
         [HintSignsButtons.Signs_Multiple]: onSignMultiple,
         [HintSignsButtons.Signs_Devision]: onSignDevision,
-        // [HintSignsButtons.Signs_Any]: onSignAny,
     };
 
     function onSignPlus() {
@@ -108,6 +107,7 @@ export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { g
 
     return (
         <>
+
         <div className={`${styles.signsContainer} ${isSignsVisible ? "" : styles.hiddenSigns}`}>
             <Menu menuConfiguration={signsButtons}  onMenuButtonClickAction={onSignsMenuClick}  getButtonClass={getSignsButtonClass} signHandlers={signHandlers}/>
         </div>

@@ -2,6 +2,7 @@
     background: url('/ragdollHintFon3.png') no-repeat center center;
     background-size: contain;
     justify-content: flex-start;
+    position: absolute;
     display: flex;
     flex-direction: column;
     z-index: 500;
@@ -19,9 +20,8 @@
     min-width: 170px;
     min-height: 50px;
     width: 100%;
-    border: 1px #ffffff;
+    border: solid 1px #ffffff;
     outline: none;
-    border-style: solid;
     text-align: center;
     line-height: 50px;
     font-family: "Audiowide", sans-serif;
@@ -84,10 +84,10 @@
     cursor: pointer;
     transition: transform 0.3s ease-in-out;
     transform-origin: center;
-
 }
 .closeButtonContainer :hover {
-    transform: rotate(360deg);
+    animation: spin 0.7s ease-in-out; /* Уменьшил время для плавности */
+
 }
 @keyframes spin {
     from {
@@ -130,7 +130,7 @@
     transform: scale(0.9);
     box-shadow: 0 3px 17px rgba(0, 0, 0, 1);
     border-radius: 25%;
-    transition: null;
+    transition: none;
 }
 
 
@@ -148,6 +148,7 @@
     left: 64%;
     transform: translateX(-50%) translateY(-50%);
 }
+
 .hintMenuContainer li {
     display: inline-flex; /* Делаем их строчно-гибкими */
     justify-content: center;
@@ -155,7 +156,6 @@
     width: auto;
     height: auto;
     margin: 5px;
-
 }
 
 
@@ -180,14 +180,12 @@
 .giveUpHint {
     background: url('/GiveUpHint.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px; /* Устанавливаем конкретный размер */
 }
 
 
 .newHint {
     background: url('/NewHint.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px; /* Устанавливаем конкретный размер */
 }
 
 
@@ -195,12 +193,15 @@
 .signs {
     background: url('/Signs.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px; /* Устанавливаем конкретный размер */
 
 }
+.giveUpHint, .newHint, .signs {
+    background-size: 80px 80px; /* Или contain, но не оба */
+}
+
 
 .shield {
-    position: fixed;
+    position: absolute; /* Вместо fixed */
     left: 0;
     top: 0;
     width: 100%;
@@ -213,7 +214,7 @@
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 2s cubic-bezier(0.4, 0, 0.2, 1), visibility 2.5s ease-in-out;
+    transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
 }
 
 .disabledButton {

@@ -10,9 +10,6 @@
     min-height: 100px;
     max-width: 300px;
     max-height: 300px;
-    /*display: flex;*/
-    /*top: 10%; !* Центрируем по вертикали *!*/
-    /*left: 180%; !* Центрируем по горизонтали *!*/
     transform: translate(200%, -410%); /* Подгоняем к центру */
     z-index: 1000;
     display: flex;
