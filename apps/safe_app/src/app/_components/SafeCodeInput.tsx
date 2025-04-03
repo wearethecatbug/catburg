@@ -2,8 +2,9 @@ import styles from './SafeCodeInput.module.css';
 import {useEffect, useRef} from "react";
 
 import {useSafeContext} from "@/app/_components/safeContainer/SafeContainerContext";
+import {SAFE_ACTION} from "@/app/_components/safeContainer/SafeContainerReducer";
 
-const SafeCodeInput = ({onOkButtonClick, focused}:{onOkButtonClick: () => void, focused: boolean}) => {
+const SafeCodeInput = ({focused}:{focused: boolean}) => {
 
     const {state, dispatch} = useSafeContext();
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -57,6 +58,18 @@ const SafeCodeInput = ({onOkButtonClick, focused}:{onOkButtonClick: () => void, 
                 onChange: onChangeInput
             };
         }
+    }
+
+    function onOkButtonClick() {
+        if (state.safeCode === null || state.inputValue.trim() === "") return;
+
+        if (state.inputValue === String(state.safeCode)) {
+            dispatch({ type: SAFE_ACTION.SET_WIN, payload: true });
+            dispatch({ type: SAFE_ACTION.SET_WRONG_SAFE_CODE, payload: false });
+        } else {
+            dispatch({ type: SAFE_ACTION.SET_WRONG_SAFE_CODE, payload: true });
+        }
+        dispatch({ type: SAFE_ACTION.ADD_LOG, payload: state.inputValue});
     }
 
     return (

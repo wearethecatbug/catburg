@@ -55,6 +55,14 @@ export default function SafeContainer() {
     const [safeCodeInputFocused, setSafeCodeInputFocused] = useState(true);
 
     useEffect(() => {
+        if (state.isWrongSafeCode) {
+            dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: true}); //TODO: можно объеденить все 3 экшена в один сделать экшен ON_USER_WIN
+            dispatch({ type: SAFE_ACTION.SET_DISABLED, payload: true });
+            updateCatViewState("userWin");
+        }
+    }, [state.isWin]);
+
+    useEffect(() => {
         setSafeComponentInitialized(true);
     }, []);
 
@@ -182,24 +190,6 @@ export default function SafeContainer() {
         return "";
     };
 
-    function onUserWin() {
-        dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: true}); //TODO: можно объеденить все 3 экшена в один сделать экшен ON_USER_WIN
-        dispatch({ type: SAFE_ACTION.SET_WIN, payload: true });
-        dispatch({ type: SAFE_ACTION.SET_DISABLED, payload: true });
-        updateCatViewState("userWin");
-    }
-
-    function onOkButtonClick() {
-        if (state.safeCode === null || state.inputValue.trim() === "") return;
-
-        if (state.inputValue === String(state.safeCode)) {
-            onUserWin();
-        } else {
-            dispatch({ type: SAFE_ACTION.SET_WRONG_SAFE_CODE, payload: true });
-        }
-        onAddLogAction();
-    }
-
     function onAddLogAction() {
         dispatch({ type: SAFE_ACTION.ADD_LOG, payload: state.inputValue});
     }
@@ -218,7 +208,7 @@ export default function SafeContainer() {
                         <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
                                    onMouseLeave={handleMouseLeave}/>
                         <div className={styles.SafeCodeInputContainer}>
-                            <SafeCodeInput onOkButtonClick={onOkButtonClick} focused={safeCodeInputFocused} />
+                            <SafeCodeInput focused={safeCodeInputFocused} />
                             <SignsProvider>
                                 <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
 
