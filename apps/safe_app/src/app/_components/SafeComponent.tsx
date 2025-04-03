@@ -7,15 +7,13 @@ import {initialCatViewState} from "@/app/_components/CatView"
 
 interface SafeComponentProps {
     safeOpen: boolean;
-    isSafeComponentInitialized: boolean;
-    currentSkinCatViewState: keyof typeof initialCatViewState;
-    updateCatViewState: (newState: keyof typeof initialCatViewState) => void;
+    //isSafeComponentInitialized: boolean;
+    //currentSkinCatViewState: keyof typeof initialCatViewState;
+    updateCatViewState?: (newState: keyof typeof initialCatViewState) => void;
 }
 
-export default function SafeComponent({ safeOpen, isSafeComponentInitialized, currentSkinCatViewState,updateCatViewState}: SafeComponentProps) {
+export default function SafeComponent({ safeOpen, updateCatViewState}: SafeComponentProps) {
     // const [currentSkinCatViewState, setCurrentSkinCatViewState] = useState<keyof typeof initialCatViewState | undefined>(undefined);
-
-
 
     // Флаг, который отслеживает, загружали ли мы состояние
     const hasLoaded = useRef(false);

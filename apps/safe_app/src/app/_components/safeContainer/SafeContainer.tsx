@@ -17,6 +17,7 @@ import {
     SafeState,
     useSafeReducer
 } from "@/app/_components/safeContainer/SafeContainerReducer";
+import SafeContainerContext, {SafeContainerContextType} from "@/app/_components/safeContainer/SafeContainerContext";
 
 
 enum MenuButtons {
@@ -37,9 +38,12 @@ const menuConfiguration: MenuConfiguration = {
 }
 
 export default function SafeContainer() {
+    const [state, dispatch] = useSafeReducer();
+
+    const providerState: SafeContainerContextType = { state, dispatch };
+
     const safeCodeInputRef = useRef<HTMLInputElement | null>(null);
     const [isSafeComponentInitialized, setSafeComponentInitialized] = useState(false)
-    const [state, dispatch] = useSafeReducer();
     const logViewRef = useRef<HTMLInputElement | null>(null);
     const [currentSkinCatViewState, setCurrentSkinCatViewState] = useState<keyof typeof initialCatViewState>("defaultState");
     const [isGiveUpHintActive, setIsGiveUpHintActive] = useState(false);
@@ -201,42 +205,44 @@ export default function SafeContainer() {
     }
 
     return <div>
+        <SafeContainerContext.Provider value={providerState}>
 
-        <div className={styles.safeContainer}>
-            <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
-                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
+            <div className={styles.safeContainer}>
+                <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
+                    <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
 
-            <div className={styles.safeAndMenuContainer}>
+                <div className={styles.safeAndMenuContainer}>
 
-                <div>
-                    <SafeComponent safeOpen={state.safeOpen} isSafeComponentInitialized={isSafeComponentInitialized}  />
-                    <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
-                               onMouseLeave={handleMouseLeave}/>
-                    <div className={styles.SafeCodeInputContainer}>
-                        <SafeCodeInput ref={safeCodeInputRef} state={state} dispatch={dispatch} onOkButtonClick={onOkButtonClick} />
-                        <SignsProvider>
-                            <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
+                    <div>
+                        <SafeComponent safeOpen={state.safeOpen} />
+                        <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
+                                   onMouseLeave={handleMouseLeave}/>
+                        <div className={styles.SafeCodeInputContainer}>
+                            <SafeCodeInput ref={safeCodeInputRef} state={state} dispatch={dispatch} onOkButtonClick={onOkButtonClick} />
+                            <SignsProvider>
+                                <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
 
-                                {state.isHintVisible && (
-                                    <HintPopupView  onCloseHintAction={() => dispatch({ type: SAFE_ACTION.TOGGLE_HINT })} safeCodeInputRef={safeCodeInputRef} getButtonClass={getButtonClass}
-                                                    onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
-                                                    setFirstNumberHintRange={setFirstNumberHintRange}
-                                                    secondNumberHintRange={secondNumberHintRange}
-                                                    setSecondNumberHintRange={setSecondNumberHintRange} />
-                                )}
-                            </QuestionProvider>
-                        </SignsProvider>
+                                    {state.isHintVisible && (
+                                        <HintPopupView  onCloseHintAction={() => dispatch({ type: SAFE_ACTION.TOGGLE_HINT })} safeCodeInputRef={safeCodeInputRef} getButtonClass={getButtonClass}
+                                                        onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
+                                                        setFirstNumberHintRange={setFirstNumberHintRange}
+                                                        secondNumberHintRange={secondNumberHintRange}
+                                                        setSecondNumberHintRange={setSecondNumberHintRange} />
+                                    )}
+                                </QuestionProvider>
+                            </SignsProvider>
+                        </div>
+
                     </div>
+                    <Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick}  state={state} ref={safeCodeInputRef} />
 
                 </div>
-                <Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick}  state={state} ref={safeCodeInputRef} />
+                <div className={styles.logWrapper}>
+                    {state.isLogVisible && <LogView ref={logViewRef} logs={state.logs} />}
+                </div>
 
             </div>
-            <div className={styles.logWrapper}>
-                {state.isLogVisible && <LogView ref={logViewRef} logs={state.logs} />}
-            </div>
 
-        </div>
-
+        </SafeContainerContext.Provider>
     </div>
 }

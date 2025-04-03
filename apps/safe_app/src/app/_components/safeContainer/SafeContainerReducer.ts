@@ -84,5 +84,6 @@ export function safeReducer(state: SafeState, action: SafeAction): SafeState {
 
 export const useSafeReducer = () => {
     const [state, dispatch] = useReducer(safeReducer, getSafeInitialStage());
+
     return [ state, dispatch ] as const;
 }
