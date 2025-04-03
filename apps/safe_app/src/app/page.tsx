@@ -1,7 +1,7 @@
 import styles from "./Home.module.css";
 
 import {Audiowide} from 'next/font/google'
-import SafeContainer from "@/app/_components/SafeContainer";
+import SafeContainer from "@/app/_components/safeContainer/SafeContainer";
 
 const audiowide = Audiowide({
     weight: '400',

@@ -9,8 +9,14 @@ import HintPopupView from "@/app/_components/HintPopupView";
 import Menu, {MenuConfiguration} from "@/app/_components/Menu";
 import { QuestionProvider } from "@/app/_components/HintPopupView";
 import { SignsProvider, useSigns } from "@/app/_components/SignsMenuButtons";
-import SafeSettings from "./SettingButtonView.tsx";
-import CatView, {initialCatViewState} from "./CatView";
+import SafeSettings from "@/app/_components/SettingButtonView.tsx";
+import CatView, {initialCatViewState} from "@/app/_components/CatView";
+import {
+    getSafeInitialStage,
+    SAFE_ACTION,
+    SafeState,
+    useSafeReducer
+} from "@/app/_components/safeContainer/SafeContainerReducer";
 
 
 enum MenuButtons {
@@ -18,79 +24,6 @@ enum MenuButtons {
     ON_GIVE_UP = 'onGiveUp',
     ON_SHOW_HINT = 'onShowHint',
     ON_SHOW_LOG = 'onShowLog',
-}
-
-// Определяем начальное состояние
-export interface SafeState {
-    safeCode: number | null;
-    isWin: boolean;
-    isWrongSafeCode: boolean;
-    isDisabled: boolean;
-    isNewGame: boolean;
-    isGiveUp: boolean;
-    isHintVisible: boolean;
-    isLogVisible: boolean;
-    logs: string[];
-    inputValue: string,
-    safeOpen: boolean;
-}
-
-// Определяем возможные действия (action)
-export type SafeAction =
-    | { type: 'NEW_GAME'; payload: number }
-    | { type: 'SET_WIN'; payload: boolean }
-    | { type: 'SET_WRONG_SAFE_CODE'; payload: boolean }
-    | { type: 'SET_DISABLED'; payload: boolean }
-    | { type: 'TOGGLE_HINT' }
-    | { type: 'TOGGLE_LOG' }
-    | { type: 'ADD_LOG'; payload: string }
-    | { type: 'CLEAR_LOGS' }
-    | { type: 'SET_GIVE_UP'; payload: boolean }
-    | { type: 'SET_INPUT_VALUE'; payload: string }
-    | { type:"TOGGLE_SAFE";   payload: boolean }
-
-// Начальное состояние
-const initialState: SafeState = {
-    safeCode: null,
-    isWin: false,
-    isWrongSafeCode: false,
-    isDisabled: false,
-    isNewGame: true,
-    isGiveUp: false,
-    isHintVisible: false,
-    isLogVisible: false,
-    logs: [],
-    inputValue: "",
-    safeOpen: false,
-};
-
-function safeReducer(state: SafeState, action: SafeAction): SafeState {
-    switch (action.type) {
-        case 'NEW_GAME':
-            return { ...initialState, safeCode: action.payload };
-        case 'SET_WIN':
-            return { ...state, isWin: action.payload, isDisabled: action.payload };
-        case 'SET_WRONG_SAFE_CODE':
-            return { ...state, isWrongSafeCode: action.payload };
-        case 'SET_DISABLED':
-            return { ...state, isDisabled: action.payload };
-        case 'TOGGLE_HINT':
-            return { ...state, isHintVisible: !state.isHintVisible };
-        case 'TOGGLE_LOG':
-            return { ...state, isLogVisible: !state.isLogVisible };
-        case 'ADD_LOG':
-            return { ...state, logs: Array.from(new Set([...state.logs, action.payload])) };
-        case 'CLEAR_LOGS':
-            return { ...state, logs: [], isLogVisible: false };
-        case 'SET_GIVE_UP':
-            return { ...state, isGiveUp: action.payload };
-        case 'SET_INPUT_VALUE':
-            return { ...state, inputValue: action.payload };
-        case "TOGGLE_SAFE":
-            return { ...state, safeOpen:  action.payload  };
-        default:
-            return state;
-    }
 }
 
 const menuConfiguration: MenuConfiguration = {
@@ -106,7 +39,7 @@ const menuConfiguration: MenuConfiguration = {
 export default function SafeContainer() {
     const safeCodeInputRef = useRef<HTMLInputElement | null>(null);
     const [isSafeComponentInitialized, setSafeComponentInitialized] = useState(false)
-    const [state, dispatch] = useReducer(safeReducer, initialState);
+    const [state, dispatch] = useSafeReducer();
     const logViewRef = useRef<HTMLInputElement | null>(null);
     const [currentSkinCatViewState, setCurrentSkinCatViewState] = useState<keyof typeof initialCatViewState>("defaultState");
     const [isGiveUpHintActive, setIsGiveUpHintActive] = useState(false);
@@ -117,7 +50,7 @@ export default function SafeContainer() {
     const [secondNumberHintRange, setSecondNumberHintRange] = useState(1000);
 
     useEffect(() => {
-            setSafeComponentInitialized(true);
+        setSafeComponentInitialized(true);
     }, []);
 
     useEffect(() => {
@@ -128,7 +61,6 @@ export default function SafeContainer() {
         console.log('gau'+ initialCatViewState[newState]);
         setCurrentSkinCatViewState(newState);
     };
-
 
     function handleMouseEnter() {
         updateCatViewState("petpet");
@@ -165,25 +97,26 @@ export default function SafeContainer() {
         }
     }
 
-
     function onShowLog() {
-        dispatch({ type: 'TOGGLE_LOG' });
+        dispatch({ type: SAFE_ACTION.TOGGLE_LOG });
     }
 
     function generateSafeCode(firstNumberCodeRange, secondNumberCodeRange) {
-        return  setSafeCode(Math.floor(Math.random() * secondNumberCodeRange) + firstNumberCodeRange) ;
+        return setSafeCode(Math.floor(Math.random() * secondNumberCodeRange) + firstNumberCodeRange) ;
     }
 
     function onNewGame() {
         generateSafeCode(firstNumberCodeRange, secondNumberCodeRange) ;
-        dispatch({ type: 'NEW_GAME', payload: safeCode });
-        dispatch({ type: 'TOGGLE_SAFE', payload: false});
-        safeCodeInputRef.current.focus();
+        dispatch({ type: SAFE_ACTION.NEW_GAME, payload: safeCode });
+        dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: false});
+
+        if (safeCodeInputRef.current != null)
+            safeCodeInputRef.current.focus();
+
         updateCatViewState('defaultState');
         // console.log("New game started with code:", newCode);
         console.log("New game started with code:",safeCode);
     }
-
 
     function onGameStart() {
         onNewGame();
@@ -194,8 +127,8 @@ export default function SafeContainer() {
     }, []);
 
     function onGiveUp() {
-        dispatch({ type: 'SET_DISABLED', payload: true });
-        dispatch({ type: 'SET_GIVE_UP', payload: true });
+        dispatch({ type: SAFE_ACTION.SET_DISABLED, payload: true });
+        dispatch({ type: SAFE_ACTION.SET_GIVE_UP, payload: true });
 
         updateCatViewState("giveUpGame");
         console.log('Newсостояни'+ currentSkinCatViewState)
@@ -214,7 +147,7 @@ export default function SafeContainer() {
     }, [state.safeOpen]);
 
     function onShowHint() {
-        dispatch({ type: 'TOGGLE_HINT' });
+        dispatch({ type: SAFE_ACTION.TOGGLE_HINT });
 
     }
 
@@ -246,11 +179,10 @@ export default function SafeContainer() {
     };
 
     function onUserWin() {
-        dispatch({ type: 'TOGGLE_SAFE', payload: true});
-        dispatch({ type: 'SET_WIN', payload: true });
-        dispatch({ type: 'SET_DISABLED', payload: true });
+        dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: true}); //TODO: можно объеденить все 3 экшена в один сделать экшен ON_USER_WIN
+        dispatch({ type: SAFE_ACTION.SET_WIN, payload: true });
+        dispatch({ type: SAFE_ACTION.SET_DISABLED, payload: true });
         updateCatViewState("userWin");
-
     }
 
     function onOkButtonClick() {
@@ -259,27 +191,26 @@ export default function SafeContainer() {
         if (state.inputValue === String(state.safeCode)) {
             onUserWin();
         } else {
-            dispatch({ type: 'SET_WRONG_SAFE_CODE', payload: true });
+            dispatch({ type: SAFE_ACTION.SET_WRONG_SAFE_CODE, payload: true });
         }
         onAddLogAction();
     }
 
     function onAddLogAction() {
-        dispatch({ type: 'ADD_LOG', payload: state.inputValue});
+        dispatch({ type: SAFE_ACTION.ADD_LOG, payload: state.inputValue});
     }
-
 
     return <div>
 
         <div className={styles.safeContainer}>
             <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
-                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange,secondNumberCodeRange,setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
+                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
 
             <div className={styles.safeAndMenuContainer}>
 
                 <div>
                     <SafeComponent safeOpen={state.safeOpen} isSafeComponentInitialized={isSafeComponentInitialized}  />
-                    <CatView   currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
+                    <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
                                onMouseLeave={handleMouseLeave}/>
                     <div className={styles.SafeCodeInputContainer}>
                         <SafeCodeInput ref={safeCodeInputRef} state={state} dispatch={dispatch} onOkButtonClick={onOkButtonClick} />
@@ -287,7 +218,7 @@ export default function SafeContainer() {
                             <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
 
                                 {state.isHintVisible && (
-                                    <HintPopupView  onCloseHintAction={() => dispatch({ type: 'TOGGLE_HINT' })} safeCodeInputRef={safeCodeInputRef}  getButtonClass={getButtonClass}
+                                    <HintPopupView  onCloseHintAction={() => dispatch({ type: SAFE_ACTION.TOGGLE_HINT })} safeCodeInputRef={safeCodeInputRef} getButtonClass={getButtonClass}
                                                     onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
                                                     setFirstNumberHintRange={setFirstNumberHintRange}
                                                     secondNumberHintRange={secondNumberHintRange}
@@ -303,11 +234,9 @@ export default function SafeContainer() {
             </div>
             <div className={styles.logWrapper}>
                 {state.isLogVisible && <LogView ref={logViewRef} logs={state.logs} />}
-
             </div>
 
         </div>
 
     </div>
-
 }
