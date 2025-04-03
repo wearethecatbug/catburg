@@ -110,7 +110,7 @@ const menuButtons: MenuConfiguration = {
     style: styles.menuButton
 }
 
-export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
+export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
     setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange }: {
     onCloseHintAction: () => void,
     getButtonClass: (buttonId: string) => string,
@@ -217,9 +217,6 @@ export default function HintPopupView({ onCloseHintAction, safeCodeInputRef, get
 
     function onCloseButtonClick() {
         onCloseHintAction();
-        if (safeCodeInputRef?.current) {
-            safeCodeInputRef.current.focus();
-        }
     }
 
     const handleFocus = () => {

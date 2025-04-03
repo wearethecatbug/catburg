@@ -52,6 +52,7 @@ export default function SafeContainer() {
     const [secondNumberCodeRange, setSecondNumberCodeRange] = useState<number>(1000);
     const [firstNumberHintRange, setFirstNumberHintRange] = useState(1);
     const [secondNumberHintRange, setSecondNumberHintRange] = useState(1000);
+    const [safeCodeInputFocused, setSafeCodeInputFocused] = useState(true);
 
     useEffect(() => {
         setSafeComponentInitialized(true);
@@ -114,8 +115,7 @@ export default function SafeContainer() {
         dispatch({ type: SAFE_ACTION.NEW_GAME, payload: safeCode });
         dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: false});
 
-        if (safeCodeInputRef.current != null)
-            safeCodeInputRef.current.focus();
+        setSafeCodeInputFocused(true);
 
         updateCatViewState('defaultState');
         // console.log("New game started with code:", newCode);
@@ -146,13 +146,13 @@ export default function SafeContainer() {
 
     useEffect(() => {
         if (state.safeOpen && safeCodeInputRef.current) {
-            safeCodeInputRef.current.focus();
+            setSafeCodeInputFocused(true);
         }
     }, [state.safeOpen]);
 
     function onShowHint() {
         dispatch({ type: SAFE_ACTION.TOGGLE_HINT });
-
+        setSafeCodeInputFocused((value) => false);
     }
 
     useEffect(() => {
@@ -218,12 +218,16 @@ export default function SafeContainer() {
                         <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
                                    onMouseLeave={handleMouseLeave}/>
                         <div className={styles.SafeCodeInputContainer}>
-                            <SafeCodeInput ref={safeCodeInputRef} state={state} dispatch={dispatch} onOkButtonClick={onOkButtonClick} />
+                            <SafeCodeInput onOkButtonClick={onOkButtonClick} focused={safeCodeInputFocused} />
                             <SignsProvider>
                                 <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
 
                                     {state.isHintVisible && (
-                                        <HintPopupView  onCloseHintAction={() => dispatch({ type: SAFE_ACTION.TOGGLE_HINT })} safeCodeInputRef={safeCodeInputRef} getButtonClass={getButtonClass}
+                                        <HintPopupView onCloseHintAction={() => {
+                                            dispatch({type: SAFE_ACTION.TOGGLE_HINT});
+                                            setSafeCodeInputFocused((value) => true);
+                                        }
+                                        } getButtonClass={getButtonClass}
                                                         onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
                                                         setFirstNumberHintRange={setFirstNumberHintRange}
                                                         secondNumberHintRange={secondNumberHintRange}
@@ -234,7 +238,7 @@ export default function SafeContainer() {
                         </div>
 
                     </div>
-                    <Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick}  state={state} ref={safeCodeInputRef} />
+                    <Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick} state={state} />
 
                 </div>
                 <div className={styles.logWrapper}>

@@ -1,13 +1,12 @@
 import styles from './SafeCodeInput.module.css';
-import {useEffect, forwardRef, useState} from "react";
+import {useEffect, useRef} from "react";
 
 import {useSafeContext} from "@/app/_components/safeContainer/SafeContainerContext";
 
-const SafeCodeInput = forwardRef<HTMLInputElement, {
-    onOkButtonClick: () => boolean;
-}>(({onOkButtonClick}, ref) => {
+const SafeCodeInput = ({onOkButtonClick, focused}:{onOkButtonClick: () => void, focused: boolean}) => {
 
     const {state, dispatch} = useSafeContext();
+    const inputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         console.log("isWrongSafeCode changed:", state.isWrongSafeCode);
@@ -19,6 +18,10 @@ const SafeCodeInput = forwardRef<HTMLInputElement, {
         }
     }, [state.isWrongSafeCode]);
 
+    if (focused) {
+        if (inputRef.current)
+            inputRef.current.focus();
+    }
 
     const getCodeInputClass = () => {
         if (state.isWin) return `${styles.CodeInput} ${styles.isWin}`;
@@ -40,7 +43,6 @@ const SafeCodeInput = forwardRef<HTMLInputElement, {
         return styles.SafeCodeInputContainer; // Стандартный стиль
     };
 
-
     function getInputProps() {
         if (state.isWin) {
             return {
@@ -60,8 +62,7 @@ const SafeCodeInput = forwardRef<HTMLInputElement, {
     return (
         <>
             <div className={getCodeContainerClass()}>
-                <input ref={ref} className={getCodeInputClass()} id="fname"
-                       name="fname" {...getInputProps()}  />
+                <input className={getCodeInputClass()} id="fname" ref={inputRef} name="fname" {...getInputProps()} />
                 <button className={styles.CodeInputButton} disabled={state.isDisabled} onClick={onOkButtonClick}>OK
                 </button>
             </div>
@@ -69,4 +70,5 @@ const SafeCodeInput = forwardRef<HTMLInputElement, {
     );
 
 });
+
 export default SafeCodeInput;
