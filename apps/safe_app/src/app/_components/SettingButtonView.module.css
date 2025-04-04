@@ -46,6 +46,11 @@
     visibility: visible;
 }
 
+/*.safeSettingsInputContainer.hide {*/
+/*    opacity: 0;*/
+/*    visibility: hidden;*/
+/*    transition: right 0.3s ease-in-out, opacity 0.3s ease-in-out;*/
+/*}*/
 
 .inputsContainer.show {
     opacity: 1;

@@ -6,23 +6,23 @@ type InputCodeRangeNumbers = {
     setFirstNumberCodeRange: (value: number) => void
     secondNumberCodeRange: number,
     setSecondNumberCodeRange: (value: number) => void
-
 }
 
 type InputHintRangeNumbers = {
     firstNumberHintRange: number,
     setFirstNumberHintRange: (value: number) => void
     secondNumberHintRange: number,
-    setSecondNumberHintRange:(value: number) => void
+    setSecondNumberHintRange: (value: number) => void
 }
 
-export default function SafeSettings({ inputCodeRangeNumbers, inputHintRangeNumbers }: {
+export default function SafeSettings({inputCodeRangeNumbers, inputHintRangeNumbers}: {
     inputCodeRangeNumbers?: InputCodeRangeNumbers, // Сделал их опциональными (?)
     inputHintRangeNumbers?: InputHintRangeNumbers
 }) {
 
     const [isExpanded, setIsExpanded] = useState(false);
 
+    //  Функция для переключения состояния
     const toggleInputs = () => {
         setIsExpanded((prev) => !prev);
     };
@@ -37,7 +37,7 @@ export default function SafeSettings({ inputCodeRangeNumbers, inputHintRangeNumb
 
     return (
         <div className={styles.settingContainer}>
-            <button className={styles.safeSettingsButton} onClick={toggleInputs} />
+            <button className={styles.safeSettingsButton} onClick={toggleInputs}/>
             {isExpanded && (
                 <div className={styles.safeSettingsInputContainer}>
                     <div className={classNames.inputsContainer}>

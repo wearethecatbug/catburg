@@ -8,7 +8,6 @@ import {useSigns} from "@/app/_components/SignsMenuButtons";
 import {signsButtons} from "@/app/_components/SignsMenuButtons";
 
 
-
 type questionData = {
     answer: number;
     questionParts: string;
@@ -20,6 +19,7 @@ const QuestionContext = createContext<{
     updateQuestion: () => void;
 } | null>(null);
 
+// Создаем контекст
 export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}) {
     const {activeSign} = useSigns();
     const [question, setQuestion] = useState(() => generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
@@ -39,6 +39,7 @@ export function QuestionProvider({children, firstNumberHintRange, secondNumberHi
     );
 }
 
+// Хук для удобного использования контекста
 export function useQuestion() {
     const context = useContext(QuestionContext);
     if (!context) {
@@ -57,7 +58,7 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
         "÷": (firstNumber, secondNumber) => secondNumber !== 0 ? firstNumber / secondNumber : firstNumber,
     }
 
-
+    // Генерируем случайные числа в заданном диапазоне
     function generateRandomNumberInRange(firstNumberHintRange, secondNumberHintRange, operator: string): [number, number] {
         if (operator == "÷") return getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange);
         const num1 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
@@ -65,13 +66,15 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
         return [num1, num2];
     }
 
-    function getDivisibleNumbers(firstNumberHintRangein, secondNumberHintRange): [number, number] {
-        let divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRangein; // Генерируем делитель
+    // Функция для генерации делимого и делителя
+    function getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange): [number, number] {
+        let divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange; // Генерируем делитель
         let quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
         let dividend = divisor * quotient; // Получаем делимое
         return [dividend, divisor];
     }
 
+    // Функция для генерации случайного знака операции
     function getOperator(): string {
         if (!activeSign) {
             let operatorsKeys = Object.keys(operators);
@@ -81,7 +84,7 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
         return activeSign;
     }
 
-
+// Функция для вычисления результата операции
     function calculate(num1: number, num2: number, operator: string): number {
         return operators[operator](num1, num2);
     }
@@ -110,8 +113,11 @@ const menuButtons: MenuConfiguration = {
     style: styles.menuButton
 }
 
-export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
-    setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange }: {
+
+export default function HintPopupView({
+                                          onCloseHintAction, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
+                                          setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange
+                                      }: {
     onCloseHintAction: () => void,
     getButtonClass: (buttonId: string) => string,
     onGiveUpHintChange: (isActive: boolean) => void,
@@ -141,6 +147,7 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
         }
     }, []);
 
+    // Функция для обработки нажатия клавиши Hint
     function onHintMenuClick(id: string) {
         switch (id) {
             case HintMenuButtons.GIVE_UP_HINT:
@@ -158,12 +165,14 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
         }
     }
 
+    // Функция для обработки нажатия клавиши Signs
     function onShowSigns() {
         console.log("onShowSigns active");
         setIsSignsVisible((prev) => !prev);
     }
 
 
+    // Функция для обработки нажатия клавиши Give Up Hint
     function onGiveUpHint() {
         if (inputRefAnswer.current == null) return;
         setIsGiveUpHintActive(true);
@@ -173,6 +182,7 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
         onGiveUpHintChange(true);
     }
 
+    // Функция для обработки нажатия клавиши New Hint
     function onNewHint() {
         updateQuestion();
         setIsValid(null);
@@ -183,6 +193,7 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
             inputRefAnswer.current.value = "";
         }
     }
+
 
     const getInputClass = () => {
         if (isValid === true) return `${styles.textInputField} ${styles.valid}`;  // Зеленый стиль при валидном значении
@@ -195,11 +206,13 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
         return styles.popupContainer; // Стандартный стиль
     };
 
+    // Функция для экранирования кнопок основого меню с помощью CSS
     const getShieldClass = () => {
         if (isDisabled) return `${styles.shield}`;
         return ``; // Стандартный стиль
     };
 
+    // Функция для обработки нажатия клавиши OK
     function onOkButtonClick() {
         if (!inputRefAnswer.current) return;
         const userAnswer = parseFloat(inputRefAnswer.current.value);
@@ -214,11 +227,12 @@ export default function HintPopupView({ onCloseHintAction, getButtonClass, onGiv
 
     }
 
-
+// Функция для обработки нажатия клавиши Close
     function onCloseButtonClick() {
         onCloseHintAction();
     }
 
+    // Функция для управления фокусом на инпуте при невалидном ответе
     const handleFocus = () => {
         if (!isValid) {
             setIsValid(null);

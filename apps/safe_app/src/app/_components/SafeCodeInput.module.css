@@ -39,22 +39,30 @@
 }
 
 @keyframes glow {
-    0% { box-shadow: 0px 0px 10px rgba(255, 89, 24, 0.84); }
-    50% { box-shadow: 0px 0px 20px rgba(255, 136, 0, 0.9); }
-    100% { box-shadow: 0px 0px 10px rgba(79, 104, 245, 0.5); }
+    0% {
+        box-shadow: 0px 0px 10px rgba(255, 89, 24, 0.84);
+    }
+    50% {
+        box-shadow: 0px 0px 20px rgba(255, 136, 0, 0.9);
+    }
+    100% {
+        box-shadow: 0px 0px 10px rgba(79, 104, 245, 0.5);
+    }
 }
 
 .CodeInputButton:active {
     animation: glow 1.5s infinite alternate;
 }
+
 .isWin {
     font-size: 13px;
     background-color: #4caf50 !important; /* Зеленый при победе */
     color: white;
 }
+
 .isGiveUp {
     font-size: 13px;
-    background-color: #ea5f6b !important; /* Зеленый при победе */
+    background-color: #ea5f6b !important; /* Красный при проигрыше */
     color: white;
 }
 
@@ -69,9 +77,14 @@
 }
 
 @keyframes flashRed {
-    0% { background-color: #ff4c4c; }
-    100% { background-color: white; }
+    0% {
+        background-color: #ff4c4c;
+    }
+    100% {
+        background-color: white;
+    }
 }
+
 .CodeInput[type="number"]::-webkit-outer-spin-button,
 .CodeInput[type="number"]::-webkit-inner-spin-button {
     -webkit-appearance: none;

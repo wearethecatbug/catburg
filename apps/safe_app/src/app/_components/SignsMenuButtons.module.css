@@ -1,7 +1,7 @@
 .signsMenuButton {
     width: 70px;
     height: 70px;
-    background-size:80px 80px; /* Устанавливаем конкретный размер */
+    background-size: 80px 80px; /* Устанавливаем конкретный размер */
     transform: scale(0.8);
     transition: all 0.2s ease-in-out;
     flex-basis: 100%;
@@ -48,27 +48,27 @@
 .buttonPlus {
     background: url('/pinkPlus.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px; /* Устанавливаем конкретный размер */
+    background-size: 80px 80px; /* Устанавливаем конкретный размер */
 
 }
 
 .buttonMinus {
     background: url('/blueMinus.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px;
+    background-size: 80px 80px;
 }
 
 .buttonMultiple {
     background: url('/redMultiple.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px;
+    background-size: 80px 80px;
 }
 
 
 .buttonDevision {
     background: url('/yellowDevision.png') no-repeat center center;
     background-size: contain;
-    background-size:80px 80px;
+    background-size: 80px 80px;
 }
 
 

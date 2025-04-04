@@ -27,7 +27,7 @@
     font-family: "Audiowide", sans-serif;
     color: #ffffff;
     background-color: rgb(52, 85, 50);
-    border-radius: 15px 15px ;
+    border-radius: 15px 15px;
 
     appearance: textfield;
     -moz-appearance: textfield; /* Firefox */
@@ -46,6 +46,7 @@
     background-color: #a0e083;
     transition: background-color 0.4s ease-in-out;
 }
+
 .invalid {
     background-color: #e30b0b;
     transition: background-color 0.4s ease-in-out;
@@ -60,6 +61,7 @@
     color: #ffffff;
     background-color: transparent;
 }
+
 .hintInputContainer {
     width: 60%;
     top: 185px;
@@ -73,7 +75,7 @@
 }
 
 .closeButtonContainer {
-    background: url('/cancellButton1.jpg')  no-repeat center center;
+    background: url('/cancellButton1.jpg') no-repeat center center;
     background-size: contain;
     display: inline-block;
     position: absolute;
@@ -85,10 +87,12 @@
     transition: transform 0.3s ease-in-out;
     transform-origin: center;
 }
+
 .closeButtonContainer :hover {
-    animation: spin 0.7s ease-in-out; /* Уменьшил время для плавности */
+    animation: spin 0.7s ease-in-out; /* Уменьшаем время для плавности */
 
 }
+
 @keyframes spin {
     from {
         transform: rotate(0deg);
@@ -103,7 +107,7 @@
 }
 
 .okButtonContainer {
-    background: url("/sendButton.png")  no-repeat center center;
+    background: url("/sendButton.png") no-repeat center center;
     background-size: contain;
     width: 70px;
     height: 70px;
@@ -126,7 +130,7 @@
     box-shadow: 0px 5px 17px rgba(0, 0, 0, 1);
 }
 
-.okButtonContainer:active{
+.okButtonContainer:active {
     transform: scale(0.9);
     box-shadow: 0 3px 17px rgba(0, 0, 0, 1);
     border-radius: 25%;
@@ -176,7 +180,6 @@
 }
 
 
-
 .giveUpHint {
     background: url('/GiveUpHint.png') no-repeat center center;
     background-size: contain;
@@ -189,12 +192,12 @@
 }
 
 
-
 .signs {
     background: url('/Signs.png') no-repeat center center;
     background-size: contain;
 
 }
+
 .giveUpHint, .newHint, .signs {
     background-size: 80px 80px; /* Или contain, но не оба */
 }

@@ -1,24 +1,28 @@
 'use client'
 
 import styles from "./Menu.module.css";
-import { SafeState, SafeAction  } from "@/app/_components/SafeContainer";
+import {SafeState, SafeAction} from "@/app/_components/SafeContainer";
 import {memo} from "react";
 
 
-
-const ButtonsList = memo(function ButtonsList({ onHintMenuClick, menuConfiguration, getButtonClass }: {onHintMenuClick: (id: string) => void, menuConfiguration: MenuConfiguration, getButtonClass: (id: string) => string}) {
+const ButtonsList = memo(function ButtonsList({
+                                                  onHintMenuClick,
+                                                  menuConfiguration,
+                                                  getButtonClass
+                                              }: { onHintMenuClick: (id: string) => void, menuConfiguration: MenuConfiguration, getButtonClass: (id: string) => string }) {
+    //Обработчик нажатия на кнопку
     function onButtonClick(event) {
-        const { id } = event.currentTarget;
+        const {id} = event.currentTarget;
         onHintMenuClick(id);
     }
-
+    // Генерация кнопок на основе конфигурации
     function createButtons() {
         return (
             <ul>
                 {menuConfiguration.buttons.map((button) => (
                     <li key={button.id}>
                         <button
-                           id={button.id}
+                            id={button.id}
                             onClick={onButtonClick}
                             type="button"
                             className={`${menuConfiguration.style} ${button.className} ${getButtonClass(button.id)}`}
@@ -30,7 +34,7 @@ const ButtonsList = memo(function ButtonsList({ onHintMenuClick, menuConfigurati
             </ul>
         );
     }
-
+    // Обёртка над списком кнопок
     return <div>{createButtons()}</div>;
 });
 
@@ -41,14 +45,21 @@ export type ButtonConfiguration = {
 }
 
 export type MenuConfiguration = {
-    buttons : ButtonConfiguration[];
+    buttons: ButtonConfiguration[];
     style: string;
 }
 
-export default function Menu({ menuConfiguration, onMenuButtonClickAction,   state , getButtonClass }: {menuConfiguration: MenuConfiguration, onMenuButtonClickAction: (id: string) => void,  state: SafeState,  getButtonClass: (id: string) => string}) {
+// Основной компонент Menu
+export default function Menu({
+                                 menuConfiguration,
+                                 onMenuButtonClickAction,
+                                 state,
+                                 getButtonClass
+                             }: { menuConfiguration: MenuConfiguration, onMenuButtonClickAction: (id: string) => void, state: SafeState, getButtonClass: (id: string) => string }) {
     return (
         <div>
-            <ButtonsList getButtonClass={getButtonClass} onHintMenuClick={onMenuButtonClickAction} menuConfiguration={menuConfiguration} />
+            <ButtonsList getButtonClass={getButtonClass} onHintMenuClick={onMenuButtonClickAction}
+                         menuConfiguration={menuConfiguration}/>
         </div>
     );
 

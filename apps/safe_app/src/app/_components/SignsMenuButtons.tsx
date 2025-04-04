@@ -13,10 +13,10 @@ enum HintSignsButtons {
 
 export const signsButtons: MenuConfiguration = {
     buttons: [
-        { id: HintSignsButtons.Signs_Plus, name: '+', className: styles.buttonPlus },
-        { id: HintSignsButtons.Signs_Minus, name: '-', className: styles.buttonMinus },
-        { id: HintSignsButtons.Signs_Multiple, name: '*', className: styles.buttonMultiple },
-        { id: HintSignsButtons.Signs_Devision, name: '÷', className: styles.buttonDevision },
+        {id: HintSignsButtons.Signs_Plus, name: '+', className: styles.buttonPlus},
+        {id: HintSignsButtons.Signs_Minus, name: '-', className: styles.buttonMinus},
+        {id: HintSignsButtons.Signs_Multiple, name: '*', className: styles.buttonMultiple},
+        {id: HintSignsButtons.Signs_Devision, name: '÷', className: styles.buttonDevision},
     ],
     style: styles.signsMenuButton
 };
@@ -26,15 +26,14 @@ type SignsContextType = {
     setActiveSign: (sign: (prev) => string) => void;
 };
 
-
-// Создаем контекст
+// Создаем контекст для передачи состояния активного знака 
 const SignsContext = createContext<SignsContextType | undefined>(undefined);
 
-export function SignsProvider({ children }: { children: ReactNode }) {
+export function SignsProvider({children}: { children: ReactNode }) {
     const [activeSign, setActiveSign] = useState<string | null>(null);
 
     return (
-        <SignsContext.Provider value={{ activeSign, setActiveSign }}>
+        <SignsContext.Provider value={{activeSign, setActiveSign}}>
             {children}
         </SignsContext.Provider>
     );
@@ -49,7 +48,10 @@ export function useSigns() {
     return context;
 }
 
-export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { getButtonClass: (buttonId: string) => string , isSignsVisible: boolean} ) {
+export default function SignsPopUpView({
+                                           getButtonClass,
+                                           isSignsVisible
+                                       }: { getButtonClass: (buttonId: string) => string, isSignsVisible: boolean }) {
 
     const {activeSign, setActiveSign} = useSigns();
 
@@ -78,9 +80,6 @@ export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { g
         console.log("Нажата кнопка ÷");
     }
 
-    function onSignAny() {
-        console.log("Нажата кнопка ⊙");
-    }
 
     function getSignsButtonClass(buttonId: string) {
         const button = signsButtons.buttons.find(btn => btn.id === buttonId);
@@ -91,6 +90,7 @@ export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { g
             ${activeSign === button.name ? styles.activeButtonSign : ''}`.trim();
     }
 
+// Обработчик клика по кнопке SignsMenu
     const onSignsMenuClick = useCallback((id: string) => {
         const button = signsButtons.buttons.find(btn => btn.id === id);
         if (!button) return;
@@ -107,10 +107,11 @@ export default  function SignsPopUpView ({getButtonClass, isSignsVisible } : { g
 
     return (
         <>
-
-        <div className={`${styles.signsContainer} ${isSignsVisible ? "" : styles.hiddenSigns}`}>
-            <Menu menuConfiguration={signsButtons}  onMenuButtonClickAction={onSignsMenuClick}  getButtonClass={getSignsButtonClass} signHandlers={signHandlers}/>
-        </div>
+            <div className={`${styles.signsContainer} ${isSignsVisible ? "" : styles.hiddenSigns}`}>
+                <Menu menuConfiguration={signsButtons} onMenuButtonClickAction={onSignsMenuClick}
+                      getButtonClass={getSignsButtonClass} signHandlers={signHandlers}/>
+            </div>
 
         </>
-    )}
+    )
+}

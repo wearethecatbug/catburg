@@ -18,6 +18,7 @@ export default function SafeComponent({ safeOpen, updateCatViewState}: SafeCompo
     // Флаг, который отслеживает, загружали ли мы состояние
     const hasLoaded = useRef(false);
 
+    // Функция для указания состояния загрузки safeComponent, чтобы CatViewState дожидался его подгрузки, а потом сам грузился
     const loadCatViewState = async () => {
         return new Promise<keyof typeof initialCatViewState>((resolve) => {
             setTimeout(() => {
@@ -26,7 +27,7 @@ export default function SafeComponent({ safeOpen, updateCatViewState}: SafeCompo
         });
     };
 
-    useEffect(() => {
+        useEffect(() => {
         if (!hasLoaded.current) {
             hasLoaded.current = true;
             loadCatViewState().then(updateCatViewState);

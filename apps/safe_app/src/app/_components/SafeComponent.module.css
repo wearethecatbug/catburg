@@ -41,6 +41,7 @@
     visibility: hidden;
     position: absolute;
 }
+
 .safePlaceholder {
     width: 500px; /* Размеры должны совпадать с .safeOpen и .safeClose */
     height: 460px;
