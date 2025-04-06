@@ -56,8 +56,7 @@ export default function SafeContainer() {
 
     useEffect(() => {
         if (state.isWrongSafeCode) {
-            dispatch({ type: SAFE_ACTION.TOGGLE_SAFE, payload: true}); //TODO: можно объеденить все 3 экшена в один сделать экшен ON_USER_WIN
-            dispatch({ type: SAFE_ACTION.SET_DISABLED, payload: true });
+            dispatch({ type: SAFE_ACTION.ON_USER_WIN, payload: true}); //TODO: можно объеденить все 3 экшена в один сделать экшен ON_USER_WIN
             updateCatViewState("userWin");
         }
     }, [state.isWin]);
