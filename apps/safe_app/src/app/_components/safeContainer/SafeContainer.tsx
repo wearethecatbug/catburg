@@ -74,6 +74,9 @@ export default function SafeContainer() {
         setCurrentSkinCatViewState(newState);
     };
 
+    /**
+     * Обработчик события mouseEnter для кота.
+     */
     function handleMouseEnter() {
         updateCatViewState("petpet");
     }

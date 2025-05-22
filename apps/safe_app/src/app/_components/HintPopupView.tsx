@@ -11,7 +11,6 @@ import {signsButtons} from "@/app/_components/SignsMenuButtons";
 type questionData = {
     answer: number;
     questionParts: string;
-
 }
 
 const QuestionContext = createContext<{
