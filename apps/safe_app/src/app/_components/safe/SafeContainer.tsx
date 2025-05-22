@@ -3,21 +3,16 @@
 import styles from './SafeContainer.module.css';
 import SafeComponent from "@/app/_components/SafeComponent";
 import LogView from "@/app/_components/LogView";
-import React, { useEffect, useRef, useState, useReducer } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import SafeCodeInput from "@/app/_components/SafeCodeInput";
-import HintPopupView from "@/app/_components/HintPopupView";
 import Menu, {MenuConfiguration} from "@/app/_components/Menu";
-import { QuestionProvider } from "@/app/_components/HintPopupView";
-import { SignsProvider, useSigns } from "@/app/_components/SignsMenuButtons";
-import SafeSettings from "@/app/_components/SettingButtonView.tsx";
+import SafeSettings from "@/app/_components/SettingButtonView";
 import CatView, {initialCatViewState} from "@/app/_components/CatView";
 import {
-    getSafeInitialStage,
     SAFE_ACTION,
-    SafeState,
     useSafeReducer
-} from "@/app/_components/safeContainer/SafeContainerReducer";
-import SafeContainerContext, {SafeContainerContextType} from "@/app/_components/safeContainer/SafeContainerContext";
+} from "@/components/safe/SafeContainerReducer";
+import SafeContainerContext, {SafeContainerContextType} from "@/components/safe/SafeContainerContext";
 
 
 enum MenuButtons {
@@ -116,7 +111,7 @@ export default function SafeContainer() {
         dispatch({ type: SAFE_ACTION.TOGGLE_LOG });
     }
 
-    function generateSafeCode(firstNumberCodeRange, secondNumberCodeRange) {
+    function generateSafeCode(firstNumberCodeRange: number, secondNumberCodeRange: number) {
         return setSafeCode(Math.floor(Math.random() * secondNumberCodeRange) + firstNumberCodeRange) ;
     }
 
@@ -198,10 +193,9 @@ export default function SafeContainer() {
 
     return <div>
         <SafeContainerContext.Provider value={providerState}>
-
             <div className={styles.safeContainer}>
                 <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
-                    <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
+                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
 
                 <div className={styles.safeAndMenuContainer}>
 
@@ -211,22 +205,6 @@ export default function SafeContainer() {
                                    onMouseLeave={handleMouseLeave}/>
                         <div className={styles.SafeCodeInputContainer}>
                             <SafeCodeInput focused={safeCodeInputFocused} />
-                            <SignsProvider>
-                                <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>
-
-                                    {state.isHintVisible && (
-                                        <HintPopupView onCloseHintAction={() => {
-                                            dispatch({type: SAFE_ACTION.TOGGLE_HINT});
-                                            setSafeCodeInputFocused((value) => true);
-                                        }
-                                        } getButtonClass={getButtonClass}
-                                                        onGiveUpHintChange={setIsGiveUpHintActive} firstNumberHintRange={firstNumberHintRange}
-                                                        setFirstNumberHintRange={setFirstNumberHintRange}
-                                                        secondNumberHintRange={secondNumberHintRange}
-                                                        setSecondNumberHintRange={setSecondNumberHintRange} />
-                                    )}
-                                </QuestionProvider>
-                            </SignsProvider>
                         </div>
 
                     </div>
