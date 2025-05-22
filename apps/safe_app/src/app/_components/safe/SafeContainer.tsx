@@ -194,29 +194,15 @@ export default function SafeContainer() {
     return <div>
         <SafeContainerContext.Provider value={providerState}>
             <div className={styles.safeContainer}>
-                <p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
-                <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
-
-                <div className={styles.safeAndMenuContainer}>
-
-                    <div>
-                        <SafeComponent safeOpen={state.safeOpen} />
-                        <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
-                                   onMouseLeave={handleMouseLeave}/>
-                        <div className={styles.SafeCodeInputContainer}>
-                            <SafeCodeInput focused={safeCodeInputFocused} />
-                        </div>
-
+                <div>
+                    <SafeComponent safeOpen={state.safeOpen} />
+                    <CatView currentSkinCatViewState={currentSkinCatViewState}  isSafeComponentInitialized={isSafeComponentInitialized} updateCatViewState={updateCatViewState}  onMouseEnter={handleMouseEnter}
+                               onMouseLeave={handleMouseLeave}/>
+                    <div className={styles.SafeCodeInputContainer}>
+                        <SafeCodeInput focused={safeCodeInputFocused} />
                     </div>
-                    <Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick} state={state} />
-
                 </div>
-                <div className={styles.logWrapper}>
-                    {state.isLogVisible && <LogView ref={logViewRef} logs={state.logs} />}
-                </div>
-
             </div>
-
         </SafeContainerContext.Provider>
     </div>
 }
