@@ -1,4 +1,4 @@
-import styles from "@/app/_components/CatView.module.css";
+import styles from "@/components/CatView.module.css";
 import React, {useEffect, useState} from "react";
 
 interface CatViewState {

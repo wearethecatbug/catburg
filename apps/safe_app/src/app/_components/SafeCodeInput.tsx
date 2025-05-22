@@ -1,8 +1,8 @@
 import styles from './SafeCodeInput.module.css';
 import {useEffect, useRef} from "react";
 
-import {useSafeContext} from "@/app/_components/safeContainer/SafeContainerContext";
-import {SAFE_ACTION} from "@/app/_components/safeContainer/SafeContainerReducer";
+import {useSafeContext} from "@/components/safe/SafeContainerContext";
+import {SAFE_ACTION} from "@/components/safe/SafeContainerReducer";
 
 const SafeCodeInput = ({focused}: { focused: boolean }) => {
 

@@ -2,10 +2,10 @@
 
 import styles from './HintPopupView.module.css'
 import React, {useEffect, useRef, useState, createContext, useContext, useCallback} from "react";
-import Menu, {MenuConfiguration} from "@/app/_components/Menu";
-import SignsPopUpView from "@/app/_components/SignsMenuButtons";
-import {useSigns} from "@/app/_components/SignsMenuButtons";
-import {signsButtons} from "@/app/_components/SignsMenuButtons";
+import Menu, {MenuConfiguration} from "@/components/Menu";
+import SignsPopUpView from "@/components/SignsMenuButtons";
+import {useSigns} from "@/components/SignsMenuButtons";
+import {signsButtons} from "@/components/SignsMenuButtons";
 
 
 type questionData = {

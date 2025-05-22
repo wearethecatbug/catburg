@@ -1,13 +1,13 @@
 'use client'
 
 import styles from './SafeContainer.module.css';
-import SafeComponent from "@/app/_components/SafeComponent";
-import LogView from "@/app/_components/LogView";
+import SafeComponent from "@/components/SafeComponent";
+import LogView from "@/components/LogView";
 import React, { useEffect, useRef, useState } from "react";
-import SafeCodeInput from "@/app/_components/SafeCodeInput";
-import Menu, {MenuConfiguration} from "@/app/_components/Menu";
-import SafeSettings from "@/app/_components/SettingButtonView";
-import CatView, {initialCatViewState} from "@/app/_components/CatView";
+import SafeCodeInput from "@/components/SafeCodeInput";
+import Menu, {MenuConfiguration} from "@/components/Menu";
+import SafeSettings from "@/components/SettingButtonView";
+import CatView, {initialCatViewState} from "@/components/CatView";
 import {
     SAFE_ACTION,
     useSafeReducer

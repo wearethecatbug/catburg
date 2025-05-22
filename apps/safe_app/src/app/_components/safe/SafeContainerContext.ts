@@ -1,5 +1,5 @@
 import React, {createContext} from 'react';
-import {SafeState} from "@/app/_components/safeContainer/SafeContainerReducer";
+import {SafeState} from "@/components/safe/SafeContainerReducer";
 
 export type SafeContainerContextType = {
     state: SafeState, dispatch: React.Dispatch<any>;

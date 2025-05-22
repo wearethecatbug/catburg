@@ -2,8 +2,8 @@
 
 import styles from "./SafeComponent.module.css";
 import React, {useState, useEffect, useRef} from 'react'
-import CatView from "@/app/_components/CatView";
-import {initialCatViewState} from "@/app/_components/CatView"
+import CatView from "@/components/CatView";
+import {initialCatViewState} from "@/components/CatView"
 
 interface SafeComponentProps {
     safeOpen: boolean;

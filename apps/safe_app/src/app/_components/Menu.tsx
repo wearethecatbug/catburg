@@ -1,7 +1,7 @@
 'use client'
 
 import styles from "./Menu.module.css";
-import {SafeState, SafeAction} from "@/app/_components/SafeContainer";
+import {SafeState, SafeAction} from "@/components/SafeContainer";
 import {memo} from "react";
 
 

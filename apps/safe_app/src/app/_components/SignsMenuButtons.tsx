@@ -1,6 +1,6 @@
 import styles from "./SignsMenuButtons.module.css";
 import React, {createContext, useContext, useCallback, useEffect, useState, ReactNode} from "react";
-import Menu, {MenuConfiguration} from "@/app/_components/Menu";
+import Menu, {MenuConfiguration} from "@/components/Menu";
 import SafeSettings from "./SettingButtonView";
 
 
