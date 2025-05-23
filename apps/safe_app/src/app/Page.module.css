@@ -1,0 +1,20 @@
+.headerText {
+    color: #de778c;
+    font-size: 50px;
+    font-family: "Audiowide", sans-serif;
+    text-align: center;
+    margin: 80px;
+    max-width: 700px;
+    user-select: none;
+    --shadowSize: 2px;
+    --shadowColor: #FFFFFF;
+    text-shadow: var(--shadowSize) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) calc(var(--shadowSize) * -1) 0 var(--shadowColor), calc(var(--shadowSize) * -1) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) var(--shadowSize) 0 var(--shadowColor);
+}
+
+.background {
+    background-image: url('/background2.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 100vh;
+    width: 100vw;
+}

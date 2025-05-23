@@ -1,26 +1,36 @@
-import styles from "./Home.module.css";
+"use client";
 
-import {Audiowide} from 'next/font/google'
+import styles from "./Page.module.css";
+
+import { Audiowide } from "next/font/google";
 import SafeContainer from "@/components/safe/SafeContainer";
+import { useSafeReducer } from "@/components/safe/SafeContainerReducer";
+import { SafeMenu } from "@/components/safe/safeMenu/SafeMenu";
 
 const audiowide = Audiowide({
-    weight: '400',
-    subsets: ['latin'],
-})
+  weight: "400",
+  subsets: ["latin"],
+});
 
 export default function Home() {
-    return (
-        <div className={styles.background}>
-            <SafeContainer/>
-        </div>
-    );
+  const [state, dispatch] = useSafeReducer();
+
+  return (
+    <div className={styles.background}>
+      <p className={styles.headerText}>
+        The safe code is a number that ranges from 1 to 1000
+      </p>
+      <SafeContainer />
+      <SafeMenu />
+    </div>
+  );
 }
-//<Menu getButtonClass={getButtonClass} menuConfiguration={menuConfiguration} onMenuButtonClickAction={onMenuButtonClick} state={state} />
+//
 // <SafeSettings inputCodeRangeNumbers={{ firstNumberCodeRange, setFirstNumberCodeRange, secondNumberCodeRange, setSecondNumberCodeRange}} inputHintRangeNumbers={{firstNumberHintRange, setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange}} ></SafeSettings>
 //<div className={styles.logWrapper}>
 //                     {state.isLogVisible && <LogView ref={logViewRef} logs={state.logs} />}
 //                 </div>
-//<p className={styles.headerText}>The safe code is a number that ranges from 1 to 1000</p>
+//
 
 // <SignsProvider>
 //                                 <QuestionProvider firstNumberHintRange={firstNumberHintRange} secondNumberHintRange={secondNumberHintRange}>

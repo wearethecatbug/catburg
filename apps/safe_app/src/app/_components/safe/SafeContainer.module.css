@@ -13,19 +13,6 @@
     justify-content: center;
 }
 
-.headerText {
-    color: #de778c;
-    font-size: 50px;
-    font-family: "Audiowide", sans-serif;
-    text-align: center;
-    margin: 80px;
-    max-width: 700px;
-    user-select: none;
-    --shadowSize: 2px;
-    --shadowColor: #FFFFFF;
-    text-shadow: var(--shadowSize) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) calc(var(--shadowSize) * -1) 0 var(--shadowColor), calc(var(--shadowSize) * -1) var(--shadowSize) 0 var(--shadowColor), var(--shadowSize) var(--shadowSize)0 var(--shadowColor);
-}
-
 .SafeCodeInputContainer {
     top: -90px;
     left: -10%;
@@ -33,49 +20,6 @@
 
 }
 
-.giveUp {
-    background-color: #8cd3d5;
-}
-
-.newGame {
-    background-color: #a0e083;
-}
-
-.log {
-    background-color: #fdab7f;
-}
-
-.hint {
-    background-color: #c27ffd;
-}
-
-.menuButton {
-    border-radius: 10px;
-    width: 200px ;
-    height: 60px;
-    font-size: 20px;
-    font-family: "Audiowide", sans-serif;
-    cursor: pointer;
-    margin-top: 10%;
-
-}
-
-.disabledButton {
-    filter: grayscale(100%);
-    pointer-events: none;
-}
-
-.highlightButton {
-    filter: brightness(60%);
-}
-.menuButton:hover {
-    filter: brightness(90%);
-}
-@keyframes blink {
-    0% { background-color: #a0e083; }  /* Обычный цвет */
-    50% { background-color: #ffcc00; } /* Жёлтый */
-    100% { background-color: #a0e083; }  /* Возвращается обратно */
-}
 
 .newGameAfterGiveUp {
     animation: blink 1s infinite; /* Запускаем мигание */
