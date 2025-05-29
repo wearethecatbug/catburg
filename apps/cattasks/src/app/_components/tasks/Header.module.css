@@ -1,0 +1,19 @@
+.headerContainer {
+    background-image: url("/bg2.png");
+    background-size: cover;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: left;
+    color: white;
+}
+
+.searchContainer {
+    width: 25%;
+    height: 100%;
+}
+
+.headerTaskContainer {
+    width: 30%;
+    height: 100%;
+}
