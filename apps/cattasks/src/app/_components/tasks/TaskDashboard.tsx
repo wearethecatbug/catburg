@@ -1,15 +1,12 @@
-"use client";
-
-import React from 'react';
-import TDHeader from '@/app/_components/tasks/TDHeader';
+import Header from '@/app/_components/tasks/Header';
+import styles from './TaskDashboard.module.css';
 
 export default function TaskDashboard() {
-  return (
-      <div>
-    <TDHeader>
-      <h1>Task Dashboard</h1>
-      <p>This is the Task Dashboard component.</p>
-    </TDHeader>
+    return (
+        <div className={styles.tdContainer}>
+            <Header className={styles.headerContainer}></Header>
+            {/*<Main></Main>*/}
+            {/*<Footer></Footer>*/}
         </div>
-  );
+    );
 }
