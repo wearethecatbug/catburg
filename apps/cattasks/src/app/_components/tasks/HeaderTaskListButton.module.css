@@ -1,0 +1,45 @@
+.dropButtonWrapper {
+    display: flex;
+    justify-content: center;
+    flex-grow: 5;
+    height: 100%;
+}
+
+.dropButton {
+    background-image: url('/task12.png');
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    flex: 1;
+}
+
+.dropdownContent {
+    position: absolute;
+    top: 10%;
+    background-color: #0A1314;
+    width: 20%;
+    max-height: 250%; /* Ограничиваем высоту выпадающего списка */
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+    box-shadow: 0px 8px 16px rgb(10, 14, 14);
+    z-index: 1;
+    border-radius: 4px;
+    padding: 4px 0;
+}
+
+.dropdownContent a {
+    color: #4cbcbc;
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 0 4px #0ff, 0 0 10px #0ff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.dropdownContent a:hover {
+    background-color: #f1f1f1;
+}
+
