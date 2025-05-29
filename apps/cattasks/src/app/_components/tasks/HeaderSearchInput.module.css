@@ -1,0 +1,28 @@
+.searchInput {
+    display: flex;
+    background-image: url('/board12.png');
+    color: white;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%; /*не работает без этого*/
+    height: 100%; /*не работает без этого*/
+    align-items: center;
+    justify-content: center;
+}
+
+.inputField {
+    width: 94%;
+    height: 50%;
+    border: none;
+    background-color: transparent;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #4cbcbc;
+    font-size: 16px;
+    outline: none;
+}
+
