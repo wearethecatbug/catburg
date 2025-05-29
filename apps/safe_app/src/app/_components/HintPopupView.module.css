@@ -1,0 +1,242 @@
+.popupContainer {
+    background: url('/ragdollHintFon3.png') no-repeat center center;
+    background-size: contain;
+    justify-content: flex-start;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    z-index: 500;
+    max-width: 1000px;
+    min-width: 750px;
+    max-height: 1000px;
+    min-height: 800px;
+    position: absolute;
+    top: -85%;
+    left: 76%;
+    transform: translateX(-50%) translateY(-50%);
+}
+
+.textInputField {
+    min-width: 170px;
+    min-height: 50px;
+    width: 100%;
+    border: solid 1px #ffffff;
+    outline: none;
+    text-align: center;
+    line-height: 50px;
+    font-family: "Audiowide", sans-serif;
+    color: #ffffff;
+    background-color: rgb(52, 85, 50);
+    border-radius: 15px 15px;
+
+    appearance: textfield;
+    -moz-appearance: textfield; /* Firefox */
+    -webkit-appearance: textfield; /* Chrome, Safari */
+
+    transition: border-color 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.textInputField::-webkit-outer-spin-button,
+.textInputField::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.valid {
+    background-color: #a0e083;
+    transition: background-color 0.4s ease-in-out;
+}
+
+.invalid {
+    background-color: #e30b0b;
+    transition: background-color 0.4s ease-in-out;
+}
+
+
+.equalsSymbol {
+    border: 1px #ffffff;
+    text-align: center;
+    line-height: 50px;
+    font-family: "Audiowide", sans-serif;
+    color: #ffffff;
+    background-color: transparent;
+}
+
+.hintInputContainer {
+    width: 60%;
+    top: 185px;
+    left: 110px;
+    display: flex;
+    flex-direction: row;
+    align-content: space-between;
+    gap: 5px;
+    position: relative;
+    overflow-y: auto;
+}
+
+.closeButtonContainer {
+    background: url('/cancellButton1.jpg') no-repeat center center;
+    background-size: contain;
+    display: inline-block;
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    top: 80px;
+    right: 15px;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out;
+    transform-origin: center;
+}
+
+.closeButtonContainer :hover {
+    animation: spin 0.7s ease-in-out; /* Уменьшаем время для плавности */
+
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.closeButtonContainer:hover {
+    animation: spin 1s linear infinite;
+}
+
+.okButtonContainer {
+    background: url("/sendButton.png") no-repeat center center;
+    background-size: contain;
+    width: 70px;
+    height: 70px;
+    padding: 10px 20px;
+    font-size: 18px;
+    border: none;
+    top: 170px;
+    right: 100px;
+    cursor: pointer;
+    display: inline-block;
+    position: absolute;
+    transition: transform 0.15s ease-in-out;
+
+    box-shadow: 2px 5px 17px rgba(0, 0, 0, 0.8);
+    border-radius: 25%;
+}
+
+
+.okButtonContainer:hover {
+    box-shadow: 0px 5px 17px rgba(0, 0, 0, 1);
+}
+
+.okButtonContainer:active {
+    transform: scale(0.9);
+    box-shadow: 0 3px 17px rgba(0, 0, 0, 1);
+    border-radius: 25%;
+    transition: none;
+}
+
+
+.hintMenuContainer {
+    position: absolute;
+    height: 150px;
+    width: 400px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    list-style: none;
+    top: 44%;
+    left: 64%;
+    transform: translateX(-50%) translateY(-50%);
+}
+
+.hintMenuContainer li {
+    display: inline-flex; /* Делаем их строчно-гибкими */
+    justify-content: center;
+    align-items: center;
+    width: auto;
+    height: auto;
+    margin: 5px;
+}
+
+
+.menuButton {
+    width: 100px;
+    height: 80px;
+    border: none;
+    font-size: 48px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 5px;
+    transform: scale(1.6);
+    transition: all 0.2s ease-in-out;
+    flex-basis: 100%;
+    flex-shrink: 0;
+    border: none; /* Убираем стандартную границу */
+    background-color: transparent; /* Делаем фон прозрачным */
+}
+
+
+.giveUpHint {
+    background: url('/GiveUpHint.png') no-repeat center center;
+    background-size: contain;
+}
+
+
+.newHint {
+    background: url('/NewHint.png') no-repeat center center;
+    background-size: contain;
+}
+
+
+.signs {
+    background: url('/Signs.png') no-repeat center center;
+    background-size: contain;
+
+}
+
+.giveUpHint, .newHint, .signs {
+    background-size: 80px 80px; /* Или contain, но не оба */
+}
+
+
+.shield {
+    position: absolute; /* Вместо fixed */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 999;
+    background: transparent;
+}
+
+.disabled {
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+}
+
+.disabledButton {
+    filter: grayscale(100%);
+    pointer-events: none;
+}
+
+
+.okButtonDisabled {
+    pointer-events: none;
+    filter: grayscale(100%);
+
+}
+
+.signs:hover,
+.newHint:hover,
+.giveUpHint:hover {
+    background-color: transparent !important; /* Убираем цвет фона */
+    transform: scale(1.9); /* Увеличиваем кнопку */
+    opacity: 0.9; /* Делаем немного прозрачнее */
+    z-index: 10;
+}
