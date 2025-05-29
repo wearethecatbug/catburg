@@ -1,0 +1,20 @@
+.taskListContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 30%;
+    height: 100%;
+    background-color: #0a0f0f;
+}
+
+.arrowButton {
+    height: 100%;
+    width: 2%;
+}
+
+
+.dropButton {
+    width: auto;
+    height: 100%;
+}

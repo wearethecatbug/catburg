@@ -1,0 +1,29 @@
+.arrowButton {
+    border: none;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    cursor: pointer;
+    align-items: center;
+    display: flex;
+}
+
+.arrowLeft {
+    background-image: url('/arrowLeftInactive.png');
+}
+
+.arrowRight {
+    background-image: url('/arrowRightInactive.png');
+}
+
+.arrowLeft, .arrowRight {
+    flex-grow: 1;
+}
+
+.arrowLeft:hover {
+    background-image: url('/arrowLeftActive.png');
+
+}
+
+.arrowRight:hover {
+    background-image: url('/arrowRightActive.png');
+}
