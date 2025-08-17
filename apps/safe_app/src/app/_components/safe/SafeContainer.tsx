@@ -115,7 +115,7 @@ export default function SafeContainer() {
 
   useEffect(() => {
     if (state.isGiveUp && state.safeCode !== null) {
-      dispatch({ type: "SET_INPUT_VALUE", payload: String(state.safeCode) });
+      dispatch({ type: SAFE_ACTION.SET_INPUT_VALUE, payload: String(state.safeCode) });
     }
   }, [state.isGiveUp, state.safeCode]);
 

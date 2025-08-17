@@ -2,37 +2,32 @@
 
 import styles from "./SafeComponent.module.css";
 import React, {useState, useEffect, useRef} from 'react'
-import CatView from "@/components/CatView";
 import {initialCatViewState} from "@/components/CatView"
 
 interface SafeComponentProps {
     safeOpen: boolean;
-    //isSafeComponentInitialized: boolean;
-    //currentSkinCatViewState: keyof typeof initialCatViewState;
     updateCatViewState?: (newState: keyof typeof initialCatViewState) => void;
 }
 
 export default function SafeComponent({ safeOpen, updateCatViewState}: SafeComponentProps) {
-    // const [currentSkinCatViewState, setCurrentSkinCatViewState] = useState<keyof typeof initialCatViewState | undefined>(undefined);
-
-    // Флаг, который отслеживает, загружали ли мы состояние
+    // Flag to track if we've loaded the state
     const hasLoaded = useRef(false);
 
-    // Функция для указания состояния загрузки safeComponent, чтобы CatViewState дожидался его подгрузки, а потом сам грузился
+    // Function to simulate loading state for safeComponent
     const loadCatViewState = async () => {
         return new Promise<keyof typeof initialCatViewState>((resolve) => {
             setTimeout(() => {
-                resolve('defaultState'); // Эмуляция загрузки
+                resolve('defaultState'); // Simulate loading
             }, 100);
         });
     };
 
         useEffect(() => {
-        if (!hasLoaded.current) {
+        if (!hasLoaded.current && updateCatViewState) {
             hasLoaded.current = true;
             loadCatViewState().then(updateCatViewState);
         }
-    }, []);
+    }, [updateCatViewState]);
 
     function getSafeComponent() {
         return safeOpen ?  <div className={styles.safeClose}></div>:<div className={styles.safeOpen}></div> ;
@@ -40,11 +35,6 @@ export default function SafeComponent({ safeOpen, updateCatViewState}: SafeCompo
 
     return (
         <div className={styles.safeContainer}>
-                {/*<CatView*/}
-                {/*    isSafeComponentInitialized={isSafeComponentInitialized}*/}
-                {/*    currentSkinCatViewState={currentSkinCatViewState}*/}
-                {/*    updateCatViewState={updateCatViewState}*/}
-                {/*/>*/}
             {getSafeComponent()}
         </div>
     );

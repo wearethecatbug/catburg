@@ -10,38 +10,37 @@ const SafeCodeInput = ({focused}: { focused: boolean }) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
-        console.log("isWrongSafeCode changed:", state.isWrongSafeCode);
         if (state.isWrongSafeCode) {
             const timer = setTimeout(() => {
-                dispatch({type: 'SET_WRONG_SAFE_CODE', payload: false});
+                dispatch({type: SAFE_ACTION.SET_WRONG_SAFE_CODE, payload: false});
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [state.isWrongSafeCode]);
+    }, [state.isWrongSafeCode, dispatch]);
 
-    if (focused) {
-        if (inputRef.current)
+    useEffect(() => {
+        if (focused && inputRef.current) {
             inputRef.current.focus();
-    }
+        }
+    }, [focused]);
 
     const getCodeInputClass = () => {
         if (state.isWin) return `${styles.CodeInput} ${styles.isWin}`;
         if (state.isWrongSafeCode) return `${styles.CodeInput} ${styles.isWrongSafeCode}`;
         if (state.isGiveUp) return `${styles.CodeInput} ${styles.isGiveUp}`;
-        return styles.CodeInput; // Стандартный стиль
+        return styles.CodeInput;
     };
 
     function onChangeInput(e: React.ChangeEvent<HTMLInputElement>) {
-        dispatch({type: 'SET_INPUT_VALUE', payload: e.target.value});
+        dispatch({type: SAFE_ACTION.SET_INPUT_VALUE, payload: e.target.value});
     }
 
     const getCodeContainerClass = () => {
         if (state.isDisabled) {
-            console.log(state.isDisabled)
             return `${styles.SafeCodeInputContainer} ${styles.isDisabled}`;
         }
 
-        return styles.SafeCodeInputContainer; // Стандартный стиль
+        return styles.SafeCodeInputContainer;
     };
 
     function getInputProps() {
@@ -59,7 +58,7 @@ const SafeCodeInput = ({focused}: { focused: boolean }) => {
             };
         }
     }
- // Функция для обработки нажатия кнопки "OK" и проверки кода сейфа
+ // Function to handle OK button click and check safe code
     function onOkButtonClick() {
         if (state.safeCode === null || state.inputValue.trim() === "") return;
 
