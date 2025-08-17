@@ -1,19 +1,40 @@
 .searchContainer {
+
     display: flex;
-    flex-direction: row;
-    align-items: center;
-}
-
-.searchIcon {
-    background: url('/searchIcon2.png');
+    background-image: url('/searchInputCapibara3.png');
+    background-position: center;
+    background-size: contain;
     background-repeat: no-repeat;
-    background-size: 100% 100%;
     cursor: pointer;
-    height: 100%;
-    width: 15%
+    width: 16%; /*не работает без этого*/
+    height: 100%; /*не работает без этого*/
+    align-items: center;
+    justify-content: center;
+
 }
 
-.searchInput {
+.inputField {
+    text-align: left;
+    margin-top: 3%;
+    margin-left: 9%;
     height: 100%;
-    min-width: 70%;
+    width: 100%;
+    border: none;
+    align-items: center;
+    background-color: transparent;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
+    text-stroke: 1px #496897; /* для других браузеров (не всегда работает) */
+    color: rgba(151, 160, 204, 0.89);
+    text-decoration: none;
+    display: block;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.8vw;
+    font-weight: bold;
+    outline: none;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
 }

@@ -1,5 +1,4 @@
 import styles from './HeaderSearchContainer.module.css';
-import HeaderSearchInput from "@/app/_components/tasks/HeaderSearchInput";
 
 
 interface HeaderSearchContainerProps {
@@ -10,8 +9,14 @@ interface HeaderSearchContainerProps {
 export default function HeaderSearchContainer({className, children}: HeaderSearchContainerProps) {
     return (
         <div className={styles.searchContainer + ' ' + (className ?? '')}>
-            <button className={styles.searchIcon}></button>
-            <HeaderSearchInput className={styles.searchInput}/>
+            <input
+                className={styles.inputField}
+                type="text"
+                placeholder="Поиск..."
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+            />
         </div>
     )
 }
