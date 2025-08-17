@@ -1,9 +1,9 @@
 .tdContainer {
     position: relative;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: start;
     color: white;
     background-color: #ab81bb;
     width: 100%;
@@ -12,6 +12,15 @@
 
 .headerContainer {
     width: 100%;
-    height: 10%;
+    height: 15%;
 }
 
+.mainContainer {
+    width: 100%;
+    height: 80%;
+}
+
+.footerContainer {
+    width: 100%;
+    height: 10%;
+}
