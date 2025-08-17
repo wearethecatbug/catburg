@@ -1,0 +1,22 @@
+.mainContainer {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 75%;
+    /*background-color: brown;*/
+    background-image: url("/bgMainCapibara3.png");
+    background-size: contain;
+    background-repeat: repeat-x;
+    /*gap: 2%;*/
+}
+
+.taskDetails {
+    width: 30%;
+    height: 100%;
+}
+
+.codeEditor {
+    background-color: blue;
+    width: 70%;
+    height: 100%;
+}
