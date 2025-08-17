@@ -7,7 +7,8 @@
     background-image: url("/taskDetailsCapibara3.png");
     background-size: 100% 90%;
     background-repeat: no-repeat;
-    width: 20%;
+    width: 30%;
+    min-height: 320px; /* или фикс: height: 400px; */
     height: 100%;
     margin-left: 5%;
     margin-right: 3%;
@@ -22,8 +23,8 @@
     position: absolute;
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    width: 3%;
-    height: 8%;
+    width: 3.5%;
+    height: 7%;
     left: 0.5%;
     top: 17%;
     cursor: pointer;
