@@ -48,7 +48,10 @@ export default function HeaderTaskListButton({children}: TDHeaderTaskListProps) 
     }, [isOpen]);
 
     return (
+
         <div className={styles.dropButtonWrapper}>
+
+
             <button
                 ref={buttonRef}
                 className={styles.dropButton}
@@ -57,6 +60,7 @@ export default function HeaderTaskListButton({children}: TDHeaderTaskListProps) 
                 aria-haspopup="true"
                 aria-expanded={isOpen}
             >
+                <input className={styles.dropButtonInput}/>
             </button>
             {isOpen && (
                 <div

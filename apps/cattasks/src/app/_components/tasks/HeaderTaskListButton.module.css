@@ -1,40 +1,76 @@
+/* Враппер ограничивает размеры */
 .dropButtonWrapper {
-    display: flex;
-    justify-content: center;
-    flex-grow: 5;
-    height: 100%;
+    width: 50%;
+    height: 100%; /* или фиксированная высота */
+    position: relative;
+    background-position: center;
+    margin-left: 1%;
+    margin-right: 1%;
 }
 
 .dropButton {
-    background-image: url('/task12.png');
+    width: 100%;
+    height: 100%;
+    background-image: url('/newFrame3.png');
     background-repeat: no-repeat;
-    background-size: 100% 100%;
-    color: white;
-    font-size: 16px;
+    background-size: contain;
+    background-position: center;
     cursor: pointer;
-    flex: 1;
+    display: block;
+}
+
+.dropButtonInput {
+    width: 90%;
+    height: 50%;
+    margin-left: 5%;
+    margin-right: 3%;
+    border: none;
+    background-color: transparent;
+    font-family: 'Orbitron', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
+    text-stroke: 1px #496897; /* для других браузеров (не всегда работает) */
+    color: rgba(151, 160, 204, 0.89);
+    text-decoration: none;
+    display: block;
+    font-size: 0.8vw;
+    font-weight: bold;
+    outline: none;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
 }
 
 .dropdownContent {
     position: absolute;
-    top: 10%;
-    background-color: #0A1314;
-    width: 20%;
+
+    --radius: 24px; /* скругление */
+    --border: 9px; /* толщина рамки */
+    --stroke: 3px; /* толщина окантовки */
+
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    /*padding: 16px 20px;*/
+    color: #2C4C1E; /* цвет текста по желанию */
+
+    width: 100%;
     max-height: 250%; /* Ограничиваем высоту выпадающего списка */
     overflow-y: auto; /* Добавляем вертикальную прокрутку */
-    box-shadow: 0px 8px 16px rgb(10, 14, 14);
-    z-index: 1;
-    border-radius: 4px;
-    padding: 4px 0;
+
+    padding: 1% 0;
+    z-index: 1; /* Чтобы выпадающий список был поверх других элементов */
 }
 
 .dropdownContent a {
-    color: #4cbcbc;
+    color: #113519;
     padding: 10px 16px;
     text-decoration: none;
     display: block;
     font-family: 'Orbitron', sans-serif;
-    text-shadow: 0 0 4px #0ff, 0 0 10px #0ff;
+    text-shadow: 0 0 4px #00ff04, 0 0 10px #294c23;
     text-transform: uppercase;
     letter-spacing: 2px;
 }
@@ -43,3 +79,16 @@
     background-color: #f1f1f1;
 }
 
+.arrowLeft {
+    background-color: #0A1314;
+    width: 20%;
+    height: 100%;
+
+}
+
+.arrowRight {
+    background-color: #0A1314;
+    width: 20%;
+    height: 100%;
+
+}
