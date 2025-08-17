@@ -8,6 +8,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "monaco-editor": "^0.52.2",
     "next": "15.1.8",
     "pixi.js": "^8.9.2",
     "react": "^19.0.0",
