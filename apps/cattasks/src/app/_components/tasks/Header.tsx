@@ -10,8 +10,8 @@ interface TDHeaderProps {
 export default function Header({className}: TDHeaderProps) {
     return (
         <div className={`${styles.headerContainer} ${className ?? ''}`}>
-            <HeaderSearchContainer className={styles.searchContainer}/>
             <HeaderTaskListContainer className={styles.taskListContainer}/>
+            <HeaderSearchContainer className={styles.searchContainer}/>
         </div>
     )
 }
