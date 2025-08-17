@@ -3,20 +3,19 @@ import styles from './HeaderSearchContainer.module.css';
 
 interface HeaderSearchContainerProps {
     readonly className?: string;
-    readonly children?: React.ReactNode;
 }
 
-export default function HeaderSearchContainer({className, children}: HeaderSearchContainerProps) {
+export default function HeaderSearchContainer({className}: HeaderSearchContainerProps) {
     return (
-        <div className={styles.searchContainer + ' ' + (className ?? '')}>
+        <div className={`${styles.searchContainer} ${className ?? ''}`}>
             <input
                 className={styles.inputField}
                 type="text"
-                placeholder="Поиск..."
+                placeholder="Search..."
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck="false"
             />
         </div>
-    )
+    );
 }

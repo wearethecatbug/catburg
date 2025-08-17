@@ -5,21 +5,15 @@ import React from "react";
 
 
 interface HeaderTaskListContainerProps {
-    readonly children?: React.ReactNode;
     readonly className?: string;
 }
 
-export default function HeaderTaskListContainer({children, className}: HeaderTaskListContainerProps) {
+export default function HeaderTaskListContainer({className}: HeaderTaskListContainerProps) {
     return (
-        <div className={styles.taskListContainer}>
-            {/*<button className={styles.arrowLeft}/>*/}
-
+        <div className={`${styles.taskListContainer} ${className ?? ''}`}>
             <HeaderArrowButtons className={styles.arrowButton} name={"arrowLeft"}/>
             <HeaderTaskListButton className={styles.dropButton}/>
             <HeaderArrowButtons className={styles.arrowButton} name={'arrowRight'}/>
-            {/*<button className={styles.arrowRight}/>*/}
         </div>
-
     );
-
 }

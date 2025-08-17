@@ -4,11 +4,10 @@ import styles from './HeaderTaskListButton.module.css';
 
 
 type TDHeaderTaskListProps = {
-    readonly children?: React.ReactNode;
     readonly className?: string;
 };
 
-export default function HeaderTaskListButton({children}: TDHeaderTaskListProps) {
+export default function HeaderTaskListButton({className}: TDHeaderTaskListProps) {
     const [isOpen, setIsOpen] = useState(false);
     const taskListRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -49,7 +48,7 @@ export default function HeaderTaskListButton({children}: TDHeaderTaskListProps) 
 
     return (
 
-        <div className={styles.dropButtonWrapper}>
+        <div className={`${styles.dropButtonWrapper} ${className ?? ''}`}>
 
 
             <button

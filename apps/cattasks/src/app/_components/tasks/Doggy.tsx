@@ -10,18 +10,10 @@ export default function Doggy() {
     const [currentAnimation, setCurrentAnimation] = useState<string>('Idle');
 
 
-    if (animations && spriteRef && spriteRef.current) {
+    if (animations && spriteRef.current) {
         spriteRef.current.textures = animations[currentAnimation] || [];
         spriteRef.current.play();
     }
-    //
-    // function switchAnimation() {
-    //     if (currentAnimation == 'Idle') {
-    //         setCurrentAnimation(() => 'Walk');
-    //     } else if (currentAnimation == 'Walk') {
-    //         setCurrentAnimation(() => 'Idle');
-    //     }
-    // }
 
 
     useEffect(() => {
@@ -143,19 +135,10 @@ export default function Doggy() {
         };
     }, []);
 
-
-    useEffect(() => {
-        window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, []);
-
     return (
         <div
             className={styles.doggySprite}
             ref={pixiContainerRef}
-            // onClick={switchAnimation}
         />
     );
 }

@@ -4,14 +4,13 @@ import MainCodeEditor from "@/app/_components/tasks/MainCodeEditor";
 
 interface MainProps {
     readonly className?: string;
-    readonly children?: React.ReactNode;
 }
 
-export default function Main({className, children}: MainProps) {
+export default function Main({className}: MainProps) {
     return (
-        <div className={styles.mainContainer}>
+        <div className={`${styles.mainContainer} ${className ?? ''}`}>
             <MainTaskDetails className={styles.taskDetails}/>
             <MainCodeEditor className={styles.codeEditor}/>
         </div>
-    )
+    );
 }
