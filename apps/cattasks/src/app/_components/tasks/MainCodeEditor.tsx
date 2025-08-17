@@ -1,37 +1,39 @@
 'use client';
+import dynamic from 'next/dynamic';
 import {useState} from 'react';
 import styles from './MainCodeEditor.module.css';
 
-type Props = React.HTMLAttributes<HTMLDivElement>;
+const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
-export default function MainCodeEditor({className, ...rest}: Props) {
+
+export default function MainCodeEditor() {
     const [code, setCode] = useState('// write code here');
-
-    function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            const el = e.currentTarget;
-            const {selectionStart, selectionEnd, value} = el;
-            const insert = '  '; // таб = 2 пробела
-            const next = value.slice(0, selectionStart) + insert + value.slice(selectionEnd);
-            setCode(next);
-            // восстановить каретку
-            queueMicrotask(() => el.setSelectionRange(selectionStart + insert.length, selectionStart + insert.length));
-        }
-    }
 
     return (
         <div className={styles.codeEditorContainer}>
-      <textarea
-          className={styles.editor}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onKeyDown={onKeyDown}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          placeholder="// write code here"
-      />
+            <Monaco
+                height="100%"
+                language="typescript"
+                path="tasks.tsx"
+                beforeMount={(monaco) => {
+                    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                        noSemanticValidation: true,  // оставить только синтаксис
+                        // noSyntaxValidation: true,  // если нужно убрать всё
+                    });
+                }}
+                value={code}
+                onChange={(v) => setCode(v ?? '')}
+                theme="vs-light"
+                options={{
+                    automaticLayout: true,
+                    minimap: {enabled: false},
+                    wordWrap: 'on',
+                    fontSize: 14,
+                    tabSize: 2,
+                    scrollBeyondLastLine: false,
+                    padding: {top: 8, bottom: 8},
+                }}
+            />
         </div>
     );
 }
