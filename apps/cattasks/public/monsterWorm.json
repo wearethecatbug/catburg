@@ -1,0 +1,102 @@
+{
+  "frames": {
+    "monster_0": {
+      "frame": {
+        "x": 4,
+        "y": 4,
+        "w": 188,
+        "h": 203
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 188,
+        "h": 203
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 188,
+        "h": 203
+      }
+    },
+    "monster_1": {
+      "frame": {
+        "x": 196,
+        "y": 4,
+        "w": 248,
+        "h": 178
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 248,
+        "h": 178
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 248,
+        "h": 178
+      }
+    },
+    "monster_2": {
+      "frame": {
+        "x": 448,
+        "y": 4,
+        "w": 175,
+        "h": 123
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 175,
+        "h": 123
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 175,
+        "h": 123
+      }
+    },
+    "monster_3": {
+      "frame": {
+        "x": 627,
+        "y": 4,
+        "w": 121,
+        "h": 90
+      },
+      "rotated": false,
+      "trimmed": false,
+      "sourceSize": {
+        "w": 121,
+        "h": 90
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 121,
+        "h": 90
+      }
+    }
+  },
+  "meta": {
+    "app": "generated-by-chatgpt",
+    "image": "monster_atlas.png",
+    "scale": "1",
+    "format": "RGBA8888",
+    "size": {
+      "w": 752,
+      "h": 211
+    }
+  },
+  "animations": {
+    "open": [
+      "monster_0",
+      "monster_1",
+      "monster_2",
+      "monster_3"
+    ]
+  }
+}
