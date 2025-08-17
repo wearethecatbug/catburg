@@ -1,0 +1,14 @@
+.monsterSprite {
+    --cols: 4.5; /* столбцов в атласе */
+    --rows: 3.8; /* строкв атласе */
+    background-image: url("/monstersSprite.png");
+    background-position: 0 1%; /* верхний левый */
+    width: 10%;
+    height: 100%;
+    background-size: calc(var(--cols) * 100%) calc(var(--rows) * 100%);
+
+    background-repeat: no-repeat;
+    z-index: 3;
+    overflow: hidden;
+    image-rendering: pixelated;
+}
