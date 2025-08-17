@@ -44,12 +44,7 @@ export default function SafeContainer() {
     setSafeComponentInitialized(true);
   }, []);
 
-  useEffect(() => {
-    console.log("Новое состояние кота:", currentSkinCatViewState);
-  }, [currentSkinCatViewState]);
-
   const updateCatViewState = (newState: keyof typeof initialCatViewState) => {
-    console.log("gau" + initialCatViewState[newState]);
     setCurrentSkinCatViewState(newState);
   };
 
@@ -93,8 +88,6 @@ export default function SafeContainer() {
     setSafeCodeInputFocused(true);
 
     updateCatViewState("defaultState");
-    // console.log("New game started with code:", newCode);
-    console.log("New game started with code:", safeCode);
   }
 
   function onGameStart() {
@@ -110,7 +103,6 @@ export default function SafeContainer() {
     dispatch({ type: SAFE_ACTION.SET_GIVE_UP, payload: true });
 
     updateCatViewState("giveUpGame");
-    console.log("Newсостояни" + currentSkinCatViewState);
   }
 
   useEffect(() => {
@@ -132,15 +124,12 @@ export default function SafeContainer() {
 
   useEffect(() => {
     if (state.isHintVisible) {
-      console.log("Подсказка открыта, меняем состояние кота");
       updateCatViewState("hintPopupViewOpen");
     } else if (!state.isHintVisible) {
-      console.log("Подсказка закрыта, возвращаем дефолтный скин");
       setIsGiveUpHintActive(false);
       updateCatViewState("defaultState");
     }
     if (isGiveUpHintActive && state.isHintVisible) {
-      console.log("Игрок сдался, меняем состояние кота");
       updateCatViewState("hintPopupContainerGiveUp");
     }
   }, [state.isHintVisible, isGiveUpHintActive]); // useEffect срабатывает при изменении isHintVisible
