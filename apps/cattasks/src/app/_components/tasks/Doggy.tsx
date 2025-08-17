@@ -1,6 +1,6 @@
 'use client';
 import {AnimatedSprite, Application, Assets, Spritesheet, Texture, TextureSource} from 'pixi.js';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState, useCallback} from 'react';
 import styles from './Doggy.module.css';
 
 export default function Doggy() {
@@ -96,7 +96,7 @@ export default function Doggy() {
     ;
 
     // Обработчик нажатия клавиши
-    function handleKeyDown(e: KeyboardEvent) {
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
         if (!spriteRef.current || !pixiContainerRef.current) return;
         const containerWidth = pixiContainerRef.current.offsetWidth;
         const halfSprite = spriteRef.current.width / 2;
@@ -117,14 +117,14 @@ export default function Doggy() {
             spriteRef.current.scale.x = -1;
             setCurrentAnimation('Walk');
         }
-    }
+    }, []);
 
     // Обработчик отпускания клавиши
-    function handleKeyUp(e: KeyboardEvent) {
+    const handleKeyUp = useCallback((e: KeyboardEvent) => {
         if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             setCurrentAnimation('Idle');
         }
-    }
+    }, []);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -133,7 +133,7 @@ export default function Doggy() {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
         };
-    }, []);
+    }, [handleKeyDown, handleKeyUp]);
 
     return (
         <div

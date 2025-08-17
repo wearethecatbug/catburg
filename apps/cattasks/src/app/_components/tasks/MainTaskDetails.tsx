@@ -5,45 +5,41 @@ import React, {useState} from 'react';
 type Props = React.HTMLAttributes<HTMLDivElement>;
 
 export default function MainTaskDetails({className, ...rest}: Props) {
-    const [isButtonMinimizeActive, setIsButtonMinimizeActive] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(false);
 
+    const handleMinimize = () => {
+        setIsMinimized(prev => !prev);
+    };
 
-    function handleMinimize() {
-        setIsButtonMinimizeActive((prev: boolean) => !prev);
-    }
+    const getButtonMinimizeClass = () => {
+        return isMinimized ? styles.buttonMinimizeActive : styles.buttonMinimizeInactive;
+    };
 
-
-    function getButtonMinimizeClass() {
-        return isButtonMinimizeActive ? styles.buttonMinimizeActive : styles.buttonMinimizeInactive;
-    }
-
-    function getTaskDetailsClass() {
-        return `${styles.taskDetailsContainer} ${isButtonMinimizeActive ? styles.hidden : ''}`;
-    }
-
+    const getTaskDetailsClass = () => {
+        return `${styles.taskDetailsContainer} ${isMinimized ? styles.hidden : ''}`;
+    };
 
     return (
-        <>
+        <div className={`${className ?? ''}`} {...rest}>
             <button
                 onClick={handleMinimize}
-                className={`${styles.buttonMinimizeBase} ${getButtonMinimizeClass()}`}>
-            </button>
-            {!isButtonMinimizeActive && (
+                className={`${styles.buttonMinimizeBase} ${getButtonMinimizeClass()}`}
+                aria-label={isMinimized ? "Expand task details" : "Minimize task details"}
+                aria-expanded={!isMinimized}
+            />
+            {!isMinimized && (
                 <div className={getTaskDetailsClass()}>
-
-                <textarea
-                    className={styles.taskDetailsTextArea}
-
-                    placeholder="Введите детали задачи..."
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck="false"
-                />
-
+                    <textarea
+                        className={styles.taskDetailsTextArea}
+                        placeholder="Enter task details..."
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        aria-label="Task details"
+                        rows={5}
+                    />
                 </div>
             )}
-
-        </>
+        </div>
     );
-
 }
