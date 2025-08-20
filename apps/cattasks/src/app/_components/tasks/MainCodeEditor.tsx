@@ -4,6 +4,10 @@ import {useState} from 'react';
 import styles from './MainCodeEditor.module.css';
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
+// type MainCodeEditorprops = {
+//     readonly className?: string;
+//     readonly children?: React.ReactNode;
+// };
 
 
 export default function MainCodeEditor() {
