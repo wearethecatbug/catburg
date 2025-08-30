@@ -1,6 +1,6 @@
 'use client';
-import type {ParsedTask} from './ParseTasksArr';
-import {parseTasksArr} from './ParseTasksArr';
+import type {ParsedTask} from '@/app/_components/tasks/lib/ParseTasksArr';
+import {parseTasksArr} from '@/app/_components/tasks/lib/ParseTasksArr';
 import {useEffect, useState} from 'react';
 
 let cache: ParsedTask[] | null = null;
