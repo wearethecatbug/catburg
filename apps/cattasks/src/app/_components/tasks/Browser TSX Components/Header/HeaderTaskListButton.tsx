@@ -3,12 +3,12 @@ import React, {useEffect, useRef, useState} from 'react';
 import styles from './HeaderTaskListButton.module.css';
 
 
-type TDHeaderTaskListProps = {
-    readonly children?: React.ReactNode;
-    readonly className?: string;
-};
+// type TDHeaderTaskListProps = {
+//     // readonly children?: React.ReactNode;
+//     readonly className?: string;
+// };
 
-export default function HeaderTaskListButton({children}: TDHeaderTaskListProps) {
+export default function HeaderTaskListButton() {
     const [isOpen, setIsOpen] = useState(false);
     const taskListRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);

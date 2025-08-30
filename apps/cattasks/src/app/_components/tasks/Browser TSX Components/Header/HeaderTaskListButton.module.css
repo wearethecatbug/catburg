@@ -2,7 +2,7 @@
 .dropButtonWrapper {
     width: 50%;
     height: 100%; /* или фиксированная высота */
-    position: relative;
+    /*position: relative;*/
     background-position: center;
     margin-left: 1%;
     margin-right: 1%;
