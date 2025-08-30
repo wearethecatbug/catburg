@@ -83,7 +83,7 @@
   },
   "meta": {
     "app": "generated-by-chatgpt",
-    "image": "monster_atlas.png",
+    "image": "monsterWormAtlas.png",
     "scale": "1",
     "format": "RGBA8888",
     "size": {
@@ -92,7 +92,10 @@
     }
   },
   "animations": {
-    "open": [
+    "Idle": [
+      "monster_0"
+    ],
+    "Open": [
       "monster_0",
       "monster_1",
       "monster_2",
