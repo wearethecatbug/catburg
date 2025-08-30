@@ -1,0 +1,125 @@
+{
+  "frames": {
+    "monsterWorm_empty": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 216
+      }
+    },
+    "monsterWorm_attack_0": {
+      "frame": {
+        "x": 264,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 216
+      }
+    },
+    "monsterWorm_attack_1": {
+      "frame": {
+        "x": 528,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 216
+      }
+    },
+    "monsterWorm_attack_2": {
+      "frame": {
+        "x": 792,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 216
+      }
+    },
+    "monsterWorm_attack_3": {
+      "frame": {
+        "x": 1056,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 264,
+        "h": 216
+      },
+      "sourceSize": {
+        "w": 264,
+        "h": 216
+      }
+    }
+  },
+  "animations": {
+    "Idle": [
+      "monsterWorm_empty"
+    ],
+    "Attack": [
+      "monsterWorm_attack_3",
+      "monsterWorm_attack_0",
+      "monsterWorm_attack_1",
+      "monsterWorm_attack_2",
+      "monsterWorm_attack_3"
+    ]
+  },
+  "meta": {
+    "app": "align-dark-center",
+    "image": "monsterWormSheet.png",
+    "size": {
+      "w": 1320,
+      "h": 216
+    },
+    "scale": "1"
+  }
+}
