@@ -1,0 +1,13 @@
+.monsterSprite {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: inline-block;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.monsterSprite > canvas {
+    display: block;
+}
+
