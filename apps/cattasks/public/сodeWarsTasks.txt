@@ -20,8 +20,10 @@
 
 <!--  }-->
 
-<!--  alert(squareSum([1,2]));-->
-<!--  alert(squareSum([1,2]));-->
+<!--  alert(squareSum([1,2])); //5-->
+<!--  alert(squareSum([0, 3, 4, 5])); //50-->
+<!--  alert(squareSum([-1, -2]))); //5-->
+<!--  alert(squareSum([])); //0-->
 <!--</script>-->
 <!--</html>-->
 
@@ -61,12 +63,12 @@
 <!--    }-->
 <!--    return result;-->
 <!--  }-->
-<!--  alert(century(10));-->
-<!--  alert(century(89));-->
-<!--  alert(century(1705));-->
-<!--  alert(century(1900));-->
-<!--  alert(century(225874));-->
-<!--  alert(century(280710));-->
+<!--  alert(century(10)); //1-->
+<!--  alert(century(89));//1-->
+<!--  alert(century(1705));//18-->
+<!--  alert(century(1900));//19-->
+<!--  alert(century(225874));//2259-->
+<!--  alert(century(280710));//2808-->
 <!--</script>-->
 <!--</body>-->
 <!--</html>-->
@@ -109,12 +111,12 @@
 <!--  }-->
 
 
-<!--  alert(century(10));-->
-<!--  alert(century(89));-->
-<!--  alert(century(1705));-->
-<!--  alert(century(1900));-->
-<!--  alert(century(225874));-->
-<!--  alert(century(280710));-->
+<!--  alert(century(10)); //1-->
+<!--  alert(century(89));//1-->
+<!--  alert(century(1705));//18-->
+<!--  alert(century(1900));//19-->
+<!--  alert(century(225874));//2259-->
+<!--  alert(century(280710));//2808-->
 <!--</script>-->
 <!--</body>-->
 
@@ -136,13 +138,11 @@
 
 <!--  function digitize(n) {-->
 <!--    let result = b.split().map(Number);-->
-
-<!--    return typeof result[0];-->
+<!--    return result.reverse();-->
 
 <!--  }-->
 
-<!--  alert(typeof b);-->
-<!--  alert( digitize(b) );-->
+<!--  alert( digitize(b) );//[3,2,1]-->
 
 <!--</script>-->
 <!--</body>-->
@@ -164,7 +164,7 @@
 
 <!--  }-->
 
-<!--  alert(noSpace('8 j 8   mBliB8g  imjB8B8  jl  B'));-->
+<!--  alert(noSpace('8 j 8   mBliB8g  imjB8B8  jl  B'));// '8j8mBliB8gimjB8B8jlB'-->
 
 <!--</script>-->
 <!--</body>-->
@@ -277,8 +277,8 @@ For input [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14, -15], you should r
 
 <!--  alert( countPositivesSumNegatives([0, 2, 3, 0, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14]));-->
 <!--  alert( countPositivesSumNegatives([8, -50]));-->
-<!--  alert( countPositivesSumNegatives([]));-->
-<!--  alert( countPositivesSumNegatives(null));-->
+<!--  alert( countPositivesSumNegatives([])); //[]-->
+<!--  alert( countPositivesSumNegatives(null)); //[]-->
 
 
 <!--</script>-->
@@ -292,59 +292,62 @@ For input [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14, -15], you should r
 <!--if bmi <= 30.0 return "Overweight"-->
 <!--if bmi > 30 return "Obese"-->
 
-<!--<!DOCTYPE html>-->
-<!--<html>-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--</head>-->
-<!--<body>-->
-<!--<script>-->
-<!--	"use strict";-->
 
 
-<!--	function bmi(weight, height) {-->
-<!--		let bmiResult = Math.round(weight/Math.pow(height, 2));-->
-<!--		if(bmiResult <= 18.5)  {-->
-<!--			return"Underweight";-->
-<!--		} else if (bmiResult <= 25.0) {-->
-<!--			return "Normal";-->
-<!--		} else if (bmiResult <= 30.0) {-->
-<!--			return"Overweight";-->
-<!--		} else if (bmiResult > 30) {-->
-<!--			return "Obese";-->
-<!--		}-->
-<!--	}-->
 
-<!--	function bmi(weight, height) {-->
-<!--		var bmi  = weight/(height*height);-->
-<!--		return bmi < 18.5 ? "Underweight" : bmi <=25 ? "Normal" : bmi <= 30 ? "Overweight" : "Obese";-->
-<!--	}-->
-
-<!--	function bmi(weight, height) {-->
-<!--		let bmi = weight / (height * height);-->
-<!--		switch(true){-->
-<!--			case bmi <= 18.5:-->
-<!--				return "Underweight";-->
-<!--			case bmi <= 25.0:-->
-<!--				return "Normal";-->
-<!--			case bmi <= 30.0:-->
-<!--				return "Overweight";-->
-<!--			case bmi > 30:-->
-<!--				return "Obese";-->
-<!--		}-->
-<!--	}-->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+<script>
+	"use strict";
 
 
-<!--	alert(bmi(35, 1.63));-->
-<!--	alert(bmi(55, 1.63));-->
-<!--	alert(bmi(75, 1.63));-->
-<!--	alert(bmi(85, 1.63));-->
-<!--	alert(bmi(185, 1.63));-->
+	function bmi(weight, height) {
+		let bmiResult = Math.round(weight/Math.pow(height, 2));
+		if(bmiResult <= 18.5)  {
+			return"Underweight";
+		} else if (bmiResult <= 25.0) {
+			return "Normal";
+		} else if (bmiResult <= 30.0) {
+			return"Overweight";
+		} else if (bmiResult > 30) {
+			return "Obese";
+		}
+	}
 
-<!--</script>-->
-<!--</body>-->
+	function bmi(weight, height) {
+		var bmi  = weight/(height*height);
+		return bmi < 18.5 ? "Underweight" : bmi <=25 ? "Normal" : bmi <= 30 ? "Overweight" : "Obese";
+	}
 
-<!--</html>-->
+	function bmi(weight, height) {
+		let bmi = weight / (height * height);
+		switch(true){
+			case bmi <= 18.5:
+				return "Underweight";
+			case bmi <= 25.0:
+				return "Normal";
+			case bmi <= 30.0:
+				return "Overweight";
+			case bmi > 30:
+				return "Obese";
+		}
+	}
+
+
+	alert(bmi(35, 1.63));//"Underweight";
+	alert(bmi(55, 1.63));//"Normal"
+	alert(bmi(75, 1.63));//Overweight
+	alert(bmi(85, 1.63));//Obese
+	alert(bmi(185, 1.63));//Obese
+
+</script>
+</body>
+
+</html>
 
 <!--Complete the function that accepts a string parameter, and reverses each word in the string. All spaces in the string-->
 <!--should be retained.-->
@@ -452,7 +455,7 @@ For input [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14, -15], you should r
 <!--	// alert(nbYear(1500, 5, 100, 2500)); //6-->
 <!--	// alert(nbYear(1500000, 2.5, 10000, 2000000));//10-->
 <!--	// alert(nbYear(1500000, 0.25, 1000, 2000000))// 94-->
-<!--	alert(nbYear(1000, 2.0, 50, 1214));-->
+<!--	alert(nbYear(1000, 2.0, 50, 1214));//4-->
 
 <!--</script>-->
 <!--</body>-->
@@ -471,28 +474,7 @@ For input [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14, -15], you should r
 
 	s="aaaxbbbbyyhwawiwjjjwwm"
 	printer_error(s) => "8/22"
--->
-<!--<!DOCTYPE html>-->
-<!--<html>-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--</head>-->
-<!--<body>-->
-<!--<script>-->
-<!--	"use strict";-->
 
-<!--	function printerError(s) {-->
-<!--		let errorLength = 0;-->
-<!--		let regExp = /[n-z]/ig;-->
-<!--		let errorsCount = s.match(regExp);-->
-<!--		// if (errorsCount instanceof Object) {errorLength = errorsCount.length;} // -->
-<!--		return `${errorLength}/${s.length}`;-->
-<!--	}-->
-
-<!--    alert(printerError("aaammmnntrweeqqfffbbbbb"));-->
-
-<!--</script>-->
-<!--</body>-->
 <!--</html>-->
 
 <!--<!DOCTYPE html>-->
@@ -518,7 +500,7 @@ For input [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -11, -12, -13, -14, -15], you should r
 <!--	// 	if (charCode > 110 && charCode < 122) errorCount++;-->
 <!--	// }-->
 
-<!--	alert(printerError("aaammmnntrweeqqfffbbbbb"));-->
+<!--	alert(printerError("aaammmnntrweeqqfffbbbbb"));//7/23-->
 
 <!--</script>-->
 <!--</body>-->
@@ -589,36 +571,17 @@ Kata.getMiddle("A") should return "A"-->
 <!--	"use strict";-->
 
 <!--	function booleanToString(b){-->
-<!--		return b === true ? "true" : "false";-->
+<!--		return b == true ? "true" : "false";-->
 
 <!--	}-->
-<!--	alert(booleanToString("11"));-->
-<!--	alert(booleanToString(false));-->
+<!--	alert(booleanToString("11"));//true-->
+<!--	alert(booleanToString(false));//false-->
 <!--</script>-->
 <!--</body>-->
 <!--</html>-->
 
-<!--<!DOCTYPE html>-->
-<!--<html>-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--</head>-->
-<!--<body>-->
-<!--<script>-->
-<!--	"use strict";-->
 
-<!--	function booleanToString(b){-->
-<!--		return String(b);-->
-<!--		return `${b}`;-->
-
-<!--	}-->
-<!--	alert(booleanToString("11"));-->
-<!--	alert(booleanToString(false));-->
-<!--</script>-->
-<!--</body>-->
-<!--</html>-->
-
-<!--Take 2 strings s1 and s2 including only letters from ato z. Return a new sorted string, the longest possible, containing-->
+<!--Take 2 strings s1 and s2 including only letters from a to z. Return a new sorted string, the longest possible, containing-->
 <!--distinct letters - each taken only once - coming from s1 or s2.
 a = "xyaabbbccccdefww"
 b = "xxxxyyyyabklmopq"
@@ -650,8 +613,8 @@ longest(a, a) -> "abcdefghijklmnopqrstuvwxyz"-->
 <!--	}-->
 
 
-<!--	alert(longest("herearethey", "yestheyarehere"));-->
-<!--	alert(longest("loopingisfunbutdangerous", "lessdangerousthancoding"));-->
+<!--	alert(longest("herearethey", "yestheyarehere"));//aehrsty-->
+<!--	alert(longest("loopingisfunbutdangerous", "lessdangerousthancoding"));//abcdefghilnoprstu-->
 <!--</script>-->
 <!--</body>-->
 <!--</html>-->
@@ -686,6 +649,8 @@ longest(a, a) -> "abcdefghijklmnopqrstuvwxyz"-->
 
 <!--Given a non-empty array of integers, return the result of multiplying the values together in order. Example:-->
 <!--[1, 2, 3, 4] => 1 * 2 * 3 * 4 = 24-->
+
+
 <!--<!DOCTYPE html>-->
 <!--<html>-->
 <!--<head>-->
@@ -700,12 +665,12 @@ longest(a, a) -> "abcdefghijklmnopqrstuvwxyz"-->
 <!--		return x.reduce((current, previous) => current * previous, 1);-->
 <!--	}-->
 
-<!--	alert(grow([1, 2, 3]));-->
-<!--	alert(grow([4, 1, 1, 1, 4]));-->
-<!--	alert(grow([2, 2, 2, 2, 2, 2]));-->
+<!--	alert(grow([1, 2, 3])); //6-->
+<!--	alert(grow([4, 1, 1, 1, 4]));//16-->
+<!--	alert(grow([2, 2, 2, 2, 2, 2]));//64-->
 <!--</script>-->
 <!--</body>-->
-<!--</html>-->
+<!--</html>
 
 <!--A hero is on his way to the castle to complete his mission. However, he's been told that the castle is surrounded with a -->
 <!--couple of powerful dragons! each dragon takes 2 bullets to be defeated, our hero has no idea how many bullets he should -->
@@ -831,9 +796,9 @@ longest(a, a) -> "abcdefghijklmnopqrstuvwxyz"-->
 <!--	};-->
 <!--	// const removeChar = (str) => str.replace(/^.|.$/g, '');-->
 
-<!--	alert(removeChar('eloquent')); //-->
-<!--	alert(removeChar('country')); //-->
-<!--	alert(removeChar('person')); //-->
+<!--	alert(removeChar('eloquent')); //'loquen'-->
+<!--	alert(removeChar('country')); //'ountr'-->
+<!--	alert(removeChar('person')); //'erso'-->
 <!--</script>-->
 <!--</body>-->
 <!--</html>-->
@@ -10689,8 +10654,6 @@ contains the Y chromosome, return "Congratulations! You're going to have a son."
 <!--<body>-->
 <!--<script>-->
 <!--	"use strict";-->
-<!--	// alert(); //-->
-
 
 <!--	function race(v1, v2, g) {-->
 <!--		let time = g/(v2 - v1);-->
@@ -10714,8 +10677,6 @@ contains the Y chromosome, return "Congratulations! You're going to have a son."
 <!--<body>-->
 <!--<script>-->
 <!--	"use strict";-->
-<!--	// alert(); //-->
-
 
 <!--	function mango(quantity, price){-->
 <!--		let freeMango =  quantity - 2 > 0;-->
@@ -10729,11 +10690,12 @@ contains the Y chromosome, return "Congratulations! You're going to have a son."
 
 <!--	}-->
 
-<!--	alert(mango( 77, 9));//, 468)-->
-<!--	// alert(mango(9, 5));//, 30)-->
+<!--	alert(mango( 77, 9));// 468-->
+<!--	// alert(mango(9, 5));// 30-->
 
 <!--</script>-->
 <!--</body>-->
+
 
 
 <!--<html>-->
@@ -10743,28 +10705,6 @@ contains the Y chromosome, return "Congratulations! You're going to have a son."
 <!--<body>-->
 <!--<script>-->
 <!--	"use strict";-->
-<!--	// alert(); //-->
-
-
-<!--	function mango(quantity, price){-->
-<!--		return price * (quantity - Math.floor(quantity / 3));-->
-<!--	}-->
-
-<!--	alert(mango( 77, 9));//, 468)-->
-<!--	// alert(mango(9, 5));//, 30)-->
-
-<!--</script>-->
-<!--</body>-->
-<!--</html>-->
-
-<!--<html>-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">- -->
-<!--</head>-->
-<!--<body>-->
-<!--<script>-->
-<!--	"use strict";-->
-<!--	// alert(); //-->
 
 <!--	function vertMirror(strng) {-->
 <!--		let arr = strng.split("\n");-->
