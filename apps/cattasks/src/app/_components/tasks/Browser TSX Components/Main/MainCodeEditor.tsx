@@ -18,13 +18,29 @@ export default function MainCodeEditor({className}: MainCodeEditorprops) {
         <div className={`${styles.codeEditorContainer} ${className ?? ''}`}>
             <Monaco
                 height="100%"
-                language="typescript"
-                path="tasks.tsx"
+                language="javascript"        // ← было "typescript"
+                path="solution.js"           // полезно для воркера
                 beforeMount={(monaco) => {
-                    monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                        noSemanticValidation: true,  // оставить только синтаксис
-                        // noSyntaxValidation: true,  // если нужно убрать всё
+                    const {javascriptDefaults} = monaco.languages.typescript;
+                    javascriptDefaults.setDiagnosticsOptions({
+                        noSemanticValidation: true, // оставить только синтаксис
+                        // noSyntaxValidation: false,  // true — убрать всё
                     });
+                    javascriptDefaults.setCompilerOptions({
+                        allowNonTsExtensions: true,
+                        checkJs: false,
+                        target: monaco.languages.typescript.ScriptTarget.ES2020,
+                    });
+
+                    // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                    //     noSemanticValidation: true,  // оставить только синтаксис
+                    //     // noSyntaxValidation: true,  // если нужно убрать всё
+                    // });
+                }}
+
+                onMount={(editor) => {
+                    // опционально авто-формат
+                    editor.getAction('editor.action.formatDocument')?.run();
                 }}
                 value={code}
                 onChange={(v) => setCode(v ?? '')}
