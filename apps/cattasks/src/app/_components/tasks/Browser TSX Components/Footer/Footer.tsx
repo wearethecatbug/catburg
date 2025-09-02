@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 
 // Динамический импорт компонентов с отключением SSR
 const Doggy = dynamic(() => import('@/app/_components/tasks/Features/Doggy'), {ssr: false});
-const FooterMonster = dynamic(() => import('@/app/_components/tasks/Features/FooterMonster'), {ssr: false});
+const FooterMonster = dynamic(() => import('@/app/_components/tasks/Features/WormMonster'), {ssr: false});
 
 export default function Footer() {
     return (
