@@ -45,12 +45,13 @@ async function loadAssets() {
 function buildScene() {
 	const doggyTextures = Assets.get('doggy');
 	const idleTextures = doggyTextures?.animations['Idle'] || [];
-	if (idleTextures.length === 0) {
-		console.warn('No idle textures found for doggy animation.');
-		return;
-	}
 	const doggy = new AnimatedSprite(idleTextures, true);
 	stage.addChild(doggy);
+
+	const wormTextures = Assets.get('monsterWorm');
+	const wormIdleTextures = wormTextures?.animations['Attack'] || [];
+	const worm = new AnimatedSprite(wormIdleTextures, true);
+	stage.addChild(worm);
 }
 
 
