@@ -69,14 +69,21 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
      * и мы всегда работаем с актуальной функцией followCallback
      */
     useEffect(() => {
+        const ticker = applicationRef.current?.ticker;
+        if (!ticker) return;
+
         if (followEnabled) {
             console.log('HealthBarOverlay: follow enabled');
-            applicationRef?.current?.ticker.add(followCallback);
+            ticker.add(followCallback);
         } else {
             console.log('HealthBarOverlay: follow disabled');
-            applicationRef?.current?.ticker.remove(followCallback);
+            ticker.remove(followCallback);
         }
-    }, [followEnabled]);
+
+        return () => {
+            ticker.remove(followCallback);
+        };
+    }, [followEnabled, followCallback]);
 
     useEffect(() => {
         verticalOffsetRef.current = verticalOffsetPixels;
@@ -88,7 +95,7 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         if (!fill) return;
         const rootElement = rootRef.current;
         if (!rootElement) return;
-        const clamped = Math.max(0, Math.min(currentHealthPoints, maximumHealthPoints));
+        const clamped = Math.max(0, Math.min(1, maximumHealthPoints));
         const fraction = maximumHealthPoints > 0 ? clamped / maximumHealthPoints : 0;
 
         fill.style.width = `${Math.round(fraction * 100)}%`;
@@ -106,7 +113,7 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
 
 
     const updatePosition = () => {
-        console.log('HealthBarOverlay: updatePosition');
+
         const root = healthBarRootElementRef.current;
         const sprite = spriteRef.current;
         const application = applicationRef.current;
@@ -135,28 +142,6 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         root.style.left = `${left}px`;
         root.style.top = `${top}px`;
     };
-
-    useEffect(() => {
-        if (!isReady || !isSpriteReady) return;
-        const application = applicationRef.current;
-        const container = containerRef.current;
-        if (!application || !container) return;
-
-        const followCallback = () => {
-            updatePosition();
-        };
-
-        updatePosition(); // стартовая позиция
-
-        return () => {
-            application.ticker.remove(followCallback);
-        };
-    }, [isReady, isSpriteReady]);
-
-    useEffect(() => {
-        if (isReady && isSpriteReady && followEnabled) updatePosition();
-    }, [followEnabled, isReady, isSpriteReady, totalWidthPixels, totalHeightPixels, applicationRef, spriteRef, containerRef]);
-
 
     return (
         <div
