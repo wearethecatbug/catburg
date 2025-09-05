@@ -1,5 +1,5 @@
 // при ошибке типов на TextureSource в v8: импортируй из '@pixi/core'
-import type {AnimatedSprite, Texture, TextureSource} from 'pixi.js';
+import type {AnimatedSprite, Application, Texture, TextureSource} from 'pixi.js';
 import {ViewportBounds} from "@/app/_components/tasks/Features/pixi/systems/movement";
 
 export type FrameBase = { width: number; height: number };
@@ -41,20 +41,19 @@ export function applyCenterLayoutToSpriteInContainer(
     containerElement.style.width = `${layout.containerWidth}px`;
     containerElement.style.height = `${layout.containerHeight}px`;
 
-    sprite.anchor.set(0.5);
+    sprite.anchor.set(0);
     sprite.x = layout.containerWidth / 2;
     sprite.y = layout.containerHeight / 2;
 }
 
-// Выравниваем спрайт по левому нижнему углу вьюпорта, используя абсолютные координаты
 export function applyBottomLeftLayoutToSprite(
     sprite: AnimatedSprite,
     viewportBounds: ViewportBounds
 ) {
-
     const base = computeFrameBase(sprite);
-    const availableWidth = viewportBounds.right - viewportBounds.left;
-    const availableHeight = viewportBounds.bottom - viewportBounds.top;
+
+    const availableWidth = Math.max(1, viewportBounds.right - viewportBounds.left);
+    const availableHeight = Math.max(1, viewportBounds.bottom - viewportBounds.top);
 
     const layout = computeSpriteLayoutForBox(
         base,
@@ -64,11 +63,51 @@ export function applyBottomLeftLayoutToSprite(
         'bottomLeft'
     );
 
-    sprite.anchor.set(0, 0);
+    // якорь: центр по X, низ по Y
+    sprite.anchor.set(0.5, 1);
+
+    // масштаб с сохранением направления
     sprite.scale.set(layout.scaleX, layout.scaleY);
-    // используем абсолютные координаты через spriteX/spriteY
-    sprite.x = viewportBounds.left + layout.spriteX;
-    sprite.y = viewportBounds.top + layout.spriteY;
+
+    // позиция якоря = левый-верх + смещение + половина ширины по X и вся высота по Y
+    sprite.x = viewportBounds.left + layout.spriteX + layout.containerWidth / 2;
+    sprite.y = viewportBounds.top + layout.spriteY + layout.containerHeight;
+
+    sprite.visible = true;
+}
+
+/** Центр по X и прижатие к низу вьюпорта (окно в футере) */
+export function applyBottomCenterLayoutToSprite(
+    sprite: AnimatedSprite,
+    viewportBounds: ViewportBounds
+) {
+    const base = computeFrameBase(sprite);
+
+    const availableWidth = Math.max(1, viewportBounds.right - viewportBounds.left);
+    const availableHeight = Math.max(1, viewportBounds.bottom - viewportBounds.top);
+
+    const scaleFactor = Math.min(availableWidth / base.width, availableHeight / base.height, 1);
+    const signX = Math.sign(sprite.scale.x) || 1;
+
+    // якорь: середина по X, низ по Y
+    sprite.anchor.set(0.5, 1);
+
+    // масштаб с сохранением направления
+    sprite.scale.set(signX * scaleFactor, scaleFactor);
+
+    // центрируем по X, “ставим на землю” по Y
+    sprite.x = viewportBounds.left + availableWidth / 2;
+    sprite.y = viewportBounds.bottom;
+
+    return {
+        scaleX: signX * scaleFactor,
+        scaleY: scaleFactor,
+        containerWidth: Math.ceil(base.width * scaleFactor),
+        containerHeight: Math.ceil(base.height * scaleFactor),
+        // для совместимости возвращаем мировые координаты якоря
+        spriteX: sprite.x,
+        spriteY: sprite.y,
+    };
 }
 
 // Вычисляем параметры для позиционирования спрайта в контейнере с учётом выравнивания и масштабирования по доступной области
@@ -108,3 +147,17 @@ export function computeSpriteLayoutForBox(
     };
 }
 
+/** Координаты DOM-оверлея над головой спрайта в CSS-пикселях */
+export function computeDomOverlayPositionAboveSprite(
+    sprite: AnimatedSprite,
+    pixiApplication: Application,
+    verticalOffsetPixels: number
+): { leftCssPixels: number; topCssPixels: number } {
+    const worldBounds = sprite.getBounds();
+    const resolution = pixiApplication.renderer.resolution;
+
+    const centerXCss = Math.round((worldBounds.x + worldBounds.width / 2) / resolution);
+    const topYCss = Math.round((worldBounds.y - verticalOffsetPixels) / resolution);
+
+    return {leftCssPixels: centerXCss, topCssPixels: topYCss};
+}
