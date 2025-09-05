@@ -1,7 +1,7 @@
 import type {AnimatedSprite, Texture} from 'pixi.js';
 
 export type EntityAnimationState =
-    | 'Idle' | 'Walk' | 'Run' | 'Attack' | 'Hurt' | 'Die';
+    | 'Idle' | 'Walk' | 'Attack' | 'Hurt' | 'Death';
 
 export type AnimationNameMap = Partial<Record<EntityAnimationState, string>>;
 
