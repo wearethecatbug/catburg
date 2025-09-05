@@ -30,47 +30,97 @@ export function initHorizontalKeyboardMovement<TAnimation extends string = strin
     } = options;
 
     const keyboard = {left: false, right: false};
-    const onDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') keyboard.left = true;
-        if (e.key === 'ArrowRight' || e.key === 'd') keyboard.right = true;
-    };
-    const onUp = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') keyboard.left = false;
-        if (e.key === 'ArrowRight' || e.key === 'd') keyboard.right = false;
+    let currentlyPressedKey: 'left' | 'right' | null = null;
+    let numberOfFramesSinceKeyDown = 0;
+
+    let acceleration = 0.22;
+    let velocity = 0;
+    let movementDirectionSign = 1;
+
+    const setFacingByKey = (key: 'left' | 'right') => {
+        const sprite = spriteRef.current;
+        if (!sprite) return;
+        const absoluteScaleX = Math.abs(sprite.scale.x) || 1;
+        const directionSign = key === 'left' ? -1 : 1;
+        sprite.scale.set(directionSign * absoluteScaleX, sprite.scale.y);
     };
 
-    window.addEventListener('keydown', onDown);
-    window.addEventListener('keyup', onUp);
+    const onKeyDown = (event: KeyboardEvent) => {
+        if (event.code !== 'ArrowLeft' && event.code !== 'KeyA' &&
+            event.code !== 'ArrowRight' && event.code !== 'KeyD') return;
+        event.preventDefault();
+
+        const key = event.code === 'ArrowLeft' || event.code === 'KeyA' ? 'left' : 'right';
+
+        if (key == 'right')
+            movementDirectionSign = 1;
+        else
+            movementDirectionSign = -1;
+
+        if (key == 'left' || key == 'right')
+            options.setCurrentAnimationIfChanged(options.walkState); // тап — в Walk
+
+        if (currentlyPressedKey !== key) {
+            currentlyPressedKey = key;
+            velocity = 0;
+            numberOfFramesSinceKeyDown = 0;
+            setFacingByKey(key);
+            //options.setCurrentAnimationIfChanged(options.idleState); // тап — остаёмся в Idle
+        }
+    };
+
+    const onKeyUp = (event: KeyboardEvent) => {
+        if (event.code !== 'ArrowLeft' && event.code !== 'KeyA' &&
+            event.code !== 'ArrowRight' && event.code !== 'KeyD') return;
+        const key = event.code === 'ArrowLeft' || event.code === 'KeyA' ? 'left' : 'right';
+        if (currentlyPressedKey === key) {
+            currentlyPressedKey = null;
+            options.setCurrentAnimationIfChanged(options.idleState);
+        }
+    };
+
 
     const onTick = () => {
         const sprite = spriteRef.current;
         if (!sprite) return;
-
-        const bounds = getViewportBounds();
-        let deltaX = 0;
-        if (keyboard.left) deltaX -= movementSpeedPixelsPerTick;
-        if (keyboard.right) deltaX += movementSpeedPixelsPerTick;
-
-        if (deltaX !== 0) {
-            const sign = deltaX < 0 ? -1 : 1;
-            sprite.scale.set(sign * Math.abs(sprite.scale.x), Math.abs(sprite.scale.y));
-            setCurrentAnimationIfChanged(walkState);
-        } else {
-            setCurrentAnimationIfChanged(idleState);
+        if (currentlyPressedKey) {
+            velocity += acceleration;
+            // velocity = 0;
         }
 
-        sprite.x += deltaX;
-        clampSpritePosition(sprite, bounds);
-        sprite.y = bounds.bottom - sprite.height;
+        const viewportBounds = options.getViewportBounds();
+        // всегда держим “ноги” на земле
+        sprite.y = viewportBounds.bottom;
+
+        //if (!currentlyPressedKey) return;
+
+        // первый кадр после нажатия — только разворот, без движения
+        if (numberOfFramesSinceKeyDown === 0) {
+            numberOfFramesSinceKeyDown = 1;
+            //return;
+        }
+
+        velocity *= 0.95; // трение
+
+        // удержание — идём
+        const movementSpeedPixelsPerTick = options.movementSpeedPixelsPerTick ?? 10;
+
+        sprite.x += movementDirectionSign * velocity;
+
+        console.log(velocity);
+
+        clampSpritePosition(sprite, viewportBounds);
     };
 
     application.ticker.add(onTick);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
 
     return {
         dispose: () => {
             application.ticker.remove(onTick);
-            window.removeEventListener('keydown', onDown);
-            window.removeEventListener('keyup', onUp);
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('keyup', onKeyUp);
         },
     };
 }
