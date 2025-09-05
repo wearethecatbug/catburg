@@ -107,8 +107,6 @@ export function initHorizontalKeyboardMovement<TAnimation extends string = strin
 
         sprite.x += movementDirectionSign * velocity;
 
-        console.log(velocity);
-
         clampSpritePosition(sprite, viewportBounds);
     };
 
