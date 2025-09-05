@@ -1,5 +1,5 @@
 'use client';
-import {useEffect, useRef} from 'react';
+import {useCallback, useEffect, useRef} from 'react';
 import type {AnimatedSprite, Application} from 'pixi.js';
 import styles from './HealthBarOverlay.module.css';
 
@@ -36,10 +36,47 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         totalHeightPixels = 12,
     } = props;
 
+    console.log('follow', followEnabled);
+
     const healthBarRootElementRef = useRef<HTMLDivElement | null>(null);
     const healthBarFillElementRef = useRef<HTMLDivElement | null>(null);
     const verticalOffsetRef = useRef<number>(verticalOffsetPixels);
     const rootRef = healthBarRootElementRef;
+
+    /**
+     * Испольузем калбек, можно и без юзкалбека.
+     * Но что он делает, он кеширует динамически создаваемую функцию
+     * Например тут юз калбек без депенденси useCallback(() => {}, [])
+     * значит создастся функция один раз и в нй сохранятся параметры 1 раз followEnabled, isReady, isSpriteReady
+     * мы ставим депенденеси [followEnabled, isReady, isSpriteReady] значит при изменении любого из них
+     * будет создана новая функция с новыми параметрами.
+     * И в эффекте ниже, когда мы добавляем и удаляем тикер, мы всегда работаем с актуальной функцией
+     * Можешь попробвать убрать депенденси и посмотреть что будет followEnabled - будет всгеда false потому что он был такой при создании
+     * и калбек не пересоздатся, useCallback - кеширует, сохраняет функцию, депеденси позволяют ее пересоздать при изменении этих параметров
+     * это полезно для событий, колбеков, эффектов и тд но в таннолм случае это не особо нужно
+     */
+    const followCallback = useCallback(() => {
+        console.log('HealthBarOverlay: followCallback tick', followEnabled, isReady, isSpriteReady);
+        if (followEnabled && isReady && isSpriteReady) {
+            updatePosition();
+        }
+    }, [followEnabled, isReady, isSpriteReady]);
+
+    /**
+     * Добавляем и удаляем тикер в зависимости от followEnabled
+     * Если followEnabled true, добавляем тикер, если false удаляем
+     * useEffect срабатывает при изменении followEnabled
+     * и мы всегда работаем с актуальной функцией followCallback
+     */
+    useEffect(() => {
+        if (followEnabled) {
+            console.log('HealthBarOverlay: follow enabled');
+            applicationRef?.current?.ticker.add(followCallback);
+        } else {
+            console.log('HealthBarOverlay: follow disabled');
+            applicationRef?.current?.ticker.remove(followCallback);
+        }
+    }, [followEnabled]);
 
     useEffect(() => {
         verticalOffsetRef.current = verticalOffsetPixels;
@@ -69,6 +106,7 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
 
 
     const updatePosition = () => {
+        console.log('HealthBarOverlay: updatePosition');
         const root = healthBarRootElementRef.current;
         const sprite = spriteRef.current;
         const application = applicationRef.current;
@@ -105,10 +143,9 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         if (!application || !container) return;
 
         const followCallback = () => {
-
             updatePosition();
         };
-        application.ticker.add(followCallback);
+
         updatePosition(); // стартовая позиция
 
         return () => {
