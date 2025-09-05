@@ -39,12 +39,7 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
     const healthBarRootElementRef = useRef<HTMLDivElement | null>(null);
     const healthBarFillElementRef = useRef<HTMLDivElement | null>(null);
     const verticalOffsetRef = useRef<number>(verticalOffsetPixels);
-    const followEnabledRef = useRef<boolean>(followEnabled);
     const rootRef = healthBarRootElementRef;
-
-    useEffect(() => {
-        followEnabledRef.current = followEnabled;
-    }, [followEnabled]);
 
     useEffect(() => {
         verticalOffsetRef.current = verticalOffsetPixels;
@@ -74,8 +69,6 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
 
 
     const updatePosition = () => {
-
-
         const root = healthBarRootElementRef.current;
         const sprite = spriteRef.current;
         const application = applicationRef.current;
@@ -112,7 +105,7 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         if (!application || !container) return;
 
         const followCallback = () => {
-            if (!followEnabledRef.current) return;
+
             updatePosition();
         };
         application.ticker.add(followCallback);
