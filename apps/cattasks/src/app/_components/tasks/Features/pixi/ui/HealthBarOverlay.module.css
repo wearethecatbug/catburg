@@ -1,0 +1,23 @@
+.healthBarRoot {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--hp-bar-width, 80px);
+    height: var(--hp-bar-height, 5px);
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--hp-bar-radius, 6px);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.healthBarFill {
+    width: 100%;
+    height: 100%;
+    background: var(--hp-bar-color, #35c759);
+    transition: background-color 120ms linear;
+    border-radius: inherit;
+    will-change: width, transform;
+    transform: translateZ(0);
+    overflow: visible;
+}
