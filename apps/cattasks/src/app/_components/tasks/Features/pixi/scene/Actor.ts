@@ -38,6 +38,10 @@ export class Actor implements IUpdatable {
         if (viewOrOptions instanceof ActorView) {
             this.view = viewOrOptions;
             this.model = model!;
+
+            this.view.setPosition(this.model.position.x, this.model.position.y);
+            this.view.setDirection(this.model.direction);
+            this.view.setState(this.model.state);
         } else {
             const options = viewOrOptions;
             const sprite = new AnimatedSprite(options.asset.animations[options.initialState]);

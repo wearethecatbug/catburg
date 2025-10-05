@@ -1,15 +1,21 @@
 import {MovementController} from './MovementController';
 import {KeyboardController} from '../interactive/KeyboardController';
 import {Direction} from '../scene/Actor';
-import {GameEvent} from '../core/Event';
+import type {ActorModel} from '../models/ActorModel';
 
 export class PlayerController extends MovementController {
     private keyboardController: KeyboardController;
     private isActive: boolean = true;
+    private actorModelRef?: ActorModel;
 
     constructor(keyboardController: KeyboardController, priority: number = 50) {
         super(priority);
         this.keyboardController = keyboardController;
+    }
+
+    init(actor: any): void {
+        super.init(actor);
+        this.actorModelRef = actor.model as ActorModel;
     }
 
     setActive(active: boolean): void {
@@ -57,9 +63,17 @@ export class PlayerController extends MovementController {
         if (horizontal !== 0 || vertical !== 0) {
             this.move(horizontal as Direction, vertical);
             this.emitEvent('player:moving', { horizontal, vertical });
+
+            if (this.actorModelRef && this.actorModelRef.state !== 'Walk') {
+                this.actorModelRef.setState('Walk');
+            }
         } else {
             this.stop();
             this.emitEvent('player:idle');
+
+            if (this.actorModelRef && this.actorModelRef.state !== 'Idle') {
+                this.actorModelRef.setState('Idle');
+            }
         }
     }
 
