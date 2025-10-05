@@ -48,9 +48,6 @@ export default function Page() {
         return <div>Error... {error.message}</div>;
     }
 
-    /**
-     * Демонстрация того как работает ПУЛЛ РЕКВЕСТ.
-     */
     return (
         <div>
         {loading && (<div>Loading...</div>)}
