@@ -17,20 +17,20 @@ export class Scene implements IUpdatable {
     addActor(actor: Actor) {
         if (this.actors.has(actor)) return;
         this.actors.add(actor);
-        this.view.addChild(actor.view);
+        this.view.addChild(actor.view.sprite);
     }
 
     removeActor(actor: Actor) {
         if (!this.actors.has(actor)) return;
         this.actors.delete(actor);
-        if (actor.view.parent === this.view) {
-            this.view.removeChild(actor.view);
+        if (actor.view.sprite.parent === this.view) {
+            this.view.removeChild(actor.view.sprite);
         }
     }
 
     clear() {
         this.actors.forEach(a => {
-            if (a.view.parent === this.view) this.view.removeChild(a.view);
+            if (a.view.sprite.parent === this.view) this.view.removeChild(a.view.sprite);
         });
         this.actors.clear();
     }
