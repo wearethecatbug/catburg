@@ -1,6 +1,10 @@
 import {AnimatedSprite, Spritesheet, Texture} from 'pixi.js';
-import {type AnimationNameMap, type EntityAnimationState, setAnimation} from '../systems/animation';
+import {type AnimationNameMap, type EntityAnimationState} from '../systems/animation';
 import type {IUpdatable} from './IUpdatable';
+import {ActorView} from '../views/ActorView';
+import {ActorModel} from '../models/ActorModel';
+import {IController} from '../controllers/IController';
+import {GameEvent} from '../core/Event';
 
 export enum Direction {
     Left = -1,
@@ -16,68 +20,139 @@ export interface ActorOptions {
     alignToBottom?: boolean;
 }
 
+interface ControllerEntry {
+    controller: IController;
+    priority: number;
+}
+
 export class Actor implements IUpdatable {
-    readonly view: AnimatedSprite;
+    readonly view: ActorView;
+    readonly model: ActorModel;
 
-    private asset: Spritesheet;
-    private animations: Record<string | number, Texture[]>;
-    private nameMap?: AnimationNameMap;
-    private baseScaleX: number;
+    private controllers: Map<string, ControllerEntry> = new Map();
+    private sortedControllers: IController[] = [];
 
-    constructor(options: ActorOptions) {
-        this.asset = options.asset;
-        this.animations = options.animations;
-        this.nameMap = options.nameMap;
-        this._state = options.initialState ?? 'Idle';
-        this._direction = options.direction ?? Direction.Right;
+    constructor(view: ActorView, model: ActorModel);
+    constructor(options: ActorOptions);
+    constructor(viewOrOptions: ActorView | ActorOptions, model?: ActorModel) {
+        if (viewOrOptions instanceof ActorView) {
+            this.view = viewOrOptions;
+            this.model = model!;
 
-        this.view = new AnimatedSprite(this.asset.animations[this._state]);
-
-        if (options.alignToBottom) {
-            this.view.anchor.set(0.5, 1);
+            this.view.setPosition(this.model.position.x, this.model.position.y);
+            this.view.setDirection(this.model.direction);
+            this.view.setState(this.model.state);
         } else {
-            this.view.anchor.set(0.5, 0.5);
+            const options = viewOrOptions;
+            const sprite = new AnimatedSprite(options.asset.animations[options.initialState]);
+
+            if (options.alignToBottom) {
+                sprite.anchor.set(0.5, 1);
+            } else {
+                sprite.anchor.set(0.5, 0.5);
+            }
+
+            this.view = new ActorView(sprite, options.animations, options.nameMap);
+            this.model = new ActorModel({
+                position: { x: sprite.x, y: sprite.y },
+                direction: options.direction ?? Direction.Right,
+                state: options.initialState ?? 'Idle',
+            });
+
+            this.view.setDirection(this.model.direction);
+            this.view.setState(this.model.state);
         }
-        this.baseScaleX = this.view.scale.x || 1;
-        this.applyDirection();
-        this.applyState();
+
+        this.setupModelListeners();
     }
 
-    private _state: EntityAnimationState;
+    private setupModelListeners(): void {
+        this.model.addEventListener('position:changed', (event: GameEvent<{x: number; y: number}>) => {
+            this.view.setPosition(event.data.x, event.data.y);
+        });
 
-    get state(): EntityAnimationState { return this._state; }
+        this.model.addEventListener('direction:changed', (event: GameEvent<Direction>) => {
+            this.view.setDirection(event.data);
+        });
 
-    private _direction: Direction;
-
-    get direction(): Direction { return this._direction; }
-
-    setState(next: EntityAnimationState) {
-        if (this._state === next) return;
-        this._state = next;
-        this.applyState();
+        this.model.addEventListener('state:changed', (event: GameEvent<{state: EntityAnimationState}>) => {
+            this.view.setState(event.data.state);
+        });
     }
 
-    setDirection(dir: Direction) {
-        if (this._direction === dir) return;
-        this._direction = dir;
-        this.applyDirection();
+    get state(): EntityAnimationState {
+        return this.model.state;
     }
 
-    setPosition(x: number, y: number) {
-        this.view.position.set(x, y);
+    get direction(): Direction {
+        return this.model.direction;
     }
 
-    centerInScene(sceneWidth: number, sceneHeight: number) {
-        this.view.position.set(sceneWidth / 2, sceneHeight);
+    setState(next: EntityAnimationState): void {
+        this.model.setState(next);
     }
 
-    update(_delta: number) {}
-
-    private applyState() {
-        setAnimation(this.view, this.animations, this._state, {nameMap: this.nameMap});
+    setDirection(dir: Direction): void {
+        this.model.setDirection(dir);
     }
 
-    private applyDirection() {
-        this.view.scale.x = this.baseScaleX * (this._direction === Direction.Left ? -1 : 1);
+    setPosition(x: number, y: number): void {
+        this.model.setPosition(x, y);
+    }
+
+    centerInScene(sceneWidth: number, sceneHeight: number): void {
+        this.setPosition(sceneWidth / 2, sceneHeight);
+    }
+
+    addController(name: string, controller: IController): void {
+        if (this.controllers.has(name)) {
+            throw new Error(`Controller with name '${name}' already exists`);
+        }
+
+        const entry: ControllerEntry = {
+            controller,
+            priority: controller.priority,
+        };
+
+        this.controllers.set(name, entry);
+        controller.init(this);
+        this.rebuildSortedControllers();
+    }
+
+    removeController(name: string): void {
+        const entry = this.controllers.get(name);
+        if (!entry) return;
+
+        entry.controller.destroy();
+        this.controllers.delete(name);
+        this.rebuildSortedControllers();
+    }
+
+    getController<T extends IController>(name: string): T | undefined {
+        return this.controllers.get(name)?.controller as T | undefined;
+    }
+
+    hasController(name: string): boolean {
+        return this.controllers.has(name);
+    }
+
+    private rebuildSortedControllers(): void {
+        this.sortedControllers = Array.from(this.controllers.values())
+            .sort((a, b) => a.priority - b.priority)
+            .map(entry => entry.controller);
+    }
+
+    update(delta: number): void {
+        for (const controller of this.sortedControllers) {
+            controller.update(delta);
+        }
+    }
+
+    destroy(): void {
+        this.controllers.forEach(entry => entry.controller.destroy());
+        this.controllers.clear();
+        this.sortedControllers = [];
+        this.model.destroy();
+        this.view.destroy();
     }
 }

@@ -5,6 +5,10 @@ import {Actor, Direction} from "@/app/_components/tasks/Features/pixi/scene/Acto
 import {DOG_ANIMATION_NAME_MAP} from "@/app/_components/tasks/Features/pixi/entities/doggy/animations";
 import {WORM_ANIMATION_NAME_MAP} from "@/app/_components/tasks/Features/pixi/entities/wormMonster/animations";
 import {keyboardControllerSingleton} from "@/app/_components/tasks/Features/pixi/interactive/KeyboardController";
+import {ViewFactory} from "@/app/_components/tasks/Features/pixi/factories/ViewFactory";
+import {ActorModel} from "@/app/_components/tasks/Features/pixi/models/ActorModel";
+import {MovementModel} from "@/app/_components/tasks/Features/pixi/models/MovementModel";
+import {PlayerController} from "@/app/_components/tasks/Features/pixi/controllers/PlayerController";
 
 export const application = new Application();
 const stage = application.stage;
@@ -55,14 +59,30 @@ function buildScene() {
 	const doggySheet = Assets.get<Spritesheet>('doggy');
 	const wormSheet = Assets.get<Spritesheet>('monsterWorm');
 
-	const dogActor = new Actor({
-		asset: doggySheet!,
+	const dogView = ViewFactory.createActorView({
+		spritesheet: doggySheet!,
 		animations: doggySheet?.animations || {},
 		nameMap: DOG_ANIMATION_NAME_MAP,
 		initialState: 'Idle',
 		alignToBottom: true,
 		direction: Direction.Right,
 	});
+
+	const initialX = application.renderer.width / 2;
+	const initialY = application.renderer.height - 50;
+
+	const dogModel = new ActorModel({
+		position: { x: initialX, y: initialY },
+		direction: Direction.Right,
+		state: 'Idle',
+	});
+	dogModel.addModel('movement', new MovementModel({ speed: 150 }));
+
+	const dogActor = new Actor(dogView, dogModel);
+	const playerController = new PlayerController(keyboardControllerSingleton, 50);
+	playerController.setSceneBounds(application.renderer.width, application.renderer.height);
+	dogActor.addController('player', playerController);
+
 
 	const wormActor = new Actor({
 		asset: wormSheet!,
@@ -76,20 +96,10 @@ function buildScene() {
 	scene.addActor(dogActor);
 	scene.addActor(wormActor);
 
-	// initial positioning
-	dogActor.centerInScene(application.renderer.width, application.renderer.height);
-	wormActor.setPosition(dogActor.view.x + 150, dogActor.view.y);
+	const dogPos = dogModel.position;
+	wormActor.setPosition(dogPos.x + 150, dogPos.y);
 
-	// start scene loop via ticker
 	application.ticker.add((t) => {
-		if (keyboardControllerSingleton.getPressedKeys().length)
-			console.log(keyboardControllerSingleton.getPressedKeys());
 		scene.update(t.deltaMS);
-
-		if (keyboardControllerSingleton.isKeyPressed('ArrowLeft')) {
-			dogActor.setDirection(Direction.Left);
-		} else if (keyboardControllerSingleton.isKeyPressed('ArrowRight')) {
-			dogActor.setDirection(Direction.Right);
-		}
 	});
 }
