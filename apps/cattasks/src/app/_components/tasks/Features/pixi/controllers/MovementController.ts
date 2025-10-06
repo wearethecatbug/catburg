@@ -3,6 +3,7 @@ import {MovementModel} from '../models/MovementModel';
 import {ActorModel} from '../models/ActorModel';
 import {Direction} from '../scene/Actor';
 import {GameEvent} from '../core/Event';
+import type {Actor} from '../scene/Actor';
 
 export class MovementController implements IController {
     readonly priority: number;
@@ -15,9 +16,9 @@ export class MovementController implements IController {
         this.priority = priority;
     }
 
-    init(actor: any): void {
-        this.actorModel = actor.model as ActorModel;
-        this.movementModel = this.actorModel?.getModel<MovementModel>('movement');
+    init(actor: Actor): void {
+        this.actorModel = actor.model;
+        this.movementModel = this.actorModel?.getModel(MovementModel);
 
         if (!this.actorModel) {
             throw new Error('MovementController requires ActorModel');

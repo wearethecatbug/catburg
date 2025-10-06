@@ -1,22 +1,22 @@
 import {MovementController} from './MovementController';
 import {KeyboardController} from '../interactive/KeyboardController';
 import {Direction} from '../scene/Actor';
-import type {ActorModel} from '../models/ActorModel';
+import type {Actor} from '../scene/Actor';
 import {PlayerEvents} from '../core/EventTypes';
 
 export class PlayerController extends MovementController {
     private keyboardController: KeyboardController;
     private isActive: boolean = true;
-    private actorModelRef?: ActorModel;
+    private actorRef?: Actor;
 
     constructor(keyboardController: KeyboardController, priority: number = 50) {
         super(priority);
         this.keyboardController = keyboardController;
     }
 
-    init(actor: any): void {
+    init(actor: Actor): void {
         super.init(actor);
-        this.actorModelRef = actor.model as ActorModel;
+        this.actorRef = actor;
     }
 
     setActive(active: boolean): void {
@@ -65,15 +65,15 @@ export class PlayerController extends MovementController {
             this.move(horizontal as Direction, vertical);
             this.emitEvent(PlayerEvents.MOVING, { horizontal, vertical });
 
-            if (this.actorModelRef && this.actorModelRef.state !== 'Walk') {
-                this.actorModelRef.setState('Walk');
+            if (this.actorRef && this.actorRef.state !== 'Walk') {
+                this.actorRef.setState('Walk');
             }
         } else {
             this.stop();
             this.emitEvent(PlayerEvents.IDLE);
 
-            if (this.actorModelRef && this.actorModelRef.state !== 'Idle') {
-                this.actorModelRef.setState('Idle');
+            if (this.actorRef && this.actorRef.state !== 'Idle') {
+                this.actorRef.setState('Idle');
             }
         }
     }
