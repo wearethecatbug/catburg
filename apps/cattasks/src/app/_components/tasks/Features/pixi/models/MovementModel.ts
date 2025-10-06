@@ -1,5 +1,6 @@
 import {Model} from '../core/Model';
 import type {Vector2D} from './ActorModel';
+import {MovementEvents} from '../core/EventTypes';
 
 export interface MovementModelConfig {
     speed?: number;
@@ -33,10 +34,10 @@ export class MovementModel extends Model {
         const wasMoving = this._isMoving;
         this._isMoving = clampedX !== 0 || clampedY !== 0;
 
-        this.emitChange('velocity:changed', { x: clampedX, y: clampedY });
+        this.emitChange(MovementEvents.VELOCITY_CHANGED, { x: clampedX, y: clampedY });
 
         if (wasMoving !== this._isMoving) {
-            this.emitChange(this._isMoving ? 'movement:started' : 'movement:stopped', { isMoving: this._isMoving });
+            this.emitChange(this._isMoving ? MovementEvents.STARTED : MovementEvents.STOPPED, { isMoving: this._isMoving });
         }
     }
 
@@ -47,7 +48,7 @@ export class MovementModel extends Model {
     setSpeed(speed: number): void {
         if (this._speed === speed) return;
         this._speed = Math.max(0, speed);
-        this.emitChange('speed:changed', this._speed);
+        this.emitChange(MovementEvents.SPEED_CHANGED, this._speed);
     }
 
     get maxSpeed(): number {
@@ -57,7 +58,7 @@ export class MovementModel extends Model {
     setMaxSpeed(maxSpeed: number): void {
         if (this._maxSpeed === maxSpeed) return;
         this._maxSpeed = Math.max(0, maxSpeed);
-        this.emitChange('maxSpeed:changed', this._maxSpeed);
+        this.emitChange(MovementEvents.MAX_SPEED_CHANGED, this._maxSpeed);
     }
 
     get isMoving(): boolean {

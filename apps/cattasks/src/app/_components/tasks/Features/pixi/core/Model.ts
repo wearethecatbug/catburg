@@ -2,29 +2,30 @@ import {EventDispatcher} from './EventDispatcher';
 import {GameEvent} from './Event';
 
 export abstract class Model extends EventDispatcher {
-    private subModels: Map<string, Model> = new Map();
+    private subModels: Map<Function, Model> = new Map();
 
-    addModel(name: string, model: Model): void {
-        if (this.subModels.has(name)) {
-            throw new Error(`Model with name '${name}' already exists`);
+    addModel<T extends Model>(model: T): void {
+        const key = model.constructor;
+        if (this.subModels.has(key)) {
+            throw new Error(`Model of type '${key.name}' already exists`);
         }
-        this.subModels.set(name, model);
+        this.subModels.set(key, model);
     }
 
-    removeModel(name: string): void {
-        const model = this.subModels.get(name);
+    removeModel<T extends Model>(modelClass: new (...args: any[]) => T): void {
+        const model = this.subModels.get(modelClass);
         if (model) {
             model.destroy();
-            this.subModels.delete(name);
+            this.subModels.delete(modelClass);
         }
     }
 
-    getModel<T extends Model>(name: string): T | undefined {
-        return this.subModels.get(name) as T | undefined;
+    getModel<T extends Model>(modelClass: new (...args: any[]) => T): T | undefined {
+        return this.subModels.get(modelClass) as T | undefined;
     }
 
-    hasModel(name: string): boolean {
-        return this.subModels.has(name);
+    hasModel<T extends Model>(modelClass: new (...args: any[]) => T): boolean {
+        return this.subModels.has(modelClass);
     }
 
     protected emitChange<T = any>(type: string, data?: T): void {

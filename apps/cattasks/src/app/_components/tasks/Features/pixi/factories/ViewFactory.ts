@@ -1,5 +1,5 @@
 import {AnimatedSprite, Spritesheet, Texture} from 'pixi.js';
-import {ActorView} from '../views/ActorView';
+import {ActorView, AnimationConfig} from '../views/ActorView';
 import {Direction} from '../scene/Actor';
 import type {AnimationNameMap, EntityAnimationState} from '../systems/animation';
 
@@ -12,6 +12,7 @@ export interface ActorViewConfig {
     alignToBottom?: boolean;
     anchorX?: number;
     anchorY?: number;
+    animationConfigs?: Partial<Record<EntityAnimationState, AnimationConfig>>;
 }
 
 export class ViewFactory {
@@ -25,6 +26,7 @@ export class ViewFactory {
             alignToBottom = false,
             anchorX,
             anchorY,
+            animationConfigs,
         } = config;
 
         const sprite = new AnimatedSprite(spritesheet.animations[initialState]);
@@ -38,6 +40,12 @@ export class ViewFactory {
         }
 
         const view = new ActorView(sprite, animations, nameMap);
+
+        if (animationConfigs) {
+            for (const [state, config] of Object.entries(animationConfigs)) {
+                view.setAnimationConfig(state as EntityAnimationState, config);
+            }
+        }
 
         view.setDirection(direction);
         view.setState(initialState);

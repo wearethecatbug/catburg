@@ -2,6 +2,11 @@ import {AnimatedSprite, Texture} from 'pixi.js';
 import {Direction} from '../scene/Actor';
 import {type AnimationNameMap, type EntityAnimationState, setAnimation} from '../systems/animation';
 
+export interface AnimationConfig {
+    fps?: number;
+    loop?: boolean;
+}
+
 export class ActorView {
     readonly sprite: AnimatedSprite;
 
@@ -9,6 +14,7 @@ export class ActorView {
     private nameMap?: AnimationNameMap;
     private baseScaleX: number;
     private currentDirection: Direction;
+    private animationConfigs: Map<EntityAnimationState, AnimationConfig> = new Map();
 
     constructor(
         sprite: AnimatedSprite,
@@ -20,6 +26,10 @@ export class ActorView {
         this.nameMap = nameMap;
         this.baseScaleX = sprite.scale.x || 1;
         this.currentDirection = this.baseScaleX >= 0 ? Direction.Right : Direction.Left;
+    }
+
+    setAnimationConfig(state: EntityAnimationState, config: AnimationConfig): void {
+        this.animationConfigs.set(state, config);
     }
 
     setPosition(x: number, y: number): void {
@@ -41,6 +51,18 @@ export class ActorView {
 
     setState(state: EntityAnimationState): void {
         setAnimation(this.sprite, this.animations, state, { nameMap: this.nameMap });
+
+        const config = this.animationConfigs.get(state);
+        if (config) {
+            if (config.fps !== undefined) {
+                this.sprite.animationSpeed = config.fps / 60;
+            }
+            if (config.loop !== undefined) {
+                this.sprite.loop = config.loop;
+            }
+        }
+
+        this.sprite.play();
     }
 
     setScale(x: number, y: number): void {

@@ -1,6 +1,7 @@
 import {Model} from '../core/Model';
 import {Direction} from '../scene/Actor';
 import type {EntityAnimationState} from '../systems/animation';
+import {StateEvents} from '../core/EventTypes';
 
 export interface Vector2D {
     x: number;
@@ -32,7 +33,7 @@ export class ActorModel extends Model {
     setPosition(x: number, y: number): void {
         if (this._position.x === x && this._position.y === y) return;
         this._position = { x, y };
-        this.emitChange('position:changed', { x, y });
+        this.emitChange(StateEvents.POSITION_CHANGED, { x, y });
     }
 
     get direction(): Direction {
@@ -42,7 +43,7 @@ export class ActorModel extends Model {
     setDirection(direction: Direction): void {
         if (this._direction === direction) return;
         this._direction = direction;
-        this.emitChange('direction:changed', direction);
+        this.emitChange(StateEvents.DIRECTION_CHANGED, direction);
     }
 
     get state(): EntityAnimationState {
@@ -53,7 +54,7 @@ export class ActorModel extends Model {
         if (this._state === state) return;
         const previousState = this._state;
         this._state = state;
-        this.emitChange('state:changed', { state, previousState });
+        this.emitChange(StateEvents.STATE_CHANGED, { state, previousState });
     }
 }
 

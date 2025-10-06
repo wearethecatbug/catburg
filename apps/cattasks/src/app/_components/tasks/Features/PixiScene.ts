@@ -1,14 +1,11 @@
-import {Application, Assets, Spritesheet} from "pixi.js";
+import {Application, Assets} from "pixi.js";
 import {spriteSheetPaths} from "@/app/_components/tasks/Features/pixi/assets/manifest";
 import {Scene} from "@/app/_components/tasks/Features/pixi/scene/Scene";
-import {Actor, Direction} from "@/app/_components/tasks/Features/pixi/scene/Actor";
+import {Direction} from "@/app/_components/tasks/Features/pixi/scene/Actor";
 import {DOG_ANIMATION_NAME_MAP} from "@/app/_components/tasks/Features/pixi/entities/doggy/animations";
 import {WORM_ANIMATION_NAME_MAP} from "@/app/_components/tasks/Features/pixi/entities/wormMonster/animations";
 import {keyboardControllerSingleton} from "@/app/_components/tasks/Features/pixi/interactive/KeyboardController";
-import {ViewFactory} from "@/app/_components/tasks/Features/pixi/factories/ViewFactory";
-import {ActorModel} from "@/app/_components/tasks/Features/pixi/models/ActorModel";
-import {MovementModel} from "@/app/_components/tasks/Features/pixi/models/MovementModel";
-import {PlayerController} from "@/app/_components/tasks/Features/pixi/controllers/PlayerController";
+import {ActorFactory} from "@/app/_components/tasks/Features/pixi/factories/ActorFactory";
 
 export const application = new Application();
 const stage = application.stage;
@@ -56,48 +53,45 @@ async function loadAssets() {
 }
 
 function buildScene() {
-	const doggySheet = Assets.get<Spritesheet>('doggy');
-	const wormSheet = Assets.get<Spritesheet>('monsterWorm');
-
-	const dogView = ViewFactory.createActorView({
-		spritesheet: doggySheet!,
-		animations: doggySheet?.animations || {},
+	const dogActor = ActorFactory.createPlayerActor({
+		spritesheet: 'doggy',
 		nameMap: DOG_ANIMATION_NAME_MAP,
-		initialState: 'Idle',
+		initialPosition: {
+			x: application.renderer.width / 2,
+			y: application.renderer.height - 50
+		},
+		direction: Direction.Right,
 		alignToBottom: true,
-		direction: Direction.Right,
+		speed: 150,
+		keyboardController: keyboardControllerSingleton,
+		sceneBounds: {
+			width: application.renderer.width,
+			height: application.renderer.height
+		},
+		animationConfigs: {
+			Idle: { fps: 8, loop: true },
+			Walk: { fps: 12, loop: true },
+		},
 	});
 
-	const initialX = application.renderer.width / 2;
-	const initialY = application.renderer.height - 50;
-
-	const dogModel = new ActorModel({
-		position: { x: initialX, y: initialY },
-		direction: Direction.Right,
-		state: 'Idle',
-	});
-	dogModel.addModel('movement', new MovementModel({ speed: 150 }));
-
-	const dogActor = new Actor(dogView, dogModel);
-	const playerController = new PlayerController(keyboardControllerSingleton, 50);
-	playerController.setSceneBounds(application.renderer.width, application.renderer.height);
-	dogActor.addController('player', playerController);
-
-
-	const wormActor = new Actor({
-		asset: wormSheet!,
-		animations: wormSheet?.animations || {},
+	const wormActor = ActorFactory.createStaticActor({
+		spritesheet: 'monsterWorm',
 		nameMap: WORM_ANIMATION_NAME_MAP,
-		initialState: 'Idle',
-		alignToBottom: true,
+		initialPosition: {
+			x: dogActor.model.position.x + 150,
+			y: dogActor.model.position.y
+		},
 		direction: Direction.Left,
+		alignToBottom: true,
 	});
+
+	if (WORM_ANIMATION_NAME_MAP.Attack) {
+		wormActor.setState(WORM_ANIMATION_NAME_MAP.Attack);
+	}
 
 	scene.addActor(dogActor);
 	scene.addActor(wormActor);
 
-	const dogPos = dogModel.position;
-	wormActor.setPosition(dogPos.x + 150, dogPos.y);
 
 	application.ticker.add((t) => {
 		scene.update(t.deltaMS);
