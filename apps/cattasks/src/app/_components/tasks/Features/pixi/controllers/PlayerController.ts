@@ -2,6 +2,7 @@ import {MovementController} from './MovementController';
 import {KeyboardController} from '../interactive/KeyboardController';
 import {Direction} from '../scene/Actor';
 import type {ActorModel} from '../models/ActorModel';
+import {PlayerEvents} from '../core/EventTypes';
 
 export class PlayerController extends MovementController {
     private keyboardController: KeyboardController;
@@ -62,14 +63,14 @@ export class PlayerController extends MovementController {
 
         if (horizontal !== 0 || vertical !== 0) {
             this.move(horizontal as Direction, vertical);
-            this.emitEvent('player:moving', { horizontal, vertical });
+            this.emitEvent(PlayerEvents.MOVING, { horizontal, vertical });
 
             if (this.actorModelRef && this.actorModelRef.state !== 'Walk') {
                 this.actorModelRef.setState('Walk');
             }
         } else {
             this.stop();
-            this.emitEvent('player:idle');
+            this.emitEvent(PlayerEvents.IDLE);
 
             if (this.actorModelRef && this.actorModelRef.state !== 'Idle') {
                 this.actorModelRef.setState('Idle');

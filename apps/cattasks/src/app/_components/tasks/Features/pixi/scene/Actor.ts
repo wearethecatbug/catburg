@@ -5,6 +5,7 @@ import {ActorView} from '../views/ActorView';
 import {ActorModel} from '../models/ActorModel';
 import {IController} from '../controllers/IController';
 import {GameEvent} from '../core/Event';
+import {StateEvents} from '../core/EventTypes';
 
 export enum Direction {
     Left = -1,
@@ -67,15 +68,15 @@ export class Actor implements IUpdatable {
     }
 
     private setupModelListeners(): void {
-        this.model.addEventListener('position:changed', (event: GameEvent<{x: number; y: number}>) => {
+        this.model.addEventListener(StateEvents.POSITION_CHANGED, (event: GameEvent<{x: number; y: number}>) => {
             this.view.setPosition(event.data.x, event.data.y);
         });
 
-        this.model.addEventListener('direction:changed', (event: GameEvent<Direction>) => {
+        this.model.addEventListener(StateEvents.DIRECTION_CHANGED, (event: GameEvent<Direction>) => {
             this.view.setDirection(event.data);
         });
 
-        this.model.addEventListener('state:changed', (event: GameEvent<{state: EntityAnimationState}>) => {
+        this.model.addEventListener(StateEvents.STATE_CHANGED, (event: GameEvent<{state: EntityAnimationState}>) => {
             this.view.setState(event.data.state);
         });
     }
