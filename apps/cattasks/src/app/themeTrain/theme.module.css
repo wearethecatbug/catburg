@@ -1,0 +1,56 @@
+:root {
+    --bg: #ffffff;
+    --fg: #0f172a;
+    --muted: #475569;
+    --accent: #2563eb;
+}
+
+[data-theme="light"] {
+    color-scheme: light;
+    --bg: #fff;
+    --fg: #0f172a;
+    --muted: #475569;
+    --accent: #2563eb;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0b0f19;
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --accent: #60a5fa;
+}
+
+[data-theme="blue"] {
+    color-scheme: light;
+    --bg: #0b1220;
+    --fg: #cfe8ff;
+    --muted: #9dbfe0;
+    --accent: #5cc8ff;
+}
+
+html, body {
+    background: var(--bg);
+    color: var(--fg);
+}
+
+a {
+    color: var(--accent);
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+button {
+    color: #fff;
+}
+
+hr, .divider {
+    border-color: color-mix(in srgb, var(--fg) 15%, transparent);
+}

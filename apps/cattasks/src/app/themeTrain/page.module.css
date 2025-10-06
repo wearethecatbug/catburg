@@ -1,0 +1,83 @@
+
+.main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 16px;
+    display: grid;
+    gap: 24px;
+}
+
+.section {
+    display: grid;
+    gap: 12px;
+}
+
+.h1 {
+    font-size: 36px;
+    margin: 0;
+}
+
+.h2 {
+    font-size: 20px;
+    margin: 0;
+}
+
+.accentRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.btnPrimary {
+    padding: 8px 12px;
+    background: var(--accent);
+    border: 1px solid transparent;
+    border-radius: 8px;
+}
+
+.linkChip {
+    padding: 8px 12px;
+    border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.textChip {
+    padding: 8px 12px;
+    border: 1px dashed color-mix(in srgb, var(--fg) 20%, transparent);
+    border-radius: 8px;
+    opacity: .9;
+    display: inline-block;
+}
+
+.cardsGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.card {
+    border: 1px solid color-mix(in srgb, var(--fg) 15%, transparent);
+    border-radius: 12px;
+    padding: 16px;
+    display: grid;
+    gap: 8px;
+    background: color-mix(in srgb, var(--bg) 85%, var(--fg) 2%);
+}
+
+.cardTitle {
+    margin: 0;
+    font-size: 16px;
+}
+
+.cardDesc {
+    margin: 0;
+    opacity: .85;
+}
+
+.footer {
+    margin-top: 24px;
+    opacity: .7;
+    font-size: 12px;
+}
