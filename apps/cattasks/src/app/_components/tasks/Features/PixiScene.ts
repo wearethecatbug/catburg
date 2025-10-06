@@ -68,6 +68,10 @@ function buildScene() {
 			width: application.renderer.width,
 			height: application.renderer.height
 		},
+		animationConfigs: [
+			{ state: 'Idle', fps: 8, loop: true },
+			{ state: 'Walk', fps: 12, loop: true },
+		],
 	});
 
 	const wormActor = ActorFactory.createStaticActor({
@@ -81,7 +85,9 @@ function buildScene() {
 		alignToBottom: true,
 	});
 
-	wormActor.setState(WORM_ANIMATION_NAME_MAP.Attack);
+	if (WORM_ANIMATION_NAME_MAP.Attack) {
+		wormActor.setState(WORM_ANIMATION_NAME_MAP.Attack);
+	}
 
 	scene.addActor(dogActor);
 	scene.addActor(wormActor);

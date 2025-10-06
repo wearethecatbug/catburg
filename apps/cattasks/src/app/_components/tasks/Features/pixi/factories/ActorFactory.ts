@@ -1,12 +1,20 @@
 import {Actor, Direction} from '../scene/Actor';
 import {ActorModel} from '../models/ActorModel';
 import {MovementModel} from '../models/MovementModel';
+import {PhysicsModel} from '../models/PhysicsModel';
 import {ViewFactory} from './ViewFactory';
 import {PlayerController} from '../controllers/PlayerController';
 import {MovementController} from '../controllers/MovementController';
+import {GravityController} from '../controllers/GravityController';
 import type {KeyboardController} from '../interactive/KeyboardController';
 import {Assets, type Spritesheet} from 'pixi.js';
-import type {AnimationNameMap} from '../systems/animation';
+import type {AnimationNameMap, EntityAnimationState} from '../systems/animation';
+
+export interface AnimationSpeedConfig {
+    state: EntityAnimationState;
+    fps?: number;
+    loop?: boolean;
+}
 
 export interface BaseActorConfig {
     spritesheet: string;
@@ -14,6 +22,7 @@ export interface BaseActorConfig {
     initialPosition: { x: number; y: number };
     direction?: Direction;
     alignToBottom?: boolean;
+    animationConfigs?: AnimationSpeedConfig[];
 }
 
 export interface MobileActorConfig extends BaseActorConfig {
@@ -41,6 +50,7 @@ export class ActorFactory {
             initialState: 'Idle',
             direction: config.direction ?? Direction.Right,
             alignToBottom: config.alignToBottom ?? false,
+            animationConfigs: config.animationConfigs,
         });
 
         const model = new ActorModel({
@@ -70,6 +80,12 @@ export class ActorFactory {
 
     static createPlayerActor(config: PlayerActorConfig): Actor {
         const actor = ActorFactory.createMobileActor(config);
+
+        const physicsModel = new PhysicsModel();
+        actor.model.addModel(physicsModel);
+
+        const gravityController = new GravityController(config.initialPosition.y);
+        actor.addController('gravity', gravityController);
 
         const playerController = new PlayerController(
             config.keyboardController,

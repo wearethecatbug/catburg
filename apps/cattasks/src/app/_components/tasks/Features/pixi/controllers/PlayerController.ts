@@ -2,7 +2,7 @@ import {MovementController} from './MovementController';
 import {KeyboardController} from '../interactive/KeyboardController';
 import {Direction} from '../scene/Actor';
 import type {Actor} from '../scene/Actor';
-import {PlayerEvents} from '../core/EventTypes';
+import {PhysicsModel} from '../models/PhysicsModel';
 
 export class PlayerController extends MovementController {
     private keyboardController: KeyboardController;
@@ -41,13 +41,11 @@ export class PlayerController extends MovementController {
                      this.keyboardController.isKeyPressed('A');
         const right = this.keyboardController.isKeyPressed('ArrowRight') ||
                       this.keyboardController.isKeyPressed('D');
-        const up = this.keyboardController.isKeyPressed('ArrowUp') ||
-                   this.keyboardController.isKeyPressed('W');
-        const down = this.keyboardController.isKeyPressed('ArrowDown') ||
-                     this.keyboardController.isKeyPressed('S');
+        const jump = this.keyboardController.isKeyPressed('Space') ||
+                     this.keyboardController.isKeyPressed('ArrowUp') ||
+                     this.keyboardController.isKeyPressed('W');
 
         let horizontal = 0;
-        let vertical = 0;
 
         if (left && !right) {
             horizontal = Direction.Left;
@@ -55,26 +53,15 @@ export class PlayerController extends MovementController {
             horizontal = Direction.Right;
         }
 
-        if (up && !down) {
-            vertical = -1;
-        } else if (down && !up) {
-            vertical = 1;
+        const physicsModel = this.actorRef?.model.getModel(PhysicsModel);
+        if (jump && physicsModel?.isGrounded) {
+            physicsModel.jump();
         }
 
-        if (horizontal !== 0 || vertical !== 0) {
-            this.move(horizontal as Direction, vertical);
-            this.emitEvent(PlayerEvents.MOVING, { horizontal, vertical });
-
-            if (this.actorRef && this.actorRef.state !== 'Walk') {
-                this.actorRef.setState('Walk');
-            }
+        if (horizontal !== 0) {
+            this.move(horizontal as Direction);
         } else {
             this.stop();
-            this.emitEvent(PlayerEvents.IDLE);
-
-            if (this.actorRef && this.actorRef.state !== 'Idle') {
-                this.actorRef.setState('Idle');
-            }
         }
     }
 

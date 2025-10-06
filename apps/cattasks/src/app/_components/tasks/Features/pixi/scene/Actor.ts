@@ -3,6 +3,7 @@ import type {IUpdatable} from './IUpdatable';
 import {ActorView} from '../views/ActorView';
 import {ActorModel} from '../models/ActorModel';
 import {IController} from '../controllers/IController';
+import {PlayerEvents} from '../core/EventTypes';
 
 export enum Direction {
     Left = -1,
@@ -36,6 +37,22 @@ export class Actor implements IUpdatable {
         this.view.setPosition(this.model.position.x, this.model.position.y);
         this.view.setDirection(this.model.direction);
         this.view.setState(this.model.state);
+
+        this.setupPlayerEventListeners();
+    }
+
+    private setupPlayerEventListeners(): void {
+        this.model.addEventListener(PlayerEvents.MOVING, () => {
+            if (this.model.state !== 'Walk') {
+                this.model.setState('Walk');
+            }
+        });
+
+        this.model.addEventListener(PlayerEvents.IDLE, () => {
+            if (this.model.state !== 'Idle') {
+                this.model.setState('Idle');
+            }
+        });
     }
 
     get state(): EntityAnimationState {
