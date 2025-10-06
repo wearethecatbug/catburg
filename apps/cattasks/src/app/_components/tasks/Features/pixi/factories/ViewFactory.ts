@@ -12,7 +12,7 @@ export interface ActorViewConfig {
     alignToBottom?: boolean;
     anchorX?: number;
     anchorY?: number;
-    animationConfigs?: AnimationConfig[];
+    animationConfigs?: Partial<Record<EntityAnimationState, AnimationConfig>>;
 }
 
 export class ViewFactory {
@@ -42,10 +42,8 @@ export class ViewFactory {
         const view = new ActorView(sprite, animations, nameMap);
 
         if (animationConfigs) {
-            for (const config of animationConfigs) {
-                if ('state' in config) {
-                    view.setAnimationConfig(config.state, config);
-                }
+            for (const [state, config] of Object.entries(animationConfigs)) {
+                view.setAnimationConfig(state as EntityAnimationState, config);
             }
         }
 

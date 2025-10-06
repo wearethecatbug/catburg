@@ -68,10 +68,10 @@ function buildScene() {
 			width: application.renderer.width,
 			height: application.renderer.height
 		},
-		animationConfigs: [
-			{ state: 'Idle', fps: 8, loop: true },
-			{ state: 'Walk', fps: 12, loop: true },
-		],
+		animationConfigs: {
+			Idle: { fps: 8, loop: true },
+			Walk: { fps: 12, loop: true },
+		},
 	});
 
 	const wormActor = ActorFactory.createStaticActor({

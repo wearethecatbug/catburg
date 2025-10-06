@@ -9,12 +9,7 @@ import {GravityController} from '../controllers/GravityController';
 import type {KeyboardController} from '../interactive/KeyboardController';
 import {Assets, type Spritesheet} from 'pixi.js';
 import type {AnimationNameMap, EntityAnimationState} from '../systems/animation';
-
-export interface AnimationSpeedConfig {
-    state: EntityAnimationState;
-    fps?: number;
-    loop?: boolean;
-}
+import type {AnimationConfig} from '../views/ActorView';
 
 export interface BaseActorConfig {
     spritesheet: string;
@@ -22,7 +17,7 @@ export interface BaseActorConfig {
     initialPosition: { x: number; y: number };
     direction?: Direction;
     alignToBottom?: boolean;
-    animationConfigs?: AnimationSpeedConfig[];
+    animationConfigs?: Partial<Record<EntityAnimationState, AnimationConfig>>;
 }
 
 export interface MobileActorConfig extends BaseActorConfig {
