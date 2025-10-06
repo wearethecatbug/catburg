@@ -58,7 +58,7 @@ export class MovementModel extends Model {
     setMaxSpeed(maxSpeed: number): void {
         if (this._maxSpeed === maxSpeed) return;
         this._maxSpeed = Math.max(0, maxSpeed);
-        this.emitChange(MovementEvents.VELOCITY_CHANGED, this._maxSpeed);
+        this.emitChange(MovementEvents.MAX_SPEED_CHANGED, this._maxSpeed);
     }
 
     get isMoving(): boolean {

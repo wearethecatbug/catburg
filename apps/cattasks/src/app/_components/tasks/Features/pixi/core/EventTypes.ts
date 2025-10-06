@@ -1,6 +1,7 @@
 export const MovementEvents = {
     VELOCITY_CHANGED: 'movement:velocity:changed',
     SPEED_CHANGED: 'movement:speed:changed',
+    MAX_SPEED_CHANGED: 'movement:maxSpeed:changed',
     STARTED: 'movement:started',
     STOPPED: 'movement:stopped',
     JUMP_STARTED: 'movement:jump:started',
