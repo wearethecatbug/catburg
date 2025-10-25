@@ -14,11 +14,11 @@
             #ff9bc4, /* розовый пастель */ #ffc08a, /* персик */ #ffe782, /* сливочное жёлтое */ #b9f6c1, /* мята */ #a4d7ff, /* небо */ #c6b5ff, /* лаванда */ #ff9bc4 /* замкнуть круг */
     ) border-box;
     font-size: 14px;
-    width: 100%; /*не работает без этого*/
-    min-width: 70%;
+    width: 50%; /*не работает без этого*/
+    min-width: 30%;
     height: 100%; /*не работает без этого*/
     align-items: center;
-    margin-left: 1%;
+    /*margin-left: 1%;*/
     margin-right: 1%;
 
 }
@@ -29,8 +29,8 @@
 
 /* сам «редактор» */
 .editor {
-    flex: 1 1 auto;
-    width: 100%;
+    /*flex: 1 1 auto;*/
+    width: 50%;
     height: 100%;
     min-height: 240px; /* или 100%, если родителю задана высота */
     resize: none;

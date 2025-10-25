@@ -5,8 +5,8 @@
     height: 75%;
     background-image: url("/bgMainCapibara3.png");
     background-size: contain;
-    background-repeat: repeat-x;
-    gap: 2.5%;
+    background-repeat: repeat;
+    gap: 1%;
 }
 
 .taskDetails {
@@ -18,8 +18,15 @@
 
 .codeEditor {
     background-color: blue;
-    width: 60%;
+    width: 30%;
     height: 100%;
-    flex: 1 1 auto;
+    /*flex: 1 1 auto;*/
+    min-width: 0;
+}
+
+.taskSolution {
+    background-color: blue;
+    width: 30%;
+    height: 100%;
     min-width: 0;
 }

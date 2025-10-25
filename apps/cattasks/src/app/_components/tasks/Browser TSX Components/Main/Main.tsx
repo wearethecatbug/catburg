@@ -1,6 +1,7 @@
 import styles from './Main.module.css';
 import MainTaskDetails from "./MainTaskDetails";
 import MainCodeEditor from "./MainCodeEditor";
+import MainTaskSolution from "./MainTaskSolution";
 
 interface MainProps {
     readonly className?: string;
@@ -12,6 +13,7 @@ export default function Main({className}: MainProps) {
         <div className={styles.mainContainer}>
             <MainTaskDetails className={styles.taskDetails}/>
             <MainCodeEditor className={styles.codeEditor}/>
+            <MainTaskSolution className={styles.taskSolution}/>
         </div>
     )
 }

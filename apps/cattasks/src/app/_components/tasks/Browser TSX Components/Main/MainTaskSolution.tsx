@@ -1,57 +1,61 @@
 'use client';
 import dynamic from 'next/dynamic';
-import {useEffect, useState} from 'react';
+import styles from './MainTaskSolution.module.css';
 import {useTaskContext} from '../../Context/TaskProvider';
-import styles from './MainCodeEditor.module.css';
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
-type MainCodeEditorProps = {
+type MainTaskSolutionProps = {
     readonly className?: string;
     // readonly children?: React.ReactNode;
 };
 
 
-export default function MainCodeEditor({className}: MainCodeEditorProps) {
-    const {selectedTaskDescription} = useTaskContext();
-    const [code, setCode] = useState(selectedTaskDescription?.solution ?? '// write code here');
+export default function MainTaskSolution({className}: MainTaskSolutionProps) {
+    const {
+        selectedTask,
+        setTaskSolution,
+        showSolution,
+        editorSolution,
+        setEditorSolution,
+    } = useTaskContext();
 
-    useEffect(() => {
-        if (selectedTaskDescription?.solution != null) setCode(selectedTaskDescription.solution);
-    }, [selectedTaskDescription]);
+    console.log("showSolution" + showSolution)
+
+
+    if (!showSolution) {
+        return <div className={`${styles.mainTaskSolution} ${styles.hidden ?? ''} ${className ?? ''}`}/>;
+    }
 
     return (
-        <div className={`${styles.codeEditorContainer} ${className ?? ''}`}>
+        <div className={`${styles.mainTaskSolution} ${className ?? ''}`}>
             <Monaco
                 height="100%"
-                language="javascript"        // ← было "typescript"
-                path={selectedTaskDescription ? `solution-${selectedTaskDescription.id}.js` : 'solution.js'}           // include id so editor model differs per task
-                beforeMount={(monaco) => {
+                language="javascript"
+                path={selectedTask ? `solution-${selectedTask.id}.js` : 'solution.js'}
+                beforeMount={(monaco: any) => {
                     const {javascriptDefaults} = monaco.languages.typescript;
                     javascriptDefaults.setDiagnosticsOptions({
-                        noSemanticValidation: true, // оставить только синтаксис
-                        // noSyntaxValidation: false,  // true — убрать всё
+                        noSemanticValidation: true,
                     });
                     javascriptDefaults.setCompilerOptions({
                         allowNonTsExtensions: true,
                         checkJs: false,
                         target: monaco.languages.typescript.ScriptTarget.ES2020,
                     });
-
-                    // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                    //     noSemanticValidation: true,  // оставить только синтаксис
-                    //     // noSyntaxValidation: true,  // если нужно убрать всё
-                    // });
                 }}
-
-                onMount={(editor) => {
-                    // опционально авто-формат
+                onMount={(editor: any) => {
                     editor.getAction('editor.action.formatDocument')?.run();
                 }}
-                value={code}
-                onChange={(v) => setCode(v ?? '')}
+                value={editorSolution ?? selectedTask?.solution ?? 'No solution available.'}
+                onChange={(v) => {
+                    const next = v ?? '';
+                    setEditorSolution(next);
+                    if (selectedTask) setTaskSolution(selectedTask.id, next);
+                }}
                 theme="vs-light"
                 options={{
+                    readOnly: true,
                     automaticLayout: true,
                     minimap: {enabled: false},
                     wordWrap: 'on',
@@ -59,6 +63,13 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                     tabSize: 2,
                     scrollBeyondLastLine: false,
                     padding: {top: 8, bottom: 8},
+                    hover: {enabled: false},
+                    occurrencesHighlight: 'off',
+                    selectionHighlight: false,
+                    renderValidationDecorations: 'off',
+                    quickSuggestions: false,
+                    suggestOnTriggerCharacters: false,
+                    contextmenu: true,
                 }}
             />
         </div>
