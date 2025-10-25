@@ -6,7 +6,7 @@
     align-items: center;
     justify-content: center;
     display: flex;
-    width: 10%;
+    width: 30%;
     height: 100%;
     background-position: center;
 }
@@ -33,15 +33,3 @@
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 
-.arrowLeft, .arrowRight {
-
-}
-
-.arrowLeft:hover {
-
-
-}
-
-.arrowRight:hover {
-
-}

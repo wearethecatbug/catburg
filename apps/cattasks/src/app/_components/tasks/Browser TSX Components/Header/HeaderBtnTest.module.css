@@ -1,0 +1,121 @@
+.headerBtnTestContainer {
+    width: 40%;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: row;
+    gap: 1.5%;
+}
+
+.headerBtnTest {
+    width: 15%;
+    height: 50%;
+    background-image: url("/btnTest.png");
+    border: none;
+    background-repeat: no-repeat;
+    background-size: contain;
+    cursor: pointer;
+    background-position: center;
+}
+
+.headerBtnTest:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+}
+
+.active {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+    filter: brightness(.92) contrast(1.75);
+}
+
+.active:hover {
+    transform: scale(1.2);
+    filter: brightness(.92) contrast(1.75);
+}
+
+.headerBtnTestDisabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+    filter: grayscale(100%) brightness(1.2) contrast(1.3);
+    pointer-events: none;
+}
+
+.headerBtnTestInfo {
+    /*--bg: #ff9500; !* оранжевый *!*/
+    /*--text: #000; !* чёрный текст *!*/
+    /*--border: #000; !* тонкая чёрная рамка *!*/
+
+    width: 10%;
+    height: 40%;
+    box-sizing: border-box;
+    border: 2px solid var(--border);
+    border-radius: 88%;
+    background: var(--bg);
+    color: var(--text);
+    margin-top: 1.5%;
+
+    /*display: inline-grid;*/
+    place-items: center;
+    font: 600 14px/1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    letter-spacing: .02em;
+    cursor: pointer;
+    user-select: none;
+
+
+    --bg: #c7c7cc; /* серый */
+    --text: #6e6e73; /* тёмно-серый текст */
+    --border: #6e6e73; /* тонкая тёмно-серая рамка */
+    cursor: not-allowed;
+    filter: grayscale(100%) contrast(1.3);
+    pointer-events: none;
+}
+
+.headerBtnTestInfo:hover {
+    transform: scale(1.2);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+}
+
+.headerBtnTestInfoSuccess {
+    --bg: #34c759; /* зелёный */
+    --text: #fff; /* белый текст */
+    --border: #fff; /* тонкая белая рамка */
+    filter: grayscale(0%);
+}
+
+
+.headerBtnTestInfoError {
+    --bg: #ff3b30; /* красный */
+    --text: #fff; /* белый текст */
+    --border: #fff; /* тонкая белая рамка */
+    filter: grayscale(0%);
+}
+
+.headerBtnTestErrorText {
+    flex: 0 0 35%;
+    height: 90%;
+    --radius: 24px; /* скругление */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    color: #2C4C1E; /* цвет текста по желанию */
+    cursor: pointer;
+    font-size: 0.6vw;
+    font-weight: bold;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: normal; /* allow wrapping */
+    word-break: break-word;
+    padding: 0.5%;
+    overflow-x: hidden;
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+}
+
+.headerBtnTestErrorHidden {
+    visibility: hidden; /* место сохраняется */
+    opacity: 0;
+    pointer-events: none;
+}

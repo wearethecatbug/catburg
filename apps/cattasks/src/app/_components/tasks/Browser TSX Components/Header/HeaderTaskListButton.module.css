@@ -1,81 +1,100 @@
 /* Враппер ограничивает размеры */
 .dropButtonWrapper {
-    width: 50%;
-    height: 100%; /* или фиксированная высота */
-    /*position: relative;*/
-    background-position: center;
-    margin-left: 1%;
-    margin-right: 1%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 50%; /* или фиксированная высота */
+    margin-left: 1.5%;
+    margin-right: 1.5%;
 }
 
 .dropButton {
     width: 100%;
     height: 100%;
-    background-image: url('/newFrame3.png');
-    background-repeat: no-repeat;
-    background-size: contain;
-    background-position: center;
+    display: flex; /* center children */
+    align-items: center; /* vertical center */
+    --radius: 24px; /* скругление */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    color: #2C4C1E; /* цвет текста по желанию */
     cursor: pointer;
-    display: block;
+    padding: 0 8px 0 16px; /* leave right space for clear button */
+    position: relative; /* allow absolutely positioned children (clear button) */
+
 }
 
-.dropButtonInput {
-    width: 90%;
-    height: 50%;
-    margin-left: 5%;
-    margin-right: 3%;
+.overlayInput {
+    flex: 1 1 auto;
+    width: auto;
+    height: 200%;
     border: none;
     background-color: transparent;
     font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    text-transform: none;
+    letter-spacing: 1px;
     -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
     text-stroke: 1px #496897; /* для других браузеров (не всегда работает) */
     color: rgba(151, 160, 204, 0.89);
     text-decoration: none;
     display: block;
-    font-size: 0.8vw;
+    font-size: 0.6vw;
     font-weight: bold;
     outline: none;
-    overflow: hidden;
-    text-overflow: clip;
-    white-space: nowrap;
+    overflow: visible;
+    text-overflow: ellipsis;
+    white-space: normal; /* allow wrapping */
+    word-break: break-word;
+    /*overflow-y: auto;*/
+    z-index: 55;
+
+}
+
+.overlayInput::placeholder {
+    opacity: .6;
 }
 
 .dropdownContent {
     position: absolute;
+    width: 100%;
+    height: 250%;
+    max-height: 250%; /* Ограничиваем высоту выпадающего списка */
 
+    top: 140%; /* Place dropdown below the button */
+    left: 0;
     --radius: 24px; /* скругление */
-    --border: 9px; /* толщина рамки */
-    --stroke: 3px; /* толщина окантовки */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
 
     background: #FEDAA4; /* фон для текста */
     border: var(--border) solid #dc7477; /* цвет рамки */
     border-radius: var(--radius);
     box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
-    /*padding: 16px 20px;*/
     color: #2C4C1E; /* цвет текста по желанию */
 
-    width: 100%;
-    max-height: 250%; /* Ограничиваем высоту выпадающего списка */
+    overflow-x: hidden;
     overflow-y: auto; /* Добавляем вертикальную прокрутку */
-
     padding: 1% 0;
-    z-index: 1; /* Чтобы выпадающий список был поверх других элементов */
+    z-index: 300;
 }
 
-.dropdownContent a {
+.dropdownContentli {
     color: #113519;
     padding: 10px 16px;
     text-decoration: none;
     display: block;
     font-family: 'Orbitron', sans-serif;
-    text-shadow: 0 0 4px #00ff04, 0 0 10px #294c23;
-    text-transform: uppercase;
-    letter-spacing: 2px;
+    text-shadow: 0 0 4px #00ff04, 0 0 5px #294c23;
+    text-transform: none;
+    letter-spacing: 1px;
+
 }
 
-.dropdownContent a:hover {
+.dropdownContentli:hover {
     background-color: #f1f1f1;
 }
 
@@ -83,12 +102,17 @@
     background-color: #0A1314;
     width: 20%;
     height: 100%;
-
 }
 
 .arrowRight {
     background-color: #0A1314;
     width: 20%;
     height: 100%;
+}
 
+.deleteButton {
+    background: #FEDAA4;
+    z-index: 2;
+    width: 15%;
+    height: 50%;
 }

@@ -1,7 +1,7 @@
 import styles from './Header.module.css';
-import HeaderTaskListContainer from "./HeaderSearchContainer";
-import HeaderSearchContainer from "./HeaderTaskListContainer";
-
+import HeaderTaskListContainer from '@/app/_components/tasks/Browser TSX Components/Header/HeaderTaskListContainer';
+import HeaderBtnSolution from "@/app/_components/tasks/Browser TSX Components/Header/HeaderBtnSolution";
+import HeaderBtnTest from "@/app/_components/tasks/Browser TSX Components/Header/HeaderBtnTest";
 
 interface TDHeaderProps {
     readonly className?: string;
@@ -10,8 +10,9 @@ interface TDHeaderProps {
 export default function Header({className}: TDHeaderProps) {
     return (
         <div className={`${styles.headerContainer} ${className ?? ''}`}>
-            <HeaderSearchContainer className={styles.searchContainer}/>
-            <HeaderTaskListContainer className={styles.taskListContainer}/>
+            <HeaderTaskListContainer className={styles.headerTaskContainer}/>
+            <HeaderBtnTest className={styles.headerBtnTest}/>
+            <HeaderBtnSolution className={styles.headerBtnSolution}/>
         </div>
     )
 }
