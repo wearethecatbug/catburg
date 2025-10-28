@@ -22,7 +22,6 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                 height="100%"
                 language="javascript"        // ← было "typescript"
                 path={selectedTask ? `solution-${selectedTask.id}.js` : 'solution.js'}
-                // path={selectedTaskDescription ? `solution-${selectedTaskDescription.id}.js` : 'solution.js'}           // include id so editor model differs per task
                 beforeMount={(monaco) => {
                     const {javascriptDefaults} = monaco.languages.typescript;
                     javascriptDefaults.setDiagnosticsOptions({
