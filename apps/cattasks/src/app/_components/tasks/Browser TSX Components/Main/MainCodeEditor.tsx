@@ -1,25 +1,27 @@
 'use client';
 import dynamic from 'next/dynamic';
-import {useState} from 'react';
+import {useTaskContext} from '../../Context/TaskProvider';
 import styles from './MainCodeEditor.module.css';
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
-type MainCodeEditorprops = {
+type MainCodeEditorProps = {
     readonly className?: string;
     // readonly children?: React.ReactNode;
 };
 
 
-export default function MainCodeEditor({className}: MainCodeEditorprops) {
-    const [code, setCode] = useState('// write code here');
+export default function MainCodeEditor({className}: MainCodeEditorProps) {
+    const {selectedTask, showSolution, editorSolution, editorUserCode, setEditorUserCode} = useTaskContext();
+
+    const value = editorUserCode ?? "";
 
     return (
         <div className={`${styles.codeEditorContainer} ${className ?? ''}`}>
             <Monaco
                 height="100%"
                 language="javascript"        // ← было "typescript"
-                path="solution.js"           // полезно для воркера
+                path={selectedTask ? `solution-${selectedTask.id}.js` : 'solution.js'}
                 beforeMount={(monaco) => {
                     const {javascriptDefaults} = monaco.languages.typescript;
                     javascriptDefaults.setDiagnosticsOptions({
@@ -42,8 +44,8 @@ export default function MainCodeEditor({className}: MainCodeEditorprops) {
                     // опционально авто-формат
                     editor.getAction('editor.action.formatDocument')?.run();
                 }}
-                value={code}
-                onChange={(v) => setCode(v ?? '')}
+                value={value}
+                onChange={(v) => setEditorUserCode(v ?? '')}
                 theme="vs-light"
                 options={{
                     automaticLayout: true,
@@ -53,6 +55,7 @@ export default function MainCodeEditor({className}: MainCodeEditorprops) {
                     tabSize: 2,
                     scrollBeyondLastLine: false,
                     padding: {top: 8, bottom: 8},
+
                 }}
             />
         </div>

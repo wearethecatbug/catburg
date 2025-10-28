@@ -1,5 +1,4 @@
-// "use client";
-import TaskDashboard from "@/app/_components/tasks/Browser TSX Components/TaskDashboard/TaskDashboard";
+import TaskDashboard from '@/app/_components/tasks/Browser TSX Components/TaskDashboard/TaskDashboard';
 import styles from './page.module.css';
 
 

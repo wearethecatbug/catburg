@@ -8,7 +8,7 @@ export type ParsedTask = {
     no: number;          // порядковый номер
     title: string;       // сгенерированный заголовок
     description: string; // исходное описание (до решения)
-    solution: string;    // HTML между маркерами
+    solution?: string;    // HTML между маркерами
     tests?: ParsedTest[];
 };
 
@@ -97,12 +97,11 @@ function extractTestsFromSolution(solution: string): ParsedTest[] {
         /alert\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*(?:\/\/\s*([^\n\r]*))?(?=$|\r?\n)/g;
 
     const tests: ParsedTest[] = [];
-    let m: RegExpExecArray | null;
+    let match: RegExpExecArray | null;
 
-    while ((m = alertPattern.exec(javascriptBody))) {
-        const callExpression = (m[1] ?? "").trim();   // race(80, 91, 37)
-        const expectedRaw = (m[2] ?? "").trim();      // [3, 21, 49]  |  42  |  ""
-
+    while ((match = alertPattern.exec(javascriptBody))) {
+        const callExpression = (match[1] ?? "").trim();   // race(80, 91, 37)
+        const expectedRaw = (match[2] ?? "").trim();      // [3, 21, 49]  |  42  |  ""
         if (!callExpression) continue;
 
         const callMatch = /^([A-Za-z_$][\w$]*)\s*\(([\s\S]*)\)$/.exec(callExpression);

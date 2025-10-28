@@ -2,30 +2,27 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: start;
-    width: 30%;
+    width: 20%;
     height: 100%;
-    margin-left: 2%;
+    padding-left: 1%;
 }
 
-.arrowLeft {
-    background-color: #26b1b1;
+/* кнопки-стрелки внутри контейнера */
+.arrowButton {
+    width: 40%;
+    height: 100%;
     z-index: 2;
-    width: 35%;
-    height: 100%;
 }
-
-
-.arrowRight {
-    background-color: #9826b1;
-    z-index: 2;
-    width: 35%;
-    height: 100%;
-}
-
 
 .dropButton {
-    width: 100%;
+    width: 20%;
     height: 100%;
     z-index: 1;
 }
+
+/*.deleteButton {*/
+/*    background-color: #9826b1;*/
+/*    z-index: 2;*/
+/*    width: 10%;*/
+/*    height: 50%;*/
+/*}*/
