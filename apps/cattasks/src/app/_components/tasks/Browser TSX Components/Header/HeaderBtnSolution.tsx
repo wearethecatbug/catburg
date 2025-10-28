@@ -7,26 +7,26 @@ interface HeaderBtnSolutionProps {
 }
 
 export default function HeaderBtnSolution({className}: HeaderBtnSolutionProps) {
-    const {showSolution, setShowSolution, selectedTask} = useTaskContext();
+    const {showSolution, selectedTask, toggleShowSolution} = useTaskContext();
     const isDisabled = !selectedTask;
 
     const handleClick = () => {
         if (isDisabled) return;
-        setShowSolution(!showSolution);
+        console.log('onclick solution, taskId=', selectedTask?.id);
+        toggleShowSolution(); // сам заполнит editorSolution
     };
 
-    const btnClass = [
+    const buttonClassName = [
         styles.headerBtnSolution,
         showSolution ? styles.active : '',
         isDisabled ? styles.headerBtnSolutionDisabled : '',
-        className ?? ''
+        className ?? '',
     ].join(' ');
-
 
     return (
         <button
             type="button"
-            className={btnClass}
+            className={buttonClassName}
             onClick={handleClick}
             aria-pressed={showSolution}
             aria-disabled={isDisabled}
