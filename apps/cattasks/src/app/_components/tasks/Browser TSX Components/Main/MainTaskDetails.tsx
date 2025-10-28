@@ -16,8 +16,6 @@ export default function MainTaskDetails({className, ...rest}: Props) {
     const isTaskSelected = Boolean(selectedTask);
     // Show details only when header contains both task id and title
     const header = (headerInput ?? '').trim();
-    // const hasId = selectedTask.id ? header.includes(selectedTask.id) : false;
-
     const hasTitle = selectedTask?.title ? header.includes(selectedTask.title) : false;
     const showDescription = hasTitle;
 
