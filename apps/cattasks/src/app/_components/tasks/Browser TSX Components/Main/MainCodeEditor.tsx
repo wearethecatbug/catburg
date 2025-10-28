@@ -46,7 +46,6 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                 }}
                 value={value}
                 onChange={(v) => setEditorUserCode(v ?? '')}
-                // onChange={(v) => setCode(v ?? '')}
                 theme="vs-light"
                 options={{
                     automaticLayout: true,
