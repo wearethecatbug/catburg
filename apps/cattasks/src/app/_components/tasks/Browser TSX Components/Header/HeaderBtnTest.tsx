@@ -24,8 +24,8 @@ export default function HeaderBtnTest({className}: { readonly className?: string
     }, [editorUserCode, setRunTest]);
 
     const handleRunTestsClick = () => {
-        const tests = Array.isArray((selectedTask as any)?.tests)
-            ? (selectedTask as any).tests
+        const tests = Array.isArray(selectedTask?.tests)
+            ? selectedTask.tests
             : [];
 
         const expectedFunctionName =
