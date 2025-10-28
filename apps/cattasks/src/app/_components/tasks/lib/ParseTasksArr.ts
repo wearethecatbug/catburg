@@ -9,7 +9,7 @@ export type ParsedTask = {
     title: string;       // сгенерированный заголовок
     description: string; // исходное описание (до решения)
     solution?: string;    // HTML между маркерами
-    tests: ParsedTest[];
+    tests?: ParsedTest[];
 };
 
 // парсер: делает массив задач с title и test
