@@ -249,26 +249,44 @@ export function compileUserExportedFunction(
 }
 
 function withConsoleSuppressed<T>(execute: () => T): T {
-    const originalConsole = {...console};
-    // @ts-expect-error переопределяем временно
-    console.log = () => {
-    };
-    // @ts-expect-error
-    console.warn = () => {
-    };
-    // @ts-expect-error
-    console.error = () => {
-    };
-    // @ts-expect-error
-    console.info = () => {
-    };
-    // @ts-expect-error
-    console.debug = () => {
-    };
-    try {
-        return execute();
-    } finally {
-        Object.assign(console, originalConsole);
+    // Browser-only: run in a hidden iframe with suppressed console
+    if (typeof window !== "undefined" && typeof document !== "undefined") {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        document.body.appendChild(iframe);
+        const iframeWindow = iframe.contentWindow!;
+        // Suppress console methods in the iframe
+        iframeWindow.console.log = () => {};
+        iframeWindow.console.warn = () => {};
+        iframeWindow.console.error = () => {};
+        iframeWindow.console.info = () => {};
+        iframeWindow.console.debug = () => {};
+        let result: T;
+        try {
+            // Run the code in the iframe context
+            result = iframeWindow.eval("(" + execute.toString() + ")()") as T;
+        } finally {
+            document.body.removeChild(iframe);
+        }
+        return result;
+    } else {
+        // Fallback: original fragile suppression (Node.js or unknown env)
+        const originalConsole = {...console};
+        // @ts-expect-error переопределяем временно
+        console.log = () => {};
+        // @ts-expect-error
+        console.warn = () => {};
+        // @ts-expect-error
+        console.error = () => {};
+        // @ts-expect-error
+        console.info = () => {};
+        // @ts-expect-error
+        console.debug = () => {};
+        try {
+            return execute();
+        } finally {
+            Object.assign(console, originalConsole);
+        }
     }
 }
 
