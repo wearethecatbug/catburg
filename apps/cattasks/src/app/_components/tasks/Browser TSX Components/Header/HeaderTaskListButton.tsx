@@ -243,6 +243,7 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
                     type="button"
                     className={styles.deleteButton}
                     onClick={handleClear}
+                    aria-label="Clear task selection"
                 >
                     X
                 </button>
