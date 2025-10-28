@@ -1,16 +1,16 @@
 .headerBtnTestContainer {
-    width: 40%;
+    width: 30%;
     height: 100%;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     display: flex;
     flex-direction: row;
     gap: 1.5%;
 }
 
 .headerBtnTest {
-    width: 15%;
-    height: 50%;
+    width: 27%;
+    height: 100%;
     background-image: url("/btnTest.png");
     border: none;
     background-repeat: no-repeat;
@@ -42,57 +42,36 @@
 }
 
 .headerBtnTestInfo {
-    /*--bg: #ff9500; !* оранжевый *!*/
-    /*--text: #000; !* чёрный текст *!*/
-    /*--border: #000; !* тонкая чёрная рамка *!*/
-
     width: 10%;
-    height: 40%;
-    box-sizing: border-box;
-    border: 2px solid var(--border);
-    border-radius: 88%;
-    background: var(--bg);
-    color: var(--text);
-    margin-top: 1.5%;
-
-    /*display: inline-grid;*/
-    place-items: center;
-    font: 600 14px/1 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    letter-spacing: .02em;
-    cursor: pointer;
+    height: 50%;
+    background-image: url("/headerBtnTestInfoApple.png");
+    background-repeat: no-repeat;
+    background-size: 200% 100%;
+    background-position: left center;
     user-select: none;
-
-
-    --bg: #c7c7cc; /* серый */
-    --text: #6e6e73; /* тёмно-серый текст */
-    --border: #6e6e73; /* тонкая тёмно-серая рамка */
-    cursor: not-allowed;
-    filter: grayscale(100%) contrast(1.3);
-    pointer-events: none;
+    filter: grayscale(100%) brightness(1.5) contrast(1.3);
 }
 
 .headerBtnTestInfo:hover {
     transform: scale(1.2);
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25)) grayscale(100%) brightness(1.5) contrast(1.3);
 }
 
 .headerBtnTestInfoSuccess {
-    --bg: #34c759; /* зелёный */
-    --text: #fff; /* белый текст */
-    --border: #fff; /* тонкая белая рамка */
-    filter: grayscale(0%);
+    background-position: right center;
+    filter: grayscale(0%) !important;
+
 }
 
 
 .headerBtnTestInfoError {
-    --bg: #ff3b30; /* красный */
-    --text: #fff; /* белый текст */
-    --border: #fff; /* тонкая белая рамка */
-    filter: grayscale(0%);
+    background-position: left center;
+    filter: grayscale(0%) !important;
+
 }
 
 .headerBtnTestErrorText {
-    flex: 0 0 35%;
+    width: 45%;
     height: 90%;
     --radius: 24px; /* скругление */
     --border: 4px; /* толщина рамки */
@@ -107,11 +86,13 @@
     font-weight: bold;
     outline: none;
     text-overflow: ellipsis;
-    white-space: normal; /* allow wrapping */
+    white-space: pre-line;
+    overflow-wrap: anywhere;
     word-break: break-word;
-    padding: 0.5%;
+    padding: 1%;
     overflow-x: hidden;
     overflow-y: auto; /* Добавляем вертикальную прокрутку */
+
 }
 
 .headerBtnTestErrorHidden {
