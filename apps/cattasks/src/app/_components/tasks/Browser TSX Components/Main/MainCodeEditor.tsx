@@ -14,7 +14,7 @@ type MainCodeEditorProps = {
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
     const {selectedTask, showSolution, editorSolution, editorUserCode, setEditorUserCode} = useTaskContext();
 
-    const value = editorUserCode;
+    const value = editorUserCode ?? "";
 
     return (
         <div className={`${styles.codeEditorContainer} ${className ?? ''}`}>
