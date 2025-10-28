@@ -151,7 +151,7 @@ function findBalancedBlock(source: string, openIndex: number): number {
 }
 
 function tryFunctionDeclaration(source: string, nameWanted?: string) {
-    const regex = /function\s+([A-Za-z_$][\w$]*)\s*\(([^\)]*)\)\s*\{/g;
+    const regex = /function\s+([A-Za-z_$][\w$]*)\s*\(([^)])*\)\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
@@ -169,7 +169,7 @@ function tryFunctionDeclaration(source: string, nameWanted?: string) {
 }
 
 function tryFunctionExpression(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*function\s*\(([^\)]*)\)\s*\{/g;
+    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*function\s*\(([^)])*\)\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
@@ -187,7 +187,7 @@ function tryFunctionExpression(source: string, nameWanted?: string) {
 }
 
 function tryArrowBlock(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(([^\)]*)\)\s*=>\s*\{/g;
+    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(([^)])*\)\s*=>\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
@@ -205,7 +205,7 @@ function tryArrowBlock(source: string, nameWanted?: string) {
 }
 
 function tryArrowExpression(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(([^\)]*)\)|([A-Za-z_$][\w$]*))\s*=>\s*([^;]+);?/g;
+    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(([^)])*\)|([A-Za-z_$][\w$]*))\s*=>\s*([^;]+);?/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
@@ -254,13 +254,21 @@ function withConsoleSuppressed<T>(execute: () => T): T {
         const iframe = document.createElement("iframe");
         iframe.style.display = "none";
         document.body.appendChild(iframe);
-        const iframeWindow = iframe.contentWindow!;
+        //TODO: типизация iframe  почему нет Window?
+        const iframeWindow: Window | any = iframe.contentWindow!;
+
+
         // Suppress console methods in the iframe
-        iframeWindow.console.log = () => {};
-        iframeWindow.console.warn = () => {};
-        iframeWindow.console.error = () => {};
-        iframeWindow.console.info = () => {};
-        iframeWindow.console.debug = () => {};
+        iframeWindow.console.log = () => {
+        };
+        iframeWindow.console.warn = () => {
+        };
+        iframeWindow.console.error = () => {
+        };
+        iframeWindow.console.info = () => {
+        };
+        iframeWindow.console.debug = () => {
+        };
         let result: T;
         try {
             // Run the code in the iframe context
@@ -272,16 +280,16 @@ function withConsoleSuppressed<T>(execute: () => T): T {
     } else {
         // Fallback: original fragile suppression (Node.js or unknown env)
         const originalConsole = {...console};
-        // @ts-expect-error переопределяем временно
-        console.log = () => {};
-        // @ts-expect-error
-        console.warn = () => {};
-        // @ts-expect-error
-        console.error = () => {};
-        // @ts-expect-error
-        console.info = () => {};
-        // @ts-expect-error
-        console.debug = () => {};
+        console.log = () => {
+        };
+        console.warn = () => {
+        };
+        console.error = () => {
+        };
+        console.info = () => {
+        };
+        console.debug = () => {
+        };
         try {
             return execute();
         } finally {
