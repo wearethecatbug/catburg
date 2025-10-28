@@ -2,76 +2,53 @@
 import dynamic from 'next/dynamic';
 import styles from './MainTaskSolution.module.css';
 import {useTaskContext} from '../../Context/TaskProvider';
+import {useRef} from 'react';
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
-type MainTaskSolutionProps = {
-    readonly className?: string;
-    // readonly children?: React.ReactNode;
-};
-
+type MainTaskSolutionProps = { readonly className?: string };
 
 export default function MainTaskSolution({className}: MainTaskSolutionProps) {
-    const {
-        selectedTask,
-        setTaskSolution,
-        showSolution,
-        editorSolution,
-        setEditorSolution,
-    } = useTaskContext();
-
-    console.log("showSolution" + showSolution)
+    const {selectedTask, showSolution, editorSolution} = useTaskContext();
+    const editorRef = useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null);
 
 
-    if (!showSolution) {
-        return <div className={`${styles.mainTaskSolution} ${styles.hidden ?? ''} ${className ?? ''}`}/>;
-    }
+    // держим редактор смонтированным, скрываем стилем
+    const isVisible = !!selectedTask && showSolution;
 
     return (
         <div className={`${styles.mainTaskSolution} ${className ?? ''}`}>
-            <Monaco
-                height="100%"
-                language="javascript"
-                path={selectedTask ? `solution-${selectedTask.id}.js` : 'solution.js'}
-                beforeMount={(monaco: any) => {
-                    const {javascriptDefaults} = monaco.languages.typescript;
-                    javascriptDefaults.setDiagnosticsOptions({
-                        noSemanticValidation: true,
-                    });
-                    javascriptDefaults.setCompilerOptions({
-                        allowNonTsExtensions: true,
-                        checkJs: false,
-                        target: monaco.languages.typescript.ScriptTarget.ES2020,
-                    });
-                }}
-                onMount={(editor: any) => {
-                    editor.getAction('editor.action.formatDocument')?.run();
-                }}
-                value={editorSolution ?? selectedTask?.solution ?? 'No solution available.'}
-                onChange={(v) => {
-                    const next = v ?? '';
-                    setEditorSolution(next);
-                    if (selectedTask) setTaskSolution(selectedTask.id, next);
-                }}
-                theme="vs-light"
-                options={{
-                    readOnly: true,
-                    automaticLayout: true,
-                    minimap: {enabled: false},
-                    wordWrap: 'on',
-                    fontSize: 14,
-                    tabSize: 2,
-                    scrollBeyondLastLine: false,
-                    padding: {top: 8, bottom: 8},
-                    hover: {enabled: false},
-                    occurrencesHighlight: 'off',
-                    selectionHighlight: false,
-                    renderValidationDecorations: 'off',
-                    quickSuggestions: false,
-                    suggestOnTriggerCharacters: false,
-                    contextmenu: true,
-                }}
-            />
+            <div
+                className={styles.editorHost}
+                style={{visibility: isVisible ? 'visible' : 'hidden'}}
+                aria-hidden={!isVisible}
+            >
+                <Monaco
+                    onMount={(editor) => {
+                        editorRef.current = editor;
+                    }}
+                    height="100%"
+                    width="100%"
+                    defaultLanguage="javascript"
+                    // НЕ задавать path — он создавал пустые модели
+                    value={editorSolution}
+                    options={{
+                        readOnly: true,
+                        minimap: {enabled: false},
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                        padding: {top: 8, bottom: 8},
+                        hover: {enabled: false},
+                        occurrencesHighlight: 'off',
+                        selectionHighlight: false,
+                        renderValidationDecorations: 'off',
+                        quickSuggestions: false,
+                        suggestOnTriggerCharacters: false,
+                        contextmenu: true,
+                    }}
+                />
+            </div>
         </div>
     );
 }
