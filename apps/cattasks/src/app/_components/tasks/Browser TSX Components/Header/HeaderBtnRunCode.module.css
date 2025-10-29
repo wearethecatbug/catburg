@@ -1,15 +1,16 @@
 .headerBtnRunCode {
-    background-image: url("/headerBtnRunCodeDoggy.png");
+    background-image: url("/headerBtnRunCodeDoggy1.png");
     background-repeat: no-repeat;
     background-size: contain;
     /*cursor: pointer;*/
     align-items: center;
     justify-content: center;
     display: flex;
-    width: 10%;
+    width: 8%;
     height: 46%;
     background-position: center;
-    margin-left: 5%;
+    margin-left: 2%;
+    margin-right: 1%;
 
 }
 

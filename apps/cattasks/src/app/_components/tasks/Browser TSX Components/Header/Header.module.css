@@ -10,6 +10,8 @@
     color: white;
     box-sizing: border-box;
     z-index: 1000;
+    padding-left: 10%;
+    padding-right: 10%;
 }
 
 .headerTaskContainer {
@@ -19,16 +21,16 @@
 
 
 .headerBtnSolution {
-    width: 35%;
+    width: 15%;
     height: 100%;
 }
 
 .headerBtnTest {
-    width: 35%;
+    width: 25%;
     height: 100%;
 }
 
 .headerBtnRunCode {
-    width: 30%;
+    width: 10%;
     height: 100%;
 }

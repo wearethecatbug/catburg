@@ -54,7 +54,7 @@ export default function HeaderBtnTest({className}: { readonly className?: string
     };
 
     return (
-        <div className={`${styles.headerBtnTestContainer} ${className ?? ""}`}>
+        <>
             <button
                 type="button"
                 className={styles.headerBtnTest}
@@ -73,7 +73,7 @@ export default function HeaderBtnTest({className}: { readonly className?: string
             >
                 {testNotificationText ?? ""}
             </div>
-        </div>
+        </>
     );
 }
 

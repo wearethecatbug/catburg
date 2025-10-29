@@ -1,15 +1,14 @@
 .headerBtnSolution {
-    width: 40%;
-    height: 55%;
-    background-image: url("/btnSolution.png");
-    border: none;
+    width: 8%;
+    height: 46%;
+    background-image: url("/btnSolution1.png");
+    /*border: none;*/
     background-repeat: no-repeat;
     background-size: contain;
     cursor: pointer;
-    align-items: center;
-    /*justify-content: center;*/
-    display: flex;
     background-position: center;
+    margin-left: 5%;
+
 }
 
 .headerBtnSolution:hover {
