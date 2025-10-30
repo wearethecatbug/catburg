@@ -9,8 +9,8 @@
 /*}*/
 
 .headerBtnTest {
-    width: 8%;
-    height: 46%;
+    width: 170px;
+    height: 75px;
     background-image: url("/btnTest1.png");
     border: none;
     background-repeat: no-repeat;
@@ -20,7 +20,7 @@
 }
 
 .headerBtnTest:hover {
-    transform: scale(1.2);
+    /*transform: scale(1.2);*/
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 
@@ -30,74 +30,6 @@
 }
 
 .active:hover {
-    transform: scale(1.2);
+    /*transform: scale(1.2);*/
     filter: brightness(.92) contrast(1.75);
-}
-
-.headerBtnTestDisabled {
-    opacity: 0.8;
-    cursor: not-allowed;
-    filter: grayscale(100%) brightness(1.2) contrast(1.3);
-    pointer-events: none;
-}
-
-.headerBtnTestInfo {
-    width: 5%;
-    height: 55%;
-    background-image: url("/headerBtnTestInfoApple.png");
-    background-repeat: no-repeat;
-    background-size: 200% 100%;
-    background-position: left center;
-    user-select: none;
-    filter: grayscale(100%) brightness(1.5) contrast(1.3);
-    margin-left: 1%;
-}
-
-.headerBtnTestInfo:hover {
-    transform: scale(1.2);
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25)) grayscale(100%) brightness(1.5) contrast(1.3);
-}
-
-.headerBtnTestInfoSuccess {
-    background-position: right center;
-    filter: grayscale(0%) !important;
-
-}
-
-
-.headerBtnTestInfoError {
-    background-position: left center;
-    filter: grayscale(0%) !important;
-
-}
-
-.headerBtnTestErrorText {
-    width: 17%;
-    height: 90%;
-    --radius: 24px; /* скругление */
-    --border: 4px; /* толщина рамки */
-    --stroke: 4px; /* толщина окантовки */
-    background: #FEDAA4; /* фон для текста */
-    border: var(--border) solid #dc7477; /* цвет рамки */
-    border-radius: var(--radius);
-    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
-    color: #2C4C1E; /* цвет текста по желанию */
-    cursor: pointer;
-    font-size: 0.6vw;
-    font-weight: bold;
-    outline: none;
-    text-overflow: ellipsis;
-    white-space: pre-line;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    padding: 1%;
-    overflow-x: hidden;
-    overflow-y: auto; /* Добавляем вертикальную прокрутку */
-
-}
-
-.headerBtnTestErrorHidden {
-    visibility: hidden; /* место сохраняется */
-    opacity: 0;
-    pointer-events: none;
 }

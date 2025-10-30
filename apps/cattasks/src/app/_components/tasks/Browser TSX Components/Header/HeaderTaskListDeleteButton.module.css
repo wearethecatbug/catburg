@@ -1,6 +1,6 @@
 .deleteButton {
     height: 100%;
-    width: 15%;
+    width: 30px;
     position: absolute;
     right: 8px;
     /*height: calc(80%);*/
@@ -11,7 +11,7 @@
     border-radius: 12px;
     background: #ab81bb;
     cursor: pointer;
-    padding: 4px 8px;
+    /*padding: 4px 8px;*/
     z-index: 111;
 }
 
@@ -19,4 +19,3 @@
     filter: brightness(0.9);
 }
 
-/*!*background: #FEDAA4;*/

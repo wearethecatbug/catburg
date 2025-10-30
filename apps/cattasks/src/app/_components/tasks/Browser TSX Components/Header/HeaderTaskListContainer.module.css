@@ -2,22 +2,22 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    width: 28%;
+    width: 550px;
     height: 100%;
     /*padding-left: 2%;*/
-    margin-left: 3%;
+    margin-left: 50px;
 }
 
 /* кнопки-стрелки внутри контейнера */
 .arrowButton {
-    width: 30%;
-    height: 80%;
+    width: 150px;
+    height: 120px;
     z-index: 2;
 }
 
 .dropButton {
-    width: 5%;
-    height: 100%;
+    width: 200px;
+    height: 50px;
     z-index: 1;
 }
 

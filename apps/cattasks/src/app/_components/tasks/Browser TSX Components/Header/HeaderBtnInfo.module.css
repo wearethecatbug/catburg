@@ -1,0 +1,84 @@
+
+.headerBtnTestInfo {
+    width: 75px;
+    height: 75px;
+    background-image: url("/headerBtnTestInfoAppleRed.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    cursor: pointer;
+
+    user-select: none;
+    filter: grayscale(100%) brightness(1.5) contrast(1.3);
+}
+
+.headerBtnTestInfo:hover {
+    /*transform: scale(1.2);*/
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25)) grayscale(100%) brightness(1.5) contrast(1.3);
+}
+
+.headerBtnTestInfoDisabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+    filter: grayscale(100%) brightness(1.2) contrast(1.3);
+    pointer-events: none;
+}
+
+
+.headerBtnTestInfoSuccess {
+    background-image: url("/headerBtnTestInfoAppleGreen.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+
+}
+
+.headerBtnTestInfoError {
+    background-image: url("/headerBtnTestInfoAppleRed.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+}
+
+.headerBtnTestErrorText {
+    /*width: 350px;*/
+    /*height: 100%;*/
+    --radius: 24px; /* скругление */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    color: #2C4C1E; /* цвет текста по желанию */
+    cursor: pointer;
+    font-size: 0.6vw;
+    font-weight: bold;
+    outline: none;
+    text-overflow: ellipsis;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    padding: 20px;
+    overflow-x: hidden;
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+
+}
+
+.headerBtnTestErrorText {
+    grid-column: 3;
+    grid-row: 1 / span 2; /* ровно 2 ряда */
+    justify-self: stretch; /* по ширине колонки */
+    align-self: center; /* по высоте двух рядов */
+    width: 100%;
+    height: 90%;
+    overflow: auto;
+    justify-content: center;
+    justify-items: center;
+}
+
+.headerBtnTestErrorHidden {
+    visibility: hidden; /* место сохраняется */
+    opacity: 0;
+    pointer-events: none;
+}

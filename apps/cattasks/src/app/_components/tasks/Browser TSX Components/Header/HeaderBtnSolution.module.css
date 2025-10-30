@@ -1,18 +1,15 @@
 .headerBtnSolution {
-    width: 8%;
-    height: 46%;
+    width: 170px;
+    height: 80px;
     background-image: url("/btnSolution1.png");
-    /*border: none;*/
     background-repeat: no-repeat;
     background-size: contain;
     cursor: pointer;
     background-position: center;
-    margin-left: 5%;
-
 }
 
 .headerBtnSolution:hover {
-    transform: scale(1.2);
+    /*transform: scale(1.2);*/
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 
@@ -22,7 +19,7 @@
 }
 
 .active:hover {
-    transform: scale(1.2);
+    /*transform: scale(1.2);*/
     filter: brightness(.92) contrast(1.75);
 }
 

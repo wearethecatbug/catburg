@@ -12,7 +12,9 @@ export default function HeaderTaskListDeleteButton({className}: HeaderTaskListDe
     const {headerInput, setHeaderInput, setSelectedId} = useTaskContext();
 
     const handleClear = () => {
+
         setHeaderInput('');
+        console.log("clock")
         // optional: clear selected task so Main shows default
         setSelectedId(null);
     };

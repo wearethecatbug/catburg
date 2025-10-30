@@ -6,8 +6,8 @@
     align-items: center;
     justify-content: center;
     display: flex;
-    width: 40%;
-    height: 70%;
+    width: 104px;
+    height: 116px;
     background-position: center;
 }
 
@@ -18,7 +18,7 @@
 
 .arrowLeft:hover {
     background-image: url("/capibaraArrowActiveLeft.png");
-    transform: scale(1.12);
+    /*transform: scale(1.12);*/
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 
@@ -29,7 +29,7 @@
 
 .arrowRight:hover {
     background-image: url("/capibaraArrowActiveRight.png");
-    transform: scale(1.12);
+    /*transform: scale(1.12);*/
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 

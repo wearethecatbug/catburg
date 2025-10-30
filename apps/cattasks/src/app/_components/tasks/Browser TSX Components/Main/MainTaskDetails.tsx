@@ -29,6 +29,7 @@ export default function MainTaskDetails({className, ...rest}: Props) {
 
     return (
         <div className={`${styles.root} ${isMinimized ? styles.min : ''} ${className ?? ''}`} {...rest}>
+
             <button
                 type="button"
                 onClick={handleToggle}

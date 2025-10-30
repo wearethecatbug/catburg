@@ -120,20 +120,32 @@
 }
 
 .taskDetailsTextArea {
-    --radius: 24px; /* скругление */
-    --border: 4px; /* толщина рамки */
-    --stroke: 4px; /* толщина окантовки */
-    background: #FEDAA4; /* фон для текста */
-    border: var(--border) solid #dc7477; /* цвет рамки */
+    display: flex; /* чтоб textarea растягивалась */
+    align-items: stretch;
+    padding: 12px 16px; /* отступ от рамки */
+    cursor: default; /* не pointer, иначе неудобно печатать */
+    --b: 18px; /* толщина рамки */
+    --r: 24px; /* радиус */
+    --alpha: .85; /* прозрачность белого внутри */
+    border: var(--b) solid transparent;
+    border-radius: calc(var(--r) + var(--b));
+    background: linear-gradient(rgba(255, 255, 255, var(--alpha)),
+    rgba(255, 255, 255, var(--alpha))) padding-box,
+    url('/catMainSolution.png') border-box;
+    background-repeat: repeat;
+    background-size: contain;
+    background-position: center;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+    min-height: 320px;
+    align-items: center;
+    box-sizing: border-box;
 
-    border-radius: var(--radius);
-    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
 
     width: 100%;
     height: 65%;
-    /*color: rgba(151, 160, 204, 0.89);*/
+    color: rgba(0, 0, 0, 0.89);
     font-family: 'Orbitron', sans-serif;
-    font-size: 0.7vw;
+    font-size: 17px;
     text-transform: none;
     letter-spacing: 1.5px;
     font-weight: bold;
@@ -144,8 +156,8 @@
     white-space: pre-wrap;
     word-break: break-word;
 
-    -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
-    text-stroke: 1px #496897; /* для других браузеров (не всегда работает) */
+    -webkit-text-stroke: 1px #0e8715; /* толщина и цвет ободка */
+    text-stroke: 1px #130303; /* для других браузеров (не всегда работает) */
     cursor: default;
     margin-left: 2%;
     padding: 3%;

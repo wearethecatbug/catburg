@@ -1,7 +1,7 @@
 .mainContainer {
     display: flex;
     flex-direction: row;
-    align-items: center;
+    /*align-items: center;*/
     justify-content: space-evenly;
     width: 100%;
     height: 75%;
@@ -24,7 +24,7 @@
 .codeEditor {
     background-color: blue;
     width: 20%;
-    height: 100%;
+    height: 70%;
     /*flex: 1 1 auto;*/
     min-width: 0;
 }
@@ -32,6 +32,6 @@
 .taskSolution {
     background-color: blue;
     width: 20%;
-    height: 100%;
+    height: 70%;
     min-width: 0;
 }
