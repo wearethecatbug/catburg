@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: row;
     /*align-items: center;*/
-    justify-content: space-evenly;
+    justify-content: center;
     width: 100%;
     height: 75%;
     background-image: url("/bgMainCapibara3.png");
@@ -10,28 +10,36 @@
     background-repeat: repeat;
     padding-left: 10%;
     padding-right: 10%;
-    /*gap: 3%;*/
+    gap: 3%;
 }
 
-.taskDetails {
+.taskContentPanel {
     width: 25%;
     height: 100%;
     display: flex;
     min-height: 0;
-
 }
 
 .codeEditor {
     background-color: blue;
     width: 20%;
     height: 70%;
-    /*flex: 1 1 auto;*/
+    flex: 1 1 auto;
     min-width: 0;
 }
 
-.taskSolution {
-    background-color: blue;
-    width: 20%;
-    height: 70%;
-    min-width: 0;
+
+.mainBtnContainer {
+    flex-direction: row;
+    width: 850px;
+    gap: 12px;
+    height: 100%;
 }
+
+
+/*.taskSolution {*/
+/*    background-color: blue;*/
+/*    width: 20%;*/
+/*    height: 70%;*/
+/*    min-width: 0;*/
+/*}*/

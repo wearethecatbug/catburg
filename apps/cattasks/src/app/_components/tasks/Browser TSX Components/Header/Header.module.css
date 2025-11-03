@@ -4,80 +4,19 @@
     background-size: contain;
     background-repeat: repeat;
     display: flex;
-    flex-direction: row;
+    /*flex-direction: row;*/
     align-items: center;
-    justify-content: start;
-    color: white;
+    justify-content: center;
+    /*color: white;*/
     box-sizing: border-box;
     z-index: 1000;
     padding-left: 10%;
     padding-right: 10%;
 }
 
-.headerBtnContainer {
-    display: grid;
-    grid-template-columns: 170px 170px 350px;
-    grid-template-rows: repeat(3, auto);
-    grid-auto-rows: minmax(60px, 1fr); /* строки растягиваются, но не ниже 60px */
-    width: 850px;
-    gap: 12px;
-    height: 100%;
-    align-content: stretch;
-    align-items: stretch; /* кнопки заполняют высоту строки */
-    /*overflow-y: auto; !* скролл, если рядов слишком много *!*/
-    justify-content: center;
-    justify-items: center;
-
-}
 
 .headerTaskContainer {
     width: 573px;
     height: 145px;
 }
 
-.headerBtnInfo {
-    width: 75px;
-    height: 75px;
-}
-
-.headerBtnSolution, .headerBtnTest, .headerBtnRunCode {
-    width: 105px;
-    height: 80px;
-    box-sizing: border-box;
-}
-
-.headerBtnTestErrorText {
-    width: 350px;
-    height: 100%;
-    background-color: #00ff04;
-}
-
-/* Явные позиции в сетке */
-.headerBtnRunCode {
-    grid-column: 1;
-    grid-row: 1;
-    height: auto;
-}
-
-.headerBtnTest {
-    grid-column: 1;
-    grid-row: 2;
-    height: auto;
-}
-
-.headerBtnSolution {
-    grid-column: 2;
-    grid-row: 1;
-    height: auto;
-}
-
-.headerBtnInfo {
-    grid-column: 2;
-    grid-row: 2;
-    height: auto;
-}
-
-.headerBtnTestErrorText {
-
-
-}

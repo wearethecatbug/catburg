@@ -1,0 +1,39 @@
+
+.btnSolution {
+    width: 150px;
+    height: 80px;
+    cursor: pointer;
+    display: inline-block;
+    box-sizing: border-box;
+    flex: 0 0 150px;
+    background-image: url("/BtnSolution1.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+    transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+}
+
+.btnSolution:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+}
+
+/* активная кнопка в обычном состоянии */
+.btnSolution.active {
+    filter: brightness(.92) contrast(1.5) drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
+}
+
+
+/* активная кнопка при ховере — селектор специфичнее и всегда победит */
+.btnSolution.active:hover {
+    filter: brightness(.92) contrast(1.5) drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
+    transform: none;
+    transition: none;
+}
+
+.disabled {
+    opacity: 0.8;
+    cursor: not-allowed;
+    filter: grayscale(100%);
+    pointer-events: none;
+}

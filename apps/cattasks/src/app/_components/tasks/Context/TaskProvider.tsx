@@ -3,6 +3,9 @@ import React, {createContext, useCallback, useContext, useEffect, useMemo, useSt
 import type {ParsedTask} from '../lib/ParseTasksArr';
 import {useTasksArr} from '../Hooks/UseTasks';
 
+type TestResultDetail = { resultText: string; areAllTestsPassed: boolean };
+type ContentTab = 'description' | 'solution' | 'info';
+
 type TaskContextValue = {
     tasks: ParsedTask[];
     selectedId: string | null;
@@ -28,6 +31,12 @@ type TaskContextValue = {
     validSolution: boolean;
     setValidSolution: (v: boolean) => void;
 
+    activeContentTab: ContentTab;
+    setActiveContentTab: (v: ContentTab) => void;
+
+    isMainPanelMinimized: boolean;
+    setMainPanelMinimized: (v: boolean) => void;
+
     selectPreviousTask: () => void;
     selectNextTask: () => void;
 
@@ -36,6 +45,11 @@ type TaskContextValue = {
 
     editorUserCode: string;
     setEditorUserCode: (v: string) => void;
+
+    testNotificationText: string;
+    setTestNotificationText: (v: string) => void;
+
+    setEditorUserCodeAndReset: (next: string) => void;
 };
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
@@ -58,6 +72,19 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [editorSolution, setEditorSolution] = useState<string>('No solution available.');
     const [editorUserCode, setEditorUserCode] = useState<string>('');
 
+    const defaultSolutionText = 'No solution available.';
+    const defaultTestInfoText = 'Нет дополнительной информации';
+
+    const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
+    const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
+
+    const updateTask = useCallback((id: string, patch: Partial<ParsedTask>) => {
+        setTasks(prevTasks => prevTasks.map(task => (task.id === id ? {...task, ...patch} : task)));
+    }, []);
+
+    const [testNotificationText, setTestNotificationText] =
+        useState<string>(defaultTestInfoText);
+
     // синхронизация задач из источника
     useEffect(() => {
         setTasks(sourceTasks);
@@ -69,26 +96,39 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     }, [tasks, selectedId]);
 
     // единая точка смены задачи
-    const selectTask = useCallback((id: string) => {
-        if (id === selectedId) return;
+    const selectTask = useCallback(
+        (id: string) => {
+            if (id === selectedId) return;
+            setSelectedId(id);
 
-        setSelectedId(id);
+            const task = tasks.find(t => t.id === id);
+            if (task) setHeaderInput(`${task.no}. ${task.title}`);
 
-        const task = tasks.find(t => t.id === id);
-        if (task) setHeaderInput(`${task.no}. ${task.title}`);
+            setActiveContentTab('description');
+            setShowSolution(false);
+            setRunTest(false);
+            setValidSolution(false);
+            setEditorUserCode('');
+            setEditorSolution(defaultSolutionText);
+            setTestNotificationText(defaultTestInfoText);
+        },
+        [tasks, selectedId, defaultSolutionText, defaultTestInfoText]
+    );
 
-        setShowSolution(false);
-        setRunTest(false);
-        setValidSolution(false);
-        setEditorUserCode('');
-        setEditorSolution('No solution available.');
-    }, [tasks, selectedId]);
+    // производить showSolution из вкладки
+    useEffect(() => {
+        const isSolution = activeContentTab === 'solution';
+        setShowSolution(isSolution);
+        if (isSolution) {
+            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
+        }
+    }, [activeContentTab, selectedTask?.solution, defaultSolutionText]);
 
     // навигация стрелками
     const selectPreviousTask = useCallback(() => {
         if (tasks.length === 0) return;
         const currentIndex = selectedId ? tasks.findIndex(t => t.id === selectedId) : -1;
-        const previousIndex = modulo((currentIndex === -1 ? tasks.length - 1 : currentIndex - 1), tasks.length);
+        const previousIndex = modulo(currentIndex === -1 ? tasks.length - 1 : currentIndex - 1, tasks.length);
         selectTask(tasks[previousIndex].id);
     }, [tasks, selectedId, selectTask]);
 
@@ -100,24 +140,27 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     }, [tasks, selectedId, selectTask]);
 
     // показать/скрыть решение с подстановкой текста
-    const toggleShowSolution = useCallback((next?: boolean) => {
-        setShowSolution(prev => {
-            const newValue = next ?? !prev;
-            if (newValue) {
-                setEditorSolution(selectedTask?.solution ?? 'No solution available.');
-            } else {
-                setEditorSolution('No solution available.');
-            }
-            return newValue;
-        });
-    }, [selectedTask?.solution]);
+    const toggleShowSolution = useCallback(
+        (next?: boolean) => {
+            setShowSolution(prev => {
+                const newValue = next ?? !prev;
+                if (newValue) {
+                    setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
+                } else {
+                    setEditorSolution(defaultSolutionText);
+                }
+                return newValue;
+            });
+        },
+        [selectedTask?.solution, defaultSolutionText]
+    );
 
     // если решение обновилось при открытой панели — синхронизировать
     useEffect(() => {
         if (showSolution) {
-            setEditorSolution(selectedTask?.solution ?? 'No solution available.');
+            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
         }
-    }, [showSolution, selectedTask?.solution]);
+    }, [showSolution, selectedTask?.solution, defaultSolutionText]);
 
     // первичная инициализация выбора
     useEffect(() => {
@@ -126,20 +169,44 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
             setSelectedId(first.id);
             setHeaderInput(`${first.no}. ${first.title}`);
             setShowSolution(false);
-            setEditorSolution('No solution available.');
+            setEditorSolution(defaultSolutionText);
         }
-    }, [tasks, selectedId]);
+    }, [tasks, selectedId, defaultSolutionText]);
 
-    const updateTask = useCallback((id: string, patch: Partial<ParsedTask>) => {
-        setTasks(prev => prev.map(t => (t.id === id ? {...t, ...patch} : t)));
+    // единый обработчик результатов тестов
+    useEffect(() => {
+        const handle = (event: Event) => {
+            const {detail} = event as CustomEvent<TestResultDetail>;
+            if (!detail) return;
+            setTestNotificationText(detail.resultText);
+            setRunTest(true);
+            setValidSolution(detail.areAllTestsPassed);
+        };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('capibara:testResult', handle as EventListener);
+            return () =>
+                window.removeEventListener('capibara:testResult', handle as EventListener);
+        }
+        return;
     }, []);
 
-    const setTaskSolution = useCallback((id: string, solution: string) => {
-        updateTask(id, {solution});
-        if (id === selectedId && showSolution) {
-            setEditorSolution(solution || 'No solution available.');
-        }
-    }, [updateTask, selectedId, showSolution]);
+    const setTaskSolution = useCallback(
+        (id: string, solution: string) => {
+            updateTask(id, {solution});
+            if (id === selectedId && showSolution) {
+                setEditorSolution(solution || defaultSolutionText);
+            }
+        },
+        [updateTask, selectedId, showSolution, defaultSolutionText]
+    );
+
+    const setEditorUserCodeAndReset = useCallback((next: string) => {
+        setEditorUserCode(next);
+        setRunTest(false);
+        setValidSolution(false);
+        setTestNotificationText(defaultTestInfoText);
+    }, [defaultTestInfoText]);
 
     const clearSelectedFields = useCallback(() => {
         setHeaderInput('');
@@ -147,9 +214,10 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         setShowSolution(false);
         setRunTest(false);
         setValidSolution(false);
-        setEditorSolution('No solution available.');
+        setEditorSolution(defaultSolutionText);
         setEditorUserCode('');
-    }, []);
+        setTestNotificationText(defaultTestInfoText);
+    }, [defaultSolutionText, defaultTestInfoText]);
 
     const value: TaskContextValue = {
         tasks,
@@ -184,6 +252,17 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
 
         editorUserCode,
         setEditorUserCode,
+
+        testNotificationText,
+        setTestNotificationText,
+
+        setEditorUserCodeAndReset,
+
+        activeContentTab,
+        setActiveContentTab,
+
+        isMainPanelMinimized,
+        setMainPanelMinimized,
     };
 
     return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

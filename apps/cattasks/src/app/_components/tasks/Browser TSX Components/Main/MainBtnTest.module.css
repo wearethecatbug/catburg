@@ -8,18 +8,32 @@
 /*    gap: 1.5%;*/
 /*}*/
 
-.headerBtnTest {
-    width: 170px;
-    height: 75px;
-    background-image: url("/btnTest1.png");
+.btnTest {
     border: none;
     background-repeat: no-repeat;
     background-size: contain;
     cursor: pointer;
     background-position: center;
+    width: 170px;
+    height: 75px;
+    margin-right: 35px;
+
 }
 
-.headerBtnTest:hover {
+.default {
+    background-image: url("/btnTest1.png");
+}
+
+.success {
+    background-image: url("/btnTestSuccess.png");
+}
+
+.fail {
+    background-image: url("/btnTestFail.png");
+}
+
+
+.btnTest:hover {
     /*transform: scale(1.2);*/
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }

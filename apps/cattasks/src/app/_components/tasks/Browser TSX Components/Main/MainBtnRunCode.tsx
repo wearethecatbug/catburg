@@ -1,13 +1,13 @@
 "use client";
 import React from "react";
-import styles from "./HeaderBtnRunCode.module.css";
+import styles from "./MainBtnRunCode.module.css";
 import {useTaskContext} from "../../Context/TaskProvider";
 
-interface HeaderBtnRunCodeProps {
+interface MainBtnRunCodeProps {
     readonly className?: string;
 }
 
-export default function HeaderBtnRunCode({className}: HeaderBtnRunCodeProps) {
+export default function MainBtnRunCode({className}: MainBtnRunCodeProps) {
     const {editorUserCode} = useTaskContext();
 
     const handleClick = () => {
@@ -39,7 +39,7 @@ export default function HeaderBtnRunCode({className}: HeaderBtnRunCodeProps) {
     return (
         <button
             type="button"
-            className={`${styles.headerBtnRunCode} ${className ?? ""}`}
+            className={`${styles.mainBtnRunCode} ${className ?? ""}`}
             aria-label="Run Code"
             onClick={handleClick}
         />

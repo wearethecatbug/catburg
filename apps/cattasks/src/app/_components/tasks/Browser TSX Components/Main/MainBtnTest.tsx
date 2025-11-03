@@ -1,20 +1,27 @@
 "use client";
-import React, {useEffect} from "react";
-import styles from "./HeaderBtnTest.module.css";
+import React from "react";
+import styles from "./MainBtnTest.module.css";
 import {useTaskContext} from "../../Context/TaskProvider";
 import {runUserTests} from "../../lib/RunUserTests";
 
-export default function HeaderBtnTest({className}: { readonly className?: string }) {
+//
+// type HeaderBtnTestProps = {
+//     readonly className?: ;
+// }
+
+export default function MainBtnTest({className}: { readonly className?: string }) {
     const {
         selectedTask,
         editorUserCode,
         setRunTest,
         setValidSolution,
+        validSolution,
+        runTest
     } = useTaskContext();
 
-    useEffect(() => {
-        setRunTest?.(false);
-    }, [editorUserCode, setRunTest]);
+    // useEffect(() => {
+    //     setRunTest?.(false);
+    // }, [editorUserCode, setRunTest]);
 
     const handleRunTestsClick = () => {
         const tests = Array.isArray(selectedTask?.tests) ? selectedTask.tests : [];
@@ -43,10 +50,17 @@ export default function HeaderBtnTest({className}: { readonly className?: string
         }
     };
 
+    const getBtnClassName = [
+        styles.btnTest,
+        !runTest ? styles.default :
+            validSolution ? styles.success : styles.fail,
+        className,
+    ].filter(Boolean).join(' ');
+    console.log('runTest=', runTest, 'validSolution=', validSolution);
     return (
         <button
             type="button"
-            className={`${styles.headerBtnTest} ${className ?? ""}`}
+            className={getBtnClassName}
             aria-label="Test Code"
             onClick={handleRunTestsClick}
         />
