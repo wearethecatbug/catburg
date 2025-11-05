@@ -1,23 +1,30 @@
-"use client"
+"use client";
 import React, {useEffect, useRef, useState} from "react";
 import styles from "./HeaderTaskListButton.module.css";
 import {useTasksArr} from "../../Hooks/UseTasks";
-import {ParsedTask} from "../../lib/ParseTasksArr";
+import type {ParsedTask} from "../../lib/ParseTasksArr";
 import {useTaskContext} from "../../Context/TaskProvider";
+import HeaderTaskListDeleteButton from "./HeaderTaskListDeleteButton";
 
-type TDHeaderTaskListProps = {
-    readonly className?: string
-    readonly children?: React.ReactNode;
-};
+type HeaderTaskListButtonProps = { readonly className?: string };
 
-export default function HeaderTaskListButton({className = '', children}: TDHeaderTaskListProps) {
+export default function HeaderTaskListButton({className = ""}: HeaderTaskListButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const {setSelectedId, headerInput, setHeaderInput, clearSelectedFields} = useTaskContext();
+
+    const {
+        selectedId,
+        headerInput,
+        setHeaderInput,
+        setSelectedId,
+        clearSelectedFields,
+    } = useTaskContext();
+
     const dropdownContentRef = useRef<HTMLDivElement>(null);
     const buttonContainerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const [openedByTyping, setOpenedByTyping] = useState(false);
     const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
+
     const tasks = useTasksArr() ?? [];
     const menuId = "headerTaskListMenu";
 
@@ -26,20 +33,25 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
         setIsOpen(prev => !prev);
     };
 
-    const filteredTasks = tasks.filter(task => {
-        const input = (headerInput ?? '').trim().toLowerCase();
-        return (
-            task.title.toLowerCase().includes(input) ||
-            task.no.toString().includes(input) ||
-            `${task.no}.`.toLowerCase().includes(input)
-        );
-    });
-
-    const listSource = (!openedByTyping && isOpen && (headerInput ?? '').trim() !== '')
-        ? tasks
-        : ((headerInput ?? '').trim() ? filteredTasks : tasks);
+    const normalizedInput = (headerInput ?? "").trim().toLowerCase();
+    const filteredTasks = tasks.filter(task =>
+        task.title.toLowerCase().includes(normalizedInput) ||
+        task.no.toString().includes(normalizedInput) ||
+        `${task.no}.`.toLowerCase().includes(normalizedInput),
+    );
+    const listSource =
+        !openedByTyping && isOpen && normalizedInput !== "" ? tasks : normalizedInput ? filteredTasks : tasks;
 
     const closeDropdown = () => setIsOpen(false);
+
+    // Ключевой момент: после clearSelectedFields() закрываем список и возвращаем фокус
+    useEffect(() => {
+        const cleared = (!selectedId) && ((headerInput ?? "").trim() === "");
+        if (cleared) {
+            setIsOpen(false);
+            inputRef.current?.focus();
+        }
+    }, [selectedId, headerInput]);
 
     useEffect(() => {
         if (isOpen && !openedByTyping) dropdownContentRef.current?.focus();
@@ -47,13 +59,12 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
 
     const focusListItem = (index: number) => {
         requestAnimationFrame(() => {
-            const lis = dropdownContentRef.current?.querySelectorAll<HTMLLIElement>('li');
-            const li = lis?.[index];
-            if (li) li.focus();
+            const items = dropdownContentRef.current?.querySelectorAll<HTMLLIElement>("li");
+            const item = items?.[index];
+            if (item) item.focus();
         });
     };
 
-    // keep highlightIndex valid when list changes
     useEffect(() => {
         if (highlightIndex !== null && (highlightIndex < 0 || highlightIndex >= listSource.length)) {
             setHighlightIndex(null);
@@ -62,28 +73,25 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
 
     const handleSelectTask = (task: ParsedTask) => {
         closeDropdown();
-        clearSelectedFields();
+        clearSelectedFields(); // синхронизируем состояние
         setHeaderInput(`${task.no}. ${task.title}`);
         inputRef.current?.focus();
         setSelectedId(task.id);
-
-        console.log("Selected task:", task.id);
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = event.target.value;
         setHeaderInput(newValue);
 
-        if (newValue.trim() !== '') {
-            const matches = tasks.filter(task => {
-                const input = newValue.trim().toLowerCase();
-                return (
-                    task.title.toLowerCase().includes(input) ||
-                    task.no.toString().includes(input) ||
-                    `${task.no}.`.toLowerCase().includes(input)
-                );
-            });
-
+        const trimmed = newValue.trim();
+        if (trimmed !== "") {
+            const inputLower = trimmed.toLowerCase();
+            const matches = tasks.filter(
+                task =>
+                    task.title.toLowerCase().includes(inputLower) ||
+                    task.no.toString().includes(inputLower) ||
+                    `${task.no}.`.toLowerCase().includes(inputLower),
+            );
             if (matches.length > 0) {
                 setOpenedByTyping(true);
                 setIsOpen(true);
@@ -93,14 +101,6 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
         }
     };
 
-
-    const handleClear = () => {
-        clearSelectedFields();
-        setSelectedId(null);
-        closeDropdown();
-    };
-
-    // Handle keyboard navigation within the dropdown (when focus is inside dropdown)
     const handleTaskListKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
         if (event.key === "Escape") {
             event.preventDefault();
@@ -108,17 +108,15 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
             inputRef.current?.focus();
             return;
         }
-
         if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            const idx = highlightIndex;
-            if (idx !== null) {
-                const task = listSource[idx];
+            const index = highlightIndex;
+            if (index !== null) {
+                const task = listSource[index];
                 if (task) handleSelectTask(task);
             } else {
-                // if nothing highlighted, try to find focused li
-                const lis = dropdownContentRef.current?.querySelectorAll<HTMLLIElement>('li');
-                const focused = Array.from(lis ?? []).findIndex(li => li === document.activeElement);
+                const items = dropdownContentRef.current?.querySelectorAll<HTMLLIElement>("li");
+                const focused = Array.from(items ?? []).findIndex(li => li === document.activeElement);
                 if (focused >= 0) {
                     const task = listSource[focused];
                     if (task) handleSelectTask(task);
@@ -126,25 +124,22 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
             }
             return;
         }
-
         if (event.key === "ArrowDown") {
             event.preventDefault();
-            const next = (highlightIndex === null) ? 0 : Math.min(highlightIndex + 1, listSource.length - 1);
+            const next = highlightIndex === null ? 0 : Math.min(highlightIndex + 1, listSource.length - 1);
             setHighlightIndex(next);
             focusListItem(next);
             return;
         }
-
         if (event.key === "ArrowUp") {
             event.preventDefault();
-            const prev = (highlightIndex === null) ? Math.max(0, listSource.length - 1) : Math.max(highlightIndex - 1, 0);
+            const prev = highlightIndex === null ? Math.max(0, listSource.length - 1) : Math.max(highlightIndex - 1, 0);
             setHighlightIndex(prev);
             focusListItem(prev);
             return;
         }
     };
 
-    // Handle keyboard events on the input field
     const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === "Escape") {
             event.preventDefault();
@@ -164,8 +159,6 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
             }, 0);
             return;
         }
-
-        // If dropdown is closed -> open and focus first li
         if (!isOpen) {
             setOpenedByTyping(false);
             setIsOpen(true);
@@ -177,8 +170,6 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
             }, 0);
             return;
         }
-
-        // If dropdown is open and an item is highlighted -> select it on Enter
         if (event.key === "Enter") {
             event.preventDefault();
             if (highlightIndex !== null) {
@@ -186,37 +177,34 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
                 if (task) handleSelectTask(task);
                 return;
             }
-            // if nothing highlighted, focus first
             if (listSource.length > 0) {
                 setHighlightIndex(0);
                 focusListItem(0);
             }
-            return;
-        }
-
-        // For other keys: if open but nothing highlighted yet -> focus first item
-        if (listSource.length > 0 && highlightIndex === null) {
-            setHighlightIndex(0);
-            focusListItem(0);
+        } else {
+            if (listSource.length > 0 && highlightIndex === null) {
+                setHighlightIndex(0);
+                focusListItem(0);
+            }
         }
     };
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (mouseEvent: MouseEvent) => {
             if (
                 isOpen &&
-                !dropdownContentRef.current?.contains(event.target as Node) &&
-                !buttonContainerRef.current?.contains(event.target as Node)
-            ) closeDropdown();
+                !dropdownContentRef.current?.contains(mouseEvent.target as Node) &&
+                !buttonContainerRef.current?.contains(mouseEvent.target as Node)
+            ) {
+                closeDropdown();
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isOpen]);
 
-
     return (
-        <div className={`${styles.dropButtonWrapper} ${className}`}>
-
+        <div className={`${styles.dropButtonWrapper} ${className}`.trim()}>
             <div
                 ref={buttonContainerRef}
                 className={styles.dropButton}
@@ -239,14 +227,8 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
                     aria-expanded={isOpen}
                     aria-controls={menuId}
                 />
-                <button
-                    type="button"
-                    className={styles.deleteButton}
-                    onClick={handleClear}
-                    aria-label="Clear task selection"
-                >
-                    X
-                </button>
+
+                <HeaderTaskListDeleteButton/>
             </div>
 
             {isOpen && (
@@ -280,7 +262,6 @@ export default function HeaderTaskListButton({className = '', children}: TDHeade
                     )}
                 </div>
             )}
-
         </div>
     );
 }

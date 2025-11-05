@@ -1,30 +1,42 @@
 .root {
     position: relative;
     transition: flex-basis .5s ease, width .3s ease, padding .3s ease, border .3s ease;
+    padding-bottom: 16px;
+    width: 400px;
+    height: 100%;
+    align-items: center;
+    display: flex;
+    flex-direction: column;
     z-index: 1;
 }
 
 /* Основная область панели */
 .taskDetailsContainer {
-    position: relative;
-    background-position: center;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: end;
-
-    width: 400px;
-    height: 700px;
+    height: 100%;
     transition: transform .35s ease, opacity .25s ease;
-    transform: scaleY(1);
-    transform-origin: top;
-    overflow: hidden;
+    transform-origin: top; /* Важный момент для анимации схлопывания */
+    gap: 16px;
     z-index: 5;
-    margin-top: 20%;
-    /*padding-left: 5%;*/
-    /*padding-right: 5%;*/
-    gap: 8px;
 }
+
+.btnContainer {
+    /*order: 0; !* если разметка уже выше контента, можно убрать *!*/
+    /*flex: 0 0 auto;*/
+    align-self: stretch;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+    max-width: 400px;
+    height: 50px;
+    background: transparent;
+    /*background-position: bottom;*/
+    margin-top: 30%;
+}
+
 
 /* Ряд кнопок переключения */
 .mainButtonsRow {
@@ -33,28 +45,25 @@
     z-index: 2;
 }
 
+
 .mainBtnSolution {
     width: 100px;
     height: 40px;
-    /*background-color: #00ff04;*/
 }
 
 .mainBtnInfo {
     width: 40px;
     height: 40px;
-    /*background-color: #00ff04;*/
 }
 
 .mainBtnTask {
     width: 100px;
     height: 40px;
-    /*background-color: #5cc8ff;*/
 }
 
 /* Декорации фона */
 .capibaraBackground {
     position: absolute;
-    /*top: 150px;*/
     left: 0;
     bottom: 0;
     background-position: left bottom;
@@ -65,41 +74,7 @@
     pointer-events: none;
     height: 40%;
     width: 40%;
-
-
 }
-
-
-/* желательно убрать лишний большой нижний паддинг, чтобы не было пустоты */
-.contentContainerFrame {
-    overflow: auto;
-    padding: 12px 12px 9vw 12px;
-}
-
-/* любые прокручиваемые области */
-/*.descriptionScroll,*/
-/*.solutionScroll,*/
-/*.infoScroll {*/
-/*    overflow: auto;*/
-/*    min-height: 0; !* важен внутри flex *!*/
-/*    max-height: 100%;*/
-/*    padding-bottom: var(--capybara-safe-area);*/
-/*    scrollbar-gutter: stable;*/
-/*}*/
-
-/* .appleBackground {
-  position: absolute;
-  right: 0;
-  top: 1%;
-  background-position: right top;
-  background-image: url('/appleBackground.png');
-  background-size: contain;
-  background-repeat: no-repeat;
-  width: 25%;
-  height: 25%;
-  z-index: 1;
-  pointer-events: none;
-} */
 
 /* Схлопывание панели */
 .min {
@@ -112,10 +87,10 @@
 }
 
 .min .buttonMinimizeBase {
-    top: 15px;
-    left: 15px;
-    width: 3vw;
-    height: 3vw;
+    top: 30px;
+    left: 70px;
+    width: 70px;
+    height: 70px;
 }
 
 .min .taskDetailsContainer {
@@ -129,12 +104,13 @@
     position: absolute;
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    width: 3vw;
-    height: 3vw;
+    width: 70px;
+    height: 70px;
     top: 15px;
     left: 15px;
     cursor: pointer;
     z-index: 220;
+    display: block;
 }
 
 .buttonMinimizeInactive {
@@ -156,9 +132,10 @@
 .contentContainerBase {
     position: relative;
     width: 100%;
-    height: clamp(240px, 600px, 520px);
-    min-height: 240px;
+    height: clamp(240px, 60vh, 600px);
+    min-height: 0px;
     min-width: 0;
+    margin-top: auto;
 }
 
 .contentContainerFrame {
@@ -166,7 +143,9 @@
     display: block;
     box-sizing: border-box;
     width: 100%;
+    /*max-width: 600px;*/
     height: 100%;
+    min-height: 0px;
     overflow-y: auto;
     overflow-x: hidden;
     contain: none;
@@ -176,14 +155,12 @@
     font-weight: 800;
     font-size: 14px;
     line-height: 22px;
-    letter-spacing: 0;
-    -webkit-text-stroke: 0;
 
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    word-break: normal;
-    hyphens: manual;
-    /*padding: 12px 12px 60px 12px;*/
+
+    /* ВАЖНО: паддинг по требованию */
+    padding: 10px;
 
     --frameBorderWidth: 18px;
     --frameRadius: 24px;
@@ -220,6 +197,7 @@
     word-break: normal;
     hyphens: manual;
     -webkit-text-stroke: 0;
+    padding-bottom: 35%;
 }
 
 /* Хост для Monaco */

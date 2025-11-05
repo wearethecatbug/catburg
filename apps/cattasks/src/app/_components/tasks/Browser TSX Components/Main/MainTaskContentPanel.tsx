@@ -102,7 +102,8 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
             <div className={styles.taskDetailsContainer} aria-hidden={isMinimized}>
                 <div className={styles.capibaraBackground} aria-hidden/>
 
-                <div className={styles.mainButtonsRow} role="group" aria-label="Режим содержимого">
+                <div className={`${styles.mainButtonsRow} ${styles.btnContainer}`} role="group"
+                     aria-label="Режим содержимого">
                     <MainBtnShowDescription
                         isActive={activeTab === 'description'}
                         isDisabled={!isTaskSelected}

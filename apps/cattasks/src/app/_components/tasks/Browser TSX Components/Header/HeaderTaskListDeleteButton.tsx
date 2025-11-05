@@ -1,30 +1,27 @@
 "use client";
-import React from 'react';
-import {useTaskContext} from '../../Context/TaskProvider';
-import styles from './HeaderTaskListDeleteButton.module.css';
+import React from "react";
+import {useTaskContext} from "../../Context/TaskProvider";
+import styles from "./HeaderTaskListDeleteButton.module.css";
 
 type HeaderTaskListDeleteButtonProps = {
     readonly className?: string;
-}
-
+};
 
 export default function HeaderTaskListDeleteButton({className}: HeaderTaskListDeleteButtonProps) {
-    const {headerInput, setHeaderInput, setSelectedId} = useTaskContext();
+    const {clearSelectedFields} = useTaskContext();
 
-    const handleClear = () => {
-
-        setHeaderInput('');
-        console.log("clock")
-        // optional: clear selected task so Main shows default
-        setSelectedId(null);
+    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+        console.log("delete button")
+        event.stopPropagation();          // не триггерим контейнер
+        clearSelectedFields();            // очищаем контекст
     };
 
     return (
         <button
             type="button"
-            className={`${styles.deleteButton} ${className ?? ''}`}
-            aria-label="Clear task input"
-            onClick={handleClear}
+            className={`${styles.deleteButton} ${className ?? ""}`.trim()}
+            aria-label="Очистить выбор задачи"
+            onClick={handleClick}
         >
             X
         </button>

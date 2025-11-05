@@ -1,5 +1,5 @@
 'use client';
-import React, {createContext, useCallback, useContext, useEffect, useMemo, useState,} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,} from 'react';
 import type {ParsedTask} from '../lib/ParseTasksArr';
 import {useTasksArr} from '../Hooks/UseTasks';
 
@@ -77,6 +77,8 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
 
     const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
     const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
+
+    const didInitRef = useRef(false);
 
     const updateTask = useCallback((id: string, patch: Partial<ParsedTask>) => {
         setTasks(prevTasks => prevTasks.map(task => (task.id === id ? {...task, ...patch} : task)));
@@ -164,12 +166,14 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
 
     // первичная инициализация выбора
     useEffect(() => {
+        if (didInitRef.current) return;                 // уже инициализировано или была ручная очистка
         if (!selectedId && tasks.length > 0) {
             const first = tasks[0];
             setSelectedId(first.id);
             setHeaderInput(`${first.no}. ${first.title}`);
             setShowSolution(false);
             setEditorSolution(defaultSolutionText);
+            didInitRef.current = true;                  // больше не автоселектить
         }
     }, [tasks, selectedId, defaultSolutionText]);
 
@@ -209,13 +213,14 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     }, [defaultTestInfoText]);
 
     const clearSelectedFields = useCallback(() => {
+        didInitRef.current = true;                      // после ручной очистки не автоселектить
         setHeaderInput('');
         setSelectedId(null);
         setShowSolution(false);
         setRunTest(false);
         setValidSolution(false);
         setEditorSolution(defaultSolutionText);
-        setEditorUserCode('');
+        // setEditorUserCode('');
         setTestNotificationText(defaultTestInfoText);
     }, [defaultSolutionText, defaultTestInfoText]);
 

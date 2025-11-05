@@ -4,19 +4,19 @@
     background-size: contain;
     background-repeat: repeat;
     display: flex;
-    /*flex-direction: row;*/
+    flex-direction: row;
     align-items: center;
     justify-content: center;
     /*color: white;*/
     box-sizing: border-box;
     z-index: 1000;
-    padding-left: 10%;
-    padding-right: 10%;
+    /*padding-left: 10%;*/
+    /*padding-right: 10%;*/
 }
 
 
 .headerTaskContainer {
-    width: 573px;
+    width: 700px;
     height: 145px;
 }
 

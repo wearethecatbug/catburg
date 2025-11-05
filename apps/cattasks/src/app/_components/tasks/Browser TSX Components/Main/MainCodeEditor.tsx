@@ -21,7 +21,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
         <>
             <div className={styles.container}>
 
-                <div className="buttonsRow">
+                <div className={styles.buttonsRow}>
                     <MainBtnTest className={styles.btnTest}/>
                     <MainBtnRunCode className={styles.btnRunCode}/>
                 </div>

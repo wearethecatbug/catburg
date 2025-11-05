@@ -12,9 +12,7 @@ export default function Main({className}: MainProps) {
         <div className={styles.mainContainer}>
             <MainTaskContentPanel className={styles.taskContentPanel}/>
             <MainCodeEditor className={styles.codeEditor}>
-
             </MainCodeEditor>
-
         </div>
     )
 }
