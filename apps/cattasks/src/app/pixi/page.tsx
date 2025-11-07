@@ -2,7 +2,7 @@
 
 import {useEffect, useRef, useState} from "react";
 import {Application} from "pixi.js";
-import {initPixiApp} from "@/app/_components/tasks/Features/PixiScene";
+import {initPixiApp} from "@/app/_components/tasks/feature/PixiScene";
 
 
 export default function Page() {
@@ -50,7 +50,7 @@ export default function Page() {
 
     return (
         <div>
-        {loading && (<div>Loading...</div>)}
+            {loading && (<div>Loading...</div>)}
             <div ref={pixiContainerRef}>
                 {/*{JSON.stringify(parseTasksArr(tasksW))};*/}
             </div>

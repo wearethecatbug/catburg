@@ -1,0 +1,51 @@
+/*.headerBtnTestContainer {*/
+/*    width: 30%;*/
+/*    height: 100%;*/
+/*    align-items: center;*/
+/*    justify-content: flex-start;*/
+/*    display: flex;*/
+/*    flex-direction: row;*/
+/*    gap: 1.5%;*/
+/*}*/
+
+.btnTest {
+    border: none;
+    background-repeat: no-repeat;
+    background-size: contain;
+    cursor: pointer;
+    background-position: center;
+    width: 170px;
+    height: 65px;
+    transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+    display: inline-block;
+    box-sizing: border-box;
+    flex: 0 0 170px;
+}
+
+.default {
+    background-image: url("/btnTest1.png");
+}
+
+.success {
+    background-image: url("/btnTestSuccess.png");
+}
+
+.fail {
+    background-image: url("/btnTestFail.png");
+}
+
+
+.btnTest:hover {
+    /*transform: scale(1.2);*/
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+}
+
+.active {
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+    filter: brightness(.92) contrast(1.75);
+}
+
+.active:hover {
+    /*transform: scale(1.2);*/
+    filter: brightness(.92) contrast(1.75);
+}
