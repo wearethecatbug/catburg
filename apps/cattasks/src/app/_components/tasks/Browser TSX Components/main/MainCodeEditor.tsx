@@ -13,7 +13,7 @@ type MainCodeEditorProps = {
 };
 
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
-    const {selectedTask, showSolution, editorSolution, editorUserCode, setEditorUserCode} = useTaskContext();
+    const {selectedTask, editorUserCode, setEditorUserCode} = useTaskContext();
 
     const value = editorUserCode ?? "";
 

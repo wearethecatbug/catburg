@@ -4,7 +4,6 @@ import MainCodeEditor from "./MainCodeEditor";
 
 interface MainProps {
     readonly className?: string;
-    // readonly children?: React.ReactNode;
 }
 
 export default function Main({className}: MainProps) {

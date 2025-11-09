@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic';
 
 interface FooterProps {
     readonly className?: string;
-    // readonly children?: React.ReactNode;
 }
 
 // Динамический импорт компонентов с отключением SSR
