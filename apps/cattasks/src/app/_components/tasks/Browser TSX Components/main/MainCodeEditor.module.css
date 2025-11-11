@@ -6,6 +6,7 @@
     /*gap: 10px;*/
     width: 100%;
     max-width: 600px; /* контейнер не шире 600px */
+    min-width: 400px;
     height: 100%; /* чтобы 80% было детерминировано */
     box-sizing: border-box;
     padding-bottom: 16px;
@@ -35,6 +36,7 @@
     display: flex; /* чтобы .editor растягивался */
     width: 100%;
     max-width: 600px;
+
     height: 80%; /* 80% высоты контейнера */
     min-height: 0;
 
@@ -56,6 +58,7 @@
 .editor {
     flex: 1 1 auto; /* занять всё внутри рамки */
     min-height: 240px;
+    min-width: 300px;
     resize: none;
     border: 0;
     outline: none;

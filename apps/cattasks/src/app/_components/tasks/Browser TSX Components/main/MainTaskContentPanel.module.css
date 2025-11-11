@@ -42,9 +42,9 @@
 .btnContainer {
     display: flex;
     align-items: center;
-    gap: 10px;
+    /*gap: 10px;*/
     width: 100%;
-    max-width: 400px;
+    max-width: 500px;
     height: auto;
     background: transparent;
 }
@@ -52,7 +52,8 @@
 /* группа таб-кнопок */
 .toolsGroup {
     display: flex;
-    gap: 10px;
+    gap: 30px;
+
     min-width: 0;
 }
 
@@ -146,18 +147,19 @@
 }
 
 /* --- <1024px: один общий ряд --- */
-@media (max-height: 799px) {
+@media (max-height: 799px  ), (max-width: 1000px) {
     .btnContainer {
         display: flex;
         flex-direction: row;
         align-items: center;
-        gap: 10px;
         width: 100%;
         max-width: 100%;
         height: 50px; /* если нужен фикс по высоте на мобильном */
     }
 
     .toolsGroup {
+        justify-content: space-evenly;
+        gap: 0;
         flex: 1 1 auto;
     }
 }
@@ -170,14 +172,37 @@
 }
 
 @media (max-width: 799px) {
-
     .min .buttonMinimizeBase {
         position: absolute;
         top: 15px;
         left: 15px;
     }
-
 }
+
+
+@media (max-width: 799px) {
+    .min .buttonMinimizeBase {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+    }
+}
+
+@media (max-width: 1000px) {
+    .min .buttonMinimizeBase {
+        position: absolute;
+        top: 35px;
+        left: -250px;
+    }
+}
+
+/*@media (max-height: 1000px) {*/
+/*    .min .buttonMinimizeBase {*/
+/*        position: absolute;*/
+/*        top: 15px;*/
+/*        left: 15px;*/
+/*    }*/
+/*}*/
 
 .contentContainerBase {
     display: flex;
