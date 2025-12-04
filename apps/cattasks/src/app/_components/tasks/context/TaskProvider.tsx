@@ -72,8 +72,10 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [editorSolution, setEditorSolution] = useState<string>('No solution available.');
     const [editorUserCode, setEditorUserCode] = useState<string>('');
 
+
     const defaultSolutionText = 'No solution available.';
-    const defaultTestInfoText = 'Нет дополнительной информации';
+    const defaultTestInfoText = 'No additional information.';
+    const defaultTaskDescriptionText = 'Task is not chosen.';
 
     const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
     const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
@@ -113,6 +115,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
             setEditorUserCode('');
             setEditorSolution(defaultSolutionText);
             setTestNotificationText(defaultTestInfoText);
+
         },
         [tasks, selectedId, defaultSolutionText, defaultTestInfoText]
     );

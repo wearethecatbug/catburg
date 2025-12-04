@@ -147,8 +147,8 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                             <div className={styles.editorHost}>
                                 <MainTaskSolutionEditor
                                     value={localSolutionText}
-                                    onChange={setLocalSolutionText}
-                                    onMount={(editor) => {
+                                    onChangeAction={setLocalSolutionText}
+                                    onMountAction={(editor) => {
                                         monacoEditorRef.current = editor;
                                         editor.getAction('editor.action.formatDocument')?.run();
                                     }}

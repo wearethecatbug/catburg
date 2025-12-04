@@ -30,8 +30,11 @@
     width: auto;
     height: 200%;
     border: none;
+    min-width: 0; /* позволяет корректно сжиматься в flex-контейнере */
+    padding-right: 33px; /* совпадает с резервом в .dropButton */
     background-color: transparent;
     font-family: 'Orbitron', sans-serif;
+    box-sizing: border-box;
     text-transform: none;
     letter-spacing: 1px;
     -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
@@ -42,12 +45,12 @@
     font-size: 17px;
     font-weight: bold;
     outline: none;
-    overflow: visible;
-    text-overflow: ellipsis;
+    overflow: hidden; /* предотвращает заход текста под кнопку */
+    text-overflow: ellipsis; /* при необходимости обрезать */
     white-space: normal; /* allow wrapping */
     word-break: break-word;
     /*overflow-y: auto;*/
-    z-index: 55;
+    z-index: 2000;
 
 }
 
@@ -107,13 +110,13 @@
     height: 100%;
 }
 
-/*.deleteButton {*/
-/*    border-radius: 25%;*/
-/*    background: #FEDAA4;*/
-/*    z-index: 2;*/
-/*    width: 15%;*/
-/*    height: 70%;*/
-/*}*/
+.deleteButton {
+    background: #FEDAA4;
+    z-index: 3000;
+    height: 100%;
+    width: 30px;
+
+}
 
 /*.deleteButton:hover {*/
 /*    filter: brightness(0.9);*/

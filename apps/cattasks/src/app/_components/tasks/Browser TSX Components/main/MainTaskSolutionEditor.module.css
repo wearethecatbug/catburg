@@ -1,0 +1,30 @@
+.taskSolutionContainer {
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+
+/* ширина/высота "полосы" */
+.taskSolutionContainer :global(.monaco-scrollable-element > .scrollbar.vertical) {
+    width: 8px;
+}
+
+.taskSolutionContainer :global(.monaco-scrollable-element > .scrollbar.horizontal) {
+    height: 8px;
+}
+
+/* прозрачный трек */
+.taskSolutionContainer :global(.monaco-scrollable-element > .scrollbar) {
+    background: transparent;
+}
+
+/* "ползунок" как твой зелёный thumb */
+.taskSolutionContainer :global(.monaco-scrollable-element > .scrollbar > .slider) {
+    background-color: #129e1a;
+    border-radius: 4px;
+}
+
+/* hover */
+.taskSolutionContainer :global(.monaco-scrollable-element > .scrollbar > .slider:hover) {
+    background-color: #129e1a;
+}

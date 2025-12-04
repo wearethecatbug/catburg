@@ -13,7 +13,23 @@ type MainCodeEditorProps = {
 };
 
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
-    const {selectedTask, editorUserCode, setEditorUserCode} = useTaskContext();
+    const {
+        selectedTask,
+        editorUserCode,
+        setEditorUserCode,
+        setRunTest,
+        setValidSolution,
+        setTestNotificationText,
+    } = useTaskContext();
+
+    const handleEditorChange = (v: string | undefined) => {
+        setEditorUserCode(value ?? '');
+        // сброс состояния тестов — вернёт MainBtnTest в styles.default
+        setRunTest?.(false);
+        setValidSolution?.(false);
+        // очищаем текст в инфо-вкладке
+        setTestNotificationText?.('');
+    };
 
     const value = editorUserCode ?? "";
 
@@ -29,32 +45,24 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                 <div className={`${styles.codeEditorFrame} ${className ?? ''}`}>
                     <Monaco
                         height="100%"
-                        language="javascript"        // ← было "typescript"
+                        language="javascript"
                         path={selectedTask ? `solution-${selectedTask.id}.js` : 'solution.js'}
                         beforeMount={(monaco) => {
                             const {javascriptDefaults} = monaco.languages.typescript;
                             javascriptDefaults.setDiagnosticsOptions({
-                                noSemanticValidation: true, // оставить только синтаксис
-                                // noSyntaxValidation: false,  // true — убрать всё
+                                noSemanticValidation: true,
                             });
                             javascriptDefaults.setCompilerOptions({
                                 allowNonTsExtensions: true,
                                 checkJs: false,
                                 target: monaco.languages.typescript.ScriptTarget.ES2020,
                             });
-
-                            // monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-                            //     noSemanticValidation: true,  // оставить только синтаксис
-                            //     // noSyntaxValidation: true,  // если нужно убрать всё
-                            // });
                         }}
-
                         onMount={(editor) => {
-                            // опционально авто-формат
                             editor.getAction('editor.action.formatDocument')?.run();
                         }}
                         value={value}
-                        onChange={(v) => setEditorUserCode(v ?? '')}
+                        onChange={handleEditorChange}
                         theme="vs-light"
                         options={{
                             automaticLayout: true,

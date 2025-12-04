@@ -1,18 +1,12 @@
 .deleteButton {
-    height: 100%;
-    width: 30px;
     position: absolute;
     right: 8px;
-    /*height: calc(80%);*/
     background: #FEDAA4;
-    min-width: 36px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 12px;
     cursor: pointer;
-    /*padding: 4px 8px;*/
-    z-index: 111;
 }
 
 .deleteButton:hover {

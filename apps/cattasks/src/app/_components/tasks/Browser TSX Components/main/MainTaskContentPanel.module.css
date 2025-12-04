@@ -3,12 +3,12 @@
     transition: flex-basis .5s ease, width .3s ease, padding .3s ease, border .3s ease;
     padding-bottom: 16px;
     padding-top: 20px;
-    width: 500px;
+    width: 100%;
+    max-width: 500px;
     height: 100%;
-    align-items: center;
+    align-items: stretch; /* вместо center, чтобы панель не сжималась по ширине */
     display: flex;
     flex-direction: column;
-    z-index: 1;
     padding-right: 50px;
 }
 
@@ -17,11 +17,12 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    height: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    /*height: 100%;*/
     transition: transform .35s ease, opacity .25s ease;
     transform-origin: top; /* Важный момент для анимации схлопывания */
     gap: 20px;
-
 }
 
 /* Декорации фона */
@@ -122,6 +123,132 @@
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
 }
 
+.contentContainerBase {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    transition: transform .35s ease, opacity .25s ease, height .25s ease;
+}
+
+.min .contentContainerBase {
+    display: none !important;
+}
+
+.contentContainerFrame {
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow: auto;
+    padding: 10px;
+
+    font-family: Consolas, "Courier New", monospace;
+    color: #0a0a0a;
+    font-weight: 800;
+    font-size: 14px;
+    line-height: 22px;
+
+    --frameBorderWidth: 18px;
+    --frameRadius: 24px;
+    --frameFillAlpha: .85;
+    --framePatternSize: 160px;
+
+    border: var(--frameBorderWidth) solid transparent;
+    border-radius: calc(var(--frameRadius) + var(--frameBorderWidth));
+
+    background-image: linear-gradient(rgba(255, 255, 255, var(--frameFillAlpha)), rgba(255, 255, 255, var(--frameFillAlpha))),
+    url('/catMainSolution.png');
+    background-clip: padding-box, border-box;
+    background-repeat: repeat;
+    background-position: center;
+    background-size: contain;
+
+    /* фиксируем геометрию рамки независимо от полос прокрутки внутри */
+    scrollbar-gutter: stable;
+}
+
+
+.taskDescriptionPre {
+    padding-left: 10px;
+    word-break: normal;
+    white-space: pre-wrap;
+    hyphens: manual;
+    -webkit-text-stroke-width: 0;
+}
+
+.editorHost {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    scrollbar-gutter: stable;
+}
+
+.taskDescriptionPre,
+.taskInfoPre {
+    margin: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: normal;
+    hyphens: manual;
+}
+
+.taskDescriptionPre,
+.taskInfoPre {
+    scrollbar-width: auto;
+    scrollbar-color: #129e1a transparent;
+}
+
+.contentContainerFrame {
+    /*overflow: auto;*/
+    /*scrollbar-width: auto;*/
+    /*scrollbar-color: #129e1a transparent;*/
+    overflow: hidden;
+    display: flex;
+}
+
+.contentContainerFrame,
+.taskInfoPre,
+.taskDescriptionPre,
+.taskSolutionContainer {
+    scrollbar-width: auto;
+    scrollbar-color: #129e1a transparent;
+}
+
+.contentContainerFrame::-webkit-scrollbar,
+.taskInfoPre::-webkit-scrollbar,
+.taskDescriptionPre::-webkit-scrollbar,
+.taskSolutionContainer::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.contentContainerFrame::-webkit-scrollbar-track,
+.taskInfoPre::-webkit-scrollbar-track,
+.taskDescriptionPre::-webkit-scrollbar-track,
+.taskSolutionContainer::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.contentContainerFrame::-webkit-scrollbar-thumb,
+.taskInfoPre::-webkit-scrollbar-thumb,
+.taskDescriptionPre::-webkit-scrollbar-thumb,
+.taskSolutionContainer::-webkit-scrollbar-thumb {
+    background-color: #129e1a;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+.contentContainerFrame::-webkit-scrollbar-thumb:hover,
+.taskInfoPre::-webkit-scrollbar-thumb:hover,
+.taskDescriptionPre::-webkit-scrollbar-thumb:hover,
+.taskSolutionContainer::-webkit-scrollbar-thumb:hover {
+    background-color: #129e1a;
+}
 
 /* --- Desktop ≥1024px: кнопка сверху, табы ниже --- */
 @media (min-height: 800px) {
@@ -171,14 +298,18 @@
 
 }
 
-@media (max-width: 799px) {
-    .min .buttonMinimizeBase {
-        position: absolute;
-        top: 15px;
-        left: 15px;
+@media (min-height: 800px) {
+    .contentContainerBase {
+        height: 100%;
     }
 }
 
+
+@media (max-width: 1000px) {
+    .contentContainerFrame {
+        height: 50%;
+    }
+}
 
 @media (max-width: 799px) {
     .min .buttonMinimizeBase {
@@ -194,124 +325,4 @@
         top: 35px;
         left: -250px;
     }
-}
-
-/*@media (max-height: 1000px) {*/
-/*    .min .buttonMinimizeBase {*/
-/*        position: absolute;*/
-/*        top: 15px;*/
-/*        left: 15px;*/
-/*    }*/
-/*}*/
-
-.contentContainerBase {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end; /* низ */
-    width: 100%;
-    height: clamp(240px, 60vh, 600px);
-    min-height: 0;
-    transition: transform .35s ease, opacity .25s ease, height .25s ease;
-    /*flex: 0 0 auto;*/
-}
-
-.min .contentContainerBase {
-    display: none !important;
-}
-
-.contentContainerFrame {
-    position: relative;
-    display: block;
-    box-sizing: border-box;
-    width: 100%;
-    /*max-width: 600px;*/
-    height: 100%;
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-    contain: none;
-    margin-top: 0;
-
-    font-family: Consolas, "Courier New", monospace;
-    color: #0a0a0a;
-    font-weight: 800;
-    font-size: 14px;
-    line-height: 22px;
-
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-
-    /* ВАЖНО: паддинг по требованию */
-    padding: 10px;
-
-    --frameBorderWidth: 18px;
-    --frameRadius: 24px;
-    --frameFillAlpha: .85;
-    --framePatternSize: 160px;
-
-    border: var(--frameBorderWidth) solid transparent;
-    border-radius: calc(var(--frameRadius) + var(--frameBorderWidth));
-
-    background-image: linear-gradient(rgba(255, 255, 255, var(--frameFillAlpha)), rgba(255, 255, 255, var(--frameFillAlpha))),
-    url('/catMainSolution.png');
-    background-clip: padding-box, border-box;
-    background-repeat: repeat;
-    background-position: center;
-    background-size: contain;
-}
-
-.taskDescriptionPre {
-    margin: 0;
-    box-sizing: border-box;
-    max-width: 100%;
-    tab-size: 4;
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: normal;
-    hyphens: manual;
-    -webkit-text-stroke: 0;
-    padding-bottom: 35%;
-}
-
-/* Хост для Monaco */
-.editorHost {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* Скроллбары (WebKit) */
-.contentContainerFrame::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.contentContainerFrame::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.contentContainerFrame::-webkit-scrollbar-thumb {
-    background-color: #50bc4c;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
-
-.contentContainerFrame::-webkit-scrollbar-thumb:hover {
-    background-color: #50bc4c;
-}
-
-/* Скроллбары (Firefox) */
-.contentContainerFrame {
-    scrollbar-width: thin;
-    scrollbar-color: #50bc4c transparent;
-}
-
-/* Синхронизация табов у Monaco только для блока решения */
-.taskSolutionContainer .monaco-editor,
-.taskSolutionContainer .monaco-editor * {
-    tab-size: 4 !important;
-    -moz-tab-size: 4 !important;
 }

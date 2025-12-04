@@ -231,7 +231,7 @@ export default function HeaderTaskListButton({className = "", children}: HeaderT
                     aria-controls={menuId}
                 />
 
-                <HeaderTaskListDeleteButton/>
+                <HeaderTaskListDeleteButton className={styles.deleteButton}/>
             </div>
 
             {isOpen && (
