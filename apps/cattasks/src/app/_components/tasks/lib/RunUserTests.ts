@@ -313,20 +313,6 @@ export function runUserTests(
         return result;
     }
 
-    if (!Array.isArray(tests) || tests.length === 0) {
-        const text = "Нет тестов для проверки";
-        const result: TestRunResult = {
-            areAllTestsPassed: false,
-            passedCount: 0,
-            totalTests: 0,
-            firstFailureMessage: text,
-            resultText: text,
-            errorMessage: text,
-        };
-        dispatchTestEvent(result);
-        return result;
-    }
-
     const {compiledFunction, errorMessage} = compileUserExportedFunction(userCode, expectedFunctionName);
     if (errorMessage || !compiledFunction) {
         const result: TestRunResult = {
@@ -336,6 +322,21 @@ export function runUserTests(
             firstFailureMessage: errorMessage ?? "Ошибка компиляции",
             resultText: errorMessage ?? "Ошибка компиляции",
             errorMessage: errorMessage ?? "Ошибка компиляции",
+        };
+        dispatchTestEvent(result);
+        return result;
+    }
+
+
+    if (!Array.isArray(tests) || tests.length === 0) {
+        const text = "Нет тестов для проверки";
+        const result: TestRunResult = {
+            areAllTestsPassed: false,
+            passedCount: 0,
+            totalTests: 0,
+            firstFailureMessage: text,
+            resultText: text,
+            errorMessage: text,
         };
         dispatchTestEvent(result);
         return result;
@@ -377,15 +378,20 @@ export function runUserTests(
             ? `Все тесты пройдены: ${passedCount}/${tests.length}`
             : `${firstFailureMessage ?? "Неизвестная ошибка"}\nПройдено: ${passedCount}/${tests.length}`;
 
-        const result: TestRunResult = {
+        // const result: TestRunResult = {
+        //     areAllTestsPassed,
+        //     passedCount,
+        //     totalTests: tests.length,
+        //     firstFailureMessage,
+        //     resultText,
+        // };
+        return {
             areAllTestsPassed,
             passedCount,
             totalTests: tests.length,
             firstFailureMessage,
             resultText,
-        };
-
-        return result;
+        } as TestRunResult;
     };
 
     const result = options?.suppressConsoleOutput ? withConsoleSuppressed(executor) : executor();
@@ -408,7 +414,10 @@ function dispatchTestEvent(result: TestRunResult): void {
                 })
             );
         }
-    } catch {
-        //игнорируем ошибки диспетчеризации???
+    } catch (eventDispatchError) {
+        console.error(
+            "[capibara] Ошибка при диспетчеризации события 'capibara:testResult'",
+            eventDispatchError
+        );
     }
 }

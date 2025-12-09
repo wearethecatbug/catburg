@@ -1,11 +1,11 @@
 'use client';
 import React from 'react';
 import styles from './MainBtnShowDescription.module.css';
+import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
 
 export type MainBtnShowDescriptionProps = {
     readonly className?: string;
     readonly isActive: boolean;      // true, когда показано описание
-    readonly isDisabled: boolean;    // true, когда задача не выбрана
     readonly onClick: () => void;
     readonly ariaLabel?: string;
 };
@@ -13,22 +13,21 @@ export type MainBtnShowDescriptionProps = {
 export default function MainBtnShowDescription({
                                                    className,
                                                    isActive,
-                                                   isDisabled,
                                                    onClick,
                                                    ariaLabel,
                                                }: MainBtnShowDescriptionProps) {
-    const buttonClassName = [
+
+    const getBtnClassName = combineClassNames(
         styles.mainBtnTask,
         isActive ? styles.active : '',
         className ?? '',
-    ].join(' ').trim();
+    );
 
     return (
         <button
             type="button"
-            className={buttonClassName}
+            className={getBtnClassName}
             onClick={onClick}
-            disabled={isDisabled}
             aria-pressed={isActive}
             aria-label={ariaLabel ?? (isActive ? 'Показано описание' : 'Показать описание')}
         />

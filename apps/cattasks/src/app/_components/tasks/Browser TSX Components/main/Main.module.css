@@ -9,41 +9,23 @@
     background-size: contain;
     background-repeat: repeat;
     min-width: 600px;
-
 }
 
-.taskContentPanel {
+.taskContentPanelContainer {
     width: 25%;
     height: 100%;
     display: flex;
-    min-height: 0;
+    /*min-height: 0;*/
 }
 
 .codeEditor {
-    background-color: blue;
     width: 20%;
     height: 70%;
     flex: 1 1 auto;
-    min-width: 0;
+    /*min-width: 0;*/
 }
 
-
-.mainBtnContainer {
-    flex-direction: row;
-    width: 850px;
-    gap: 12px;
-    height: 100%;
-}
-
-
-/*.taskSolution {*/
-/*    background-color: blue;*/
-/*    width: 20%;*/
-/*    height: 70%;*/
-/*    min-width: 0;*/
-/*}*/
-
-@media (max-width: 1000px) {
+@media (max-width: 1150px) {
     .mainContainer {
         flex-direction: column;
         align-items: center;
@@ -66,13 +48,5 @@
         width: 100%;
         justify-content: center;
     }
-
-
 }
 
-/*@media (max-height: 799px) {*/
-/*    .contentContainerBase {*/
-/*        height: clamp(200px, 50dvh, 520px);*/
-/*    }*/
-
-/*}*/

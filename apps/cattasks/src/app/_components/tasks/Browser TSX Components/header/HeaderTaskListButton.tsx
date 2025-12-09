@@ -8,10 +8,9 @@ import HeaderTaskListDeleteButton from "./HeaderTaskListDeleteButton";
 
 type HeaderTaskListButtonProps = {
     readonly className?: string,
-    readonly children?: React.ReactNode,
 };
 
-export default function HeaderTaskListButton({className = "", children}: HeaderTaskListButtonProps) {
+export default function HeaderTaskListButton({className = ""}: HeaderTaskListButtonProps) {
     const [isOpen, setIsOpen] = useState(false);
 
     const {
@@ -207,10 +206,10 @@ export default function HeaderTaskListButton({className = "", children}: HeaderT
     }, [isOpen]);
 
     return (
-        <div className={`${styles.dropButtonWrapper} ${className}`.trim()}>
+        <div className={`${styles.dropdownWrapper} ${className}`.trim()}>
             <div
                 ref={buttonContainerRef}
-                className={styles.dropButton}
+                className={styles.dropdownTrigger}
                 role="button"
                 tabIndex={0}
                 onDoubleClick={toggleDropdown}
@@ -220,7 +219,7 @@ export default function HeaderTaskListButton({className = "", children}: HeaderT
             >
                 <input
                     ref={inputRef}
-                    className={styles.overlayInput}
+                    className={styles.dropdownInput}
                     placeholder="Список задач..."
                     value={headerInput}
                     onChange={handleInputChange}
@@ -238,13 +237,13 @@ export default function HeaderTaskListButton({className = "", children}: HeaderT
                 <div
                     id={menuId}
                     ref={dropdownContentRef}
-                    className={styles.dropdownContent}
+                    className={styles.dropdownList}
                     role="listbox"
                     tabIndex={-1}
                     onKeyDown={handleTaskListKeyDown}
                 >
                     {tasks.length === 0 ? (
-                        <div className={styles.empty}>Loading…</div>
+                        <div className={styles.taskListEmptyState}>Loading…</div>
                     ) : (
                         <ul>
                             {listSource.map((task: ParsedTask, index: number) => (
@@ -252,7 +251,7 @@ export default function HeaderTaskListButton({className = "", children}: HeaderT
                                     key={task.id}
                                     role="option"
                                     tabIndex={0}
-                                    className={styles.dropdownContentli}
+                                    className={styles.dropdownListItem}
                                     title={task.title}
                                     onClick={() => handleSelectTask(task)}
                                     onMouseEnter={() => setHighlightIndex(index)}

@@ -5,7 +5,7 @@ import styles from './page.module.css';
 export default function Home() {
     return (
         <div className={styles.background}>
-            <div className={styles.tdContainer}>
+            <div className={styles.pageDashboardRoot}>
                 <TaskDashboard/>
             </div>
         </div>

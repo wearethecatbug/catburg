@@ -23,7 +23,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
     const isTaskSelected = Boolean(selectedTask);
 
-    const descriptionText = selectedTask?.description ?? 'Нет описания';
+    const descriptionText = selectedTask?.description ?? 'No task selected.';
     const solutionText =
         editorSolution && editorSolution.trim().length > 0
             ? editorSolution
@@ -40,9 +40,29 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     const [localSolutionText, setLocalSolutionText] =
         useState<string>(() => sanitizeSolutionText(solutionText));
 
+    const taskDescriptionPreElementRef =
+        useRef<HTMLPreElement | null>(null);
+
     function sanitizeSolutionText(input: string): string {
         return input.replace(/[\u00A0\u2007\u202F]/g, ' ').replace(/\r\n?/g, '\n');
     }
+
+    useEffect(() => {
+        if (!selectedTask) {
+            return;
+        }
+
+        // Всегда переключаемся на вкладку описания
+        setActiveTab('description');
+
+        // После отрисовки переносим фокус на описание
+        requestAnimationFrame(() => {
+            const taskDescriptionElement = taskDescriptionPreElementRef.current;
+            if (taskDescriptionElement) {
+                taskDescriptionElement.focus();
+            }
+        });
+    }, [selectedTask?.id]);
 
     useEffect(() => {
         setShowSolution?.(activeTab === 'solution');
@@ -68,12 +88,12 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     }, [isMinimized]);
 
     const handleToggleMinimize = () => {
-        if (!isTaskSelected) return;
+        // if (!isTaskSelected) return;
         setIsMinimized(prev => !prev);
     };
 
     const handleShowDescription = () => {
-        if (!isTaskSelected) return;
+        // if (!isTaskSelected) return;
         setActiveTab('description');
     };
     const handleShowSolution = () => {
@@ -81,7 +101,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
         setActiveTab('solution');
     };
     const handleShowInfo = () => {
-        if (!isTaskSelected) return;
+        // if (!isTaskSelected) return;
         setActiveTab('info');
     };
 
@@ -96,9 +116,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                             ref={minimizeButtonRef}
                             type="button"
                             onClick={handleToggleMinimize}
-                            disabled={!isTaskSelected}
-                            aria-disabled={!isTaskSelected}
-                            aria-expanded={isTaskSelected ? !isMinimized : false}
+                            aria-expanded={!isMinimized}
                             aria-controls="taskPanelContent"
                             className={combineClassNames(
                                 styles.buttonMinimizeBase,
@@ -111,7 +129,6 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         <div className={styles.toolsGroup}>
                             <MainBtnShowDescription
                                 isActive={activeTab === 'description'}
-                                isDisabled={!isTaskSelected}
                                 onClick={handleShowDescription}
                                 ariaLabel={activeTab === 'description' ? 'Показано описание' : 'Показать описание'}
                                 className={styles.mainBtnTask}
@@ -161,6 +178,8 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         <div
                             className={combineClassNames(styles.contentContainerFrame, styles.taskDescriptionContainer)}>
               <pre
+                  ref={taskDescriptionPreElementRef}
+                  tabIndex={-1}
                   className={styles.taskDescriptionPre}
                   aria-label={isTaskSelected ? 'Описание задачи' : 'Нет выбранной задачи'}
               >
@@ -188,9 +207,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                     ref={minimizeButtonRef}
                     type="button"
                     onClick={handleToggleMinimize}
-                    disabled={!isTaskSelected}
-                    aria-disabled={!isTaskSelected}
-                    aria-expanded={isTaskSelected ? !isMinimized : false}
+                    aria-expanded={!isMinimized}
                     aria-controls="taskPanelContent"
                     className={combineClassNames(
                         styles.buttonMinimizeBase,

@@ -1,9 +1,8 @@
-.container {
+.codeEditorContainer {
     display: flex;
     flex-direction: column;
     justify-content: flex-start; /* вдоль колонки: сверху */
     align-items: center; /* по горизонтали: по центру */
-    /*gap: 10px;*/
     width: 100%;
     max-width: 600px; /* контейнер не шире 600px */
     min-width: 400px;
@@ -21,14 +20,6 @@
     justify-content: center;
     align-items: center;
     width: 100%;
-    height: 80px;
-}
-
-
-.mainBtnTest, .mainBtnRunCode {
-    /*gap: 22px;*/
-    display: inline-flex;
-    width: 105px;
     height: 80px;
 }
 

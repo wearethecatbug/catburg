@@ -1,6 +1,6 @@
 .root {
     position: relative;
-    transition: flex-basis .5s ease, width .3s ease, padding .3s ease, border .3s ease;
+    /*transition: flex-basis .5s ease, width .3s ease, padding .3s ease, border .3s ease;*/
     padding-bottom: 16px;
     padding-top: 20px;
     width: 100%;
@@ -26,24 +26,23 @@
 }
 
 /* Декорации фона */
-.capibaraBackground {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    background-position: left bottom;
-    background-image: url('/capibaraBackground.png');
-    background-size: contain;
-    background-repeat: no-repeat;
-    z-index: 1;
-    pointer-events: none;
-    height: 40%;
-    width: 40%;
-}
+/*.capibaraBackground {*/
+/*    position: absolute;*/
+/*    left: 0;*/
+/*    bottom: 0;*/
+/*    background-position: left bottom;*/
+/*    background-image: url('/capibaraBackground.png');*/
+/*    background-size: contain;*/
+/*    background-repeat: no-repeat;*/
+/*    z-index: 1;*/
+/*    pointer-events: none;*/
+/*    height: 40%;*/
+/*    width: 40%;*/
+/*}*/
 
 .btnContainer {
     display: flex;
     align-items: center;
-    /*gap: 10px;*/
     width: 100%;
     max-width: 500px;
     height: auto;
@@ -54,25 +53,24 @@
 .toolsGroup {
     display: flex;
     gap: 30px;
-
     min-width: 0;
 }
 
 .mainBtnSolution {
-    width: 100px;
-    height: 40px;
+    width: 150px;
+    height: 80px;
 }
 
 .mainBtnInfo {
-    width: 40px;
-    height: 40px;
+    width: 70px;
+    height: 75px;
 }
 
 .mainBtnTask {
-    width: 100px;
-    height: 40px;
+    width: 150px;
+    height: 80px;
+    flex: 0 0 150px;
 }
-
 
 .min {
     flex-basis: 0;
@@ -171,6 +169,7 @@
 
 
 .taskDescriptionPre {
+    overflow: hidden;
     padding-left: 10px;
     word-break: normal;
     white-space: pre-wrap;
@@ -200,14 +199,6 @@
 .taskInfoPre {
     scrollbar-width: auto;
     scrollbar-color: #129e1a transparent;
-}
-
-.contentContainerFrame {
-    /*overflow: auto;*/
-    /*scrollbar-width: auto;*/
-    /*scrollbar-color: #129e1a transparent;*/
-    overflow: hidden;
-    display: flex;
 }
 
 .contentContainerFrame,
@@ -251,7 +242,7 @@
 }
 
 /* --- Desktop ≥1024px: кнопка сверху, табы ниже --- */
-@media (min-height: 800px) {
+@media (min-height: 800px), (min-width: 1149px) {
     .btnContainer {
         display: grid;
         grid-template-columns: 1fr;
@@ -273,8 +264,8 @@
     }
 }
 
-/* --- <1024px: один общий ряд --- */
-@media (max-height: 799px  ), (max-width: 1000px) {
+
+@media (max-height: 799px  ), (max-width: 1150px) {
     .btnContainer {
         display: flex;
         flex-direction: row;
@@ -283,33 +274,32 @@
         max-width: 100%;
         height: 50px; /* если нужен фикс по высоте на мобильном */
     }
+}
 
+
+@media (max-height: 799px  ) {
     .toolsGroup {
         justify-content: space-evenly;
         gap: 0;
         flex: 1 1 auto;
+        padding-top: 10px;
     }
 }
 
-@media (max-height: 799px) {
-    .contentContainerBase {
-        height: clamp(200px, 50dvh, 520px);
+@media (max-width: 1150px) {
+    .contentContainerFrame {
+        height: clamp(200px, 50dvh, 420px);
     }
-
 }
+
 
 @media (min-height: 800px) {
     .contentContainerBase {
         height: 100%;
+
     }
 }
 
-
-@media (max-width: 1000px) {
-    .contentContainerFrame {
-        height: 50%;
-    }
-}
 
 @media (max-width: 799px) {
     .min .buttonMinimizeBase {
@@ -319,7 +309,7 @@
     }
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1150px) {
     .min .buttonMinimizeBase {
         position: absolute;
         top: 35px;

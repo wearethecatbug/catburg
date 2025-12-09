@@ -3,25 +3,24 @@ import React from "react";
 import styles from "./MainBtnTest.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
 import {runUserTests} from "../../lib/RunUserTests";
+import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
 
-//
-// type HeaderBtnTestProps = {
-//     readonly className?: ;
-// }
 
-export default function MainBtnTest({className}: { readonly className?: string }) {
+type HeaderBtnTestProps = {
+    readonly className?: string;
+    readonly isDisabled?: boolean;
+}
+
+export default function MainBtnTest({className, isDisabled}: HeaderBtnTestProps) {
     const {
         selectedTask,
         editorUserCode,
         setRunTest,
         setValidSolution,
         validSolution,
-        runTest
+        runTest,
+        setTestNotificationText,
     } = useTaskContext();
-
-    // useEffect(() => {
-    //     setRunTest?.(false);
-    // }, [editorUserCode, setRunTest]);
 
     const handleRunTestsClick = () => {
         const tests = Array.isArray(selectedTask?.tests) ? selectedTask.tests : [];
@@ -33,6 +32,7 @@ export default function MainBtnTest({className}: { readonly className?: string }
             (selectedTask as any)?.expectedFunctionName ??
             undefined;
 
+
         const {areAllTestsPassed, resultText} = runUserTests(
             editorUserCode ?? "",
             tests,
@@ -42,27 +42,25 @@ export default function MainBtnTest({className}: { readonly className?: string }
 
         setRunTest?.(true);
         setValidSolution?.(areAllTestsPassed);
-
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("capibara:testResult", {
-                detail: {resultText, areAllTestsPassed}
-            }));
-        }
+        setTestNotificationText?.(resultText);
     };
 
-    const getBtnClassName = [
+    const getBtnClassName = combineClassNames(
         styles.btnTest,
-        !runTest ? styles.default :
-            validSolution ? styles.success : styles.fail,
+        !selectedTask ? styles.disabled :
+            !runTest ? styles.default :
+                validSolution ? styles.success : styles.fail,
         className,
-    ].filter(Boolean).join(' ');
-    console.log('runTest=', runTest, 'validSolution=', validSolution);
+    );
+
     return (
         <button
             type="button"
             className={getBtnClassName}
             aria-label="Test Code"
             onClick={handleRunTestsClick}
+            disabled={isDisabled}
+
         />
     );
 }

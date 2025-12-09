@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import styles from './MainBtnShowSolution.module.css';
+import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
 
 export type MainBtnShowSolutionProps = {
     readonly className?: string;
@@ -17,17 +18,17 @@ export default function MainBtnShowSolution({
                                                 onClick,
                                                 ariaLabel,
                                             }: MainBtnShowSolutionProps) {
-    const buttonClassName = [
+    const getBtnClassName = combineClassNames(
         styles.btnSolution,
         isActive && styles.active,
         isDisabled && styles.disabled,
         className,
-    ].filter(Boolean).join(' ');
+    );
 
     return (
         <button
             type="button"
-            className={buttonClassName}
+            className={getBtnClassName}
             onClick={onClick}
             disabled={isDisabled}
             aria-pressed={isActive}

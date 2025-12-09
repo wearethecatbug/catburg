@@ -1,14 +1,9 @@
-
 .btnSolution {
-    width: 150px;
-    height: 80px;
     cursor: pointer;
-
     background-image: url("/BtnSolution1.png");
     background-repeat: no-repeat;
     background-size: contain;
     background-position: center;
-
 }
 
 .btnSolution:hover {

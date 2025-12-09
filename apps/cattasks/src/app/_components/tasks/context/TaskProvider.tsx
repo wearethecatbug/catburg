@@ -72,10 +72,10 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [editorSolution, setEditorSolution] = useState<string>('No solution available.');
     const [editorUserCode, setEditorUserCode] = useState<string>('');
 
-
-    const defaultSolutionText = 'No solution available.';
+    //
+    const defaultSolutionText = '"No solution available."';
     const defaultTestInfoText = 'No additional information.';
-    const defaultTaskDescriptionText = 'Task is not chosen.';
+
 
     const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
     const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
@@ -112,7 +112,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
             setShowSolution(false);
             setRunTest(false);
             setValidSolution(false);
-            setEditorUserCode('');
+            // setEditorUserCode('');
             setEditorSolution(defaultSolutionText);
             setTestNotificationText(defaultTestInfoText);
 
@@ -198,6 +198,14 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         return;
     }, []);
 
+    // сброс результата тестов при смене выбранной задачи
+    useEffect(() => {
+        // когда задача сменилась или была очищена, старый результат теста нам не нужен
+        setRunTest(false);
+        setValidSolution(false);
+        setTestNotificationText(defaultTestInfoText);
+    }, [selectedId, defaultTestInfoText]);
+
     const setTaskSolution = useCallback(
         (id: string, solution: string) => {
             updateTask(id, {solution});
@@ -223,7 +231,6 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         setRunTest(false);
         setValidSolution(false);
         setEditorSolution(defaultSolutionText);
-        // setEditorUserCode('');
         setTestNotificationText(defaultTestInfoText);
     }, [defaultSolutionText, defaultTestInfoText]);
 

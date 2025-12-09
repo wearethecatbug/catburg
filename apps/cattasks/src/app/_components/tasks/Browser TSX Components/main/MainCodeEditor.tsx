@@ -22,8 +22,10 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
         setTestNotificationText,
     } = useTaskContext();
 
-    const handleEditorChange = (v: string | undefined) => {
-        setEditorUserCode(value ?? '');
+    const handleEditorChange = (editorValue: string | undefined) => {
+        const safeEditorValue = editorValue ?? '';
+        setEditorUserCode?.(safeEditorValue);
+
         // сброс состояния тестов — вернёт MainBtnTest в styles.default
         setRunTest?.(false);
         setValidSolution?.(false);
@@ -35,7 +37,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
 
     return (
         <>
-            <div className={styles.container}>
+            <div className={styles.codeEditorContainer}>
 
                 <div className={styles.buttonsRow}>
                     <MainBtnTest className={styles.btnTest}/>

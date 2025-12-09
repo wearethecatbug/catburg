@@ -1,12 +1,10 @@
 .mainBtnTask {
-    width: 150px;
-    height: 80px;
     cursor: pointer;
     transition: transform .15s ease, filter .15s ease, opacity .15s ease;
 
     display: inline-block;
     box-sizing: border-box;
-    flex: 0 0 150px;
+
 
     background-image: url("/mainTaskBtn.png");
     background-repeat: no-repeat;
@@ -17,11 +15,6 @@
 .mainBtnTask:hover {
     transform: scale(1.05);
     filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
-}
-
-.disabled {
-    opacity: .5;
-    cursor: not-allowed;
 }
 
 .active {

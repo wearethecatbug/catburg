@@ -5,7 +5,7 @@ import Footer from '@/app/_components/tasks/Browser TSX Components/footer/Footer
 
 export default function TaskDashboard() {
     return (
-        <div className={styles.tdContainer}>
+        <div className={styles.taskDashboardRoot}>
             <Header className={styles.headerContainer}></Header>
             <Main className={styles.mainContainer}></Main>
             <Footer className={styles.footerContainer}></Footer>

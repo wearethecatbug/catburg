@@ -2,6 +2,8 @@
 import React from "react";
 import styles from "./MainBtnInfo.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
+import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
+
 
 type MainBtnInfoProps = {
     readonly className?: string;
@@ -11,11 +13,10 @@ type MainBtnInfoProps = {
     ariaLabel: string;
 };
 
-type TestResultDetail = {
-    resultText: string;
-    areAllTestsPassed: boolean;
-};
-
+// type TestResultDetail = {
+//     resultText: string;
+//     areAllTestsPassed: boolean;
+// };
 
 export default function MainBtnInfo({
                                         className,
@@ -29,17 +30,18 @@ export default function MainBtnInfo({
         runTest,
     } = useTaskContext();
 
-    const buttonClassName = [
-        styles.mainBtnTestInfo,
-        runTest ? (validSolution ? styles.success : styles.fail) : styles.default,
-        className
-    ].filter(Boolean).join(" ");
+    const getBtnClassName = combineClassNames(
+        styles.btnTestInfo,
+        runTest ? (validSolution ? styles.success : styles.fail) :
+            isDisabled ? styles.disabled : styles.default,
+        className,
+    );
 
 
     return (
         <button
             type="button"
-            className={buttonClassName}
+            className={getBtnClassName}
             aria-label={ariaLabel}
             aria-pressed={isActive}
             disabled={isDisabled}
