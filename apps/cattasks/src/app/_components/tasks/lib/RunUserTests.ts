@@ -391,7 +391,7 @@ export function runUserTests(
             totalTests: tests.length,
             firstFailureMessage,
             resultText,
-        } as TestRunResult;
+        } satisfies TestRunResult;
     };
 
     const result = options?.suppressConsoleOutput ? withConsoleSuppressed(executor) : executor();
