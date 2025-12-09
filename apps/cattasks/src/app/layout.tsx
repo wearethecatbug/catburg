@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import {Geist, Geist_Mono, Orbitron} from "next/font/google";
 import "./globals.css";
-import {TaskProvider} from './_components/tasks/Context/TaskProvider';
+import {TaskProvider} from './_components/tasks/context/TaskProvider';
 
 const geistSans = Geist({
     variable: "--font-geist-sans",

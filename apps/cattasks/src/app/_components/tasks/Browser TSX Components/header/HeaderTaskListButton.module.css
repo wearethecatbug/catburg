@@ -1,0 +1,108 @@
+/* Враппер ограничивает размеры */
+.dropdownWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 50px;
+}
+
+.dropdownTrigger {
+    width: 100%;
+    height: 100%;
+    display: flex; /* center children */
+    align-items: center; /* vertical center */
+    --radius: 24px; /* скругление */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    color: #2C4C1E; /* цвет текста по желанию */
+    cursor: pointer;
+    padding: 0 8px 0 16px; /* leave right space for clear button */
+    position: relative; /* allow absolutely positioned children (clear button) */
+}
+
+.dropdownInput {
+    flex: 1 1 auto;
+    width: auto;
+    height: 100%;
+    border: none;
+    min-width: 0; /* позволяет корректно сжиматься в flex-контейнере */
+    padding-right: 33px; /* совпадает с резервом в .dropButton */
+    background-color: transparent;
+    font-family: 'Orbitron', sans-serif;
+    box-sizing: border-box;
+    text-transform: none;
+    letter-spacing: 1px;
+    -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
+    color: rgba(151, 160, 204, 0.89);
+    text-decoration: none;
+    display: block;
+    font-size: 17px;
+    font-weight: bold;
+    outline: none;
+    overflow: hidden; /* предотвращает заход текста под кнопку */
+    text-overflow: ellipsis; /* при необходимости обрезать */
+    white-space: nowrap;
+    word-break: break-word;
+    z-index: 2000;
+}
+
+.dropdownInput::placeholder {
+    opacity: .6;
+}
+
+.dropdownList {
+    position: absolute;
+    width: 100%;
+    height: 250%;
+    max-height: 250%; /* Ограничиваем высоту выпадающего списка */
+
+    top: 140%; /* Place dropdown below the button */
+    left: 0;
+    --radius: 24px; /* скругление */
+    --border: 4px; /* толщина рамки */
+    --stroke: 4px; /* толщина окантовки */
+
+    background: #FEDAA4; /* фон для текста */
+    border: var(--border) solid #dc7477; /* цвет рамки */
+    border-radius: var(--radius);
+    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
+    color: #2C4C1E; /* цвет текста по желанию */
+
+    overflow-x: hidden;
+    overflow-y: auto; /* Добавляем вертикальную прокрутку */
+    padding: 1% 0;
+    z-index: 300;
+}
+
+.dropdownListItem {
+    color: #113519;
+    padding: 10px 16px;
+    text-decoration: none;
+    display: block;
+    font-family: 'Orbitron', sans-serif;
+    text-shadow: 0 0 4px #00ff04, 0 0 5px #294c23;
+    text-transform: none;
+    letter-spacing: 1px;
+}
+
+.dropdownListItem:hover {
+    background-color: #f1f1f1;
+}
+
+.deleteButton {
+    background: #FEDAA4;
+    z-index: 3000;
+    height: 100%;
+    width: 30px;
+}
+
+.taskListEmptyState {
+    padding: 8px 16px;
+    font-family: "Orbitron", sans-serif;
+    font-size: 12px;
+    opacity: 0.7;
+}

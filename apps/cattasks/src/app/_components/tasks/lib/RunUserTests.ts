@@ -19,10 +19,10 @@ export type TestRunResult = {
     errorMessage?: string;
 };
 
+/** Стабильное JSON-представление: сортирует ключи объектов. */
 export function stableStringify(value: unknown): string {
-    return JSON.stringify(
-        value,
-        (_key, val) => {
+    return (
+        JSON.stringify(value, (_key, val) => {
             if (val && typeof val === "object" && !Array.isArray(val)) {
                 const sorted: Record<string, unknown> = {};
                 for (const key of Object.keys(val as Record<string, unknown>).sort()) {
@@ -31,10 +31,11 @@ export function stableStringify(value: unknown): string {
                 return sorted;
             }
             return val;
-        }
-    ) ?? "";
+        }) ?? ""
+    );
 }
 
+/** Глубокое сравнение через стабилизированное представление + NaN === NaN. */
 export function deepEqual(a: unknown, b: unknown): boolean {
     if (typeof a === "number" && typeof b === "number" && Number.isNaN(a) && Number.isNaN(b)) return true;
     return stableStringify(a) === stableStringify(b);
@@ -50,23 +51,27 @@ export function assertExpectedEqualsActual(
     }
     return {
         isPassed: false,
-        message: `Тест ${testNumber}:\nожидалось ${stableStringify(expectedValue)}\nполучено ${stableStringify(actualValue)}`
+        message: `Тест ${testNumber}:\nожидалось ${stableStringify(expectedValue)}\nполучено ${stableStringify(actualValue)}`,
     };
 }
 
-// ——— внутренние утилиты компиляции ———
+// ——— парсинг экспортируемой функции из пользовательского кода ———
+
 function trimParameterList(text: string): string[] {
-    return text.split(",").map(s => s.trim()).filter(Boolean);
+    return text.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 function findBalancedBlock(source: string, openIndex: number): number {
     let depth = 0;
     let i = openIndex;
-    let inSingle = false, inDouble = false, inBacktick = false;
-    let inLineComment = false, inBlockComment = false;
+    let inSingle = false,
+        inDouble = false,
+        inBacktick = false;
+    let inLineComment = false,
+        inBlockComment = false;
 
     while (i < source.length) {
-        const ch = source[i];
+        const ch = source[i]!;
         const next = source[i + 1];
 
         // комментарии
@@ -151,61 +156,62 @@ function findBalancedBlock(source: string, openIndex: number): number {
 }
 
 function tryFunctionDeclaration(source: string, nameWanted?: string) {
-    const regex = /function\s+([A-Za-z_$][\w$]*)\s*\(([^)])*\)\s*\{/g;
+    const regex = /function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
         const name = match[1]!;
         const params = match[2] ?? "";
-        const openIndex = match.index + match[0].lastIndexOf("{");
+        const openIndex = match.index + match[0]!.lastIndexOf("{");
         const closeIndex = findBalancedBlock(source, openIndex);
         if (closeIndex < 0) continue;
         const body = source.slice(openIndex + 1, closeIndex);
         found.push({name, params, body});
     }
-    if (nameWanted) return found.find(f => f.name === nameWanted) ?? null;
+    if (nameWanted) return found.find((f) => f.name === nameWanted) ?? null;
     if (found.length === 1) return found[0] ?? null;
     return null;
 }
 
 function tryFunctionExpression(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*function\s*\(([^)])*\)\s*\{/g;
+    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*function\s*\(([^)]*)\)\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
         const name = match[2]!;
         const params = match[3] ?? "";
-        const openIndex = match.index + match[0].lastIndexOf("{");
+        const openIndex = match.index + match[0]!.lastIndexOf("{");
         const closeIndex = findBalancedBlock(source, openIndex);
         if (closeIndex < 0) continue;
         const body = source.slice(openIndex + 1, closeIndex);
         found.push({name, params, body});
     }
-    if (nameWanted) return found.find(f => f.name === nameWanted) ?? null;
+    if (nameWanted) return found.find((f) => f.name === nameWanted) ?? null;
     if (found.length === 1) return found[0] ?? null;
     return null;
 }
 
 function tryArrowBlock(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(([^)])*\)\s*=>\s*\{/g;
+    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\(([^)]*)\)\s*=>\s*\{/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
         const name = match[2]!;
         const params = match[3] ?? "";
-        const openIndex = match.index + match[0].lastIndexOf("{");
+        const openIndex = match.index + match[0]!.lastIndexOf("{");
         const closeIndex = findBalancedBlock(source, openIndex);
         if (closeIndex < 0) continue;
         const body = source.slice(openIndex + 1, closeIndex);
         found.push({name, params, body});
     }
-    if (nameWanted) return found.find(f => f.name === nameWanted) ?? null;
+    if (nameWanted) return found.find((f) => f.name === nameWanted) ?? null;
     if (found.length === 1) return found[0] ?? null;
     return null;
 }
 
 function tryArrowExpression(source: string, nameWanted?: string) {
-    const regex = /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(([^)])*\)|([A-Za-z_$][\w$]*))\s*=>\s*([^;]+);?/g;
+    const regex =
+        /(const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>\s*([^;]+);?/g;
     const found: Array<{ name: string; params: string; body: string }> = [];
     let match: RegExpExecArray | null;
     while ((match = regex.exec(source))) {
@@ -215,11 +221,12 @@ function tryArrowExpression(source: string, nameWanted?: string) {
         const body = `return (${expr});`;
         found.push({name, params, body});
     }
-    if (nameWanted) return found.find(f => f.name === nameWanted) ?? null;
+    if (nameWanted) return found.find((f) => f.name === nameWanted) ?? null;
     if (found.length === 1) return found[0] ?? null;
     return null;
 }
 
+/** Компилирует одну экспортируемую функцию пользователя через new Function. */
 export function compileUserExportedFunction(
     userCode: string,
     expectedFunctionName?: string
@@ -234,12 +241,15 @@ export function compileUserExportedFunction(
         if (!picked) {
             return {
                 errorMessage:
-                    "Функция не найдена. Объявите её как function name(...) {...} или const name = (...) => {...} и, при необходимости, укажите имя в expectedFunctionName."
+                    "Функция не найдена. Объявите её как function name(...) {...} или const name = (...) => {...} и, при необходимости, укажите имя в expectedFunctionName.",
             };
         }
 
         const parameterList = trimParameterList(picked.params);
-        const compiled = new Function(...parameterList, `"use strict";\n${picked.body}`) as (...a: unknown[]) => unknown;
+        const compiled = new Function(
+            ...parameterList,
+            `"use strict";\n${picked.body}`
+        ) as (...functionArguments: unknown[]) => unknown;
 
         return {compiledFunction: compiled};
     } catch (error) {
@@ -248,38 +258,17 @@ export function compileUserExportedFunction(
     }
 }
 
+/** Временно подавляет вывод console.* в текущем контексте выполнения. */
 function withConsoleSuppressed<T>(execute: () => T): T {
-    // Browser-only: run in a hidden iframe with suppressed console
-    if (typeof window !== "undefined" && typeof document !== "undefined") {
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        document.body.appendChild(iframe);
-        //TODO: типизация iframe  почему нет Window?
-        const iframeWindow: Window | any = iframe.contentWindow!;
-
-
-        // Suppress console methods in the iframe
-        iframeWindow.console.log = () => {
-        };
-        iframeWindow.console.warn = () => {
-        };
-        iframeWindow.console.error = () => {
-        };
-        iframeWindow.console.info = () => {
-        };
-        iframeWindow.console.debug = () => {
-        };
-        let result: T;
-        try {
-            // Run the code in the iframe context
-            result = iframeWindow.eval("(" + execute.toString() + ")()") as T;
-        } finally {
-            document.body.removeChild(iframe);
-        }
-        return result;
-    } else {
-        // Fallback: original fragile suppression (Node.js or unknown env)
-        const originalConsole = {...console};
+    // универсально для браузера и Node: без iframe и без eval
+    const original = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        info: console.info,
+        debug: console.debug,
+    };
+    try {
         console.log = () => {
         };
         console.warn = () => {
@@ -290,14 +279,20 @@ function withConsoleSuppressed<T>(execute: () => T): T {
         };
         console.debug = () => {
         };
-        try {
-            return execute();
-        } finally {
-            Object.assign(console, originalConsole);
-        }
+        return execute();
+    } finally {
+        console.log = original.log;
+        console.warn = original.warn;
+        console.error = original.error;
+        console.info = original.info;
+        console.debug = original.debug;
     }
 }
 
+/**
+ * Запускает тесты и возвращает агрегированный результат.
+ * Дополнительно диспатчит CustomEvent('capibara:testResult', { detail: { ... } }).
+ */
 export function runUserTests(
     userCode: string,
     tests: ParsedTest[],
@@ -306,41 +301,48 @@ export function runUserTests(
 ): TestRunResult {
     if (!userCode.trim()) {
         const text = "Код пустой";
-        return {
+        const result: TestRunResult = {
             areAllTestsPassed: false,
             passedCount: 0,
             totalTests: 0,
             firstFailureMessage: text,
             resultText: text,
-            errorMessage: text
+            errorMessage: text,
         };
-    }
-
-    if (!Array.isArray(tests) || tests.length === 0) {
-        const text = "Нет тестов для проверки";
-        return {
-            areAllTestsPassed: false,
-            passedCount: 0,
-            totalTests: 0,
-            firstFailureMessage: text,
-            resultText: text,
-            errorMessage: text
-        };
+        dispatchTestEvent(result);
+        return result;
     }
 
     const {compiledFunction, errorMessage} = compileUserExportedFunction(userCode, expectedFunctionName);
-    if (errorMessage) {
-        return {
+    if (errorMessage || !compiledFunction) {
+        const result: TestRunResult = {
             areAllTestsPassed: false,
             passedCount: 0,
             totalTests: tests.length,
-            firstFailureMessage: errorMessage,
-            resultText: errorMessage,
-            errorMessage
+            firstFailureMessage: errorMessage ?? "Ошибка компиляции",
+            resultText: errorMessage ?? "Ошибка компиляции",
+            errorMessage: errorMessage ?? "Ошибка компиляции",
         };
+        dispatchTestEvent(result);
+        return result;
     }
 
-    const executor = () => {
+
+    if (!Array.isArray(tests) || tests.length === 0) {
+        const text = "Нет тестов для проверки";
+        const result: TestRunResult = {
+            areAllTestsPassed: false,
+            passedCount: 0,
+            totalTests: 0,
+            firstFailureMessage: text,
+            resultText: text,
+            errorMessage: text,
+        };
+        dispatchTestEvent(result);
+        return result;
+    }
+
+    const executor = (): TestRunResult => {
         let passedCount = 0;
         let firstFailureMessage: string | null = null;
 
@@ -350,13 +352,11 @@ export function runUserTests(
             const expected = currentTest.expected;
 
             const normalizedArguments =
-                Array.isArray(parameters) ? parameters :
-                    parameters === undefined ? [] :
-                        [parameters];
+                Array.isArray(parameters) ? parameters : parameters === undefined ? [] : [parameters];
 
             let actual: unknown;
             try {
-                actual = compiledFunction!(...normalizedArguments);
+                actual = compiledFunction(...normalizedArguments);
             } catch (callError) {
                 firstFailureMessage = `Тест ${index + 1}: функция бросила ошибку: ${
                     callError instanceof Error ? callError.message : String(callError)
@@ -378,14 +378,46 @@ export function runUserTests(
             ? `Все тесты пройдены: ${passedCount}/${tests.length}`
             : `${firstFailureMessage ?? "Неизвестная ошибка"}\nПройдено: ${passedCount}/${tests.length}`;
 
+        // const result: TestRunResult = {
+        //     areAllTestsPassed,
+        //     passedCount,
+        //     totalTests: tests.length,
+        //     firstFailureMessage,
+        //     resultText,
+        // };
         return {
             areAllTestsPassed,
             passedCount,
             totalTests: tests.length,
             firstFailureMessage,
-            resultText
-        } as TestRunResult;
+            resultText,
+        } satisfies TestRunResult;
     };
 
-    return options?.suppressConsoleOutput ? withConsoleSuppressed(executor) : executor();
+    const result = options?.suppressConsoleOutput ? withConsoleSuppressed(executor) : executor();
+    dispatchTestEvent(result);
+    return result;
+}
+
+/** Диспатчит результат для UI-слушателя в TaskProvider. */
+function dispatchTestEvent(result: TestRunResult): void {
+    try {
+        if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+            window.dispatchEvent(
+                new CustomEvent("capibara:testResult", {
+                    detail: {
+                        resultText: result.resultText,
+                        areAllTestsPassed: result.areAllTestsPassed,
+                        passedCount: result.passedCount,
+                        totalTests: result.totalTests,
+                    },
+                })
+            );
+        }
+    } catch (eventDispatchError) {
+        console.error(
+            "[capibara] Ошибка при диспетчеризации события 'capibara:testResult'",
+            eventDispatchError
+        );
+    }
 }

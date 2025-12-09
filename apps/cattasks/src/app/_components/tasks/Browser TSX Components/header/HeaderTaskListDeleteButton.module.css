@@ -1,0 +1,15 @@
+.deleteButton {
+    position: absolute;
+    right: 8px;
+    background: #FEDAA4;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.deleteButton:hover {
+    filter: brightness(0.9);
+}
+
