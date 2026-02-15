@@ -1,9 +1,7 @@
 .btn {
-    /*background-color: #ffffff; !* Green *!*/
+    background-color: #ffffff; /* Green */
     border: none;
-    color: white;
-    border: 1px solid #ffffff;
-
+    /*color: white;*/
     padding: 15px 32px;
     text-align: center;
     text-decoration: none;
@@ -16,3 +14,31 @@
 /*.btn:hover {*/
 /*    background-color: #1e8c8c;*/
 /*}*/
+
+.main {
+    padding: 24px;
+    display: grid;
+    gap: 12px;
+    font-family: system-ui, sans-serif;
+    font-size: 16px;
+    color: #5cc8ff;
+
+}
+
+.input {
+    padding: 8px 10px;
+    border: 1px solid #973636;
+    border-radius: 8px;
+    font-family: system-ui, sans-serif;
+    font-size: 16px;
+    color: #5cc8ff;
+}
+
+.output {
+    margin-top: 8px;
+}
+
+.btn--active {
+    outline: 2px solid currentColor;
+    font-weight: 700;
+}
