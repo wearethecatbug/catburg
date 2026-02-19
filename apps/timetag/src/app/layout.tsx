@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { TaskProvider } from '@/context';
+import { TaskProvider } from '@/store';
 
 export const metadata: Metadata = {
   title: 'TimeTag - Task Timer',
@@ -20,4 +20,3 @@ export default function RootLayout({
     </html>
   );
 }
-
