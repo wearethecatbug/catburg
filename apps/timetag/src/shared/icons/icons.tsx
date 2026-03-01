@@ -150,25 +150,26 @@ export function UserIcon(props: IconProps) {
 }
 
 export function HourglassIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v2m9-14H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V4a2 2 0 00-2-2zm-7 7a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
-    </IconBase>
-  );
+    return (
+        <IconBase {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v2m9-14H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V4a2 2 0 00-2-2zm-7 7a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
+        </IconBase>
+    );
 }
 
 export function CalendarIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-    </IconBase>
-  );
+    return (
+        <IconBase {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </IconBase>
+    );
 }
 
 export function PomodoroIcon(props: IconProps) {
-  return (
-    <IconBase {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </IconBase>
-  );
+    return (
+        <IconBase {...props}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </IconBase>
+    );
 }
+
