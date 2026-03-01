@@ -149,56 +149,108 @@ export function UserIcon(props: IconProps) {
   );
 }
 
+/**
+ * HourglassIcon — for Duration mode
+ */
 export function HourglassIcon(props: IconProps) {
     return (
         <IconBase {...props}>
-            {/* Top chamber */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 3h12v3H6V3z" />
-            {/* Bottom chamber */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18h12v3H6v-3z" />
-            {/* Left vertical line */}
-            <line x1="6" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
-            {/* Right vertical line */}
-            <line x1="18" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
-            {/* Middle sand falling line */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6v4c0 1 1 2 2 2s2-1 2-2V6" />
-            {/* Sand in bottom */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14v2c0 1 1 2 2 2s2-1 2-2v-2" />
+            <path
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        />
+            {/* top + bottom caps */}
+            <path d="M6.5 3h11" strokeWidth="1.8" />
+            <path d="M6.5 21h11" strokeWidth="1.8" />
+
+            {/* outer hourglass frame (outline only) */}
+            <path
+                d="M8.2 3
+           c0 5 4 6.2 4 9
+           s-4 4-4 9"
+                strokeWidth="1.8"
+            />
+            <path
+                d="M15.8 3
+           c0 5-4 6.2-4 9
+           s4 4 4 9"
+                strokeWidth="1.8"
+            />
+
+            {/* pinch marker */}
+            <path d="M11 12h2" strokeWidth="1.8" />
+
+            {/* optional “sand” hint (still outline) */}
+            <path d="M10.2 8.6h3.6" strokeWidth="1.4" opacity="0.65" />
+            <path d="M10.2 15.4h3.6" strokeWidth="1.4" opacity="0.65" />
         </IconBase>
     );
 }
 
+/**
+ * CalendarIcon — for Deadline mode
+ */
 export function CalendarIcon(props: IconProps) {
     return (
         <IconBase {...props}>
-            {/* Calendar border */}
-            <rect x="3" y="4" width="18" height="17" rx="2" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Top bar */}
-            <line x1="3" y1="9" x2="21" y2="9" strokeWidth={2} strokeLinecap="round" />
-            {/* Left date marker */}
-            <line x1="8" y1="1" x2="8" y2="6" strokeWidth={2} strokeLinecap="round" />
-            {/* Right date marker */}
-            <line x1="16" y1="1" x2="16" y2="6" strokeWidth={2} strokeLinecap="round" />
-            {/* Grid lines - dates */}
-            <line x1="6" y1="9" x2="6" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
-            <line x1="12" y1="9" x2="12" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
-            <line x1="18" y1="9" x2="18" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
+            <rect x="3" y="5" width="18" height="16" rx="2" strokeWidth={2} stroke="currentColor" fill="none" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 3v4M8 3v4M3 11h18" />
         </IconBase>
     );
 }
 
+/**
+ * PomodoroIcon — tomato silhouette with band and small play-triangle + rays
+ * - Filled icon (use fill="currentColor")
+ */
 export function PomodoroIcon(props: IconProps) {
     return (
-        <IconBase {...props}>
-            {/* Tomato body - main circle */}
-            <circle cx="12" cy="13" r="8" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            {/* Tomato segments */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13 Q8 10 9 7M12 13 V6M15 13 Q16 10 15 7" opacity="0.6" />
-            {/* Leaves/stem on top */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5c-1-1.5-2-2-3-2.5M12 5v-3M13 5c1-1.5 2-2 3-2.5" />
-            {/* Leaf details */}
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 4 Q9 4 8 3M12 5 Q12 3.5 12 2M14 4 Q15 4 16 3" opacity="0.7" />
+        <IconBase  {...props}>
+            <path
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            />
+            {/* stem */}
+            <path d="M12 1.8v2.2" strokeWidth="1.8" />
+
+            {/* leaf crown (calyx) */}
+            <path
+                d="M12 4.1
+           L13.1 5.7
+           L15.3 5.0
+           L14.1 6.9
+           L16.2 8.0
+           L13.8 8.2
+           L14.6 10.2
+           L12.9 9.2
+           L12 10.7
+           L11.1 9.2
+           L9.4 10.2
+           L10.2 8.2
+           L7.8 8.0
+           L9.9 6.9
+           L8.7 5.0
+           L10.9 5.7
+           Z"
+                strokeWidth="1.8"
+            />
+
+            {/* tomato body outline */}
+            <path
+                d="M12 6.8
+           C7.8 6.8 4.6 9.3 4.2 12.9
+           C3.7 17.1 6.8 21.6 12 21.6
+           C17.2 21.6 20.3 17.1 19.8 12.9
+           C19.4 9.3 16.2 6.8 12 6.8
+           Z"
+                strokeWidth="1.9"
+            />
         </IconBase>
     );
 }
-
