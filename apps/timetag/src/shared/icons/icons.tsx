@@ -152,7 +152,18 @@ export function UserIcon(props: IconProps) {
 export function HourglassIcon(props: IconProps) {
     return (
         <IconBase {...props}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4v2m9-14H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V4a2 2 0 00-2-2zm-7 7a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z" />
+            {/* Top chamber */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 3h12v3H6V3z" />
+            {/* Bottom chamber */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18h12v3H6v-3z" />
+            {/* Left vertical line */}
+            <line x1="6" y1="6" x2="6" y2="18" strokeWidth={2} strokeLinecap="round" />
+            {/* Right vertical line */}
+            <line x1="18" y1="6" x2="18" y2="18" strokeWidth={2} strokeLinecap="round" />
+            {/* Middle sand falling line */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6v4c0 1 1 2 2 2s2-1 2-2V6" />
+            {/* Sand in bottom */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14v2c0 1 1 2 2 2s2-1 2-2v-2" />
         </IconBase>
     );
 }
@@ -160,7 +171,18 @@ export function HourglassIcon(props: IconProps) {
 export function CalendarIcon(props: IconProps) {
     return (
         <IconBase {...props}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            {/* Calendar border */}
+            <rect x="3" y="4" width="18" height="17" rx="2" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Top bar */}
+            <line x1="3" y1="9" x2="21" y2="9" strokeWidth={2} strokeLinecap="round" />
+            {/* Left date marker */}
+            <line x1="8" y1="1" x2="8" y2="6" strokeWidth={2} strokeLinecap="round" />
+            {/* Right date marker */}
+            <line x1="16" y1="1" x2="16" y2="6" strokeWidth={2} strokeLinecap="round" />
+            {/* Grid lines - dates */}
+            <line x1="6" y1="9" x2="6" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
+            <line x1="12" y1="9" x2="12" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
+            <line x1="18" y1="9" x2="18" y2="21" strokeWidth={1.5} opacity="0.5" strokeLinecap="round" />
         </IconBase>
     );
 }
@@ -168,7 +190,14 @@ export function CalendarIcon(props: IconProps) {
 export function PomodoroIcon(props: IconProps) {
     return (
         <IconBase {...props}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            {/* Tomato body - main circle */}
+            <circle cx="12" cy="13" r="8" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            {/* Tomato segments */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13 Q8 10 9 7M12 13 V6M15 13 Q16 10 15 7" opacity="0.6" />
+            {/* Leaves/stem on top */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5c-1-1.5-2-2-3-2.5M12 5v-3M13 5c1-1.5 2-2 3-2.5" />
+            {/* Leaf details */}
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 4 Q9 4 8 3M12 5 Q12 3.5 12 2M14 4 Q15 4 16 3" opacity="0.7" />
         </IconBase>
     );
 }
