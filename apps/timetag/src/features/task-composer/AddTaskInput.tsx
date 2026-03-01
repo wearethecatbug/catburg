@@ -7,10 +7,8 @@ import {
     PlusIcon,
     ClockIcon,
     ChevronDownIcon,
-    HourglassIcon,
-    CalendarIcon,
-    PomodoroIcon,
-} from '@/shared/icons';
+
+} from '@/shared';
 import { Dropdown, DetailsPanel, type DropdownOption } from './components';
 
 /**
