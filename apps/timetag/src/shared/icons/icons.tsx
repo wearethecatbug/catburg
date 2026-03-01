@@ -149,3 +149,48 @@ export function UserIcon(props: IconProps) {
   );
 }
 
+export function HourglassIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v2m0 4v2m6-10H6a1 1 0 00-1 1v2a1 1 0 001 1h1v2H6a1 1 0 00-1 1v2a1 1 0 001 1h12a1 1 0 001-1v-2a1 1 0 00-1-1h-1v-2h1a1 1 0 001-1V5a1 1 0 00-1-1z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8l2-2m0 4l-2 2m0 0l2 2m-2-2l-2-2" />
+    </IconBase>
+  );
+}
+
+export function CalendarIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h18M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 11h1m3 0h1m3 0h1m-7 4h1m3 0h1m3 0h1" />
+    </IconBase>
+  );
+}
+
+export function PomodoroIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      {/* Помидор - красная часть */}
+      <circle cx="12" cy="14" r="7" stroke="currentColor" strokeWidth={2} fill="none" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 7C9.238 7 7 9.015 7 11.5c0 2.485 2.238 4.5 5 4.5s5-2.015 5-4.5C17 9.015 14.762 7 12 7z"
+        fill="currentColor"
+        opacity="0.2"
+      />
+      {/* Листики на помидоре */}
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M11 6c-1 0-1.5-1-2-1.5M12 5c0.5-0.5 1-1.5 2-1.5M13 6c1 0 1.5-1 2-1.5"
+        fill="currentColor"
+      />
+      {/* Белая середина помидора */}
+      <circle cx="12" cy="14" r="3" fill="white" stroke="currentColor" strokeWidth={1.5} />
+    </IconBase>
+  );
+}
+
