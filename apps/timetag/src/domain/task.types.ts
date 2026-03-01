@@ -16,7 +16,7 @@ export type DeadlineMode = 'duration' | 'deadline';
 // ============================================================================
 // Urgency Level (derived from remaining time)
 // ============================================================================
-export type UrgencyLevel = 'green' | 'yellow' | 'red' | 'overdue';
+export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 
 // ============================================================================
 // Workspace
