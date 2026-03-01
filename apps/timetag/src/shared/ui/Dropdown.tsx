@@ -6,12 +6,16 @@ import React, { useState, useRef, useEffect } from 'react';
 // Dropdown
 // ============================================================================
 
-interface DropdownProps {
+export interface DropdownProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
   align?: 'left' | 'right';
   disabled?: boolean;
   className?: string;
+  closeOnSelect?: boolean; // Whether to close dropdown when item is clicked
+  isOpen?: boolean; // Controlled state (optional)
+  onClose?: () => void; // Callback when dropdown should close
+  onOpen?: () => void; // Callback when dropdown should open
 }
 
 export function Dropdown({
@@ -20,9 +24,32 @@ export function Dropdown({
   align = 'left',
   disabled = false,
   className = '',
+  closeOnSelect = true,
+  isOpen: controlledIsOpen,
+  onClose,
+  onOpen,
 }: DropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  // Use controlled state if provided, otherwise use internal state
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setInternalIsOpen(false);
+    }
+  };
+
+  const handleOpen = () => {
+    if (onOpen) {
+      onOpen();
+    } else {
+      setInternalIsOpen(true);
+    }
+  };
 
   // Close on outside click
   useEffect(() => {
@@ -31,29 +58,29 @@ export function Dropdown({
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        handleClose();
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [onClose]);
 
   // Close on Escape
   useEffect(() => {
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setIsOpen(false);
+      if (event.key === 'Escape') handleClose();
     }
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={() => !disabled && (isOpen ? handleClose() : handleOpen())}
         disabled={disabled}
         className="flex items-center"
         aria-expanded={isOpen}
@@ -78,7 +105,9 @@ export function Dropdown({
                       (
                         child as React.ReactElement<{ onClick?: () => void }>
                       ).props.onClick?.();
-                      setIsOpen(false);
+                      if (closeOnSelect) {
+                        handleClose();
+                      }
                     },
                   },
                 )
