@@ -47,8 +47,8 @@ type TaskAction =
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'DELETE_SELECTED' }
-  | { type: 'TOGGLE_TIMER'; payload: string }
-  | { type: 'RESET_TIMER'; payload: string }
+  | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string } }
+  | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
   | { type: 'TICK_TIMERS' }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
@@ -69,9 +69,11 @@ type TaskAction =
 // ============================================================================
 
 const initialFilter: FilterState = {
-  status: 'all',
-  urgency: { green: true, yellow: true, red: true, overdue: true },
+  status: 'active',
+  urgency: { normal: true, warn: true, danger: true, overdue: true },
   approachingRed: { enabled: false, windowMinutes: 10 },
+  mode: { duration: true, pomodoro: true, deadline: true },
+  hasReminders: 'any',
 };
 
 const initialSort: SortState = { field: 'createdAt', direction: 'desc' };
@@ -92,18 +94,43 @@ const initialState: TaskState = {
 
 function createTask(input: CreateTaskInput): Task {
   const now = new Date().toISOString();
-  const durationSec = input.durationSec ?? 25 * 60;
+
+  // For deadline mode: calculate remainingSec from targetAt
+  // For other modes: use durationSec with default fallback
+  const isDeadlineMode = input.timerMode === 'deadline';
+
+  let durationSec: number;
+  if (isDeadlineMode) {
+    // Calculate remaining seconds from targetAt to now
+    if (input.targetAt) {
+      const targetTime = new Date(input.targetAt).getTime();
+      const nowTime = new Date(now).getTime();
+      durationSec = Math.max(0, Math.floor((targetTime - nowTime) / 1000));
+    } else {
+      durationSec = 0;
+    }
+  } else {
+    durationSec = input.durationSec ?? 25 * 60;
+  }
 
   return {
     id: generateId(),
     title: input.title,
     workspace: input.workspace ?? 'work',
     status: 'active',
-    deadlineMode: input.deadlineMode ?? 'duration',
+    timerMode: input.timerMode ?? 'duration',
     targetAt: input.targetAt,
     remainingSec: durationSec,
     originalDurationSec: durationSec,
-    timerStatus: 'idle',
+    timerStatus: input.timerControls?.autoStart ? 'running' : 'idle',
+    timerControls: input.timerControls ?? {
+      autoStart: false,
+      autoPlay: false,
+      autoReset: false,
+      allowOverdue: false,
+    },
+    pomodoro: input.pomodoro,
+    reminders: input.reminders ?? [],
     createdAt: now,
     updatedAt: now,
   };
@@ -156,7 +183,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          t.id === action.payload ? { ...t, ...toggleTimerState(t) } : t,
+            t.id === action.payload.id ? { ...t, ...toggleTimerState(t, action.payload.nowIso) } : t,
         ),
       };
 
@@ -164,7 +191,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          t.id === action.payload ? { ...t, ...resetTimerState(t) } : t,
+            t.id === action.payload.id ? { ...t, ...resetTimerState(t, action.payload.nowIso) } : t,
         ),
       };
 
@@ -313,19 +340,28 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [savedTasks, setSavedTasks] = useLocalStorage<Task[]>('timetag-tasks', []);
-  const [state, dispatch] = useReducer(taskReducer, { ...initialState, tasks: savedTasks });
+
+  // Always initialize with empty tasks to avoid hydration mismatch
+  const [state, dispatch] = useReducer(taskReducer, initialState);
+
+  // Track if we've loaded from localStorage
+  const hasLoadedRef = useRef(false);
 
   // Persist to localStorage
   useEffect(() => {
-    setSavedTasks(state.tasks);
+    // Only persist if we've already loaded (avoid overwriting on first render)
+    if (hasLoadedRef.current) {
+      setSavedTasks(state.tasks);
+    }
   }, [state.tasks, setSavedTasks]);
 
-  // Hydrate on mount
+  // Hydrate from localStorage on mount (client-side only)
   useEffect(() => {
-    if (savedTasks.length > 0 && state.tasks.length === 0) {
+    if (!hasLoadedRef.current && savedTasks.length > 0) {
       dispatch({ type: 'SET_TASKS', payload: savedTasks });
+      hasLoadedRef.current = true;
     }
-  }, [savedTasks, state.tasks.length]);
+  }, [savedTasks]);
 
   // Timer tick engine
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -359,8 +395,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const addTask = useCallback((input: CreateTaskInput) => dispatch({ type: 'ADD_TASK', payload: input }), []);
   const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates } }), []);
   const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
-  const toggleTimer = useCallback((id: string) => dispatch({ type: 'TOGGLE_TIMER', payload: id }), []);
-  const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: id }), []);
+  const toggleTimer = useCallback((id: string) => dispatch({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
   const setWorkspace = useCallback((ws: WorkspaceType) => dispatch({ type: 'SET_WORKSPACE', payload: ws }), []);
   const setFilter = useCallback((f: Partial<FilterState>) => dispatch({ type: 'SET_FILTER', payload: f }), []);
   const setSort = useCallback((s: SortState) => dispatch({ type: 'SET_SORT', payload: s }), []);
