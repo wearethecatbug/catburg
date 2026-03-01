@@ -49,9 +49,12 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   workspace?: WorkspaceType;
+  timerMode?: TimerMode;
   deadlineMode?: DeadlineMode;
   targetAt?: string;
   durationSec?: number;
+  timerControls?: TimerControls;
+  pomodoro?: PomodoroConfig;
 }
 
 // ============================================================================

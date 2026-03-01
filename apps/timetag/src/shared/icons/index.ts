@@ -21,5 +21,8 @@ export {
   MuteIcon,
   BellIcon,
   UserIcon,
+  HourglassIcon,
+  CalendarIcon,
+  PomodoroIcon,
 } from './icons';
 
