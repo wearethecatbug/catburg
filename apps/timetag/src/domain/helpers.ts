@@ -36,7 +36,8 @@ export function formatTime(seconds: number): string {
 }
 
 /**
- * Format time for badge display (shorter version)
+ * Format time for badge display (max 5 characters for UI alignment)
+ * Examples: "5h", "30m", "-5h", "123s"
  */
 export function formatTimeBadge(seconds: number): string {
   const absSeconds = Math.abs(seconds);
@@ -48,17 +49,13 @@ export function formatTimeBadge(seconds: number): string {
   let timeStr: string;
 
   if (hours > 0) {
-    timeStr = `${hours}h${minutes > 0 ? ` ${minutes}m` : ''}`;
+    timeStr = `${hours}h`;  // Just hours, no minutes (e.g., "5h" instead of "5h 30m")
   } else if (minutes > 0) {
     timeStr = `${minutes}m`;
   } else {
     timeStr = `${absSeconds}s`;
   }
 
-  if (isNegative) {
-    return `+${timeStr}`;
-  }
-
-  return timeStr;
+  return isNegative ? `-${timeStr}` : timeStr;
 }
 
