@@ -24,5 +24,8 @@ export {
   HourglassIcon,
   CalendarIcon,
   PomodoroIcon,
+  HourglassIconLegacy,
+  CalendarIconLegacy,
+  PomodoroIconLegacy,
 } from './icons';
 

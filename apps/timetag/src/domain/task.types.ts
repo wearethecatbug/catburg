@@ -9,9 +9,9 @@ export type TaskStatus = 'active' | 'done' | 'archived';
 export type TimerStatus = 'running' | 'paused' | 'idle' | 'expired';
 
 // ============================================================================
-// Deadline Mode
+// Timer Mode
 // ============================================================================
-export type DeadlineMode = 'duration' | 'deadline';
+export type TimerMode = 'duration' | 'pomodoro' | 'deadline';
 
 // ============================================================================
 // Urgency Level (derived from remaining time)
@@ -24,6 +24,38 @@ export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 export type WorkspaceType = 'work' | 'home' | 'all';
 
 // ============================================================================
+// Timer Controls
+// ============================================================================
+export interface TimerControls {
+  autoStart: boolean;
+  autoPlay: boolean;
+  autoReset: boolean;
+  allowOverdue: boolean;
+}
+
+// ============================================================================
+// Pomodoro Config
+// ============================================================================
+export interface PomodoroConfig {
+  cycles: number;
+  workDurationMin: number;
+  shortBreakMin: number;
+  longBreakMin: number;
+  currentCycle?: number;
+  isBreak?: boolean;
+  autoStart?: boolean;
+  autoPlay?: boolean;
+}
+
+// ============================================================================
+// Reminder
+// ============================================================================
+export interface Reminder {
+  id: string;
+  enabled: boolean;
+}
+
+// ============================================================================
 // Task Entity
 // ============================================================================
 export interface Task {
@@ -31,7 +63,7 @@ export interface Task {
   title: string;
   workspace: WorkspaceType;
   status: TaskStatus;
-  deadlineMode: DeadlineMode;
+  timerMode: TimerMode;
   /** Target time as ISO string (for deadline mode) */
   targetAt?: string;
   /** Remaining seconds (for duration mode) */
@@ -39,6 +71,9 @@ export interface Task {
   /** Original duration in seconds (for reset) */
   originalDurationSec: number;
   timerStatus: TimerStatus;
+  timerControls?: TimerControls;
+  pomodoro?: PomodoroConfig;
+  reminders: Reminder[];
   createdAt: string;
   updatedAt: string;
 }
@@ -49,9 +84,12 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   workspace?: WorkspaceType;
-  deadlineMode?: DeadlineMode;
+  timerMode?: TimerMode;
   targetAt?: string;
   durationSec?: number;
+  timerControls?: TimerControls;
+  pomodoro?: PomodoroConfig;
+  reminders?: Reminder[];
 }
 
 // ============================================================================
@@ -87,19 +125,3 @@ export interface SortState {
   field: SortField;
   direction: SortDirection;
 }
-
-// ============================================================================
-// Query State (everything that controls list view)
-// ============================================================================
-export interface QueryState {
-  workspace: WorkspaceType;
-  filter: FilterState;
-  sort: SortState;
-  searchQuery: string;
-  selectedIds: Set<string>;
-  pagination: {
-    page: number;
-    perPage: number;
-  };
-}
-

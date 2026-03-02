@@ -3,7 +3,9 @@
 import React, { useState } from 'react';
 import { Dropdown, DropdownDivider, Checkbox, FilterIcon } from '@/shared';
 import { useTasks } from '@/store';
-import type { UrgencyLevel, TimerMode } from '@/domain/task.types';
+import type { UrgencyLevel } from '@/domain/task.types';
+
+type TimerMode = 'duration' | 'pomodoro' | 'deadline';
 
 const URGENCY_OPTIONS: { id: UrgencyLevel; label: string; color: string }[] = [
   { id: 'normal', label: 'Green (50%+)', color: 'bg-green-500' },
