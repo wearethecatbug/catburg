@@ -16,7 +16,7 @@ export type DeadlineMode = 'duration' | 'deadline';
 // ============================================================================
 // Urgency Level (derived from remaining time)
 // ============================================================================
-export type UrgencyLevel = 'green' | 'yellow' | 'red' | 'overdue';
+export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 
 // ============================================================================
 // Workspace
@@ -60,15 +60,21 @@ export interface CreateTaskInput {
 export interface FilterState {
   status: TaskStatus | 'all';
   urgency: {
-    green: boolean;
-    yellow: boolean;
-    red: boolean;
+    normal: boolean;
+    warn: boolean;
+    danger: boolean;
     overdue: boolean;
   };
   approachingRed: {
     enabled: boolean;
     windowMinutes: 5 | 10 | 30;
   };
+  mode: {
+    duration: boolean;
+    pomodoro: boolean;
+    deadline: boolean;
+  };
+  hasReminders?: 'any' | 'yes' | 'no';
 }
 
 // ============================================================================

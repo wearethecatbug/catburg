@@ -54,6 +54,7 @@ export function TimerControlsSection({
                     <TimerControlToggle
                         checked={autoResetEnabled}
                         onChange={onAutoResetEnabledChange}
+                        disabled={overdueEnabled}  // Disable if Allow Overdue is enabled
                         label="Auto Reset"
                         description="Reset when timer ends"
                         ariaLabel="Auto reset timer when it reaches zero"
@@ -65,6 +66,7 @@ export function TimerControlsSection({
                     <TimerControlToggle
                         checked={overdueEnabled}
                         onChange={onOverdueEnabledChange}
+                        disabled={autoResetEnabled}  // Disable if Auto Reset is enabled
                         label="Allow Overdue"
                         description="Continue counting past zero"
                         ariaLabel="Allow timer to go negative when overdue"

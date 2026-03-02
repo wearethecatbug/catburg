@@ -291,6 +291,24 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         requestAnimationFrame(() => localInputRef.current?.focus());
     };
 
+    // Handle Auto Reset toggle - disable Allow Overdue when enabled
+    const handleAutoResetChange = (enabled: boolean) => {
+        setAutoResetEnabled(enabled);
+        // If enabling Auto Reset, disable Allow Overdue
+        if (enabled && overdueEnabled) {
+            setOverdueEnabled(false);
+        }
+    };
+
+    // Handle Allow Overdue toggle - disable Auto Reset when enabled
+    const handleOverdueChange = (enabled: boolean) => {
+        setOverdueEnabled(enabled);
+        // If enabling Allow Overdue, disable Auto Reset
+        if (enabled && autoResetEnabled) {
+            setAutoResetEnabled(false);
+        }
+    };
+
     return (
         <form onSubmit={(e) => handleSubmit(e)} className="space-y-2">
             <div className="flex items-center gap-2">
@@ -431,10 +449,12 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     onPomoLongBreakMinChange={setPomoLongBreakMin}
                     onAutoEnabledChange={setAutoEnabled}
                     onPlayEnabledChange={setPlayEnabled}
-                    onAutoResetEnabledChange={setAutoResetEnabled}
-                    onOverdueEnabledChange={setOverdueEnabled}
+                    onAutoResetEnabledChange={handleAutoResetChange}
+                    onOverdueEnabledChange={handleOverdueChange}
                 />
             )}
         </form>
     );
 });
+
+

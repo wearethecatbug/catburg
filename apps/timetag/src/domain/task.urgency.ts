@@ -14,9 +14,9 @@ export function getUrgencyLevel(task: Task): UrgencyLevel {
 
   const minutes = task.remainingSec / 60;
 
-  if (minutes < 5) return 'red';
-  if (minutes < 15) return 'yellow';
-  return 'green';
+  if (minutes < 5) return 'danger';
+  if (minutes < 15) return 'warn';
+  return 'normal';
 }
 
 /**
@@ -26,7 +26,7 @@ export function isApproachingRed(task: Task, windowMinutes: number): boolean {
   const urgency = getUrgencyLevel(task);
 
   // Already red or overdue — not "approaching"
-  if (urgency === 'red' || urgency === 'overdue') {
+  if (urgency === 'danger' || urgency === 'overdue') {
     return false;
   }
 
@@ -44,11 +44,11 @@ export function isApproachingRed(task: Task, windowMinutes: number): boolean {
  */
 export function getUrgencyColorClass(urgency: UrgencyLevel): string {
   switch (urgency) {
-    case 'green':
+    case 'normal':
       return 'bg-green-500 text-white';
-    case 'yellow':
+    case 'warn':
       return 'bg-yellow-500 text-black';
-    case 'red':
+    case 'danger':
       return 'bg-red-500 text-white';
     case 'overdue':
       return 'bg-red-700 text-white animate-pulse';
