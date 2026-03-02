@@ -48,7 +48,7 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
     result = result.filter(
       (t) =>
         isApproachingRed(t, query.filter.approachingRed.windowMinutes) ||
-        getUrgencyLevel(t) === 'red' ||
+        getUrgencyLevel(t) === 'danger' ||
         getUrgencyLevel(t) === 'overdue',
     );
   }
