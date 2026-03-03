@@ -9,40 +9,47 @@ export function useLocalStorage<T>(
     key: string,
     initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  // Always start from initialValue to keep server/client first render consistent.
+  // Keep server render and client first render identical.
   const [storedValue, setStoredValue] = useState<T>(initialValue);
-  const hasHydratedRef = useRef(false);
+  const initialValueRef = useRef(initialValue);
+  initialValueRef.current = initialValue;
 
-  // Read from localStorage only after mount.
+  // Read from localStorage after mount to avoid SSR hydration mismatch.
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     try {
       const item = window.localStorage.getItem(key);
       if (item !== null) {
         setStoredValue(JSON.parse(item) as T);
       } else {
-        // Ensure localStorage has initial value for new keys.
-        window.localStorage.setItem(key, JSON.stringify(initialValue));
+        window.localStorage.setItem(key, JSON.stringify(initialValueRef.current));
+        setStoredValue(initialValueRef.current);
       }
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
-    } finally {
-      hasHydratedRef.current = true;
+      setStoredValue(initialValueRef.current);
     }
   }, [key]);
 
-  // Persist changes after hydration is complete.
-  useEffect(() => {
-    if (!hasHydratedRef.current) return;
-    try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch (error) {
-      console.error(`Error setting localStorage key "${key}":`, error);
-    }
-  }, [key, storedValue]);
+  const setValue = useCallback(
+    (value: T | ((prev: T) => T)) => {
+      setStoredValue((prev) => {
+        const valueToStore = value instanceof Function ? value(prev) : value;
 
-  const setValue = useCallback((value: T | ((prev: T) => T)) => {
-    setStoredValue((prev) => (value instanceof Function ? value(prev) : value));
-  }, []);
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          }
+        } catch (error) {
+          console.error(`Error setting localStorage key "${key}":`, error);
+        }
+
+        return valueToStore;
+      });
+    },
+    [key],
+  );
 
   return [storedValue, setValue];
 }
