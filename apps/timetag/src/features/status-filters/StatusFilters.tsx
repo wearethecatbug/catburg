@@ -4,8 +4,7 @@ import React from 'react';
 import type { TaskStatus } from '@/domain/task.types';
 import { useTasks } from '@/store';
 
-const STATUS_OPTIONS: { id: TaskStatus | 'all'; label: string }[] = [
-  { id: 'all', label: 'All' },
+const STATUS_OPTIONS: { id: TaskStatus; label: string }[] = [
   { id: 'active', label: 'Active' },
   { id: 'done', label: 'Done' },
   { id: 'archived', label: 'Archived' },
