@@ -21,7 +21,9 @@ export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 // ============================================================================
 // Workspace
 // ============================================================================
-export type WorkspaceType = 'work' | 'home' | 'all';
+export type DefaultWorkspaceType = 'work' | 'home';
+// Keep predefined tabs while allowing user-created workspace ids.
+export type WorkspaceType = 'all' | DefaultWorkspaceType | (string & {});
 
 // ============================================================================
 // Timer Controls
@@ -95,8 +97,10 @@ export interface CreateTaskInput {
 // ============================================================================
 // Filter State
 // ============================================================================
+export type TaskStatusFilter = TaskStatus | 'all';
+
 export interface FilterState {
-  status: TaskStatus | 'all';
+  status: TaskStatusFilter;
   urgency: {
     normal: boolean;
     warn: boolean;
