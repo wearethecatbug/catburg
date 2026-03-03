@@ -7,4 +7,5 @@ export * from './task.urgency';
 export * from './task.pipeline';
 export * from './timer.logic';
 export * from './helpers';
+export * from './timer.ring';
 
