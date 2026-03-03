@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CloseIcon } from '@/shared/icons';
 
 // ============================================================================
@@ -69,9 +69,12 @@ interface ToastItem {
 
 export function useToast() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const toastIdRef = useRef(0);
 
   const showToast = (message: string, action?: { label: string; onClick: () => void }) => {
-    const id = Date.now().toString();
+    const id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : (toastIdRef.current++).toString();
     setToasts((prev) => [...prev, { id, message, action }]);
   };
 
