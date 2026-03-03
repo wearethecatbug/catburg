@@ -25,7 +25,7 @@
 
 ## State + Persistence Conventions
 - `TaskProvider` in `store/task.store.tsx` is the source of truth for tasks, filters, sort, selection.
-- Persistence uses `shared/hooks/useLocalStorage.ts` with SSR-safe pattern:
+- Persistence uses `shared/hooks/uselocalstorage.ts` with SSR-safe pattern:
   - initial render uses `initialValue`;
   - storage is read in `useEffect` after mount;
   - setter writes state and `localStorage` atomically.
