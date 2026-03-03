@@ -1,52 +1,48 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
- * Custom hook for localStorage with SSR support
+ * Custom hook for localStorage with SSR-safe hydration
  */
 export function useLocalStorage<T>(
-  key: string,
-  initialValue: T,
+    key: string,
+    initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') return initialValue;
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? (JSON.parse(item) as T) : initialValue;
-    } catch (error) {
-      console.error(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  });
+  // Always start from initialValue to keep server/client first render consistent.
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const hasHydratedRef = useRef(false);
 
-  // Sync with localStorage on mount (for SSR hydration)
+  // Read from localStorage only after mount.
   useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
-      if (item) setStoredValue(JSON.parse(item) as T);
+      if (item !== null) {
+        setStoredValue(JSON.parse(item) as T);
+      } else {
+        // Ensure localStorage has initial value for new keys.
+        window.localStorage.setItem(key, JSON.stringify(initialValue));
+      }
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
+    } finally {
+      hasHydratedRef.current = true;
     }
   }, [key]);
 
-  const setValue = useCallback(
-    (value: T | ((prev: T) => T)) => {
-      try {
-        setStoredValue((prev) => {
-          const valueToStore = value instanceof Function ? value(prev) : value;
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
-          }
-          return valueToStore;
-        });
-      } catch (error) {
-        console.error(`Error setting localStorage key "${key}":`, error);
-      }
-    },
-    [key],
-  );
+  // Persist changes after hydration is complete.
+  useEffect(() => {
+    if (!hasHydratedRef.current) return;
+    try {
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
+
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    setStoredValue((prev) => (value instanceof Function ? value(prev) : value));
+  }, []);
 
   return [storedValue, setValue];
 }
-
