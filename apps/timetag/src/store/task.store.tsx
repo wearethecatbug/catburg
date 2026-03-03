@@ -357,10 +357,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // Hydrate from localStorage on mount (client-side only)
   useEffect(() => {
-    if (!hasLoadedRef.current && savedTasks.length > 0) {
+    if (hasLoadedRef.current) return;
+
+    if (savedTasks.length > 0) {
       dispatch({ type: 'SET_TASKS', payload: savedTasks });
       hasLoadedRef.current = true;
+      return;
     }
+
+    // Mark hydration complete even when storage is empty.
+    hasLoadedRef.current = true;
   }, [savedTasks]);
 
   // Timer tick engine
