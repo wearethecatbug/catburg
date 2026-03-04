@@ -1,5 +1,22 @@
 import { Task, UrgencyLevel } from './task.types';
 
+export const URGENCY_NORMAL_MIN_RATIO = 0.5;
+export const URGENCY_WARN_MIN_RATIO = 0.2;
+
+const URGENCY_LEVEL_ORDER: ReadonlyArray<UrgencyLevel> = ['normal', 'warn', 'danger', 'overdue'];
+
+export const URGENCY_FILTER_LABELS: Record<UrgencyLevel, string> = {
+  normal: `Green (${Math.round(URGENCY_NORMAL_MIN_RATIO * 100)}%+)`,
+  warn: `Yellow (${Math.round(URGENCY_WARN_MIN_RATIO * 100)}-${Math.round(URGENCY_NORMAL_MIN_RATIO * 100)}%)`,
+  danger: `Red (< ${Math.round(URGENCY_WARN_MIN_RATIO * 100)}%)`,
+  overdue: 'Overdue',
+};
+
+export const URGENCY_FILTER_OPTIONS: ReadonlyArray<{ id: UrgencyLevel; label: string }> = URGENCY_LEVEL_ORDER.map((id) => ({
+  id,
+  label: URGENCY_FILTER_LABELS[id],
+}));
+
 // ============================================================================
 // Urgency Calculation (pure, deterministic)
 // Urgency is based on PERCENTAGE of remaining time, not absolute minutes
@@ -23,10 +40,10 @@ export function getUrgencyLevel(task: Task): UrgencyLevel {
     return 'danger';
   }
 
-  const percentageRemaining = (task.remainingSec / task.originalDurationSec) * 100;
+  const remainingRatio = task.remainingSec / task.originalDurationSec;
 
-  if (percentageRemaining >= 50) return 'normal';
-  if (percentageRemaining >= 20) return 'warn';
+  if (remainingRatio >= URGENCY_NORMAL_MIN_RATIO) return 'normal';
+  if (remainingRatio >= URGENCY_WARN_MIN_RATIO) return 'warn';
   return 'danger';
 }
 
@@ -56,7 +73,7 @@ export function isApproachingRed(task: Task, windowMinutes: number): boolean {
   }
 
   // Calculate when task will reach danger zone (20% remaining)
-  const dangerThresholdSec = task.originalDurationSec * 0.2;
+  const dangerThresholdSec = task.originalDurationSec * URGENCY_WARN_MIN_RATIO;
   const windowSeconds = windowMinutes * 60;
 
   // "Approaching" means: will reach danger zone within the window
