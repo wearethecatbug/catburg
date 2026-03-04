@@ -11,7 +11,7 @@ import {
   BulkDropdown,
   AddTaskInput,
 } from '@/features';
-import { TaskList } from './TaskList';
+import { TaskList } from '@/widgets';
 import { useToast, Chip } from '@/shared/ui';
 import { useKeyboardShortcuts } from '@/shared/hooks';
 import { useTasks } from '@/store';
@@ -21,7 +21,7 @@ import { useTasks } from '@/store';
  * Composes all vertical layers: Header → Workspace → Status → Controls → Composer → List → Pagination
  */
 export function TaskListWidget() {
-  const { deleteTask, deleteSelected, undoDelete, hasSelection, state, setFilter } = useTasks();
+  const { deleteTask, deleteSelected, undoDelete, hasSelection, state, setFilter, setSearch } = useTasks();
   const { showToast, ToastContainer } = useToast();
 
   const addInputRef = useRef<HTMLInputElement>(null);
@@ -32,7 +32,7 @@ export function TaskListWidget() {
     onAddFocus: () => addInputRef.current?.focus(),
     onSearchFocus: () => searchInputRef.current?.focus(),
     onSearchClear: () => {
-      if (searchInputRef.current) searchInputRef.current.value = '';
+      setSearch('');
     },
   });
 
@@ -97,5 +97,4 @@ export function TaskListWidget() {
     </div>
   );
 }
-
 
