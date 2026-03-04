@@ -53,13 +53,27 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
     );
   }
 
-  // 5. Search filter
+  // 5. Mode filter (show only tasks with selected timer modes)
+  const modesSelected = Object.values(query.filter.mode).some((v) => v);
+  if (modesSelected) {
+    result = result.filter((t) => query.filter.mode[t.timerMode]);
+  }
+
+  // 6. Reminders filter
+  if (query.filter.hasReminders && query.filter.hasReminders !== 'any') {
+    result = result.filter((t) => {
+      const hasReminders = t.reminders.length > 0;
+      return query.filter.hasReminders === 'yes' ? hasReminders : !hasReminders;
+    });
+  }
+
+  // 7. Search filter
   if (query.searchQuery.trim()) {
     const q = query.searchQuery.toLowerCase();
     result = result.filter((t) => t.title.toLowerCase().includes(q));
   }
 
-  // 6. Sort
+  // 8. Sort
   result = [...result].sort((a, b) => {
     let cmp = 0;
 
