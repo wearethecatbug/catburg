@@ -2,15 +2,9 @@
 
 import React, { useState } from 'react';
 import { Dropdown, DropdownDivider, Checkbox, FilterIcon } from '@/shared';
+import { URGENCY_FILTER_OPTIONS } from '@/domain';
 import { useTasks } from '@/store';
 import type { UrgencyLevel, TimerMode } from '@/domain/task.types';
-
-const URGENCY_OPTIONS: { id: UrgencyLevel; label: string; color: string }[] = [
-  { id: 'normal', label: 'Green (50%+)', color: 'bg-green-500' },
-  { id: 'warn', label: 'Yellow (20-50%)', color: 'bg-yellow-500' },
-  { id: 'danger', label: 'Red (< 20%)', color: 'bg-red-500' },
-  { id: 'overdue', label: 'Overdue', color: 'bg-red-700' },
-];
 
 const MODE_OPTIONS: { id: TimerMode; label: string }[] = [
   { id: 'duration', label: 'Duration' },
@@ -18,7 +12,7 @@ const MODE_OPTIONS: { id: TimerMode; label: string }[] = [
   { id: 'deadline', label: 'Deadline' },
 ];
 
-const AR_WINDOWS: { value: 5 | 10 | 30; label: string }[] = [
+const AR_WINDOWS: { value: number; label: string }[] = [
   { value: 5, label: '5 min' },
   { value: 10, label: '10 min' },
   { value: 30, label: '30 min' },
@@ -50,7 +44,7 @@ export function FilterDropdown() {
     });
   };
 
-  const setARWindow = (windowMinutes: 5 | 10 | 30) => {
+  const setARWindow = (windowMinutes: number) => {
     setFilter({
       approachingRed: { ...state.filter.approachingRed, windowMinutes },
     });
@@ -81,13 +75,12 @@ export function FilterDropdown() {
       >
         <div className="px-4 py-2">
           <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Urgency</p>
-          {URGENCY_OPTIONS.map((option) => (
+          {URGENCY_FILTER_OPTIONS.map((option) => (
               <div key={option.id} className="flex items-center gap-2 py-1">
                 <Checkbox
                     checked={state.filter.urgency[option.id]}
                     onChange={() => toggleUrgency(option.id)}
                 />
-                <span className={`w-3 h-3 rounded-full ${option.color}`} />
                 <span className="text-sm text-gray-700">{option.label}</span>
               </div>
           ))}
