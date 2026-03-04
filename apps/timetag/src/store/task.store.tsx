@@ -339,7 +339,8 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 // ============================================================================
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
-  const [savedTasks, setSavedTasks, isSavedTasksHydrated] = useLocalStorage<Task[]>('timetag-tasks', []);
+  const [savedTasks, setSavedTasks, isSavedTasksHydrated] =
+    useLocalStorage<Task[]>('timetag-tasks', []);
 
   // Always initialize with empty tasks to avoid hydration mismatch
   const [state, dispatch] = useReducer(taskReducer, initialState);
