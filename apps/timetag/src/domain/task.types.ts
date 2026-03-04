@@ -109,7 +109,8 @@ export interface FilterState {
   };
   approachingRed: {
     enabled: boolean;
-    windowMinutes: 5 | 10 | 30;
+    // User-configurable in app settings (not limited to preset chips).
+    windowMinutes: number;
   };
   mode: {
     duration: boolean;
