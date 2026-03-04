@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 // ============================================================================
 // Dropdown
@@ -35,24 +35,26 @@ export function Dropdown({
   
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (onClose) {
       onClose();
     } else {
       setInternalIsOpen(false);
     }
-  };
+  }, [onClose]);
 
-  const handleOpen = () => {
+  const handleOpen = useCallback(() => {
     if (onOpen) {
       onOpen();
     } else {
       setInternalIsOpen(true);
     }
-  };
+  }, [onOpen]);
 
-  // Close on outside click
+  // Close on outside click (only while dropdown is open)
   useEffect(() => {
+    if (!isOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
       if (
         dropdownRef.current &&
@@ -63,7 +65,7 @@ export function Dropdown({
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  }, [isOpen, handleClose]);
 
   // Close on Escape
   useEffect(() => {
@@ -74,7 +76,7 @@ export function Dropdown({
       document.addEventListener('keydown', handleEscape);
       return () => document.removeEventListener('keydown', handleEscape);
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
 
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
