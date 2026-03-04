@@ -339,7 +339,7 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 // ============================================================================
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
-  const [savedTasks, setSavedTasks] = useLocalStorage<Task[]>('timetag-tasks', []);
+  const [savedTasks, setSavedTasks, isSavedTasksHydrated] = useLocalStorage<Task[]>('timetag-tasks', []);
 
   // Always initialize with empty tasks to avoid hydration mismatch
   const [state, dispatch] = useReducer(taskReducer, initialState);
@@ -347,27 +347,23 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   // Track if we've loaded from localStorage
   const hasLoadedRef = useRef(false);
 
-  // Persist to localStorage
+  // Persist to localStorage after initial storage hydration + task hydration complete.
   useEffect(() => {
-    // Only persist if we've already loaded (avoid overwriting on first render)
-    if (hasLoadedRef.current) {
-      setSavedTasks(state.tasks);
-    }
-  }, [state.tasks, setSavedTasks]);
+    if (!isSavedTasksHydrated || !hasLoadedRef.current) return;
+    setSavedTasks(state.tasks);
+  }, [state.tasks, setSavedTasks, isSavedTasksHydrated]);
 
-  // Hydrate from localStorage on mount (client-side only)
+  // Hydrate from localStorage when storage read is complete.
   useEffect(() => {
-    if (hasLoadedRef.current) return;
+    if (!isSavedTasksHydrated || hasLoadedRef.current) return;
 
     if (savedTasks.length > 0) {
       dispatch({ type: 'SET_TASKS', payload: savedTasks });
-      hasLoadedRef.current = true;
-      return;
     }
 
     // Mark hydration complete even when storage is empty.
     hasLoadedRef.current = true;
-  }, [savedTasks]);
+  }, [savedTasks, isSavedTasksHydrated]);
 
   // Timer tick engine
   const timerRef = useRef<NodeJS.Timeout | null>(null);
