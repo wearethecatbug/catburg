@@ -8,15 +8,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export function useLocalStorage<T>(
     key: string,
     initialValue: T,
-): [T, (value: T | ((prev: T) => T)) => void] {
+): [T, (value: T | ((prev: T) => T)) => void, boolean] {
   // Keep server render and client first render identical.
   const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const [isHydrated, setIsHydrated] = useState(false);
   const initialValueRef = useRef(initialValue);
   initialValueRef.current = initialValue;
 
   // Read from localStorage after mount to avoid SSR hydration mismatch.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    setIsHydrated(false);
 
     try {
       const item = window.localStorage.getItem(key);
@@ -29,6 +32,8 @@ export function useLocalStorage<T>(
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
       setStoredValue(initialValueRef.current);
+    } finally {
+      setIsHydrated(true);
     }
   }, [key]);
 
@@ -51,5 +56,5 @@ export function useLocalStorage<T>(
     [key],
   );
 
-  return [storedValue, setValue];
+  return [storedValue, setValue, isHydrated];
 }
