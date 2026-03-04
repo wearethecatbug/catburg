@@ -133,8 +133,14 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         if (!title) return;
 
         // For deadline mode: use targetAt (ISO date string), no durationSec
-        // For duration and pomodoro: use durationSec, no targetAt
-        const durationSec = timerMode === 'deadline' ? undefined : Math.max(1, Math.floor(Number(durationMin))) * 60;
+        // For duration mode: use durationMin
+        // For pomodoro mode: use edited work duration from details panel
+        const durationSec =
+            timerMode === 'deadline'
+                ? undefined
+                : timerMode === 'pomodoro'
+                  ? Math.max(1, Math.floor(Number(pomoWorkMin))) * 60
+                  : Math.max(1, Math.floor(Number(durationMin))) * 60;
 
         // Convert local datetime-local to UTC ISO string for correct server parsing
         let targetAt: string | undefined = undefined;
@@ -161,12 +167,11 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         // Add pomodoro-specific settings if mode is pomodoro
         if (timerMode === 'pomodoro') {
-            const pomPreset = POMODORO_PRESETS.find((p) => p.id === pomodoroPresetId) ?? POMODORO_PRESETS[0];
             taskData.pomodoro = {
-                cycles: pomPreset.cycles,
-                workDurationMin: pomPreset.workDurationMin,
-                shortBreakMin: pomPreset.shortBreakMin,
-                longBreakMin: pomPreset.longBreakMin,
+                cycles: Math.max(1, Math.floor(Number(pomoCycles))),
+                workDurationMin: Math.max(1, Math.floor(Number(pomoWorkMin))),
+                shortBreakMin: Math.max(1, Math.floor(Number(pomoShortBreakMin))),
+                longBreakMin: Math.max(1, Math.floor(Number(pomoLongBreakMin))),
                 autoStart: autoEnabled,
                 autoPlay: playEnabled,
             };
@@ -456,5 +461,4 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         </form>
     );
 });
-
 
