@@ -21,7 +21,7 @@
 ## State + Persistence Rules
 - UI dispatches through `useTasks()` from `src/store/task.store.tsx`.
 - Visible tasks must be derived through `applyPipeline()` (`src/domain/task.pipeline.ts`).
-- `useLocalStorage` (`src/shared/hooks/uselocalstorage.ts`) is SSR-safe:
+- `useLocalStorage` (`src/shared/hooks/useLocalStorage.ts`) is SSR-safe:
   - first render uses `initialValue`;
   - localStorage read happens in `useEffect` after mount;
   - setter updates React state and localStorage together.
