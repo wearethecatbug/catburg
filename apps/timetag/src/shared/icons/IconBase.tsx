@@ -49,23 +49,23 @@ export function IconBase({
   fill = 'none',
   stroke = 'currentColor',
   'aria-label': ariaLabel,
-  'aria-hidden': ariaHidden = true,
+  'aria-hidden': ariaHidden,
 }: IconBaseProps) {
   const s = SIZE_MAP[size];
-
+  const computedAriaHidden = ariaHidden ?? !ariaLabel;
   return (
-    <svg
-      className={`${s.className} shrink-0 ${color} ${className}`}
-      width={s.width}
-      height={s.height}
-      viewBox={viewBox}
-      fill={fill}
-      stroke={stroke}
-      aria-label={ariaLabel}
-      aria-hidden={ariaHidden}
-    >
-      {children}
-    </svg>
+      <svg
+          className={`${s.className} shrink-0 ${color} ${className}`}
+          width={s.width}
+          height={s.height}
+          viewBox={viewBox}
+          fill={fill}
+          stroke={stroke}
+          aria-hidden={computedAriaHidden}
+          aria-label={computedAriaHidden ? undefined : ariaLabel}
+      >
+        {children}
+      </svg>
   );
 }
 
