@@ -23,10 +23,14 @@ A task list application with per-task timers, deadlines, and urgency levels.
 
 ## Urgency Levels
 
-- **Green** (🟢): 15+ minutes remaining
-- **Yellow** (🟡): 5-15 minutes remaining
-- **Red** (🔴): Less than 5 minutes remaining
+Visual indicators based on **percentage of original duration remaining** (fair for tasks of any length):
+
+- **Green** (🟢): 50%+ of time remaining
+- **Yellow** (🟡): 20-50% of time remaining
+- **Red** (🔴): Less than 20% of time remaining
 - **Overdue** (⚫): Timer expired
+
+*Example: For a 2-hour task, Yellow starts at 24 minutes remaining (20%). For a 10-minute task, Yellow starts at 2 minutes remaining.*
 
 ## Getting Started
 
@@ -50,33 +54,44 @@ Open [http://localhost:3003](http://localhost:3003) in your browser.
 
 ## Project Structure
 
+TimeTag follows a **layered architecture** for clear separation of concerns:
+
 ```
 src/
-├── app/                    # Next.js app router
+├── app/                    # Next.js App Router entry points
 │   ├── globals.css
 │   ├── layout.tsx
 │   └── page.tsx
-├── components/             # Shared UI components
-│   ├── Badge.tsx
-│   ├── Checkbox.tsx
-│   ├── Chip.tsx
-│   ├── Dropdown.tsx
-│   └── Toast.tsx
-├── context/                # React Context providers
-│   └── TaskContext.tsx
-├── features/               # Feature-based components
-│   ├── composer/
-│   ├── filters/
+├── widgets/                # Screen-level composition (header, task-list)
 │   ├── header/
-│   ├── task-list/
-│   └── workspace-tabs/
-├── hooks/                  # Custom React hooks
-│   ├── useKeyboardShortcuts.ts
-│   └── useLocalStorage.ts
-├── types/                  # TypeScript types
-│   └── task.ts
-└── utils/                  # Utility functions
-    ├── id.ts
-    └── time.ts
+│   └── task-list/
+├── features/               # Feature UI modules
+│   ├── bulk-actions/
+│   ├── list-filter/
+│   ├── list-search/
+│   ├── list-sort/
+│   ├── status-filters/
+│   ├── task-composer/
+│   └── workspace-switch/
+├── entities/               # Business entities (task components)
+│   └── task/
+├── store/                  # Global state management
+│   └── task.store.tsx      # TaskProvider + reducer
+├── domain/                 # Pure business logic (no React)
+│   ├── task.pipeline.ts    # Filter/sort pipeline
+│   ├── task.urgency.ts     # Urgency calculation
+│   ├── task.types.ts       # Core types
+│   ├── timer.logic.ts      # Timer state machine
+│   └── timer.ring.ts       # Visual ring logic
+└── shared/                 # Reusable utilities
+    ├── hooks/              # Custom React hooks
+    ├── icons/              # Icon components
+    ├── ui/                 # UI components (Button, Dropdown, Toast, etc.)
+    └── utils/              # Helper functions (id, time formatting)
 ```
+
+**Key principles:**
+- UI dispatches actions via `useTasks()` from `store/task.store.tsx`
+- Business logic stays pure in `domain/`
+- Visible tasks derived through `applyPipeline()` in `domain/task.pipeline.ts`
 
