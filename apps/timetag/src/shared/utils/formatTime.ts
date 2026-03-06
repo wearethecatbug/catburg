@@ -1,8 +1,8 @@
 /**
- * Format remaining seconds to human-readable format (max 5 characters for UI alignment)
+ * Format remaining seconds to human-readable format (typically 2-5 characters for UI alignment)
  * @param remainingSec - remaining seconds (can be negative for overdue)
- * @returns Short format (e.g., "1d", "5h", "30m", "-5h", "1×25m")
- * Max length: 5 characters (e.g., "-999h", "999d")
+ * @returns Short format (e.g., "1d", "5h", "30m", "-5h")
+ * Typical length: 2-5 characters (e.g., "5m", "-99h", "999d"). Very large values may exceed 5 chars.
  */
 export function formatTimeShort(remainingSec: number): string {
   // Handle zero
@@ -16,7 +16,7 @@ export function formatTimeShort(remainingSec: number): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  let result = '';
+  let result: string;
   
   // Priority: days > hours > minutes > seconds
   // For hours: DON'T show remaining minutes to keep it short (max 5 chars)
@@ -64,13 +64,20 @@ export function formatTimeFull(remainingSec: number): string {
 }
 
 /**
+ * Time display format with short and full versions
+ */
+export type TimeDisplay = {
+  short: string;
+  full: string;
+};
+
+/**
  * Get display format based on remaining time
  * - If > 24 hours: show days (e.g., "1d")
  * - Otherwise: show hours/minutes/seconds
  * @param remainingSec - remaining seconds
- * @returns { short: string, full: string }
  */
-export function getTimeDisplay(remainingSec: number) {
+export function getTimeDisplay(remainingSec: number): TimeDisplay {
   return {
     short: formatTimeShort(remainingSec),
     full: formatTimeFull(remainingSec),
