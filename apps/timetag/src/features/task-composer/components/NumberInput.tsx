@@ -33,11 +33,11 @@ export function NumberInput({
                 max={max}
                 value={value}
                 onChange={(e) => {
-                    let val = Math.max(min, Number(e.target.value || min));
+                    let clampedValue = Math.max(min, Number(e.target.value || min));
                     if (max !== undefined) {
-                        val = Math.min(max, val);
+                        clampedValue = Math.min(max, clampedValue);
                     }
-                    onChange(val);
+                    onChange(clampedValue);
                 }}
                 className="py-2 px-2 text-gray-700 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label={ariaLabel}
