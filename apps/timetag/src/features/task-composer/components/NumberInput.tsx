@@ -32,7 +32,13 @@ export function NumberInput({
                 min={min}
                 max={max}
                 value={value}
-                onChange={(e) => onChange(Math.max(min, Number(e.target.value || min)))}
+                onChange={(e) => {
+                    let val = Math.max(min, Number(e.target.value || min));
+                    if (max !== undefined) {
+                        val = Math.min(max, val);
+                    }
+                    onChange(val);
+                }}
                 className="py-2 px-2 text-gray-700 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 aria-label={ariaLabel}
             />
