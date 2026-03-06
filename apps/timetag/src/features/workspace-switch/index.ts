@@ -1,0 +1,2 @@
+export { WorkspaceSwitch } from './WorkspaceSwitch';
+

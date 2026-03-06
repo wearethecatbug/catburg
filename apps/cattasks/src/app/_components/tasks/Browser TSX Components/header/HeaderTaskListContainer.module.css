@@ -1,0 +1,20 @@
+.headerTaskListContainer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+}
+
+/* кнопки-стрелки внутри контейнера */
+.taskListArrowButton {
+    width: 150px;
+    height: 100%;
+    min-height: 70px;
+}
+
+.taskSelectorButtonContainer {
+    width: 100%;
+    min-width: 300px;
+    height: 70%;
+    min-height: 80px;
+}

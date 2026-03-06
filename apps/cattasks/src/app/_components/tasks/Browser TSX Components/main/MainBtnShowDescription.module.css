@@ -1,0 +1,28 @@
+.mainBtnTask {
+    cursor: pointer;
+    transition: transform .15s ease, filter .15s ease, opacity .15s ease;
+
+    display: inline-block;
+    box-sizing: border-box;
+
+
+    background-image: url("/mainTaskBtn.png");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: center;
+}
+
+.mainBtnTask:hover {
+    transform: scale(1.05);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
+}
+
+.active {
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .15)) brightness(.92) contrast(1.5);
+}
+
+.active:hover {
+    filter: brightness(.92) contrast(1.5) drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
+    transition: none;
+    transform: none;
+}
