@@ -10,6 +10,7 @@ const SORT_OPTIONS: { field: SortField; label: string }[] = [
   { field: 'updatedAt', label: 'Last Updated' },
   { field: 'remainingSec', label: 'Time Remaining' },
   { field: 'title', label: 'Title' },
+  { field: 'priority', label: 'Priority' },
 ];
 
 export function SortDropdown() {

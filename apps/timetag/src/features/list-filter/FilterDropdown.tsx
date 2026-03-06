@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Dropdown, DropdownDivider, Checkbox, FilterIcon } from '@/shared';
 import { URGENCY_FILTER_OPTIONS } from '@/domain';
 import { useTasks } from '@/store';
-import type { UrgencyLevel, TimerMode } from '@/domain/task.types';
+import type { UrgencyLevel, TimerMode, TaskPriority } from '@/domain/task.types';
 
 const MODE_OPTIONS: { id: TimerMode; label: string }[] = [
   { id: 'duration', label: 'Duration' },
@@ -25,6 +25,12 @@ export function FilterDropdown() {
   const toggleUrgency = (urgency: UrgencyLevel) => {
     setFilter({
       urgency: { ...state.filter.urgency, [urgency]: !state.filter.urgency[urgency] },
+    });
+  };
+
+  const togglePriority = (priority: TaskPriority) => {
+    setFilter({
+      priority: { ...state.filter.priority, [priority]: !state.filter.priority[priority] },
     });
   };
 
@@ -53,6 +59,7 @@ export function FilterDropdown() {
   const clearAll = () => {
     setFilter({
       urgency: { normal: true, warn: true, danger: true, overdue: true },
+      priority: { normal: true, urgent: true },
       mode: { duration: true, pomodoro: true, deadline: true },
       approachingRed: { enabled: false, windowMinutes: 10 },
       hasReminders: 'any',
@@ -84,6 +91,23 @@ export function FilterDropdown() {
                 <span className="text-sm text-gray-700">{option.label}</span>
               </div>
           ))}
+        </div>
+
+        <DropdownDivider />
+
+        <div className="px-4 py-2">
+          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Priority</p>
+          <div className="flex flex-col gap-1">
+            {['normal', 'urgent'].map((p) => (
+                <label key={p} className="inline-flex items-center gap-2 py-1">
+                  <Checkbox
+                      checked={state.filter.priority[p as TaskPriority]}
+                      onChange={() => togglePriority(p as TaskPriority)}
+                  />
+                  <span className="text-sm text-gray-700 capitalize">{p}</span>
+                </label>
+            ))}
+          </div>
         </div>
 
         <DropdownDivider />

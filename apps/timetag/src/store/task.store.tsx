@@ -71,6 +71,7 @@ type TaskAction =
 const initialFilter: FilterState = {
   status: 'active',
   urgency: { normal: true, warn: true, danger: true, overdue: true },
+  priority: { normal: true, urgent: true },
   approachingRed: { enabled: false, windowMinutes: 10 },
   mode: { duration: true, pomodoro: true, deadline: true },
   hasReminders: 'any',
@@ -118,6 +119,7 @@ function createTask(input: CreateTaskInput): Task {
     title: input.title,
     workspace: input.workspace ?? 'work',
     status: 'active',
+    priority: input.priority ?? 'normal',
     timerMode: input.timerMode ?? 'duration',
     targetAt: input.targetAt,
     remainingSec: durationSec,
