@@ -181,7 +181,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         addTask(taskData);
 
-        // reset input, keep selected preset and mode
+        // reset input and priority; keep selected preset and mode
         setValue('');
         setPriority('normal');
         // reset duration input to preset value
