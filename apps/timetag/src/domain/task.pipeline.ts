@@ -21,12 +21,16 @@ export interface PipelineQuery {
 // ============================================================================
 
 /**
+ * Legacy persisted tasks may miss priority; default to normal to keep them visible.
+ */
+const getTaskPriority = (task: Task) => task.priority ?? 'normal';
+
+/**
  * Apply the full list processing pipeline.
  * Pure function — no side effects.
  */
 export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   let result = tasks;
-
   // 1. Workspace filter
   if (query.workspace !== 'all') {
     result = result.filter((t) => t.workspace === query.workspace);
@@ -44,7 +48,7 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   });
 
   // 4. Priority filter
-  result = result.filter((t) => query.filter.priority[t.priority]);
+  result = result.filter((t) => query.filter.priority[getTaskPriority(t)]);
 
   // 5. Approaching Red filter (if enabled, show only AR + red + overdue)
   if (query.filter.approachingRed.enabled) {
@@ -96,7 +100,7 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
       case 'priority':
         // Sort: 'urgent' (0) before 'normal' (1)
         const priorityOrder = { urgent: 0, normal: 1 };
-        cmp = priorityOrder[a.priority] - priorityOrder[b.priority];
+        cmp = priorityOrder[getTaskPriority(a)] - priorityOrder[getTaskPriority(b)];
         break;
     }
 
