@@ -11,7 +11,11 @@ import React, {
 } from 'react';
 import {
   Task,
+  PomodoroConfig,
+  Reminder,
+  TaskPriority,
   TaskStatus,
+  TimerMode,
   WorkspaceType,
   CreateTaskInput,
   FilterState,
@@ -136,6 +140,87 @@ function createTask(input: CreateTaskInput): Task {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isTaskStatus(value: unknown): value is TaskStatus {
+  return value === 'active' || value === 'done' || value === 'archived';
+}
+
+function isTaskPriority(value: unknown): value is TaskPriority {
+  return value === 'normal' || value === 'urgent';
+}
+
+function isTimerMode(value: unknown): value is TimerMode {
+  return value === 'duration' || value === 'pomodoro' || value === 'deadline';
+}
+
+function isTimerStatus(value: unknown): value is TimerStatus {
+  return value === 'running' || value === 'paused' || value === 'idle' || value === 'expired';
+}
+
+function isPomodoroConfig(value: unknown): value is PomodoroConfig {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.cycles === 'number' &&
+    Number.isFinite(value.cycles) &&
+    typeof value.workDurationMin === 'number' &&
+    Number.isFinite(value.workDurationMin) &&
+    typeof value.shortBreakMin === 'number' &&
+    Number.isFinite(value.shortBreakMin) &&
+    typeof value.longBreakMin === 'number' &&
+    Number.isFinite(value.longBreakMin)
+  );
+}
+
+function isReminder(value: unknown): value is Reminder {
+  if (!isRecord(value)) return false;
+  return typeof value.id === 'string' && typeof value.enabled === 'boolean';
+}
+
+function normalizeHydratedTasks(tasks: unknown[]): Task[] {
+  const nowIso = new Date().toISOString();
+
+  return tasks.flatMap((raw) => {
+    if (!isRecord(raw)) return [];
+
+    const remainingSec =
+      typeof raw.remainingSec === 'number' && Number.isFinite(raw.remainingSec)
+        ? raw.remainingSec
+        : 25 * 60;
+    const originalDurationSec =
+      typeof raw.originalDurationSec === 'number' && Number.isFinite(raw.originalDurationSec)
+        ? raw.originalDurationSec
+        : remainingSec;
+
+    return [{
+      id: typeof raw.id === 'string' && raw.id.trim() ? raw.id : generateId(),
+      title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Untitled task',
+      workspace: typeof raw.workspace === 'string' ? (raw.workspace as WorkspaceType) : 'work',
+      status: isTaskStatus(raw.status) ? raw.status : 'active',
+      priority: isTaskPriority(raw.priority) ? raw.priority : 'normal',
+      timerMode: isTimerMode(raw.timerMode) ? raw.timerMode : 'duration',
+      targetAt: typeof raw.targetAt === 'string' ? raw.targetAt : undefined,
+      remainingSec,
+      originalDurationSec,
+      timerStatus: isTimerStatus(raw.timerStatus) ? raw.timerStatus : 'idle',
+      timerControls: isRecord(raw.timerControls)
+        ? {
+            autoStart: Boolean(raw.timerControls.autoStart),
+            autoPlay: Boolean(raw.timerControls.autoPlay),
+            autoReset: Boolean(raw.timerControls.autoReset),
+            allowOverdue: Boolean(raw.timerControls.allowOverdue),
+          }
+        : undefined,
+      pomodoro: isPomodoroConfig(raw.pomodoro) ? raw.pomodoro : undefined,
+      reminders: Array.isArray(raw.reminders) ? raw.reminders.filter(isReminder) : [],
+      createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : nowIso,
+      updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso,
+    }];
+  });
 }
 
 // ============================================================================
@@ -342,7 +427,7 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [savedTasks, setSavedTasks, isSavedTasksHydrated] =
-    useLocalStorage<Task[]>('timetag-tasks', []);
+    useLocalStorage<unknown[]>('timetag-tasks', []);
 
   // Always initialize with empty tasks to avoid hydration mismatch
   const [state, dispatch] = useReducer(taskReducer, initialState);
@@ -361,7 +446,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (!isSavedTasksHydrated || hasLoadedRef.current) return;
 
     if (savedTasks.length > 0) {
-      dispatch({ type: 'SET_TASKS', payload: savedTasks });
+      dispatch({ type: 'SET_TASKS', payload: normalizeHydratedTasks(savedTasks) });
     }
 
     // Mark hydration complete even when storage is empty.
