@@ -97,11 +97,12 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
       case 'title':
         cmp = a.title.localeCompare(b.title);
         break;
-      case 'priority':
+      case 'priority': {
         // Sort: 'urgent' (0) before 'normal' (1)
         const priorityOrder = { urgent: 0, normal: 1 };
         cmp = priorityOrder[getTaskPriority(a)] - priorityOrder[getTaskPriority(b)];
         break;
+      }
     }
 
     return query.sort.direction === 'asc' ? cmp : -cmp;
