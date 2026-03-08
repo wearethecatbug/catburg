@@ -1,11 +1,11 @@
 import React from 'react';
+import type { TaskPriority } from '@/domain/task.types';
 import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
 
 type TimerMode = 'duration' | 'deadline' | 'pomodoro';
-type TaskPriority = 'normal' | 'urgent';
 
 interface DetailsPanelProps {
     timerMode: TimerMode;
