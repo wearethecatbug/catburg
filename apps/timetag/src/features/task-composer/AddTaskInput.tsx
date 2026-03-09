@@ -321,7 +321,18 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
     const handleDurationUnitChange = (unit: DurationUnit) => {
         setDurationUnit(unit);
-        setPresetLabel(undefined);
+
+        // Check if the current durationSec matches any preset
+        // If the new unit is the "canonical" unit for this duration (e.g., 3600s → 'h'),
+        // keep or update the preset label accordingly
+        const matchingPreset = PRESETS.find((p) => p.durationSec === durationSec);
+        if (matchingPreset && getDurationUnitFromSec(durationSec) === unit) {
+            // The new unit matches the canonical unit for this preset
+            setPresetLabel(matchingPreset.label);
+        } else {
+            // User is viewing a preset in a non-canonical unit, clear the label to avoid confusion
+            setPresetLabel(undefined);
+        }
     };
 
     return (
