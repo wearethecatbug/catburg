@@ -316,8 +316,8 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
     const handleDurationSecChange = (value: number) => {
         setDurationSec(value);
-        // When duration is manually edited, always clear the preset label
-        // since the current duration no longer matches any selected preset
+        // When duration is manually edited, always clear the preset label to indicate a custom value,
+        // even if the new duration happens to numerically match one of the presets.
         setPresetLabel(undefined);
     };
 
