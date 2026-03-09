@@ -33,7 +33,7 @@ export function NumberInput({
                 max={max}
                 value={value}
                 onChange={(e) => {
-                    let clampedValue = Math.max(min, Number(e.target.value || min));
+                    let clampedValue = Math.max(min, Number(e.target.value || min)); // Ensure value is at least min
                     if (max !== undefined) {
                         clampedValue = Math.min(max, clampedValue);
                     }
