@@ -1,17 +1,23 @@
 'use client';
+
 import React from 'react';
 import type { TaskPriority } from '@/domain/task.types';
+import type { DurationUnit } from '@/domain/duration';
 import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
+import { DurationField } from './DurationField';
 
 type TimerMode = 'duration' | 'deadline' | 'pomodoro';
 
 interface DetailsPanelProps {
     timerMode: TimerMode;
     priority: TaskPriority;
-    durationMin: number;
+
+    durationSec: number;
+    durationUnit: DurationUnit;
+
     deadlineDate: string;
     pomoCycles: number;
     pomoWorkMin: number;
@@ -22,9 +28,13 @@ interface DetailsPanelProps {
     autoResetEnabled: boolean;
     overdueEnabled: boolean;
     presetLabel?: string;
+
     onTimerModeChange: (mode: TimerMode) => void;
     onPriorityChange: (priority: TaskPriority) => void;
-    onDurationMinChange: (value: number) => void;
+
+    onDurationSecChange: (value: number) => void;
+    onDurationUnitChange: (unit: DurationUnit) => void;
+
     onDeadlineDateChange: (value: string) => void;
     onPomoCyclesChange: (value: number) => void;
     onPomoWorkMinChange: (value: number) => void;
@@ -37,41 +47,41 @@ interface DetailsPanelProps {
 }
 
 export function DetailsPanel({
-    timerMode,
-    priority,
-    durationMin,
-    deadlineDate,
-    pomoCycles,
-    pomoWorkMin,
-    pomoShortBreakMin,
-    pomoLongBreakMin,
-    autoEnabled,
-    playEnabled,
-    autoResetEnabled,
-    overdueEnabled,
-    presetLabel,
-    onTimerModeChange,
-    onPriorityChange,
-    onDurationMinChange,
-    onDeadlineDateChange,
-    onPomoCyclesChange,
-    onPomoWorkMinChange,
-    onPomoShortBreakMinChange,
-    onPomoLongBreakMinChange,
-    onAutoEnabledChange,
-    onPlayEnabledChange,
-    onAutoResetEnabledChange,
-    onOverdueEnabledChange,
-}: DetailsPanelProps) {
+                                 timerMode,
+                                 priority,
+                                 durationSec,
+                                 durationUnit,
+                                 deadlineDate,
+                                 pomoCycles,
+                                 pomoWorkMin,
+                                 pomoShortBreakMin,
+                                 pomoLongBreakMin,
+                                 autoEnabled,
+                                 playEnabled,
+                                 autoResetEnabled,
+                                 overdueEnabled,
+                                 presetLabel,
+                                 onTimerModeChange,
+                                 onPriorityChange,
+                                 onDurationSecChange,
+                                 onDurationUnitChange,
+                                 onDeadlineDateChange,
+                                 onPomoCyclesChange,
+                                 onPomoWorkMinChange,
+                                 onPomoShortBreakMinChange,
+                                 onPomoLongBreakMinChange,
+                                 onAutoEnabledChange,
+                                 onPlayEnabledChange,
+                                 onAutoResetEnabledChange,
+                                 onOverdueEnabledChange,
+                             }: DetailsPanelProps) {
     return (
-        <div id="task-composer-details" className="p-3 border border-gray-100 rounded-md bg-gray-50 space-y-3">
-            {/* Mode */}
+        <div
+            id="task-composer-details"
+            className="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-3"
+        >
             <ModeSelector timerMode={timerMode} onChange={onTimerModeChange} />
 
-            {/* Priority */}
-            <PrioritySelect priority={priority} onChange={onPriorityChange} />
-
-            {/* Duration or Pomodoro Settings */}
             {timerMode === 'pomodoro' ? (
                 <PomodoroSettings
                     cycles={pomoCycles}
@@ -84,9 +94,8 @@ export function DetailsPanel({
                     onLongBreakMinChange={onPomoLongBreakMinChange}
                 />
             ) : timerMode === 'deadline' ? (
-                /* Deadline Settings - only datetime picker */
                 <div className="flex flex-col">
-                    <label htmlFor="deadline-picker" className="text-xs font-medium text-gray-700 mb-1">
+                    <label htmlFor="deadline-picker" className="mb-1 text-xs font-medium text-gray-700">
                         Deadline
                     </label>
                     <input
@@ -94,31 +103,25 @@ export function DetailsPanel({
                         type="datetime-local"
                         value={deadlineDate}
                         onChange={(e) => onDeadlineDateChange(e.target.value)}
-                        className="py-2 px-3 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                        className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         aria-label="Deadline date and time"
                     />
-                    <div className="text-xs text-gray-500 mt-1">Set specific date and time for this task</div>
+                    <div className="mt-1 text-xs text-gray-500">
+                        Set specific date and time for this task
+                    </div>
                 </div>
             ) : (
-                /* Duration Settings - only for duration mode */
-                <div className="flex flex-col">
-                    <label htmlFor="duration-min" className="text-xs font-medium text-gray-700 mb-1">
-                        Duration (minutes)
-                    </label>
-                    <input
-                        id="duration-min"
-                        type="number"
-                        min={1}
-                        value={String(durationMin)}
-                        onChange={(e) => onDurationMinChange(Math.max(1, Number(e.target.value || 1)))}
-                        className="py-2 px-3 text-gray-700 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        aria-label="Duration in minutes"
-                    />
-                    {presetLabel && <div className="text-xs text-gray-500 mt-1">Preset: {presetLabel}</div>}
-                </div>
+                <DurationField
+                    durationSec={durationSec}
+                    unit={durationUnit}
+                    presetLabel={presetLabel}
+                    onDurationSecChange={onDurationSecChange}
+                    onUnitChange={onDurationUnitChange}
+                />
             )}
 
-            {/* Timer Controls */}
+            <PrioritySelect priority={priority} onChange={onPriorityChange} />
+
             <TimerControlsSection
                 timerMode={timerMode}
                 autoEnabled={autoEnabled}
@@ -133,4 +136,3 @@ export function DetailsPanel({
         </div>
     );
 }
-
