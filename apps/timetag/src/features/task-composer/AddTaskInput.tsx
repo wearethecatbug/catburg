@@ -322,12 +322,18 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     const handleDurationUnitChange = (unit: DurationUnit) => {
         setDurationUnit(unit);
 
-        const matchingPreset = PRESETS.find((p) => p.durationSec === durationSec);
-        if (matchingPreset && getDurationUnitFromSec(durationSec) === unit) {
-            // ✅ Switching to the canonical unit for this preset → restore the preset label
-            setPresetLabel(matchingPreset.label);
+        // Only restore preset label if durationSec matches the CURRENTLY SELECTED preset
+        // This prevents showing "Preset: 10m" when dropdown shows "25m"
+        const selectedPreset = PRESETS.find((p) => p.id === presetId);
+        if (
+            selectedPreset &&
+            selectedPreset.durationSec === durationSec &&
+            getDurationUnitFromSec(durationSec) === unit
+        ) {
+            // Current durationSec matches selected preset AND unit is canonical → restore label
+            setPresetLabel(selectedPreset.label);
         } else {
-            // ✅ Switching to a non-canonical unit → clear the label to avoid contradictions
+            // Either durationSec doesn't match selected preset, or unit is non-canonical → clear label
             setPresetLabel(undefined);
         }
     };
