@@ -321,6 +321,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
     const handleDurationUnitChange = (unit: DurationUnit) => {
         setDurationUnit(unit);
+        setPresetLabel(undefined);
     };
 
     return (
