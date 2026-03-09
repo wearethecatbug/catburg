@@ -16,7 +16,7 @@ export function NumberInput({
     label,
     value,
     onChange,
-    min = 3,
+    min = 1,
     max,
     unit,
     ariaLabel,
