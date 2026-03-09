@@ -324,10 +324,10 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         const matchingPreset = PRESETS.find((p) => p.durationSec === durationSec);
         if (matchingPreset && getDurationUnitFromSec(durationSec) === unit) {
-            // ✅ Переключение на каноничную единицу → обновляем лейбл
+            // ✅ Switching to the canonical unit for this preset → restore the preset label
             setPresetLabel(matchingPreset.label);
         } else {
-            // ✅ Переключение на неканоничную → убираем лейбл (избегаем противоречий)
+            // ✅ Switching to a non-canonical unit → clear the label to avoid contradictions
             setPresetLabel(undefined);
         }
     };
