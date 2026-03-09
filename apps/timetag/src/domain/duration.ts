@@ -7,7 +7,9 @@ export function toDurationSec(value: number, unit: DurationUnit): number {
 
     switch (unit) {
         case 'min':
-            return Math.round(safeValue * 60);
+            // Round to whole minutes before multiplying to ensure durationSec is always a multiple of 60
+            // This keeps display (formatDurationValue) consistent with storage
+            return Math.round(safeValue) * 60;
         case 'h':
             return Math.round(safeValue * 3600);
         case 'd':
