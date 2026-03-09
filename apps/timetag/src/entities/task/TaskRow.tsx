@@ -103,7 +103,7 @@ export function TaskRow({
         </button>
 
         <span
-            className={`flex-1 text-sm ${
+            className={`flex-1 flex items-center gap-2 min-w-0 text-sm ${
                 task.status === 'done'
                     ? 'text-gray-400 line-through'
                     : task.status === 'archived'
@@ -111,8 +111,17 @@ export function TaskRow({
                         : 'text-gray-900'
             }`}
         >
-        {task.title}
-      </span>
+          {task.priority === 'urgent' && (
+              <span
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-white text-[11px] font-bold leading-none"
+                  title="Urgent"
+                  aria-label="Urgent priority"
+              >
+                !
+              </span>
+          )}
+          <span className="truncate">{task.title}</span>
+        </span>
 
         <TimerRingButton
             isRunning={task.timerStatus === 'running'}

@@ -19,6 +19,11 @@ export type TimerMode = 'duration' | 'pomodoro' | 'deadline';
 export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 
 // ============================================================================
+// Priority
+// ============================================================================
+export type TaskPriority = 'normal' | 'urgent';
+
+// ============================================================================
 // Workspace
 // ============================================================================
 export type DefaultWorkspaceType = 'work' | 'home';
@@ -65,6 +70,7 @@ export interface Task {
   title: string;
   workspace: WorkspaceType;
   status: TaskStatus;
+  priority: TaskPriority;
   timerMode: TimerMode;
   /** Target time as ISO string (for deadline mode) */
   targetAt?: string;
@@ -86,6 +92,7 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   workspace?: WorkspaceType;
+  priority?: TaskPriority;
   timerMode?: TimerMode;
   targetAt?: string;
   durationSec?: number;
@@ -107,6 +114,10 @@ export interface FilterState {
     danger: boolean;
     overdue: boolean;
   };
+  priority: {
+    normal: boolean;
+    urgent: boolean;
+  };
   approachingRed: {
     enabled: boolean;
     // User-configurable in app settings (not limited to preset chips).
@@ -123,7 +134,7 @@ export interface FilterState {
 // ============================================================================
 // Sort Options
 // ============================================================================
-export type SortField = 'createdAt' | 'updatedAt' | 'remainingSec' | 'title';
+export type SortField = 'createdAt' | 'updatedAt' | 'remainingSec' | 'title' | 'priority';
 export type SortDirection = 'asc' | 'desc';
 
 export interface SortState {

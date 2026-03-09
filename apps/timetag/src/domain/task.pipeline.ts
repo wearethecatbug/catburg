@@ -21,12 +21,16 @@ export interface PipelineQuery {
 // ============================================================================
 
 /**
+ * Legacy persisted tasks may miss priority; default to normal to keep them visible.
+ */
+const getTaskPriority = (task: Task) => task.priority ?? 'normal';
+
+/**
  * Apply the full list processing pipeline.
  * Pure function — no side effects.
  */
 export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   let result = tasks;
-
   // 1. Workspace filter
   if (query.workspace !== 'all') {
     result = result.filter((t) => t.workspace === query.workspace);
@@ -43,7 +47,10 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
     return query.filter.urgency[urgency];
   });
 
-  // 4. Approaching Red filter (if enabled, show only AR + red + overdue)
+  // 4. Priority filter
+  result = result.filter((t) => query.filter.priority[getTaskPriority(t)]);
+
+  // 5. Approaching Red filter (if enabled, show only AR + red + overdue)
   if (query.filter.approachingRed.enabled) {
     result = result.filter(
       (t) =>
@@ -53,13 +60,13 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
     );
   }
 
-  // 5. Mode filter (show only tasks with selected timer modes)
+  // 6. Mode filter (show only tasks with selected timer modes)
   const modesSelected = Object.values(query.filter.mode).some((v) => v);
   if (modesSelected) {
     result = result.filter((t) => query.filter.mode[t.timerMode]);
   }
 
-  // 6. Reminders filter
+  // 7. Reminders filter
   if (query.filter.hasReminders && query.filter.hasReminders !== 'any') {
     result = result.filter((t) => {
       const hasReminders = t.reminders.length > 0;
@@ -67,13 +74,13 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
     });
   }
 
-  // 7. Search filter
+  // 8. Search filter
   if (query.searchQuery.trim()) {
     const q = query.searchQuery.toLowerCase();
     result = result.filter((t) => t.title.toLowerCase().includes(q));
   }
 
-  // 8. Sort
+  // 9. Sort
   result = [...result].sort((a, b) => {
     let cmp = 0;
 
@@ -90,6 +97,12 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
       case 'title':
         cmp = a.title.localeCompare(b.title);
         break;
+      case 'priority': {
+        // Sort: 'urgent' (0) before 'normal' (1)
+        const priorityOrder = { urgent: 0, normal: 1 };
+        cmp = priorityOrder[getTaskPriority(a)] - priorityOrder[getTaskPriority(b)];
+        break;
+      }
     }
 
     return query.sort.direction === 'asc' ? cmp : -cmp;

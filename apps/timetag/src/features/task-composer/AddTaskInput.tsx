@@ -2,7 +2,7 @@
 
 import React, { useState, forwardRef, useRef } from 'react';
 import { useTasks } from '@/store';
-import type { WorkspaceType, CreateTaskInput } from '@/domain/task.types';
+import type { WorkspaceType, CreateTaskInput, TaskPriority } from '@/domain/task.types';
 import {
     PlusIcon,
     ClockIcon,
@@ -95,6 +95,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     const [showDetails, setShowDetails] = useState(false);
     const [durationMin, setDurationMin] = useState(PRESETS[2].durationSec / 60);
     const [timerMode, setTimerMode] = useState<TimerMode>('duration');
+    const [priority, setPriority] = useState<TaskPriority>('normal');
     const [deadlineDate, setDeadlineDate] = useState('');
 
     // Pomodoro-specific settings
@@ -154,6 +155,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         const taskData: CreateTaskInput = {
             title,
             workspace: defaultWorkspace ?? state.workspace,
+            priority,
             timerMode,
             durationSec,
             targetAt,
@@ -179,8 +181,9 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         addTask(taskData);
 
-        // reset input, keep selected preset and mode
+        // reset input and priority; keep selected preset and mode
         setValue('');
+        setPriority('normal');
         // reset duration input to preset value
         const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[2];
         setDurationMin(preset.durationSec / 60);
@@ -434,6 +437,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             {showDetails && (
                 <DetailsPanel
                     timerMode={timerMode}
+                    priority={priority}
                     durationMin={durationMin}
                     deadlineDate={deadlineDate}
                     pomoCycles={pomoCycles}
@@ -446,6 +450,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     overdueEnabled={overdueEnabled}
                     presetLabel={PRESETS.find((p) => p.id === presetId)?.label}
                     onTimerModeChange={setTimerMode}
+                    onPriorityChange={setPriority}
                     onDurationMinChange={setDurationMin}
                     onDeadlineDateChange={setDeadlineDate}
                     onPomoCyclesChange={setPomoCycles}

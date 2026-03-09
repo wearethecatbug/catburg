@@ -1,5 +1,8 @@
+'use client';
 import React from 'react';
+import type { TaskPriority } from '@/domain/task.types';
 import { ModeSelector } from './ModeSelector';
+import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
 
@@ -7,6 +10,7 @@ type TimerMode = 'duration' | 'deadline' | 'pomodoro';
 
 interface DetailsPanelProps {
     timerMode: TimerMode;
+    priority: TaskPriority;
     durationMin: number;
     deadlineDate: string;
     pomoCycles: number;
@@ -19,6 +23,7 @@ interface DetailsPanelProps {
     overdueEnabled: boolean;
     presetLabel?: string;
     onTimerModeChange: (mode: TimerMode) => void;
+    onPriorityChange: (priority: TaskPriority) => void;
     onDurationMinChange: (value: number) => void;
     onDeadlineDateChange: (value: string) => void;
     onPomoCyclesChange: (value: number) => void;
@@ -33,6 +38,7 @@ interface DetailsPanelProps {
 
 export function DetailsPanel({
     timerMode,
+    priority,
     durationMin,
     deadlineDate,
     pomoCycles,
@@ -45,6 +51,7 @@ export function DetailsPanel({
     overdueEnabled,
     presetLabel,
     onTimerModeChange,
+    onPriorityChange,
     onDurationMinChange,
     onDeadlineDateChange,
     onPomoCyclesChange,
@@ -60,6 +67,9 @@ export function DetailsPanel({
         <div id="task-composer-details" className="p-3 border border-gray-100 rounded-md bg-gray-50 space-y-3">
             {/* Mode */}
             <ModeSelector timerMode={timerMode} onChange={onTimerModeChange} />
+
+            {/* Priority */}
+            <PrioritySelect priority={priority} onChange={onPriorityChange} />
 
             {/* Duration or Pomodoro Settings */}
             {timerMode === 'pomodoro' ? (

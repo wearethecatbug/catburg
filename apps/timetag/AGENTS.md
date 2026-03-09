@@ -32,6 +32,13 @@
 - `WorkspaceType` intentionally allows built-in ids and user-created string ids.
 - Urgency is ratio-based (`remainingSec / originalDurationSec`) in `src/domain/task.urgency.ts`.
 - `isApproachingRed()` uses user window minutes relative to the danger threshold boundary.
+- **Task Priority**: 2-level system ('normal' | 'urgent')
+  - Default: 'normal' when creating tasks
+  - FilterState includes `priority: {normal: boolean, urgent: boolean}`
+  - SortField includes 'priority' (urgent tasks first when sorting asc)
+  - Applied in pipeline after urgency filter (step 4), before mode filter
+  - UI: black circle with white '!' indicator in TaskRow title area for urgent tasks
+  - Component: `src/features/task-composer/components/PrioritySelect.tsx` (segmented control)
 
 ## Workspace Switch Conventions
 - File: `src/features/workspace-switch/WorkspaceSwitch.tsx`.
