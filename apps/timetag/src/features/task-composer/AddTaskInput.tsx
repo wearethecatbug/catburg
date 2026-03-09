@@ -316,24 +316,32 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
     const handleDurationSecChange = (value: number) => {
         setDurationSec(value);
+        // When duration is manually edited, always clear the preset label
+        // since the current duration no longer matches any selected preset
         setPresetLabel(undefined);
     };
 
     const handleDurationUnitChange = (unit: DurationUnit) => {
         setDurationUnit(unit);
 
-        // Only restore preset label if durationSec matches the CURRENTLY SELECTED preset
-        // This prevents showing "Preset: 10m" when dropdown shows "25m"
-        const selectedPreset = PRESETS.find((p) => p.id === presetId);
+        // Note: presetId tracks the 'last selected preset from the dropdown', NOT the current duration state.
+        // If the user manually edited the duration, presetId may not match durationSec.
+        // Only restore the preset label if the current duration matches the last-selected preset AND
+        // the unit is canonical for that preset. This prevents showing "Preset: 10m" when the dropdown shows "25m"
+        // (which would happen if the user manually changed duration to 10m, then toggled units).
+        const lastSelectedPreset = PRESETS.find((p) => p.id === presetId);
         if (
-            selectedPreset &&
-            selectedPreset.durationSec === durationSec &&
+            lastSelectedPreset &&
+            lastSelectedPreset.durationSec === durationSec &&
             getDurationUnitFromSec(durationSec) === unit
         ) {
-            // Current durationSec matches selected preset AND unit is canonical → restore label
-            setPresetLabel(selectedPreset.label);
+            // Current duration exactly matches the last-selected preset in its canonical unit
+            // → restore the label to indicate we're still viewing that preset
+            setPresetLabel(lastSelectedPreset.label);
         } else {
-            // Either durationSec doesn't match selected preset, or unit is non-canonical → clear label
+            // Either: (a) user manually changed duration away from the preset,
+            // or (b) unit is non-canonical for the last-selected preset
+            // → clear the label to avoid misleading the user
             setPresetLabel(undefined);
         }
     };
