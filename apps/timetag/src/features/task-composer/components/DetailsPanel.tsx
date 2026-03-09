@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import type { TaskPriority } from '@/domain/task.types';
 import { ModeSelector } from './ModeSelector';

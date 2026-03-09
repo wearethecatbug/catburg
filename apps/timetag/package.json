@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS='' next dev --turbopack --port 3003",
     "build": "cross-env NODE_OPTIONS='' next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "cross-env NODE_OPTIONS='' next start",
+    "lint": "cross-env NODE_OPTIONS='' next lint"
   },
   "dependencies": {
     "clsx": "^2.1.1",
