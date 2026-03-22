@@ -17,6 +17,7 @@ export {
   MenuIcon,
   ChevronDownIcon,
   ClipboardIcon,
+  NoteIcon,
   SunIcon,
   MuteIcon,
   BellIcon,

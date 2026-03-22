@@ -1,10 +1,5 @@
-import styles from "./page.module.css";
-import {Todos} from "./hooks";
+import { redirect } from 'next/navigation';
 
-export default function Page() {
-    return (
-        <main className={styles.main}>
-            <Todos/>
-        </main>
-    );
+export default function HooksTrainPage() {
+  redirect('/hooksTrain/Tasks');
 }

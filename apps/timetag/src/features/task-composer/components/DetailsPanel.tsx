@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { TaskPriority } from '@/domain/task.types';
+import { TASK_NOTE_MAX_LENGTH, type TaskPriority, type TimerMode } from '@/domain/task.types';
 import type { DurationUnit } from '@/domain/duration';
 import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
@@ -9,11 +9,10 @@ import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
 import { DurationField } from './DurationField';
 
-type TimerMode = 'duration' | 'deadline' | 'pomodoro';
-
 interface DetailsPanelProps {
     timerMode: TimerMode;
     priority: TaskPriority;
+    note: string;
 
     durationSec: number;
     durationUnit: DurationUnit;
@@ -31,6 +30,7 @@ interface DetailsPanelProps {
 
     onTimerModeChange: (mode: TimerMode) => void;
     onPriorityChange: (priority: TaskPriority) => void;
+    onNoteChange: (value: string) => void;
 
     onDurationSecChange: (value: number) => void;
     onDurationUnitChange: (unit: DurationUnit) => void;
@@ -49,6 +49,7 @@ interface DetailsPanelProps {
 export function DetailsPanel({
                                  timerMode,
                                  priority,
+                                  note,
                                  durationSec,
                                  durationUnit,
                                  deadlineDate,
@@ -63,6 +64,7 @@ export function DetailsPanel({
                                  presetLabel,
                                  onTimerModeChange,
                                  onPriorityChange,
+                                  onNoteChange,
                                  onDurationSecChange,
                                  onDurationUnitChange,
                                  onDeadlineDateChange,
@@ -121,6 +123,30 @@ export function DetailsPanel({
             )}
 
             <PrioritySelect priority={priority} onChange={onPriorityChange} />
+
+            <div className="flex flex-col">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                    <label htmlFor="task-note" className="text-xs font-medium text-gray-700">
+                        Note
+                    </label>
+                    <span className="text-[11px] text-gray-500" aria-live="polite">
+                        {note.length}/{TASK_NOTE_MAX_LENGTH}
+                    </span>
+                </div>
+                <textarea
+                    id="task-note"
+                    value={note}
+                    onChange={(e) => onNoteChange(e.target.value.slice(0, TASK_NOTE_MAX_LENGTH))}
+                    rows={3}
+                    maxLength={TASK_NOTE_MAX_LENGTH}
+                    placeholder="Add a short note…"
+                    className="resize-none rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    aria-describedby="task-note-help"
+                />
+                <div id="task-note-help" className="mt-1 text-xs text-gray-500">
+                    Optional note for context, reminders, or next steps.
+                </div>
+            </div>
 
             <TimerControlsSection
                 timerMode={timerMode}

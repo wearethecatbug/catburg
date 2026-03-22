@@ -23,6 +23,8 @@ export type UrgencyLevel = 'normal' | 'warn' | 'danger' | 'overdue';
 // ============================================================================
 export type TaskPriority = 'normal' | 'urgent';
 
+export const TASK_NOTE_MAX_LENGTH = 280;
+
 // ============================================================================
 // Workspace
 // ============================================================================
@@ -68,6 +70,7 @@ export interface Reminder {
 export interface Task {
   id: string;
   title: string;
+  note?: string;
   workspace: WorkspaceType;
   status: TaskStatus;
   priority: TaskPriority;
@@ -91,6 +94,7 @@ export interface Task {
 // ============================================================================
 export interface CreateTaskInput {
   title: string;
+  note?: string;
   workspace?: WorkspaceType;
   priority?: TaskPriority;
   timerMode?: TimerMode;

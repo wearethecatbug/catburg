@@ -2,7 +2,7 @@
 
 import React, { useState, forwardRef, useRef } from 'react';
 import { useTasks } from '@/store';
-import type { WorkspaceType, CreateTaskInput, TaskPriority } from '@/domain/task.types';
+import { TASK_NOTE_MAX_LENGTH, type WorkspaceType, type CreateTaskInput, type TaskPriority, type TimerMode } from '@/domain/task.types';
 import type { DurationUnit } from '@/domain/duration';
 import {
     PlusIcon,
@@ -68,8 +68,6 @@ const POMODORO_PRESETS = [
     },
 ];
 
-type TimerMode = 'duration' | 'deadline' | 'pomodoro';
-
 export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(function AddTaskInput(
     { defaultWorkspace },
     ref,
@@ -82,6 +80,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
     const [timerMode, setTimerMode] = useState<TimerMode>('duration');
     const [priority, setPriority] = useState<TaskPriority>('normal');
+    const [note, setNote] = useState('');
     const [deadlineDate, setDeadlineDate] = useState('');
 
     const [durationSec, setDurationSec] = useState(25 * 60);
@@ -161,6 +160,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         const taskData: CreateTaskInput = {
             title,
+            note: note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined,
             workspace: defaultWorkspace ?? state.workspace,
             priority,
             timerMode,
@@ -189,6 +189,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
 
         setValue('');
         setPriority('normal');
+        setNote('');
 
         const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[2];
         applyDurationPreset(preset);
@@ -460,6 +461,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                 <DetailsPanel
                     timerMode={timerMode}
                     priority={priority}
+                    note={note}
                     durationSec={durationSec}
                     durationUnit={durationUnit}
                     deadlineDate={deadlineDate}
@@ -474,6 +476,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     presetLabel={presetLabel}
                     onTimerModeChange={onModeSelect}
                     onPriorityChange={setPriority}
+                    onNoteChange={setNote}
                     onDurationSecChange={handleDurationSecChange}
                     onDurationUnitChange={handleDurationUnitChange}
                     onDeadlineDateChange={setDeadlineDate}
