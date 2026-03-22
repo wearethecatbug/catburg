@@ -2,6 +2,7 @@
 // Pure business logic — no React, no side effects
 
 export * from './task.types';
+export * from './settings.types';
 export * from './task.status';
 export * from './task.urgency';
 export * from './task.pipeline';

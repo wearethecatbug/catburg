@@ -13,6 +13,7 @@ import {
   NoteIcon,
   TimerRingButton,
 } from '@/shared';
+import { useSettings } from '@/store';
 import { formatTimeBadge } from '@/domain/helpers';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
 import { getUrgencyLevel } from '@/domain/task.urgency';
@@ -40,6 +41,7 @@ export function TaskRow({
                           onRestore,
                           onDelete,
                         }: TaskRowProps) {
+  const { settings } = useSettings();
   const notePreviewRef = React.useRef<HTMLSpanElement | null>(null);
   const notePopoverId = React.useId();
   const [isNoteHovered, setIsNoteHovered] = React.useState(false);
@@ -153,7 +155,7 @@ export function TaskRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 min-w-0 text-sm">
-            {task.priority === 'urgent' && (
+            {settings.general.showUrgencyIndicator && task.priority === 'urgent' && (
                 <span
                     className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-white text-[11px] font-bold leading-none"
                     title="Urgent"
@@ -223,7 +225,7 @@ export function TaskRow({
             </span>
           </div>
 
-          {hasNote && (
+          {hasNote && settings.general.showNotePreviewsInTaskList && (
               <div
                   className={`mt-0.5 truncate pr-2 text-xs ${
                       task.status === 'archived'

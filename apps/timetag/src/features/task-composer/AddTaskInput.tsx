@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, forwardRef, useRef } from 'react';
-import { useTasks } from '@/store';
+import { useSettings, useTasks } from '@/store';
 import { TASK_NOTE_MAX_LENGTH, type WorkspaceType, type CreateTaskInput, type TaskPriority, type TimerMode } from '@/domain/task.types';
 import type { DurationUnit } from '@/domain/duration';
 import {
@@ -98,6 +98,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     const [overdueEnabled, setOverdueEnabled] = useState(false);
 
     const { addTask, state } = useTasks();
+    const { settings } = useSettings();
     const localInputRef = useRef<HTMLInputElement | null>(null);
 
     const [presetOpen, setPresetOpen] = useState(false);
@@ -161,7 +162,9 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         const taskData: CreateTaskInput = {
             title,
             note: note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined,
-            workspace: defaultWorkspace ?? state.workspace,
+            workspace:
+                defaultWorkspace ??
+                (state.workspace === 'all' ? settings.general.defaultWorkspace : state.workspace),
             priority,
             timerMode,
             durationSec: nextDurationSec,
