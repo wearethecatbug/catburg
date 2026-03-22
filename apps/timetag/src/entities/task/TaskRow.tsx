@@ -41,7 +41,6 @@ export function TaskRow({
                           onDelete,
                         }: TaskRowProps) {
   const notePreviewRef = React.useRef<HTMLSpanElement | null>(null);
-  const noteTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   const notePopoverId = React.useId();
   const [isNoteHovered, setIsNoteHovered] = React.useState(false);
   const [isNoteFocused, setIsNoteFocused] = React.useState(false);
@@ -177,7 +176,6 @@ export function TaskRow({
                     }}
                 >
                   <button
-                      ref={noteTriggerRef}
                       type="button"
                       tabIndex={0}
                       onMouseDown={preventMouseFocus}
