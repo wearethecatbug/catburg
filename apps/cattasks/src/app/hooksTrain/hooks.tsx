@@ -1909,84 +1909,85 @@
 //         </div>
 //     );
 // }
-import * as React from "react";
+// import * as React from "react";
+//
+// type Todo = { id: string; title: string; done: boolean };
+//
+// export function Todos() {
+//     const [todos, setTodos] = React.useState<Todo[]>([]);
+//     const [title, setTitle] = React.useState("");
+//
+//     function addTodo() {
+//         const trimmed = title.trim();
+//         if (!trimmed) return;
+//
+//         setTodos(prev => [
+//             ...prev,
+//             {id: crypto.randomUUID(), title: trimmed, done: false},
+//         ]);
+//         setTitle("");
+//     }
+//
+//     function toggleTodo(id: string) {
+//         setTodos(prev => prev.map(t => (t.id === id ? {...t, done: !t.done} : t)));
+//     }
+//
+//     function removeTodo(id: string) {
+//         setTodos(prev => prev.filter(t => t.id !== id));
+//     }
+//
+//     return (
+//         <div>
+//             <form
+//                 onSubmit={(e) => {
+//                     e.preventDefault();
+//                     addTodo();
+//                 }}
+//             >
+//                 <input
+//                     value={title}
+//                     onChange={(e) => setTitle(e.currentTarget.value)}
+//                     placeholder="New todo…"
+//                 />
+//                 <button type="submit">Add</button>
+//             </form>
+//
+//             <ul>
+//                 {todos.map(t => (
+//                     <TodoRow
+//                         key={t.id}
+//                         todo={t}
+//                         onToggle={toggleTodo}
+//                         onRemove={removeTodo}
+//                     />
+//                 ))}
+//             </ul>
+//         </div>
+//     );
+// }
+//
+// type TodoRowProps = {
+//     todo: Todo;
+//     onToggle: (id: string) => void;
+//     onRemove: (id: string) => void;
+// };
+//
+// function TodoRow({todo, onToggle, onRemove}: TodoRowProps) {
+//     return (
+//         <li>
+//             <label>
+//                 <input
+//                     type="checkbox"
+//                     checked={todo.done}
+//                     onChange={() => onToggle(todo.id)}
+//                 />
+//                 {todo.title}
+//             </label>
+//
+//             <button type="button" onClick={() => onRemove(todo.id)}>
+//                 - Remove
+//             </button>
+//         </li>
+//     );
+// }
 
-type Todo = { id: string; title: string; done: boolean };
-
-export function Todos() {
-    const [todos, setTodos] = React.useState<Todo[]>([]);
-    const [title, setTitle] = React.useState("");
-
-    function addTodo() {
-        const trimmed = title.trim();
-        if (!trimmed) return;
-
-        setTodos(prev => [
-            ...prev,
-            {id: crypto.randomUUID(), title: trimmed, done: false},
-        ]);
-        setTitle("");
-    }
-
-    function toggleTodo(id: string) {
-        setTodos(prev => prev.map(t => (t.id === id ? {...t, done: !t.done} : t)));
-    }
-
-    function removeTodo(id: string) {
-        setTodos(prev => prev.filter(t => t.id !== id));
-    }
-
-    return (
-        <div>
-            <form
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    addTodo();
-                }}
-            >
-                <input
-                    value={title}
-                    onChange={(e) => setTitle(e.currentTarget.value)}
-                    placeholder="New todo…"
-                />
-                <button type="submit">Add</button>
-            </form>
-
-            <ul>
-                {todos.map(t => (
-                    <TodoRow
-                        key={t.id}
-                        todo={t}
-                        onToggle={toggleTodo}
-                        onRemove={removeTodo}
-                    />
-                ))}
-            </ul>
-        </div>
-    );
-}
-
-type TodoRowProps = {
-    todo: Todo;
-    onToggle: (id: string) => void;
-    onRemove: (id: string) => void;
-};
-
-function TodoRow({todo, onToggle, onRemove}: TodoRowProps) {
-    return (
-        <li>
-            <label>
-                <input
-                    type="checkbox"
-                    checked={todo.done}
-                    onChange={() => onToggle(todo.id)}
-                />
-                {todo.title}
-            </label>
-
-            <button type="button" onClick={() => onRemove(todo.id)}>
-                - Remove
-            </button>
-        </li>
-    );
-}

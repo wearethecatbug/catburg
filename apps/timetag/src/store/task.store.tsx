@@ -13,6 +13,7 @@ import {
   Task,
   PomodoroConfig,
   Reminder,
+  TASK_NOTE_MAX_LENGTH,
   TaskPriority,
   TaskStatus,
   TimerMode,
@@ -99,6 +100,7 @@ const initialState: TaskState = {
 
 function createTask(input: CreateTaskInput): Task {
   const now = new Date().toISOString();
+  const note = typeof input.note === 'string' ? input.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) : '';
 
   // For deadline mode: calculate remainingSec from targetAt
   // For other modes: use durationSec with default fallback
@@ -121,6 +123,7 @@ function createTask(input: CreateTaskInput): Task {
   return {
     id: generateId(),
     title: input.title,
+    note: note || undefined,
     workspace: input.workspace ?? 'work',
     status: 'active',
     priority: input.priority ?? 'normal',
@@ -195,10 +198,12 @@ function normalizeHydratedTasks(tasks: unknown[]): Task[] {
       typeof raw.originalDurationSec === 'number' && Number.isFinite(raw.originalDurationSec)
         ? raw.originalDurationSec
         : remainingSec;
+    const note = typeof raw.note === 'string' ? raw.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) : '';
 
     return [{
       id: typeof raw.id === 'string' && raw.id.trim() ? raw.id : generateId(),
       title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Untitled task',
+      note: note || undefined,
       workspace: typeof raw.workspace === 'string' ? (raw.workspace as WorkspaceType) : 'work',
       status: isTaskStatus(raw.status) ? raw.status : 'active',
       priority: isTaskPriority(raw.priority) ? raw.priority : 'normal',

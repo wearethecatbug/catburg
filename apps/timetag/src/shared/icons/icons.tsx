@@ -116,6 +116,28 @@ export function ClipboardIcon(props: IconProps) {
   );
 }
 
+export function NoteIcon(props: IconProps) {
+  return (
+    <IconBase {...props} stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.7}
+        d="M8 4.5h6.5l4 4V18a2.5 2.5 0 01-2.5 2.5H8A2.5 2.5 0 015.5 18V7A2.5 2.5 0 018 4.5z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M14.5 4.8V9h4.2" />
+      <path strokeLinecap="round" strokeWidth={1.6} d="M9 11h5.5" />
+      <path strokeLinecap="round" strokeWidth={1.6} d="M9 14h4.5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.6}
+        d="M13.4 16.8l3.9-3.9a1.06 1.06 0 011.5 0l.7.7a1.06 1.06 0 010 1.5l-3.9 3.9-2.4.5z"
+      />
+    </IconBase>
+  );
+}
+
 export function SunIcon(props: IconProps) {
   return (
     <IconBase {...props}>

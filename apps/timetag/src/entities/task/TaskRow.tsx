@@ -10,6 +10,7 @@ import {
   Checkbox,
   CheckIcon,
   MoreVerticalIcon,
+  NoteIcon,
   TimerRingButton,
 } from '@/shared';
 import { formatTimeBadge } from '@/domain/helpers';
@@ -39,8 +40,24 @@ export function TaskRow({
                           onRestore,
                           onDelete,
                         }: TaskRowProps) {
+  const notePreviewRef = React.useRef<HTMLSpanElement | null>(null);
+  const noteTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const notePopoverId = React.useId();
+  const [isNoteHovered, setIsNoteHovered] = React.useState(false);
+  const [isNoteFocused, setIsNoteFocused] = React.useState(false);
+  const [isNotePinned, setIsNotePinned] = React.useState(false);
+  const [suppressTransientPreview, setSuppressTransientPreview] = React.useState(false);
+
+  const preventMouseFocus = (event: React.MouseEvent<HTMLSpanElement>) => {
+    event.preventDefault();
+  };
+
   const isTimerDisabled = task.status !== 'active';
-  
+  const trimmedNote = task.note?.trim() ?? '';
+  const hasNote = Boolean(trimmedNote);
+  const notePreview = hasNote ? trimmedNote.split(/\r?\n/, 1)[0] : '';
+  const isNotePreviewOpen = hasNote && (isNotePinned || (!suppressTransientPreview && (isNoteHovered || isNoteFocused)));
+
   // Calculate urgency level for timer ring visualization
   const urgency = getUrgencyLevel(task);
 
@@ -76,6 +93,39 @@ export function TaskRow({
     return timeDisplay.full;
   };
 
+  const handleNoteToggle = () => {
+    setIsNotePinned((prev) => {
+      const next = !prev;
+      setSuppressTransientPreview(!next);
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    if (!isNotePinned) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!notePreviewRef.current?.contains(event.target as Node)) {
+        setIsNotePinned(false);
+        setSuppressTransientPreview(true);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setIsNotePinned(false);
+      setSuppressTransientPreview(true);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isNotePinned]);
+
   return (
       <div
           className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
@@ -102,26 +152,92 @@ export function TaskRow({
           {task.status === 'done' && <CheckIcon size="xs" />}
         </button>
 
-        <span
-            className={`flex-1 flex items-center gap-2 min-w-0 text-sm ${
-                task.status === 'done'
-                    ? 'text-gray-400 line-through'
-                    : task.status === 'archived'
-                        ? 'text-gray-400'
-                        : 'text-gray-900'
-            }`}
-        >
-          {task.priority === 'urgent' && (
-              <span
-                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-white text-[11px] font-bold leading-none"
-                  title="Urgent"
-                  aria-label="Urgent priority"
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 text-sm">
+            {task.priority === 'urgent' && (
+                <span
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-white text-[11px] font-bold leading-none"
+                    title="Urgent"
+                    aria-label="Urgent priority"
+                >
+                  !
+                </span>
+            )}
+            {hasNote && (
+                <span
+                    ref={notePreviewRef}
+                    className="relative inline-flex shrink-0"
+                    onMouseEnter={() => {
+                      setIsNoteHovered(true);
+                      setSuppressTransientPreview(false);
+                    }}
+                    onMouseLeave={() => {
+                      setIsNoteHovered(false);
+                      setSuppressTransientPreview(false);
+                    }}
+                >
+                  <button
+                      ref={noteTriggerRef}
+                      type="button"
+                      tabIndex={0}
+                      onMouseDown={preventMouseFocus}
+                      onFocus={() => {
+                        setIsNoteFocused(true);
+                        setSuppressTransientPreview(false);
+                      }}
+                      onBlur={() => {
+                        setIsNoteFocused(false);
+                        setSuppressTransientPreview(false);
+                      }}
+                      onClick={handleNoteToggle}
+                      className={`inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
+                        isNotePreviewOpen ? 'text-gray-600' : 'text-gray-400 hover:text-gray-600 focus:text-gray-600'
+                      }`}
+                      aria-label="Task note preview"
+                      aria-expanded={isNotePreviewOpen}
+                      aria-controls={notePopoverId}
+                  >
+                    <NoteIcon size="sm" />
+                  </button>
+                  {isNotePreviewOpen && (
+                      <span
+                          id={notePopoverId}
+                          className="absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-gray-200 bg-white p-2 text-xs leading-5 text-gray-700 shadow-lg"
+                      >
+                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                          Note
+                        </span>
+                        <span className="block whitespace-pre-wrap break-words">{trimmedNote}</span>
+                      </span>
+                  )}
+                </span>
+            )}
+            <span
+                className={`truncate ${
+                    task.status === 'done'
+                        ? 'text-gray-400 line-through'
+                        : task.status === 'archived'
+                            ? 'text-gray-400'
+                            : 'text-gray-900'
+                }`}
+            >
+              {task.title}
+            </span>
+          </div>
+
+          {hasNote && (
+              <div
+                  className={`mt-0.5 truncate pr-2 text-xs ${
+                      task.status === 'archived'
+                          ? 'text-gray-400'
+                          : 'text-gray-500'
+                  }`}
+                  title={trimmedNote}
               >
-                !
-              </span>
+                {notePreview}
+              </div>
           )}
-          <span className="truncate">{task.title}</span>
-        </span>
+        </div>
 
         <TimerRingButton
             isRunning={task.timerStatus === 'running'}
