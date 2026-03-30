@@ -12,6 +12,7 @@ import {
   MoreVerticalIcon,
   NoteIcon,
   TimerRingButton,
+  UrgentWarningIcon,
 } from '@/shared';
 import { useSettings } from '@/store';
 import { formatTimeBadge } from '@/domain/helpers';
@@ -157,11 +158,11 @@ export function TaskRow({
           <div className="flex items-center gap-2 min-w-0 text-sm">
             {settings.general.showUrgencyIndicator && task.priority === 'urgent' && (
                 <span
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black text-white text-[11px] font-bold leading-none"
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center"
                     title="Urgent"
                     aria-label="Urgent priority"
                 >
-                  !
+                  <UrgentWarningIcon size="md" aria-hidden />
                 </span>
             )}
             {hasNote && (
