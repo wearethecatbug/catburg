@@ -1,36 +1,15 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import type { WorkspaceType } from '@/domain/task.types';
-import { generateId } from '@/domain/helpers';
-import { useTasks } from '@/store';
-import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
-
-type WorkspaceTab = { id: WorkspaceType; label: string };
-
-// Default user tabs (these are defaults and can be removed by user)
-const DEFAULT_USER_WORKSPACES: WorkspaceTab[] = [
-  { id: 'work', label: 'Work' },
-  { id: 'home', label: 'Home' },
-];
-
-// 'All' is a special, functional tab — always present
-const ALL_TAB = { id: 'all' as WorkspaceType, label: 'All' };
-
-/**
- * Simple slug generator for workspace id from label
- */
-function slugify(label: string) {
-  return label.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '');
-}
-
-function createWorkspaceId(label: string): WorkspaceType {
-  const slug = slugify(label);
-  if (slug) return slug;
-
-  // Fallback for labels that contain no latin letters/digits.
-  return `ws-${generateId()}`;
-}
+import type { AssignableWorkspaceType } from '@/domain/task.types';
+import {
+  ALL_WORKSPACE_TAB,
+  createWorkspaceId,
+  getSafeDefaultWorkspace,
+  type WorkspaceTab,
+} from '@/domain/workspace';
+import { useSettings, useTasks } from '@/store';
+import { usePersistedWorkspaces } from '@/shared';
 
 /**
  * WorkspaceSwitch — renders user-manageable workspace tabs + All + add-button.
@@ -38,12 +17,8 @@ function createWorkspaceId(label: string): WorkspaceType {
  */
 export function WorkspaceSwitch() {
   const { state, setWorkspace } = useTasks();
-
-  // Use the SSR-safe localStorage hook
-  const [userWorkspaces, setUserWorkspaces] = useLocalStorage<WorkspaceTab[]>(
-      'timetag-workspaces',
-      DEFAULT_USER_WORKSPACES
-  );
+  const { settings, updateGeneral } = useSettings();
+  const { workspaces: userWorkspaces, setWorkspaces: setUserWorkspaces } = usePersistedWorkspaces();
 
   // Track if component is mounted (client-side) to prevent flash
   const [isMounted, setIsMounted] = useState(false);
@@ -58,7 +33,7 @@ export function WorkspaceSwitch() {
 
 
   // Combined tabs for rendering: user tabs (order preserved) + All tab
-  const tabs = [ ALL_TAB, ...userWorkspaces];
+  const tabs = [ALL_WORKSPACE_TAB, ...userWorkspaces];
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {
@@ -105,15 +80,19 @@ export function WorkspaceSwitch() {
 
   // Remove workspace (only from userWorkspaces, cannot remove 'all')
   const handleRemove = useCallback(
-      (id: WorkspaceType) => {
+      (id: AssignableWorkspaceType) => {
         const next = userWorkspaces.filter((w) => w.id !== id);
         setUserWorkspaces(next);
         // if removed one was active, fallback to 'all'
         if (state.workspace === id) {
           setWorkspace('all');
         }
+
+        if (settings.general.defaultWorkspace === id) {
+          updateGeneral({ defaultWorkspace: getSafeDefaultWorkspace(next, undefined) });
+        }
       },
-      [userWorkspaces, setUserWorkspaces, state.workspace, setWorkspace],
+      [settings.general.defaultWorkspace, setUserWorkspaces, setWorkspace, state.workspace, updateGeneral, userWorkspaces],
   );
 
   return (
@@ -145,7 +124,7 @@ export function WorkspaceSwitch() {
                       </button>
 
                       {/* render remove control for user-owned tabs (not All) */}
-                      {ws.id !== ALL_TAB.id && (
+                      {ws.id !== ALL_WORKSPACE_TAB.id && (
                           <button
                               type="button"
                               aria-label={`Remove workspace ${ws.label}`}
