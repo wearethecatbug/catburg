@@ -18,7 +18,6 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <title>TimeTag - Task Timer</title>
         <script dangerouslySetInnerHTML={{ __html: getThemeInitScript(SETTINGS_STORAGE_KEY) }} />
       </head>
       <body suppressHydrationWarning>

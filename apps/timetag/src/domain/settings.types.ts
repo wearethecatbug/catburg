@@ -107,8 +107,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     },
     deadlineDefaults: {
       presetId: '1d',
-      // @eslint-disable-next-line no-magic-numbers
-      offsetSec: 1 * 86400,
+      offsetSec: 86400,
     },
     hiddenDurationPresetIds: [],
     hiddenPomodoroPresetIds: [],

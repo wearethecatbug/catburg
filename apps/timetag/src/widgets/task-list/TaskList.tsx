@@ -51,7 +51,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="divide-y" style={{ borderColor: 'var(--tt-border)' }}>
+      <div className="divide-y divide-[var(--tt-border)]">
         {visibleTasks.map((task) => (
           <TaskRow
             key={task.id}
