@@ -27,6 +27,7 @@ import { applyPipeline } from '@/domain/task.pipeline';
 import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
 import { generateId } from '@/domain/helpers';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
+import { useSettings } from './settings.store';
 
 // ============================================================================
 // State
@@ -48,11 +49,11 @@ interface TaskState {
 
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
-  | { type: 'ADD_TASK'; payload: CreateTaskInput }
+  | { type: 'ADD_TASK'; payload: { input: CreateTaskInput; nowIso: string; pauseOthers: boolean } }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'DELETE_SELECTED' }
-  | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string } }
+  | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
   | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
   | { type: 'TICK_TIMERS' }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
@@ -60,7 +61,7 @@ type TaskAction =
   | { type: 'SET_SORT'; payload: SortState }
   | { type: 'SET_SEARCH'; payload: string }
   | { type: 'TOGGLE_SELECT'; payload: string }
-  | { type: 'SELECT_ALL' }
+  | { type: 'SELECT_ALL'; payload: { showCompletedTasks: boolean } }
   | { type: 'CLEAR_SELECTION' }
   | { type: 'PAUSE_SELECTED' }
   | { type: 'PLAY_SELECTED' }
@@ -98,8 +99,7 @@ const initialState: TaskState = {
 // Task Factory
 // ============================================================================
 
-function createTask(input: CreateTaskInput): Task {
-  const now = new Date().toISOString();
+function createTask(input: CreateTaskInput, now: string): Task {
   const note = typeof input.note === 'string' ? input.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) : '';
 
   // For deadline mode: calculate remainingSec from targetAt
@@ -143,6 +143,14 @@ function createTask(input: CreateTaskInput): Task {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+function pauseOtherRunningTasks(tasks: Task[], activeId: string, nowIso: string): Task[] {
+  return tasks.map((task) => (
+    task.id !== activeId && task.timerStatus === 'running'
+      ? { ...task, timerStatus: 'paused' as TimerStatus, updatedAt: nowIso }
+      : task
+  ));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -237,8 +245,15 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     case 'SET_TASKS':
       return { ...state, tasks: action.payload };
 
-    case 'ADD_TASK':
-      return { ...state, tasks: [createTask(action.payload), ...state.tasks] };
+    case 'ADD_TASK': {
+      const nextTask = createTask(action.payload.input, action.payload.nowIso);
+      const nextTasks =
+        nextTask.timerStatus === 'running' && action.payload.pauseOthers
+          ? pauseOtherRunningTasks(state.tasks, nextTask.id, action.payload.nowIso)
+          : state.tasks;
+
+      return { ...state, tasks: [nextTask, ...nextTasks] };
+    }
 
     case 'UPDATE_TASK': {
       const { id, updates } = action.payload;
@@ -271,13 +286,26 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     }
 
     // Timer actions — delegated to domain/timer.logic
-    case 'TOGGLE_TIMER':
+    case 'TOGGLE_TIMER': {
+      const targetTask = state.tasks.find((task) => task.id === action.payload.id);
+      if (!targetTask) return state;
+
+      const patch = toggleTimerState(targetTask, action.payload.nowIso);
+      const nextTimerStatus = (patch.timerStatus ?? targetTask.timerStatus) as TimerStatus;
+
+      let nextTasks = state.tasks.map((task) => (
+        task.id === action.payload.id ? { ...task, ...patch } : task
+      ));
+
+      if (action.payload.pauseOthers && nextTimerStatus === 'running') {
+        nextTasks = pauseOtherRunningTasks(nextTasks, action.payload.id, action.payload.nowIso);
+      }
+
       return {
         ...state,
-        tasks: state.tasks.map((t) =>
-            t.id === action.payload.id ? { ...t, ...toggleTimerState(t, action.payload.nowIso) } : t,
-        ),
+        tasks: nextTasks,
       };
+    }
 
     case 'RESET_TIMER':
       return {
@@ -323,6 +351,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         filter: state.filter,
         sort: state.sort,
         searchQuery: state.searchQuery,
+        showCompletedTasks: action.payload.showCompletedTasks,
       };
       const visible = applyPipeline(state.tasks, query);
       return { ...state, selectedIds: new Set(visible.map((t) => t.id)) };
@@ -431,6 +460,7 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 // ============================================================================
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
+  const { settings } = useSettings();
   const [savedTasks, setSavedTasks, isSavedTasksHydrated] =
     useLocalStorage<Task[]>('timetag-tasks', []);
 
@@ -482,22 +512,40 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         filter: state.filter,
         sort: state.sort,
         searchQuery: state.searchQuery,
+        showCompletedTasks: settings.general.showCompletedTasks,
       }),
-    [state],
+    [settings.general.showCompletedTasks, state],
   );
 
+  const shouldPauseOtherTimers = settings.general.autoPauseOtherTimers || !settings.timer.allowMultipleTimers;
+
   // Convenience dispatchers
-  const addTask = useCallback((input: CreateTaskInput) => dispatch({ type: 'ADD_TASK', payload: input }), []);
+  const addTask = useCallback(
+    (input: CreateTaskInput) => dispatch({
+      type: 'ADD_TASK',
+      payload: { input, nowIso: new Date().toISOString(), pauseOthers: shouldPauseOtherTimers },
+    }),
+    [shouldPauseOtherTimers],
+  );
   const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates } }), []);
   const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
-  const toggleTimer = useCallback((id: string) => dispatch({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const toggleTimer = useCallback(
+    (id: string) => dispatch({
+      type: 'TOGGLE_TIMER',
+      payload: { id, nowIso: new Date().toISOString(), pauseOthers: shouldPauseOtherTimers },
+    }),
+    [shouldPauseOtherTimers],
+  );
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
   const setWorkspace = useCallback((ws: WorkspaceType) => dispatch({ type: 'SET_WORKSPACE', payload: ws }), []);
   const setFilter = useCallback((f: Partial<FilterState>) => dispatch({ type: 'SET_FILTER', payload: f }), []);
   const setSort = useCallback((s: SortState) => dispatch({ type: 'SET_SORT', payload: s }), []);
   const setSearch = useCallback((q: string) => dispatch({ type: 'SET_SEARCH', payload: q }), []);
   const toggleSelect = useCallback((id: string) => dispatch({ type: 'TOGGLE_SELECT', payload: id }), []);
-  const selectAll = useCallback(() => dispatch({ type: 'SELECT_ALL' }), []);
+  const selectAll = useCallback(
+    () => dispatch({ type: 'SELECT_ALL', payload: { showCompletedTasks: settings.general.showCompletedTasks } }),
+    [settings.general.showCompletedTasks],
+  );
   const clearSelection = useCallback(() => dispatch({ type: 'CLEAR_SELECTION' }), []);
   const deleteSelected = useCallback(() => dispatch({ type: 'DELETE_SELECTED' }), []);
   const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED' }), []);

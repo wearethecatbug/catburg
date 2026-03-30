@@ -2,6 +2,20 @@
 
 import React, { createContext, useCallback, useContext, useMemo } from 'react';
 import {
+  clampDurationSec,
+  filterDurationPresetIds,
+  getVisibleDurationPresetById,
+} from '@/domain/duration';
+import { isDurationPresetId } from '@/domain/duration';
+import {
+  clampDeadlineOffsetSec,
+  filterDeadlinePresetIds,
+  filterPomodoroPresetIds,
+  getVisibleDeadlinePresetById,
+  getVisiblePomodoroPresetById,
+} from '@/domain/timer.presets';
+import { isAssignableWorkspaceType } from '@/domain/workspace';
+import {
   AppSettings,
   DEFAULT_SETTINGS,
   OvertimeBehavior,
@@ -19,6 +33,7 @@ interface SettingsContextValue {
   updateGeneral: (patch: Partial<GeneralSettings>) => void;
   updateTimer: (patch: Partial<TimerSettings>) => void;
   updateAppearance: (patch: Partial<AppearanceSettings>) => void;
+  replaceSettings: (next: AppSettings) => void;
   resetSettings: () => void;
   isHydrated: boolean;
 }
@@ -30,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isDefaultTaskView(value: unknown): value is DefaultTaskView {
-  return value === 'active' || value === 'done' || value === 'archived' || value === 'all';
+  return value === 'active' || value === 'all';
 }
 
 function isThemeMode(value: unknown): value is ThemeMode {
@@ -52,21 +67,55 @@ function normalizeSettings(raw: unknown): AppSettings {
   const general = isRecord(raw.general) ? raw.general : {};
   const timer = isRecord(raw.timer) ? raw.timer : {};
   const appearance = isRecord(raw.appearance) ? raw.appearance : {};
+  const legacyDefaultTimerPreset = isDurationPresetId(general.defaultTimerPreset)
+    ? general.defaultTimerPreset
+    : undefined;
+  const durationDefaults = isRecord(timer.durationDefaults) ? timer.durationDefaults : {};
+  const pomodoroDefaults = isRecord(timer.pomodoroDefaults) ? timer.pomodoroDefaults : {};
+  const deadlineDefaults = isRecord(timer.deadlineDefaults) ? timer.deadlineDefaults : {};
+  const hiddenDurationPresetIds = filterDurationPresetIds(timer.hiddenDurationPresetIds);
+  const hiddenPomodoroPresetIds = filterPomodoroPresetIds(timer.hiddenPomodoroPresetIds);
+  const hiddenDeadlinePresetIds = filterDeadlinePresetIds(timer.hiddenDeadlinePresetIds);
+  const resolvedDurationPreset = getVisibleDurationPresetById(
+    durationDefaults.presetId ?? legacyDefaultTimerPreset,
+    hiddenDurationPresetIds,
+  );
+  const resolvedPomodoroPreset = getVisiblePomodoroPresetById(
+    pomodoroDefaults.presetId,
+    hiddenPomodoroPresetIds,
+  );
+  const resolvedDeadlinePreset = getVisibleDeadlinePresetById(
+    deadlineDefaults.presetId,
+    hiddenDeadlinePresetIds,
+  );
 
   return {
-    version: 1,
+    version: 2,
     general: {
+      autoStartTimerWhenTaskCreated:
+        typeof general.autoStartTimerWhenTaskCreated === 'boolean'
+          ? general.autoStartTimerWhenTaskCreated
+          : DEFAULT_SETTINGS.general.autoStartTimerWhenTaskCreated,
+      autoPauseOtherTimers:
+        typeof general.autoPauseOtherTimers === 'boolean'
+          ? general.autoPauseOtherTimers
+          : DEFAULT_SETTINGS.general.autoPauseOtherTimers,
       confirmBeforeDelete:
         typeof general.confirmBeforeDelete === 'boolean'
           ? general.confirmBeforeDelete
           : DEFAULT_SETTINGS.general.confirmBeforeDelete,
-      defaultWorkspace:
-        general.defaultWorkspace === 'work' || general.defaultWorkspace === 'home'
-          ? general.defaultWorkspace
-          : DEFAULT_SETTINGS.general.defaultWorkspace,
-      defaultTaskViewOnStartup: isDefaultTaskView(general.defaultTaskViewOnStartup)
-        ? general.defaultTaskViewOnStartup
-        : DEFAULT_SETTINGS.general.defaultTaskViewOnStartup,
+      defaultWorkspace: isAssignableWorkspaceType(general.defaultWorkspace)
+        ? general.defaultWorkspace
+        : DEFAULT_SETTINGS.general.defaultWorkspace,
+      defaultTaskView: isDefaultTaskView(general.defaultTaskView)
+        ? general.defaultTaskView
+        : isDefaultTaskView(general.defaultTaskViewOnStartup)
+          ? general.defaultTaskViewOnStartup
+          : DEFAULT_SETTINGS.general.defaultTaskView,
+      showCompletedTasks:
+        typeof general.showCompletedTasks === 'boolean'
+          ? general.showCompletedTasks
+          : DEFAULT_SETTINGS.general.showCompletedTasks,
       showUrgencyIndicator:
         typeof general.showUrgencyIndicator === 'boolean'
           ? general.showUrgencyIndicator
@@ -92,6 +141,49 @@ function normalizeSettings(raw: unknown): AppSettings {
         typeof timer.showSecondsInTimer === 'boolean'
           ? timer.showSecondsInTimer
           : DEFAULT_SETTINGS.timer.showSecondsInTimer,
+      durationDefaults: {
+        presetId: resolvedDurationPreset.id,
+        durationSec: clampDurationSec(
+          typeof durationDefaults.durationSec === 'number'
+            ? durationDefaults.durationSec
+            : resolvedDurationPreset.durationSec,
+        ),
+      },
+      pomodoroDefaults: {
+        presetId: resolvedPomodoroPreset.id,
+        cycles: clampNumber(pomodoroDefaults.cycles, resolvedPomodoroPreset.cycles, 1, 12),
+        workDurationMin: clampNumber(
+          pomodoroDefaults.workDurationMin,
+          resolvedPomodoroPreset.workDurationMin,
+          1,
+          240,
+        ),
+        shortBreakMin: clampNumber(
+          pomodoroDefaults.shortBreakMin,
+          resolvedPomodoroPreset.shortBreakMin,
+          1,
+          120,
+        ),
+        longBreakMin: clampNumber(
+          pomodoroDefaults.longBreakMin,
+          resolvedPomodoroPreset.longBreakMin,
+          1,
+          180,
+        ),
+      },
+      deadlineDefaults: {
+        presetId: resolvedDeadlinePreset.id,
+        offsetSec: clampDeadlineOffsetSec(
+          typeof deadlineDefaults.offsetSec === 'number'
+            ? deadlineDefaults.offsetSec
+            : typeof deadlineDefaults.days === 'number'
+              ? deadlineDefaults.days * 86400
+              : resolvedDeadlinePreset.offsetSec,
+        ),
+      },
+      hiddenDurationPresetIds,
+      hiddenPomodoroPresetIds,
+      hiddenDeadlinePresetIds,
     },
     appearance: {
       themeMode: isThemeMode(appearance.themeMode)
@@ -150,6 +242,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [setStoredSettings]);
 
+  const replaceSettings = useCallback((next: AppSettings) => {
+    setStoredSettings(normalizeSettings(next));
+  }, [setStoredSettings]);
+
   const resetSettings = useCallback(() => {
     setStoredSettings(DEFAULT_SETTINGS);
   }, [setStoredSettings]);
@@ -160,10 +256,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       updateGeneral,
       updateTimer,
       updateAppearance,
+      replaceSettings,
       resetSettings,
       isHydrated,
     }),
-    [settings, updateGeneral, updateTimer, updateAppearance, resetSettings, isHydrated],
+    [settings, updateGeneral, updateTimer, updateAppearance, replaceSettings, resetSettings, isHydrated],
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
