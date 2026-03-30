@@ -148,19 +148,33 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-[1px]" role="dialog" aria-modal="true" aria-label="Settings">
+    <div
+      className="fixed inset-0 z-50 flex justify-end backdrop-blur-[1px]"
+      style={{ background: 'var(--tt-overlay)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+    >
       <button type="button" className="flex-1 cursor-default" aria-label="Close settings overlay" onClick={handleCancel} />
-      <div className="flex h-full w-full max-w-5xl overflow-hidden bg-white shadow-2xl">
+      <div
+        className="flex h-full w-full max-w-5xl overflow-hidden shadow-2xl"
+        style={{
+          background: 'var(--tt-surface-elevated)',
+          boxShadow: 'var(--tt-shadow)',
+          backdropFilter: 'blur(18px) saturate(1.08)',
+        }}
+      >
         <SettingsSidebar activeSection={activeSection} onChange={setActiveSection} onClose={handleCancel} />
-        <div className="flex min-w-0 flex-1 flex-col bg-white">
-          <div className="flex items-start justify-between border-b border-violet-100 px-8 py-6">
+        <div className="flex min-w-0 flex-1 flex-col" style={{ background: 'var(--tt-surface-elevated)' }}>
+          <div className="flex items-start justify-between border-b px-8 py-6" style={{ borderColor: 'var(--tt-border)' }}>
             <div>
-              <h2 className="mt-1 text-2xl font-semibold text-gray-900">{activeSectionLabel}</h2>
+              <h2 className="mt-1 text-2xl font-semibold" style={{ color: 'var(--tt-text)' }}>{activeSectionLabel}</h2>
             </div>
             <button
               type="button"
               onClick={handleCancel}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
+              style={{ color: 'var(--tt-text-soft)' }}
               aria-label="Close settings"
               title="Close"
             >
@@ -172,11 +186,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             <div className="space-y-6">{renderSection()}</div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-violet-100 bg-white px-8 py-4">
+          <div className="flex items-center justify-between border-t px-8 py-4" style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface)' }}>
             <button
               type="button"
               onClick={handleResetDraft}
-              className="rounded-md px-3 py-2 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+              className="rounded-md px-3 py-2 text-sm transition-colors"
+              style={{ color: 'var(--tt-text-muted)' }}
             >
               Reset
             </button>
@@ -184,7 +199,12 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                className="rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors"
+                style={{
+                  borderColor: 'var(--tt-border)',
+                  color: 'var(--tt-text)',
+                  background: 'var(--tt-surface-subtle)',
+                }}
               >
                 Cancel
               </button>
@@ -192,7 +212,11 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 type="button"
                 onClick={handleSave}
                 disabled={!isDirty}
-                className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-violet-300"
+                className="rounded-xl px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed"
+                style={{
+                  background: isDirty ? 'var(--tt-accent)' : 'var(--tt-accent-soft)',
+                  color: isDirty ? 'var(--tt-accent-contrast)' : 'var(--tt-text-soft)',
+                }}
               >
                 Save
               </button>

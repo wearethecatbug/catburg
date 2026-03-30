@@ -133,6 +133,10 @@ export function TaskRow({
           className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
               isSelected ? 'bg-blue-50' : ''
           }`}
+          style={{
+            borderColor: 'var(--tt-border)',
+            background: isSelected ? 'var(--tt-accent-soft)' : 'transparent',
+          }}
       >
         <Checkbox
             checked={isSelected}
@@ -191,9 +195,8 @@ export function TaskRow({
                         setSuppressTransientPreview(false);
                       }}
                       onClick={handleNoteToggle}
-                      className={`inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
-                        isNotePreviewOpen ? 'text-gray-600' : 'text-gray-400 hover:text-gray-600 focus:text-gray-600'
-                      }`}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-1"
+                      style={{ color: isNotePreviewOpen ? 'var(--tt-text-muted)' : 'var(--tt-text-soft)' }}
                       aria-label="Task note preview"
                       aria-expanded={isNotePreviewOpen}
                       aria-controls={notePopoverId}
@@ -203,9 +206,15 @@ export function TaskRow({
                   {isNotePreviewOpen && (
                       <span
                           id={notePopoverId}
-                          className="absolute left-0 top-full z-20 mt-2 w-64 rounded-md border border-gray-200 bg-white p-2 text-xs leading-5 text-gray-700 shadow-lg"
+                          className="absolute left-0 top-full z-20 mt-2 w-64 rounded-md border p-2 text-xs leading-5 shadow-lg"
+                          style={{
+                            borderColor: 'var(--tt-border)',
+                            background: 'var(--tt-surface-elevated)',
+                            color: 'var(--tt-text)',
+                            boxShadow: 'var(--tt-shadow)',
+                          }}
                       >
-                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--tt-text-muted)' }}>
                           Note
                         </span>
                         <span className="block whitespace-pre-wrap break-words">{trimmedNote}</span>
@@ -219,8 +228,9 @@ export function TaskRow({
                         ? 'text-gray-400 line-through'
                         : task.status === 'archived'
                             ? 'text-gray-400'
-                            : 'text-gray-900'
+                            : ''
                 }`}
+                style={task.status === 'done' || task.status === 'archived' ? undefined : { color: 'var(--tt-text)' }}
             >
               {task.title}
             </span>
@@ -231,8 +241,9 @@ export function TaskRow({
                   className={`mt-0.5 truncate pr-2 text-xs ${
                       task.status === 'archived'
                           ? 'text-gray-400'
-                          : 'text-gray-500'
+                          : ''
                   }`}
+                  style={task.status === 'archived' ? undefined : { color: 'var(--tt-text-muted)' }}
                   title={trimmedNote}
               >
                 {notePreview}
@@ -271,7 +282,7 @@ export function TaskRow({
 
         <Dropdown
             trigger={
-              <span className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+              <span className="rounded-lg p-1.5" style={{ color: 'var(--tt-text-soft)' }}>
             <MoreVerticalIcon size="sm" aria-label="Task options" />
           </span>
             }

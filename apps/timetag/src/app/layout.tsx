@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ThemeController } from './ThemeController';
+import { getThemeInitScript } from '@/domain/theme';
+import { SETTINGS_STORAGE_KEY } from '@/domain/settings.types';
 import { SettingsProvider, TaskProvider } from '@/store';
 
 export const metadata: Metadata = {
@@ -13,9 +16,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <title>TimeTag - Task Timer</title>
+        <script dangerouslySetInnerHTML={{ __html: getThemeInitScript(SETTINGS_STORAGE_KEY) }} />
+      </head>
+      <body suppressHydrationWarning>
         <SettingsProvider>
+          <ThemeController />
           <TaskProvider>{children}</TaskProvider>
         </SettingsProvider>
       </body>

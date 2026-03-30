@@ -20,12 +20,12 @@ import {
   DEFAULT_SETTINGS,
   OvertimeBehavior,
   SETTINGS_STORAGE_KEY,
-  ThemeMode,
   type AppearanceSettings,
   type DefaultTaskView,
   type GeneralSettings,
   type TimerSettings,
 } from '@/domain/settings.types';
+import { isThemeMode, normalizeCustomThemeSettings } from '@/domain/theme';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 
 interface SettingsContextValue {
@@ -48,10 +48,6 @@ function isDefaultTaskView(value: unknown): value is DefaultTaskView {
   return value === 'active' || value === 'all';
 }
 
-function isThemeMode(value: unknown): value is ThemeMode {
-  return value === 'light' || value === 'dark' || value === 'system';
-}
-
 function isOvertimeBehavior(value: unknown): value is OvertimeBehavior {
   return value === 'continue' || value === 'stop';
 }
@@ -67,6 +63,7 @@ function normalizeSettings(raw: unknown): AppSettings {
   const general = isRecord(raw.general) ? raw.general : {};
   const timer = isRecord(raw.timer) ? raw.timer : {};
   const appearance = isRecord(raw.appearance) ? raw.appearance : {};
+  const customTheme = normalizeCustomThemeSettings(appearance.customTheme);
   const legacyDefaultTimerPreset = isDurationPresetId(general.defaultTimerPreset)
     ? general.defaultTimerPreset
     : undefined;
@@ -90,7 +87,7 @@ function normalizeSettings(raw: unknown): AppSettings {
   );
 
   return {
-    version: 2,
+    version: 3,
     general: {
       autoStartTimerWhenTaskCreated:
         typeof general.autoStartTimerWhenTaskCreated === 'boolean'
@@ -189,6 +186,7 @@ function normalizeSettings(raw: unknown): AppSettings {
       themeMode: isThemeMode(appearance.themeMode)
         ? appearance.themeMode
         : DEFAULT_SETTINGS.appearance.themeMode,
+      customTheme,
       compactList:
         typeof appearance.compactList === 'boolean'
           ? appearance.compactList

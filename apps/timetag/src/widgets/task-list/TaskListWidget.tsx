@@ -85,14 +85,14 @@ export function TaskListWidget() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
+    <div className="flex h-screen flex-col bg-gray-100" style={{ background: 'var(--tt-app-bg)' }}>
       <Header onOpenSettings={() => setIsSettingsOpen(true)} />
       <WorkspaceSwitch />
       <StatusFilters />
 
-      <main className="flex-1 flex flex-col overflow-hidden bg-white">
+      <main className="flex-1 flex flex-col overflow-hidden bg-white" style={{ background: 'var(--tt-surface-elevated)' }}>
         {/* List Controls + Composer area */}
-        <div className="p-4 space-y-3 bg-white border-b border-gray-200">
+        <div className="space-y-3 border-b bg-white p-4" style={{ background: 'var(--tt-surface)', borderColor: 'var(--tt-border)' }}>
           {/* Add Task Input (Composer) */}
           <AddTaskInput ref={addInputRef} />
 

@@ -503,7 +503,12 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         placeholder="Add a new task..."
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                        style={{
+                            borderColor: 'var(--tt-border)',
+                            background: 'var(--tt-input-bg)',
+                            color: 'var(--tt-text)',
+                        }}
                         aria-label="Add a new task"
                     />
                 </div>
@@ -579,7 +584,12 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     <button
                         type="button"
                         onClick={() => setShowDetails((s) => !s)}
-                        className="flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm focus:outline-none"
+                        style={{
+                            borderColor: 'var(--tt-border)',
+                            background: 'var(--tt-surface-subtle)',
+                            color: 'var(--tt-text)',
+                        }}
                         aria-expanded={showDetails}
                         aria-controls="task-composer-details"
                         title="Show details"
@@ -591,7 +601,11 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                 <div className="flex-shrink-0">
                     <button
                         type="submit"
-                        className="flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium focus:outline-none"
+                        style={{
+                            background: 'var(--tt-accent)',
+                            color: 'var(--tt-accent-contrast)',
+                        }}
                         aria-label="Add task"
                         title="Add task"
                     >

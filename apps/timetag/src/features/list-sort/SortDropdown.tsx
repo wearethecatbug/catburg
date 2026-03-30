@@ -27,7 +27,14 @@ export function SortDropdown() {
   return (
     <Dropdown
       trigger={
-        <span className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+        <span
+          className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm"
+          style={{
+            color: 'var(--tt-text)',
+            background: 'var(--tt-surface-subtle)',
+            borderColor: 'var(--tt-border)',
+          }}
+        >
           <SortIcon size="sm" />
           {currentLabel}
           <ChevronDownIcon

@@ -22,10 +22,10 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4">
         <ClipboardIcon size="lg" color="text-gray-300" className="mb-4" />
-        <p className="text-gray-500 text-center">
+        <p className="text-center" style={{ color: 'var(--tt-text-muted)' }}>
           No tasks found.
           <br />
-          <span className="text-sm text-gray-400">Add a new task to get started!</span>
+          <span className="text-sm" style={{ color: 'var(--tt-text-soft)' }}>Add a new task to get started!</span>
         </p>
       </div>
     );
@@ -51,7 +51,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y" style={{ borderColor: 'var(--tt-border)' }}>
         {visibleTasks.map((task) => (
           <TaskRow
             key={task.id}
@@ -70,11 +70,15 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
 
       {/* Pagination Control */}
       {hasMore && (
-        <div className="flex justify-center py-4 border-t border-gray-100">
+        <div className="flex justify-center border-t py-4" style={{ borderColor: 'var(--tt-border)' }}>
           <button
             type="button"
             onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
-            className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
+            className="rounded-lg px-4 py-2 text-sm"
+            style={{
+              color: 'var(--tt-accent)',
+              background: 'var(--tt-accent-soft)',
+            }}
           >
             Show more ({filteredTasks.length - visibleCount} remaining)
           </button>

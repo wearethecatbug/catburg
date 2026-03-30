@@ -96,12 +96,21 @@ export function WorkspaceSwitch() {
   );
 
   return (
-      <div className="flex items-center border-b border-gray-200 px-2" role="tablist" aria-label="Workspaces">
+      <div
+        className="flex items-center border-b px-2"
+        role="tablist"
+        aria-label="Workspaces"
+        style={{
+          borderColor: 'var(--tt-border)',
+          background: 'var(--tt-surface-muted)',
+          backdropFilter: 'blur(16px) saturate(1.06)',
+        }}
+      >
         {!isMounted ? (
             // Skeleton loader during SSR/initial mount to prevent flash
             <>
-              <div className="px-4 py-2 h-10 w-16 bg-gray-100 animate-pulse rounded" />
-              <div className="ml-2 px-4 py-2 h-10 w-16 bg-gray-100 animate-pulse rounded" />
+              <div className="h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
+              <div className="ml-2 h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
             </>
         ) : (
             <>
@@ -116,9 +125,12 @@ export function WorkspaceSwitch() {
                           onClick={() => setWorkspace(ws.id)}
                           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
                               selected
-                                  ? 'border-blue-600 text-blue-600'
-                                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                   ? ''
+                                   : 'border-transparent'
                           }`}
+                           style={selected
+                             ? { borderColor: 'var(--tt-accent)', color: 'var(--tt-accent)' }
+                             : { color: 'var(--tt-text-muted)' }}
                       >
                         <span className="whitespace-nowrap">{ws.label}</span>
                       </button>
@@ -130,8 +142,8 @@ export function WorkspaceSwitch() {
                               aria-label={`Remove workspace ${ws.label}`}
                               title={`Remove ${ws.label}`}
                               onClick={() => handleRemove(ws.id)}
-                              className="ml-0 mr-1 text-gray-400 hover:text-red-500 focus:outline-none"
-                              style={{ lineHeight: 0 }}
+                              className="ml-0 mr-1 focus:outline-none"
+                              style={{ lineHeight: 0, color: 'var(--tt-text-soft)' }}
                           >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                               <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -150,7 +162,8 @@ export function WorkspaceSwitch() {
                         aria-label="Add workspace"
                         title="Add workspace"
                         onClick={handleToggleAdd}
-                        className="px-2 py-1 rounded text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-800"
+                        className="rounded px-2 py-1 text-sm"
+                        style={{ color: 'var(--tt-text-muted)' }}
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
@@ -158,7 +171,7 @@ export function WorkspaceSwitch() {
                     </button>
                   </div>
               ) : (
-                  <div className="ml-2 flex items-center gap-2 border-b-2 border-blue-600 pb-2">
+                  <div className="ml-2 flex items-center gap-2 border-b-2 pb-2" style={{ borderColor: 'var(--tt-accent)' }}>
                     <input
                         type="text"
                         value={newWorkspaceName}
@@ -166,15 +179,15 @@ export function WorkspaceSwitch() {
                         onKeyDown={handleKeyDown}
                         placeholder="Workspace name"
                         autoFocus
-                        className="px-2 py-1 text-sm text-gray-600 border-none outline-none bg-transparent"
-                        style={{ minWidth: '120px' }}
+                        className="border-none bg-transparent px-2 py-1 text-sm outline-none"
+                        style={{ minWidth: '120px', color: 'var(--tt-text)' }}
                     />
                     <button
                         type="button"
                         aria-label="Confirm add workspace"
                         title="Add"
                         onClick={handleConfirmAdd}
-                        className="text-blue-600 hover:text-blue-800"
+                        style={{ color: 'var(--tt-accent)' }}
                     >
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -185,7 +198,7 @@ export function WorkspaceSwitch() {
                         aria-label="Cancel add workspace"
                         title="Cancel"
                         onClick={handleCancelAdd}
-                        className="text-gray-400 hover:text-gray-600"
+                        style={{ color: 'var(--tt-text-soft)' }}
                     >
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -196,7 +209,7 @@ export function WorkspaceSwitch() {
 
               {/* Placeholder hint when no user workspaces and not adding */}
               {userWorkspaces.length === 0 && !isAdding && (
-                  <div className="ml-3 text-xs text-gray-400 italic">
+                  <div className="ml-3 text-xs italic" style={{ color: 'var(--tt-text-soft)' }}>
                     Click + to add workspace
                   </div>
               )}

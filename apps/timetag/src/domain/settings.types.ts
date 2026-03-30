@@ -1,8 +1,14 @@
 import type { DurationPresetId } from './duration';
 import type { DeadlinePresetId, PomodoroPresetId } from './timer.presets';
 import type { AssignableWorkspaceType, TimerMode } from './task.types';
+import {
+  DEFAULT_CUSTOM_THEME_SETTINGS,
+  type CustomThemeSettings,
+  type ThemeMode,
+} from './theme';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type { CustomThemeOverrides, CustomThemePresetId, CustomThemeSettings, ThemeMode } from './theme';
+
 export type DefaultTaskView = 'active' | 'all';
 export type OvertimeBehavior = 'continue' | 'stop';
 
@@ -55,6 +61,7 @@ export interface TimerSettings {
 
 export interface AppearanceSettings {
   themeMode: ThemeMode;
+  customTheme: CustomThemeSettings;
   compactList: boolean;
   animationsEnabled: boolean;
   roundedCorners: number;
@@ -62,7 +69,7 @@ export interface AppearanceSettings {
 }
 
 export interface AppSettings {
-  version: 2;
+  version: 3;
   general: GeneralSettings;
   timer: TimerSettings;
   appearance: AppearanceSettings;
@@ -71,7 +78,7 @@ export interface AppSettings {
 export const SETTINGS_STORAGE_KEY = 'timetag-settings';
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  version: 2,
+  version: 3,
   general: {
     autoStartTimerWhenTaskCreated: false,
     autoPauseOtherTimers: false,
@@ -100,6 +107,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     },
     deadlineDefaults: {
       presetId: '1d',
+      // @eslint-disable-next-line no-magic-numbers
       offsetSec: 1 * 86400,
     },
     hiddenDurationPresetIds: [],
@@ -107,7 +115,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     hiddenDeadlinePresetIds: [],
   },
   appearance: {
-    themeMode: 'system',
+    themeMode: 'light',
+    customTheme: DEFAULT_CUSTOM_THEME_SETTINGS,
     compactList: false,
     animationsEnabled: true,
     roundedCorners: 12,

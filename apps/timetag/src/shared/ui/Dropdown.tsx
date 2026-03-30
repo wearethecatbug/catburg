@@ -93,9 +93,15 @@ export function Dropdown({
 
       {isOpen && (
         <div
-          className={`absolute top-full mt-1 z-50 min-w-[180px] bg-white rounded-lg shadow-lg border border-gray-200 py-1 ${
+          className={`absolute top-full mt-1 z-50 min-w-[180px] rounded-lg border py-1 ${
             align === 'right' ? 'right-0' : 'left-0'
           }`}
+          style={{
+            background: 'var(--tt-surface-elevated)',
+            borderColor: 'var(--tt-border)',
+            boxShadow: 'var(--tt-shadow)',
+            backdropFilter: 'blur(16px) saturate(1.06)',
+          }}
           role="menu"
         >
           {React.Children.map(children, (child) =>
@@ -143,9 +149,11 @@ export function DropdownItem({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed ${
-        danger ? 'text-red-600 hover:bg-red-50' : 'text-gray-700'
-      }`}
+      className="w-full px-4 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
+      style={{
+        color: danger ? '#dc2626' : 'var(--tt-text)',
+        background: 'transparent',
+      }}
       role="menuitem"
     >
       {children}
@@ -162,6 +170,6 @@ interface DropdownDividerProps {
 }
 
 export function DropdownDivider({ onClick: _onClick }: DropdownDividerProps) {
-  return <div className="border-t border-gray-200 my-1" />;
+  return <div className="my-1 border-t" style={{ borderColor: 'var(--tt-border)' }} />;
 }
 
