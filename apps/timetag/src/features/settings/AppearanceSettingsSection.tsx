@@ -7,6 +7,7 @@ import {
   DEFAULT_CUSTOM_THEME_SETTINGS,
   getCustomThemePresetById,
   resolveThemeTokens,
+  type CustomThemeOverrides,
 } from '@/domain/theme';
 
 interface AppearanceSettingsSectionProps {
@@ -53,6 +54,14 @@ export function AppearanceSettingsSection({ activeTab, settings, updateAppearanc
       },
     });
   };
+
+  const customThemeFields: Array<{ id: keyof CustomThemeOverrides; label: string; value: string }> = [
+    { id: 'background', label: 'Background', value: customOverrides.background ?? customThemePreset.backgroundColor },
+    { id: 'surface', label: 'Surface', value: customOverrides.surface ?? customThemePreset.surface },
+    { id: 'accent', label: 'Accent', value: customOverrides.accent ?? customThemePreset.accent },
+    { id: 'text', label: 'Text', value: customOverrides.text ?? customThemePreset.text },
+    { id: 'border', label: 'Border', value: customOverrides.border ?? customThemePreset.border },
+  ];
 
   if (activeTab === 'theme') {
     return (
@@ -105,20 +114,14 @@ export function AppearanceSettingsSection({ activeTab, settings, updateAppearanc
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-            {[
-              { id: 'background', label: 'Background', value: customOverrides.background ?? customThemePreset.backgroundColor },
-              { id: 'surface', label: 'Surface', value: customOverrides.surface ?? customThemePreset.surface },
-              { id: 'accent', label: 'Accent', value: customOverrides.accent ?? customThemePreset.accent },
-              { id: 'text', label: 'Text', value: customOverrides.text ?? customThemePreset.text },
-              { id: 'border', label: 'Border', value: customOverrides.border ?? customThemePreset.border },
-            ].map((field) => (
+            {customThemeFields.map((field) => (
               <label key={field.id} className="space-y-1">
                 <span className="block text-xs font-medium uppercase tracking-wide text-gray-500">{field.label}</span>
                 <div className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-2">
                   <input
                     type="color"
                     value={field.value}
-                    onChange={(event) => updateCustomOverrides({ [field.id]: event.target.value })}
+                    onChange={(event) => updateCustomOverrides({ [field.id]: event.target.value } satisfies Partial<CustomThemeOverrides>)}
                     className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
                     aria-label={`${field.label} color`}
                   />
