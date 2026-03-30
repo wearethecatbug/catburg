@@ -67,9 +67,16 @@ export function TaskListWidget() {
   useEffect(() => {
     if (!areSettingsHydrated || hasAppliedStartupViewRef.current) return;
 
-    setFilter({ status: settings.general.defaultTaskViewOnStartup });
+    setFilter({ status: settings.general.defaultTaskView });
     hasAppliedStartupViewRef.current = true;
-  }, [areSettingsHydrated, setFilter, settings.general.defaultTaskViewOnStartup]);
+  }, [areSettingsHydrated, setFilter, settings.general.defaultTaskView]);
+
+  useEffect(() => {
+    if (settings.general.showCompletedTasks) return;
+    if (state.filter.status === 'done' || state.filter.status === 'archived') {
+      setFilter({ status: 'active' });
+    }
+  }, [setFilter, settings.general.showCompletedTasks, state.filter.status]);
 
   const disableApproachingRed = () => {
     setFilter({
