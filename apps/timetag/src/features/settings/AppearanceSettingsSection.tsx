@@ -1,11 +1,12 @@
 'use client';
 
 import React from 'react';
-import type { AppearanceTabId } from '@/domain/settings.types';
-import { useSettings } from '@/store';
+import type { AppearanceSettings, AppearanceTabId, AppSettings } from '@/domain/settings.types';
 
 interface AppearanceSettingsSectionProps {
   activeTab: AppearanceTabId;
+  settings: AppSettings;
+  updateAppearance: (patch: Partial<AppearanceSettings>) => void;
 }
 
 function Field({ label, description, children }: { label: string; description?: string; children: React.ReactNode }) {
@@ -20,8 +21,7 @@ function Field({ label, description, children }: { label: string; description?: 
   );
 }
 
-export function AppearanceSettingsSection({ activeTab }: AppearanceSettingsSectionProps) {
-  const { settings, updateAppearance } = useSettings();
+export function AppearanceSettingsSection({ activeTab, settings, updateAppearance }: AppearanceSettingsSectionProps) {
 
   if (activeTab === 'theme') {
     return (
