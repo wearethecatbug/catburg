@@ -14,6 +14,7 @@ export interface PipelineQuery {
   filter: FilterState;
   sort: SortState;
   searchQuery: string;
+  showCompletedTasks: boolean;
 }
 
 // ============================================================================
@@ -31,6 +32,11 @@ const getTaskPriority = (task: Task) => task.priority ?? 'normal';
  */
 export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   let result = tasks;
+
+  if (!query.showCompletedTasks) {
+    result = result.filter((task) => task.status === 'active');
+  }
+
   // 1. Workspace filter
   if (query.workspace !== 'all') {
     result = result.filter((t) => t.workspace === query.workspace);

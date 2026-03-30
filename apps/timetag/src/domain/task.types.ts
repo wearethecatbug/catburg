@@ -31,6 +31,7 @@ export const TASK_NOTE_MAX_LENGTH = 280;
 export type DefaultWorkspaceType = 'work' | 'home';
 // Keep predefined tabs while allowing user-created workspace ids.
 export type WorkspaceType = 'all' | DefaultWorkspaceType | (string & {});
+export type AssignableWorkspaceType = Exclude<WorkspaceType, 'all'>;
 
 // ============================================================================
 // Timer Controls

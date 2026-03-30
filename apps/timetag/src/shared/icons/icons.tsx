@@ -138,6 +138,27 @@ export function NoteIcon(props: IconProps) {
   );
 }
 
+export function UrgentWarningIcon(props: IconProps) {
+  return (
+    <IconBase {...props} viewBox="0 0 24 24" fill="none" stroke="none">
+      <path
+        d="M12 3.2L21 19.2a1.4 1.4 0 01-1.22 2.1H4.22A1.4 1.4 0 013 19.2l9-16a1.15 1.15 0 012 0z"
+        fill="#FDE047"
+        stroke="#CA8A04"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 8v5.8"
+        stroke="#111827"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="17.1" r="1.2" fill="#111827" />
+    </IconBase>
+  );
+}
+
 export function SunIcon(props: IconProps) {
   return (
     <IconBase {...props}>

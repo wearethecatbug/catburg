@@ -7,5 +7,5 @@ export { Badge, Checkbox, Chip, Dropdown, DropdownItem, DropdownDivider, Toast, 
 export * from './icons';
 
 // Hooks
-export { useLocalStorage, useKeyboardShortcuts, useFocusRef } from './hooks';
+export { useLocalStorage, useKeyboardShortcuts, useFocusRef, usePersistedWorkspaces } from './hooks';
 

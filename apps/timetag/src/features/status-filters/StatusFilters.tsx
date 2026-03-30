@@ -1,21 +1,24 @@
 'use client';
 
 import React from 'react';
-import type { TaskStatus } from '@/domain/task.types';
-import { useTasks } from '@/store';
+import type { TaskStatusFilter } from '@/domain/task.types';
+import { useSettings, useTasks } from '@/store';
 
-const STATUS_OPTIONS: { id: TaskStatus; label: string }[] = [
+const STATUS_OPTIONS: { id: TaskStatusFilter; label: string; requiresCompleted?: boolean }[] = [
+  { id: 'all', label: 'All' },
   { id: 'active', label: 'Active' },
-  { id: 'done', label: 'Done' },
-  { id: 'archived', label: 'Archived' },
+  { id: 'done', label: 'Done', requiresCompleted: true },
+  { id: 'archived', label: 'Archived', requiresCompleted: true },
 ];
 
 export function StatusFilters() {
   const { state, setFilter } = useTasks();
+  const { settings } = useSettings();
+  const visibleOptions = STATUS_OPTIONS.filter((option) => settings.general.showCompletedTasks || !option.requiresCompleted);
 
   return (
     <div className="flex gap-1 px-4 py-2 bg-gray-50 border-b border-gray-200">
-      {STATUS_OPTIONS.map((opt) => (
+      {visibleOptions.map((opt) => (
         <button
           key={opt.id}
           type="button"
