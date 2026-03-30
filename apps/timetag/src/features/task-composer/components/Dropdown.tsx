@@ -83,7 +83,12 @@ export function Dropdown({
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
                 onClick={onToggle}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm focus:outline-none"
+                style={{
+                    borderColor: 'var(--tt-border)',
+                    background: 'var(--tt-input-bg)',
+                    color: 'var(--tt-text)',
+                }}
                 title={title}
             >
                 {icon}
@@ -94,7 +99,13 @@ export function Dropdown({
                 <div
                     role="menu"
                     aria-label={ariaLabel || label}
-                    className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-md shadow-md z-40"
+                    className="absolute right-0 z-40 mt-2 w-44 rounded-md border"
+                    style={{
+                        background: 'var(--tt-surface-elevated)',
+                        borderColor: 'var(--tt-border)',
+                        boxShadow: 'var(--tt-shadow)',
+                        backdropFilter: 'blur(16px) saturate(1.06)',
+                    }}
                 >
                     <ul className="py-1" role="none">
                         {options.map((option) => (
@@ -103,9 +114,11 @@ export function Dropdown({
                                     role="menuitem"
                                     type="button"
                                     onClick={() => onSelect(option.id)}
-                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
-                                        option.id === selectedId ? 'font-medium text-gray-900' : 'text-gray-700'
-                                    }`}
+                                    className={`w-full px-3 py-2 text-left text-sm ${option.id === selectedId ? 'font-medium' : ''}`}
+                                    style={{
+                                        color: option.id === selectedId ? 'var(--tt-accent)' : 'var(--tt-text)',
+                                        background: option.id === selectedId ? 'var(--tt-accent-soft)' : 'transparent',
+                                    }}
                                 >
                                     {option.icon ? (
                                         <span className="inline-flex items-center gap-2">

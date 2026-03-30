@@ -24,9 +24,14 @@ export function BulkDropdown({ onDeleteSelected }: BulkDropdownProps) {
     <Dropdown
       trigger={
         <span
-          className={`flex items-center gap-1 px-3 py-1.5 text-sm border rounded-lg text-gray-700 bg-white border-gray-300 hover:bg-gray-50 ${
+          className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm ${
             hasSelection ? 'font-medium' : ''
           }`}
+          style={{
+            color: 'var(--tt-text)',
+            background: 'var(--tt-surface-subtle)',
+            borderColor: 'var(--tt-border)',
+          }}
         >
           <MenuIcon size="sm" />
           Bulk

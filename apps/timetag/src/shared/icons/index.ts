@@ -20,6 +20,8 @@ export {
   NoteIcon,
   UrgentWarningIcon,
   SunIcon,
+  MoonIcon,
+  SparklesIcon,
   MuteIcon,
   BellIcon,
   UserIcon,

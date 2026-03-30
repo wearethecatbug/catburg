@@ -4,29 +4,58 @@ import React from 'react';
 import {
   SettingsIcon,
   SunIcon,
+  MoonIcon,
+  SparklesIcon,
   MuteIcon,
   BellIcon,
   UserIcon,
 } from '@/shared';
+import { getNextThemeMode, getThemeModeLabel } from '@/domain/theme';
+import { useSettings } from '@/store';
 
 interface HeaderProps {
   onOpenSettings: () => void;
 }
 
 export function Header({ onOpenSettings }: HeaderProps) {
+  const { settings, updateAppearance } = useSettings();
+  const themeMode = settings.appearance.themeMode;
+  const nextThemeMode = getNextThemeMode(themeMode);
+  const themeLabel = getThemeModeLabel(themeMode);
+  const nextThemeLabel = getThemeModeLabel(nextThemeMode);
+
+  const ThemeIcon = themeMode === 'dark'
+    ? MoonIcon
+    : themeMode === 'custom'
+      ? SparklesIcon
+      : SunIcon;
+
+  const handleThemeCycle = () => {
+    updateAppearance({ themeMode: nextThemeMode });
+  };
+
   return (
-    <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+    <header
+      className="flex items-center justify-between border-b px-4 py-3"
+      style={{
+        background: 'var(--tt-surface)',
+        borderColor: 'var(--tt-border)',
+        color: 'var(--tt-text)',
+        backdropFilter: 'blur(18px) saturate(1.08)',
+      }}
+    >
       {/* Left — Settings */}
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onOpenSettings}
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="rounded-lg p-2"
+          style={{ color: 'var(--tt-text-muted)' }}
           aria-label="Settings"
         >
           <SettingsIcon size="md" />
         </button>
-        <span className="text-sm font-medium text-gray-700">Settings</span>
+        <span className="text-sm font-medium" style={{ color: 'var(--tt-text)' }}>Settings</span>
       </div>
 
       {/* Right — compact global controls */}
@@ -34,16 +63,25 @@ export function Header({ onOpenSettings }: HeaderProps) {
         {/* Theme toggle */}
         <button
           type="button"
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
-          aria-label="Toggle theme"
+          onClick={handleThemeCycle}
+          className="inline-flex min-w-[7.5rem] items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
+          style={{
+            borderColor: 'var(--tt-border)',
+            background: 'var(--tt-surface-subtle)',
+            color: 'var(--tt-text)',
+          }}
+          aria-label={`Theme: ${themeLabel}. Switch to ${nextThemeLabel}`}
+          title={`Theme: ${themeLabel} · Click to switch to ${nextThemeLabel}`}
         >
-          <SunIcon size="md" />
+          <ThemeIcon size="sm" />
+          <span>{themeLabel}</span>
         </button>
 
         {/* Mute toggle */}
         <button
           type="button"
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="rounded-lg p-2"
+          style={{ color: 'var(--tt-text-muted)' }}
           aria-label="Toggle mute"
         >
           <MuteIcon size="md" />
@@ -52,7 +90,8 @@ export function Header({ onOpenSettings }: HeaderProps) {
         {/* Notifications */}
         <button
           type="button"
-          className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="relative rounded-lg p-2"
+          style={{ color: 'var(--tt-text-muted)' }}
           aria-label="Notifications"
         >
           <BellIcon size="md" />
@@ -62,7 +101,8 @@ export function Header({ onOpenSettings }: HeaderProps) {
         {/* Profile */}
         <button
           type="button"
-          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+          className="rounded-lg p-2"
+          style={{ color: 'var(--tt-text-muted)' }}
           aria-label="Profile"
         >
           <UserIcon size="md" />

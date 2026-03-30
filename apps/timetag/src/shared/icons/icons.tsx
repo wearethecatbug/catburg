@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IconBase, IconProps } from './IconBase';
+import { IconBase, type IconProps } from '@/shared/icons/IconBase';
 
 export function ClockIcon(props: IconProps) {
   return (
@@ -163,6 +163,29 @@ export function SunIcon(props: IconProps) {
   return (
     <IconBase {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+    </IconBase>
+  );
+}
+
+export function MoonIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M20.354 15.354A9 9 0 018.646 3.646a9 9 0 1011.708 11.708z"
+      />
+    </IconBase>
+  );
+}
+
+export function SparklesIcon(props: IconProps) {
+  return (
+    <IconBase {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 16l.8 2.2L8 19l-2.2.8L5 22l-.8-2.2L2 19l2.2-.8L5 16z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l.6 1.4L21 16l-1.4.6L19 18l-.6-1.4L17 16l1.4-.6L19 14z" />
     </IconBase>
   );
 }

@@ -17,14 +17,21 @@ export const SearchInput = forwardRef<HTMLInputElement>(
           value={state.searchQuery}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search tasks... (Ctrl+K)"
-          className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full rounded-lg border py-2 pl-9 pr-8 text-sm focus:outline-none"
+          style={{
+            borderColor: 'var(--tt-border)',
+            background: 'var(--tt-input-bg)',
+            color: 'var(--tt-text)',
+            boxShadow: 'inset 0 0 0 1px transparent',
+          }}
           aria-label="Search tasks"
         />
         {state.searchQuery && (
           <button
             type="button"
             onClick={() => setSearch('')}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
+            style={{ color: 'var(--tt-text-soft)' }}
             aria-label="Clear search"
           >
             <CloseIcon size="sm" />
