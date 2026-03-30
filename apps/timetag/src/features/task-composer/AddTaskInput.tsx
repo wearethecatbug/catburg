@@ -1,9 +1,31 @@
 'use client';
 
-import React, { useState, forwardRef, useRef } from 'react';
+import React, { useState, forwardRef, useRef, useEffect } from 'react';
+import { getSafeDefaultWorkspace } from '@/domain/workspace';
+import {
+    DEADLINE_PRESETS,
+    formatDeadlineOffsetLabel,
+    formatNamedPomodoroPresetLabel,
+    formatPomodoroPresetLabel,
+    getVisibleDeadlinePresetById,
+    getVisibleDeadlinePresets,
+    getVisiblePomodoroPresetById,
+    getVisiblePomodoroPresets,
+    POMODORO_PRESETS,
+    type DeadlinePresetId,
+    type PomodoroPresetId,
+} from '@/domain/timer.presets';
 import { useSettings, useTasks } from '@/store';
 import { TASK_NOTE_MAX_LENGTH, type WorkspaceType, type CreateTaskInput, type TaskPriority, type TimerMode } from '@/domain/task.types';
-import type { DurationUnit } from '@/domain/duration';
+import {
+    DURATION_PRESETS,
+    formatDurationValue,
+    getDurationPresetById,
+    getVisibleDurationPresetById,
+    getVisibleDurationPresets,
+    type DurationPresetId,
+    type DurationUnit,
+} from '@/domain/duration';
 import {
     PlusIcon,
     ClockIcon,
@@ -11,6 +33,7 @@ import {
     HourglassIcon,
     CalendarIcon,
     PomodoroIcon,
+    usePersistedWorkspaces,
 } from '@/shared';
 import { Dropdown, DetailsPanel, type DropdownOption } from './components';
 
@@ -18,87 +41,95 @@ interface AddTaskInputProps {
     defaultWorkspace?: WorkspaceType;
 }
 
-const PRESETS = [
-    { id: '5', label: '5m', durationSec: 5 * 60 },
-    { id: '10', label: '10m', durationSec: 10 * 60 },
-    { id: '25', label: '25m', durationSec: 25 * 60 },
-    { id: '45', label: '45m', durationSec: 45 * 60 },
-    { id: '60', label: '1h', durationSec: 60 * 60 },
-];
+function getDurationUnitFromSec(valueSec: number): DurationUnit {
+    if (valueSec % 86400 === 0) return 'd';
+    if (valueSec % 3600 === 0) return 'h';
+    return 'min';
+}
 
-const DEADLINE_PRESETS = [
-    { id: '1d', label: '1 day', days: 1 },
-    { id: '2d', label: '2 days', days: 2 },
-    { id: '5d', label: '5 days', days: 5 },
-    { id: '10d', label: '10 days', days: 10 },
-];
+function formatCompactDurationLabel(durationSec: number): string {
+    const unit = getDurationUnitFromSec(durationSec);
+    const unitLabel = unit === 'min' ? 'm' : unit;
+    return `${formatDurationValue(durationSec, unit)}${unitLabel}`;
+}
 
-const POMODORO_PRESETS = [
-    {
-        id: 'classic',
-        label: 'Classic (1×25m)',
-        cycles: 1,
-        workDurationMin: 25,
-        shortBreakMin: 5,
-        longBreakMin: 15,
-    },
-    {
-        id: 'focus',
-        label: 'Focus (2×25m)',
-        cycles: 2,
-        workDurationMin: 25,
-        shortBreakMin: 5,
-        longBreakMin: 15,
-    },
-    {
-        id: 'extended',
-        label: 'Extended (4×25m)',
-        cycles: 4,
-        workDurationMin: 25,
-        shortBreakMin: 5,
-        longBreakMin: 15,
-    },
-    {
-        id: 'quick',
-        label: 'Quick (3×15m)',
-        cycles: 3,
-        workDurationMin: 15,
-        shortBreakMin: 3,
-        longBreakMin: 10,
-    },
-];
+function getApproxDeadlineOffsetSec(localValue: string): number | null {
+    if (!localValue) return null;
+
+    const target = new Date(`${localValue}:00`);
+    if (Number.isNaN(target.getTime())) return null;
+
+    const diffMs = target.getTime() - Date.now();
+    return Math.max(60, Math.round(diffMs / 60000) * 60);
+}
+
+const PRESETS = DURATION_PRESETS;
+const CUSTOM_DURATION_PRESET_ID = '__custom-duration-default__';
+const CUSTOM_POMODORO_PRESET_ID = '__custom-pomodoro-default__';
+const CUSTOM_DEADLINE_PRESET_ID = '__custom-deadline-default__';
+
+function getDurationPresetLabel(durationSec: number, presetId: DurationPresetId): string | undefined {
+    const preset = getDurationPresetById(presetId);
+    return preset.durationSec === durationSec ? preset.label : undefined;
+}
 
 export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(function AddTaskInput(
     { defaultWorkspace },
     ref,
 ) {
+    const { settings, isHydrated: areSettingsHydrated } = useSettings();
+    const { addTask, state } = useTasks();
+    const { workspaces } = usePersistedWorkspaces();
+    const visibleDurationPresets = getVisibleDurationPresets(settings.timer.hiddenDurationPresetIds);
+    const visiblePomodoroPresets = getVisiblePomodoroPresets(settings.timer.hiddenPomodoroPresetIds);
+    const visibleDeadlinePresets = getVisibleDeadlinePresets(settings.timer.hiddenDeadlinePresetIds);
+    const defaultDurationPreset = getVisibleDurationPresetById(
+        settings.timer.durationDefaults.presetId,
+        settings.timer.hiddenDurationPresetIds,
+    );
+    const defaultPomodoroPreset = getVisiblePomodoroPresetById(
+        settings.timer.pomodoroDefaults.presetId,
+        settings.timer.hiddenPomodoroPresetIds,
+    );
+    const defaultDeadlinePreset = getVisibleDeadlinePresetById(
+        settings.timer.deadlineDefaults.presetId,
+        settings.timer.hiddenDeadlinePresetIds,
+    );
+    const defaultDurationSec = settings.timer.durationDefaults.durationSec;
+    const hasCustomDurationDefault = !visibleDurationPresets.some((preset) => preset.durationSec === defaultDurationSec);
+    const hasCustomPomodoroDefault = !visiblePomodoroPresets.some((preset) => (
+        preset.cycles === settings.timer.pomodoroDefaults.cycles &&
+        preset.workDurationMin === settings.timer.pomodoroDefaults.workDurationMin &&
+        preset.shortBreakMin === settings.timer.pomodoroDefaults.shortBreakMin &&
+        preset.longBreakMin === settings.timer.pomodoroDefaults.longBreakMin
+    ));
+    const hasCustomDeadlineDefault = !visibleDeadlinePresets.some((preset) => preset.offsetSec === settings.timer.deadlineDefaults.offsetSec);
+
     const [value, setValue] = useState('');
-    const [presetId, setPresetId] = useState(PRESETS[2].id);
-    const [pomodoroPresetId, setPomodoroPresetId] = useState(POMODORO_PRESETS[0].id);
-    const [deadlinePresetId, setDeadlinePresetId] = useState(DEADLINE_PRESETS[0].id);
+    const [presetId, setPresetId] = useState<DurationPresetId>(() => defaultDurationPreset.id);
+    const [pomodoroPresetId, setPomodoroPresetId] = useState<PomodoroPresetId>(() => defaultPomodoroPreset.id);
+    const [deadlinePresetId, setDeadlinePresetId] = useState<DeadlinePresetId>(() => defaultDeadlinePreset.id);
     const [showDetails, setShowDetails] = useState(false);
 
-    const [timerMode, setTimerMode] = useState<TimerMode>('duration');
+    const [timerMode, setTimerMode] = useState<TimerMode>(settings.timer.defaultMode);
     const [priority, setPriority] = useState<TaskPriority>('normal');
     const [note, setNote] = useState('');
     const [deadlineDate, setDeadlineDate] = useState('');
 
-    const [durationSec, setDurationSec] = useState(25 * 60);
-    const [durationUnit, setDurationUnit] = useState<DurationUnit>('min');
-    const [presetLabel, setPresetLabel] = useState<string | undefined>('25m');
+    const [durationSec, setDurationSec] = useState(() => defaultDurationSec);
+    const [durationUnit, setDurationUnit] = useState<DurationUnit>(() => getDurationUnitFromSec(defaultDurationSec));
+    const [presetLabel, setPresetLabel] = useState<string | undefined>(() => getDurationPresetLabel(defaultDurationSec, defaultDurationPreset.id));
 
-    const [pomoCycles, setPomoCycles] = useState(4);
-    const [pomoWorkMin, setPomoWorkMin] = useState(25);
-    const [pomoShortBreakMin, setPomoShortBreakMin] = useState(5);
-    const [pomoLongBreakMin, setPomoLongBreakMin] = useState(15);
+    const [pomoCycles, setPomoCycles] = useState(settings.timer.pomodoroDefaults.cycles);
+    const [pomoWorkMin, setPomoWorkMin] = useState(settings.timer.pomodoroDefaults.workDurationMin);
+    const [pomoShortBreakMin, setPomoShortBreakMin] = useState(settings.timer.pomodoroDefaults.shortBreakMin);
+    const [pomoLongBreakMin, setPomoLongBreakMin] = useState(settings.timer.pomodoroDefaults.longBreakMin);
 
-    const [autoEnabled, setAutoEnabled] = useState(false);
+    const [autoEnabled, setAutoEnabled] = useState(settings.general.autoStartTimerWhenTaskCreated);
     const [playEnabled, setPlayEnabled] = useState(true);
     const [autoResetEnabled, setAutoResetEnabled] = useState(false);
     const [overdueEnabled, setOverdueEnabled] = useState(false);
 
-    const { addTask, state } = useTasks();
-    const { settings } = useSettings();
     const localInputRef = useRef<HTMLInputElement | null>(null);
 
     const [presetOpen, setPresetOpen] = useState(false);
@@ -115,11 +146,58 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         }
     };
 
-    const getDurationUnitFromSec = (valueSec: number): DurationUnit => {
-        if (valueSec % 86400 === 0) return 'd';
-        if (valueSec % 3600 === 0) return 'h';
-        return 'min';
-    };
+    const applyPomodoroPreset = React.useCallback((preset: (typeof POMODORO_PRESETS)[number]) => {
+        setPomodoroPresetId(preset.id);
+        setPomoCycles(preset.cycles);
+        setPomoWorkMin(preset.workDurationMin);
+        setPomoShortBreakMin(preset.shortBreakMin);
+        setPomoLongBreakMin(preset.longBreakMin);
+    }, []);
+
+    const applyDeadlinePreset = React.useCallback((preset: (typeof DEADLINE_PRESETS)[number]) => {
+        setDeadlinePresetId(preset.id);
+        setDeadlineDate(buildDeadlineLocalValue(preset.offsetSec));
+    }, []);
+
+    const resetComposerToSettingsDefaults = React.useCallback(() => {
+        setPresetId(defaultDurationPreset.id);
+        setPomodoroPresetId(defaultPomodoroPreset.id);
+        setDeadlinePresetId(defaultDeadlinePreset.id);
+        setTimerMode(settings.timer.defaultMode);
+        setPriority('normal');
+        setNote('');
+        setDurationSec(defaultDurationSec);
+        setDurationUnit(getDurationUnitFromSec(defaultDurationSec));
+        setPresetLabel(getDurationPresetLabel(defaultDurationSec, defaultDurationPreset.id));
+        setAutoEnabled(settings.general.autoStartTimerWhenTaskCreated);
+        setPlayEnabled(true);
+        setAutoResetEnabled(false);
+        setOverdueEnabled(false);
+        setPomoCycles(settings.timer.pomodoroDefaults.cycles);
+        setPomoWorkMin(settings.timer.pomodoroDefaults.workDurationMin);
+        setPomoShortBreakMin(settings.timer.pomodoroDefaults.shortBreakMin);
+        setPomoLongBreakMin(settings.timer.pomodoroDefaults.longBreakMin);
+        setDeadlineDate(buildDeadlineLocalValue(settings.timer.deadlineDefaults.offsetSec));
+    }, [
+        defaultDeadlinePreset,
+        defaultDurationSec,
+        defaultDurationPreset,
+        defaultPomodoroPreset,
+        settings.general.autoStartTimerWhenTaskCreated,
+        settings.timer.deadlineDefaults.offsetSec,
+        settings.timer.defaultMode,
+        settings.timer.pomodoroDefaults.cycles,
+        settings.timer.pomodoroDefaults.longBreakMin,
+        settings.timer.pomodoroDefaults.shortBreakMin,
+        settings.timer.pomodoroDefaults.workDurationMin,
+    ]);
+
+    useEffect(() => {
+        if (!areSettingsHydrated) return;
+        if (value.trim() || note.trim()) return;
+
+        resetComposerToSettingsDefaults();
+    }, [areSettingsHydrated, note, resetComposerToSettingsDefaults, value]);
 
     const applyDurationPreset = (preset: (typeof PRESETS)[number]) => {
         setDurationSec(preset.durationSec);
@@ -127,9 +205,9 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         setPresetLabel(preset.label);
     };
 
-    const buildDeadlineLocalValue = (daysFromNow: number) => {
+    const buildDeadlineLocalValue = (offsetSec: number) => {
         const now = new Date();
-        now.setDate(now.getDate() + daysFromNow);
+        now.setSeconds(now.getSeconds() + offsetSec);
 
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -164,7 +242,9 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             note: note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined,
             workspace:
                 defaultWorkspace ??
-                (state.workspace === 'all' ? settings.general.defaultWorkspace : state.workspace),
+                (state.workspace === 'all'
+                    ? getSafeDefaultWorkspace(workspaces, settings.general.defaultWorkspace)
+                    : state.workspace),
             priority,
             timerMode,
             durationSec: nextDurationSec,
@@ -191,30 +271,17 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         addTask(taskData);
 
         setValue('');
-        setPriority('normal');
-        setNote('');
-
-        const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[2];
-        applyDurationPreset(preset);
-
-        setDeadlineDate('');
-        setAutoEnabled(false);
-        setPlayEnabled(true);
-        setAutoResetEnabled(false);
-        setOverdueEnabled(false);
+        resetComposerToSettingsDefaults();
 
         try {
             localInputRef.current?.focus();
         } catch {}
     };
 
-    const onPresetSelect = (id: string) => {
+    const onPresetSelect = (id: DurationPresetId) => {
         setPresetId(id);
 
-        const preset = PRESETS.find((x) => x.id === id);
-        if (preset) {
-            applyDurationPreset(preset);
-        }
+        applyDurationPreset(getVisibleDurationPresetById(id, settings.timer.hiddenDurationPresetIds));
 
         setPresetOpen(false);
         requestAnimationFrame(() => localInputRef.current?.focus());
@@ -225,17 +292,19 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         setModeOpen(false);
 
         if (mode === 'pomodoro') {
-            const pomPreset = POMODORO_PRESETS.find((p) => p.id === pomodoroPresetId) ?? POMODORO_PRESETS[0];
-            setPomoCycles(pomPreset.cycles);
-            setPomoWorkMin(pomPreset.workDurationMin);
-            setPomoShortBreakMin(pomPreset.shortBreakMin);
-            setPomoLongBreakMin(pomPreset.longBreakMin);
+            setPomodoroPresetId(defaultPomodoroPreset.id);
+            setPomoCycles(settings.timer.pomodoroDefaults.cycles);
+            setPomoWorkMin(settings.timer.pomodoroDefaults.workDurationMin);
+            setPomoShortBreakMin(settings.timer.pomodoroDefaults.shortBreakMin);
+            setPomoLongBreakMin(settings.timer.pomodoroDefaults.longBreakMin);
         } else if (mode === 'deadline') {
-            const dlPreset = DEADLINE_PRESETS.find((p) => p.id === deadlinePresetId) ?? DEADLINE_PRESETS[0];
-            setDeadlineDate(buildDeadlineLocalValue(dlPreset.days));
+            setDeadlinePresetId(defaultDeadlinePreset.id);
+            setDeadlineDate(buildDeadlineLocalValue(settings.timer.deadlineDefaults.offsetSec));
         } else {
-            const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[2];
-            applyDurationPreset(preset);
+            setPresetId(defaultDurationPreset.id);
+            setDurationSec(settings.timer.durationDefaults.durationSec);
+            setDurationUnit(getDurationUnitFromSec(settings.timer.durationDefaults.durationSec));
+            setPresetLabel(getDurationPresetLabel(settings.timer.durationDefaults.durationSec, defaultDurationPreset.id));
         }
 
         requestAnimationFrame(() => localInputRef.current?.focus());
@@ -247,9 +316,27 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         { id: 'deadline', label: 'Deadline', icon: <CalendarIcon size="sm" /> },
     ];
 
-    const presetOptions: DropdownOption[] = PRESETS.map((p) => ({ id: p.id, label: p.label }));
-    const pomodoroPresetOptions: DropdownOption[] = POMODORO_PRESETS.map((p) => ({ id: p.id, label: p.label }));
-    const deadlinePresetOptions: DropdownOption[] = DEADLINE_PRESETS.map((p) => ({ id: p.id, label: p.label }));
+    const presetOptions: DropdownOption[] = [
+        ...visibleDurationPresets.map((p) => ({ id: p.id, label: p.label })),
+        ...(hasCustomDurationDefault
+            ? [{ id: CUSTOM_DURATION_PRESET_ID, label: formatCompactDurationLabel(defaultDurationSec) }]
+            : []),
+    ];
+    const pomodoroPresetOptions: DropdownOption[] = [
+        ...visiblePomodoroPresets.map((p) => ({ id: p.id, label: formatNamedPomodoroPresetLabel(p) })),
+        ...(hasCustomPomodoroDefault
+            ? [{
+                id: CUSTOM_POMODORO_PRESET_ID,
+                label: `Custom · ${formatPomodoroPresetLabel(settings.timer.pomodoroDefaults)}`,
+            }]
+            : []),
+    ];
+    const deadlinePresetOptions: DropdownOption[] = [
+        ...visibleDeadlinePresets.map((p) => ({ id: p.id, label: p.label })),
+        ...(hasCustomDeadlineDefault
+            ? [{ id: CUSTOM_DEADLINE_PRESET_ID, label: formatDeadlineOffsetLabel(settings.timer.deadlineDefaults.offsetSec) }]
+            : []),
+    ];
 
     const ModeIcon =
         timerMode === 'duration'
@@ -265,40 +352,92 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                 ? 'Deadline'
                 : 'Pomodoro';
 
+    const customDurationLabel = formatCompactDurationLabel(durationSec);
+    const safeDurationPresetId = visibleDurationPresets.some((preset) => preset.id === presetId)
+        ? presetId
+        : defaultDurationPreset.id;
+    const safePomodoroPresetId = visiblePomodoroPresets.some((preset) => preset.id === pomodoroPresetId)
+        ? pomodoroPresetId
+        : defaultPomodoroPreset.id;
+    const safeDeadlinePresetId = visibleDeadlinePresets.some((preset) => preset.id === deadlinePresetId)
+        ? deadlinePresetId
+        : defaultDeadlinePreset.id;
+    const isUsingCustomDurationDefault = hasCustomDurationDefault && durationSec === settings.timer.durationDefaults.durationSec;
+    const matchedPomodoroPreset = visiblePomodoroPresets.find((preset) => (
+        preset.cycles === pomoCycles &&
+        preset.workDurationMin === pomoWorkMin &&
+        preset.shortBreakMin === pomoShortBreakMin &&
+        preset.longBreakMin === pomoLongBreakMin
+    ));
+    const isUsingCustomPomodoroDefault = hasCustomPomodoroDefault &&
+        pomoCycles === settings.timer.pomodoroDefaults.cycles &&
+        pomoWorkMin === settings.timer.pomodoroDefaults.workDurationMin &&
+        pomoShortBreakMin === settings.timer.pomodoroDefaults.shortBreakMin &&
+        pomoLongBreakMin === settings.timer.pomodoroDefaults.longBreakMin;
+    const hasCustomPomodoroSelection = !matchedPomodoroPreset;
+    const isUsingCustomDeadlineDefault = hasCustomDeadlineDefault && getApproxDeadlineOffsetSec(deadlineDate) === settings.timer.deadlineDefaults.offsetSec;
+    const currentPomodoroConfig = {
+        cycles: pomoCycles,
+        workDurationMin: pomoWorkMin,
+        shortBreakMin: pomoShortBreakMin,
+        longBreakMin: pomoLongBreakMin,
+    };
+
     const currentPresetLabel =
         timerMode === 'pomodoro'
-            ? POMODORO_PRESETS.find((p) => p.id === pomodoroPresetId)?.label ?? 'Preset'
-            : PRESETS.find((p) => p.id === presetId)?.label ?? 'Preset';
+            ? (hasCustomPomodoroSelection
+                ? `Custom · ${formatPomodoroPresetLabel(currentPomodoroConfig)}`
+                : formatNamedPomodoroPresetLabel(matchedPomodoroPreset ?? defaultPomodoroPreset))
+            : presetLabel ?? customDurationLabel;
 
     const currentPresetOptions = timerMode === 'pomodoro' ? pomodoroPresetOptions : presetOptions;
-    const currentPresetId = timerMode === 'pomodoro' ? pomodoroPresetId : presetId;
+    const currentPresetId = timerMode === 'pomodoro'
+        ? (isUsingCustomPomodoroDefault ? CUSTOM_POMODORO_PRESET_ID : safePomodoroPresetId)
+        : (isUsingCustomDurationDefault ? CUSTOM_DURATION_PRESET_ID : safeDurationPresetId);
 
     const handlePresetSelect = (id: string) => {
         if (timerMode === 'pomodoro') {
-            const preset = POMODORO_PRESETS.find((x) => x.id === id);
-            if (preset) {
-                setPomodoroPresetId(id);
-                setPomoCycles(preset.cycles);
-                setPomoWorkMin(preset.workDurationMin);
-                setPomoShortBreakMin(preset.shortBreakMin);
-                setPomoLongBreakMin(preset.longBreakMin);
+            if (id === CUSTOM_POMODORO_PRESET_ID) {
+                setPomodoroPresetId(defaultPomodoroPreset.id);
+                setPomoCycles(settings.timer.pomodoroDefaults.cycles);
+                setPomoWorkMin(settings.timer.pomodoroDefaults.workDurationMin);
+                setPomoShortBreakMin(settings.timer.pomodoroDefaults.shortBreakMin);
+                setPomoLongBreakMin(settings.timer.pomodoroDefaults.longBreakMin);
+                setPresetOpen(false);
+                requestAnimationFrame(() => localInputRef.current?.focus());
+                return;
             }
+
+            applyPomodoroPreset(getVisiblePomodoroPresetById(id, settings.timer.hiddenPomodoroPresetIds));
 
             setPresetOpen(false);
             requestAnimationFrame(() => localInputRef.current?.focus());
             return;
         }
 
-        onPresetSelect(id);
+        if (id === CUSTOM_DURATION_PRESET_ID) {
+            setPresetId(defaultDurationPreset.id);
+            setDurationSec(settings.timer.durationDefaults.durationSec);
+            setDurationUnit(getDurationUnitFromSec(settings.timer.durationDefaults.durationSec));
+            setPresetLabel(undefined);
+            setPresetOpen(false);
+            requestAnimationFrame(() => localInputRef.current?.focus());
+            return;
+        }
+
+        onPresetSelect(id as DurationPresetId);
     };
 
     const handleDeadlinePresetSelect = (id: string) => {
-        setDeadlinePresetId(id);
-
-        const preset = DEADLINE_PRESETS.find((x) => x.id === id);
-        if (preset) {
-            setDeadlineDate(buildDeadlineLocalValue(preset.days));
+        if (id === CUSTOM_DEADLINE_PRESET_ID) {
+            setDeadlinePresetId(defaultDeadlinePreset.id);
+            setDeadlineDate(buildDeadlineLocalValue(settings.timer.deadlineDefaults.offsetSec));
+            setPresetOpen(false);
+            requestAnimationFrame(() => localInputRef.current?.focus());
+            return;
         }
+
+        applyDeadlinePreset(getVisibleDeadlinePresetById(id, settings.timer.hiddenDeadlinePresetIds));
 
         setPresetOpen(false);
         requestAnimationFrame(() => localInputRef.current?.focus());
@@ -418,13 +557,15 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         buttonContent={
                             <>
                                 <span className="whitespace-nowrap">
-                                    {DEADLINE_PRESETS.find((p) => p.id === deadlinePresetId)?.label ?? 'Preset'}
+                                    {isUsingCustomDeadlineDefault
+                                            ? formatDeadlineOffsetLabel(settings.timer.deadlineDefaults.offsetSec)
+                                            : visibleDeadlinePresets.find((p) => p.id === safeDeadlinePresetId)?.label ?? 'Preset'}
                                 </span>
                                 <ChevronDownIcon size="sm" />
                             </>
                         }
                         options={deadlinePresetOptions}
-                        selectedId={deadlinePresetId}
+                        selectedId={isUsingCustomDeadlineDefault ? CUSTOM_DEADLINE_PRESET_ID : safeDeadlinePresetId}
                         isOpen={presetOpen}
                         onToggle={() => setPresetOpen((s) => !s)}
                         onSelect={handleDeadlinePresetSelect}
