@@ -7,8 +7,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, '..');
 const nextDir = resolve(appDir, '.next');
 const cliArgs = process.argv.slice(2);
+const shouldCleanNext = process.platform === 'win32' || process.env.TIMETAG_CLEAN_NEXT === '1';
 
-rmSync(nextDir, { recursive: true, force: true });
+if (shouldCleanNext) {
+  rmSync(nextDir, { recursive: true, force: true });
+}
 
 const child = spawn(
   'pnpm',

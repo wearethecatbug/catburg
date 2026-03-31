@@ -61,7 +61,7 @@ export function TimerRingButton({
                 : ringTone === 'danger'
                     ? 'var(--tt-chip-danger-text)'
                     : ringTone === 'overdue'
-                        ? '#8a4747'
+                        ? 'var(--tt-chip-danger-text)'
                         : 'var(--tt-accent)';
 
     const progressStroke = disabled
@@ -86,7 +86,7 @@ export function TimerRingButton({
               }
             : ringTone === 'overdue'
                 ? {
-                    background: '#fcf3f3',
+                    background: 'var(--tt-chip-danger-bg)',
                     color: iconColor,
                     width: sizePx,
                     height: sizePx,

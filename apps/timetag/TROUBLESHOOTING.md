@@ -16,7 +16,7 @@ Require stack:
 ### Решение
 Проект уже настроен для автоматической очистки `NODE_OPTIONS`:
 
-```text
+```json
 {
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
@@ -87,7 +87,8 @@ On Windows with Turbopack, stale `.next` artifacts can break both dev reloads an
 - `pnpm dev` runs through `scripts/dev.mjs`
 - `pnpm build` runs through `scripts/build.mjs`
 
-Both commands remove the local `.next` directory before starting.
+- On Windows, both `pnpm dev` and `pnpm build` remove the local `.next` directory before starting.
+- On other platforms, both commands keep the cache by default for faster incremental runs.
 
 ### Recommended commands
 
@@ -100,6 +101,14 @@ To use another dev port:
 
 ```powershell
 pnpm dev -- --port 3004
+```
+
+To force a clean dev/build start on macOS/Linux too:
+
+```powershell
+$env:TIMETAG_CLEAN_NEXT="1"
+pnpm dev
+pnpm build
 ```
 
 ### Manual recovery

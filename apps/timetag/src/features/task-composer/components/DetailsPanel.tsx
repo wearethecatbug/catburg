@@ -123,7 +123,7 @@ export function DetailsPanel({
                         type="datetime-local"
                         value={deadlineDate}
                         onChange={(e) => onDeadlineDateChange(e.target.value)}
-                        className="rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                        className="rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]"
                         style={fieldStyle}
                         aria-label="Deadline date and time"
                     />
@@ -159,7 +159,7 @@ export function DetailsPanel({
                     rows={3}
                     maxLength={TASK_NOTE_MAX_LENGTH}
                     placeholder="Add a short note…"
-                    className="resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    className="resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]"
                     style={fieldStyle}
                     aria-describedby="task-note-help"
                 />

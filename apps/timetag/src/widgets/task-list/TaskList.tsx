@@ -83,10 +83,9 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
           <button
             type="button"
             onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
-            className="rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface)]"
+            className="rounded-xl border bg-[var(--tt-surface)] px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
             style={{
               color: 'var(--tt-accent)',
-              background: 'var(--tt-surface)',
               borderColor: 'var(--tt-border)',
               boxShadow: 'var(--tt-shadow-soft)',
             }}

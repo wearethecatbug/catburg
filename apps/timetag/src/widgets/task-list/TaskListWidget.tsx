@@ -94,7 +94,7 @@ export function TaskListWidget() {
         className="flex-1 flex flex-col overflow-hidden border-t"
         style={{
           background: 'var(--tt-surface-elevated)',
-          borderColor: 'rgba(15, 23, 42, 0.04)',
+            borderColor: 'var(--tt-border)',
         }}
       >
         {/* List Controls + Composer area */}
