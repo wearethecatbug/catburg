@@ -16,15 +16,20 @@ export function ModeSelector({ timerMode, onChange }: ModeSelectorProps) {
     ];
 
     return (
-        <div className="flex flex-col">
-            <label className="text-xs font-medium text-gray-700 mb-2">Mode</label>
-            <div className="flex gap-2">
+        <fieldset className="flex flex-col gap-2">
+            <legend className="text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>Mode</legend>
+            <div
+                className="inline-flex w-fit flex-wrap gap-2 rounded-xl border p-1"
+                style={{
+                    borderColor: 'var(--tt-border)',
+                    background: 'var(--tt-surface-muted)',
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.7)',
+                }}
+            >
                 {modes.map(({ value, label, Icon }) => (
                     <label
                         key={value}
-                        className={`px-2 py-1 text-sm border rounded cursor-pointer ${
-                            timerMode === value ? 'bg-white border-blue-500' : 'bg-white border-gray-300'
-                        }`}
+                        className="cursor-pointer rounded-lg"
                     >
                         <input
                             type="radio"
@@ -33,13 +38,24 @@ export function ModeSelector({ timerMode, onChange }: ModeSelectorProps) {
                             onChange={() => onChange(value)}
                             className="sr-only"
                         />
-                        <span className="text-gray-700 inline-flex items-center gap-2">
-                            <Icon size="sm" /> {label}
+                        <span
+                            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
+                            style={timerMode === value
+                                ? {
+                                    background: 'var(--tt-chip-active-bg)',
+                                    color: 'var(--tt-chip-active-text)',
+                                  }
+                                : {
+                                    color: 'var(--tt-text-muted)',
+                                  }}
+                        >
+                            <Icon size="sm" />
+                            {label}
                         </span>
                     </label>
                 ))}
             </div>
-        </div>
+        </fieldset>
     );
 }
 

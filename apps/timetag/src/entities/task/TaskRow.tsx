@@ -95,6 +95,51 @@ export function TaskRow({
     return timeDisplay.full;
   };
 
+  const rowBackground = isSelected ? 'var(--tt-accent-soft)' : 'transparent';
+  const rowBoxShadow = isSelected ? 'inset 0 0 0 1px rgba(79, 125, 243, 0.10)' : undefined;
+  const statusButtonStyle: React.CSSProperties = task.status === 'done'
+    ? {
+        background: '#16a34a',
+        borderColor: '#16a34a',
+        color: '#ffffff',
+      }
+    : {
+        borderColor: 'var(--tt-border-strong)',
+        background: isSelected ? 'rgba(255, 255, 255, 0.78)' : 'var(--tt-surface)',
+        color: 'var(--tt-text-soft)',
+      };
+  const isPaused = task.timerStatus === 'paused';
+  const timeChipTone = task.status === 'archived'
+    ? 'neutral'
+    : urgency === 'overdue'
+      ? 'danger'
+      : isPaused
+        ? 'neutral'
+        : urgency === 'danger'
+          ? 'danger'
+          : urgency === 'warn'
+            ? 'warning'
+            : task.timerStatus === 'running'
+              ? 'info'
+              : 'neutral';
+  const timeChipStyle: React.CSSProperties = task.status === 'archived'
+    ? {
+        color: 'var(--tt-text-soft)',
+        opacity: 0.78,
+      }
+    : isPaused
+      ? {
+          borderColor: 'var(--tt-border)',
+          background: 'var(--tt-surface-subtle)',
+          color: 'var(--tt-text-muted)',
+        }
+    : urgency === 'overdue'
+      ? {
+          background: '#f8eded',
+          color: '#8a4747',
+        }
+    : {};
+
   const handleNoteToggle = () => {
     setIsNotePinned((prev) => {
       const next = !prev;
@@ -130,12 +175,10 @@ export function TaskRow({
 
   return (
       <div
-          className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-              isSelected ? 'bg-blue-50' : ''
-          }`}
+          className="group flex items-center gap-3.5 px-4 py-3 transition-[background-color,box-shadow] hover:bg-[var(--tt-row-hover)] hover:shadow-[var(--tt-shadow-soft)]"
           style={{
-            borderColor: 'var(--tt-border)',
-            background: isSelected ? 'var(--tt-accent-soft)' : 'transparent',
+            background: rowBackground,
+            boxShadow: rowBoxShadow,
           }}
       >
         <Checkbox
@@ -147,22 +190,21 @@ export function TaskRow({
         <button
             type="button"
             onClick={() => onToggleStatus(task.id)}
-            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                task.status === 'done'
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-gray-300 hover:border-gray-400'
-            } ${task.status === 'archived' ? 'opacity-50' : ''}`}
+            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                task.status === 'archived' ? 'opacity-50' : 'hover:scale-[1.03]'
+            }`}
+            style={statusButtonStyle}
             aria-label={task.status === 'done' ? 'Mark as active' : 'Mark as done'}
             disabled={task.status === 'archived'}
         >
           {task.status === 'done' && <CheckIcon size="xs" />}
         </button>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0 text-sm">
+        <div className="min-w-0 flex-1 pr-2">
+          <div className="flex min-w-0 items-start gap-2 text-sm">
             {settings.general.showUrgencyIndicator && task.priority === 'urgent' && (
                 <span
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center"
+                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center pt-0.5"
                     title="Urgent"
                     aria-label="Urgent priority"
                 >
@@ -195,8 +237,11 @@ export function TaskRow({
                         setSuppressTransientPreview(false);
                       }}
                       onClick={handleNoteToggle}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-offset-1"
-                      style={{ color: isNotePreviewOpen ? 'var(--tt-text-muted)' : 'var(--tt-text-soft)' }}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors hover:bg-[var(--tt-surface-hover)] focus-visible:ring-2 focus-visible:ring-offset-1"
+                      style={{
+                        color: isNotePreviewOpen ? 'var(--tt-text-muted)' : 'var(--tt-text-soft)',
+                        background: isNotePreviewOpen ? 'var(--tt-surface-subtle)' : 'transparent',
+                      }}
                       aria-label="Task note preview"
                       aria-expanded={isNotePreviewOpen}
                       aria-controls={notePopoverId}
@@ -223,14 +268,12 @@ export function TaskRow({
                 </span>
             )}
             <span
-                className={`truncate ${
-                    task.status === 'done'
-                        ? 'text-gray-400 line-through'
-                        : task.status === 'archived'
-                            ? 'text-gray-400'
-                            : ''
+                className={`min-w-0 truncate text-[15px] font-medium leading-5 ${
+                    task.status === 'done' ? 'line-through' : ''
                 }`}
-                style={task.status === 'done' || task.status === 'archived' ? undefined : { color: 'var(--tt-text)' }}
+                style={task.status === 'done' || task.status === 'archived'
+                  ? { color: 'var(--tt-text-soft)' }
+                  : { color: 'var(--tt-text)' }}
             >
               {task.title}
             </span>
@@ -238,12 +281,8 @@ export function TaskRow({
 
           {hasNote && settings.general.showNotePreviewsInTaskList && (
               <div
-                  className={`mt-0.5 truncate pr-2 text-xs ${
-                      task.status === 'archived'
-                          ? 'text-gray-400'
-                          : ''
-                  }`}
-                  style={task.status === 'archived' ? undefined : { color: 'var(--tt-text-muted)' }}
+                  className="mt-1 truncate pr-2 text-xs leading-5"
+                  style={{ color: task.status === 'archived' ? 'var(--tt-text-soft)' : 'var(--tt-text-muted)' }}
                   title={trimmedNote}
               >
                 {notePreview}
@@ -258,7 +297,7 @@ export function TaskRow({
             totalSec={task.originalDurationSec}
             urgency={urgency}
             disabled={isTimerDisabled}
-            onClick={() => onToggleTimer(task.id)}
+            onToggleAction={() => onToggleTimer(task.id)}
             sizePx={32}
             strokeWidth={3}
         />
@@ -266,15 +305,12 @@ export function TaskRow({
         {/* Time pill: fixed width for alignment, neutral gray bg + dark gray text - wrapped in div for title tooltip support */}
         <div title={getFullTimeText()} className="flex-shrink-0 cursor-help">
           <Chip
+              tone={timeChipTone}
               className={[
-                'w-[72px] justify-center text-center',  // Fixed width + center alignment
-                'h-7 px-3',
+                'h-7 w-[76px] justify-center text-center',
                 'tabular-nums leading-none',
-                // light
-                'border-gray-200 bg-gray-100 text-gray-700',
-                // dark (чтобы текст не исчезал)
-                'dark:border-white/10 dark:bg-white/10 dark:text-slate-500',
               ].join(' ')}
+              style={timeChipStyle}
           >
             {getDisplayTime()}
           </Chip>
@@ -282,9 +318,12 @@ export function TaskRow({
 
         <Dropdown
             trigger={
-              <span className="rounded-lg p-1.5" style={{ color: 'var(--tt-text-soft)' }}>
-            <MoreVerticalIcon size="sm" aria-label="Task options" />
-          </span>
+              <span
+                  className="rounded-lg p-1.5 transition-colors group-hover:bg-[var(--tt-row-hover)]"
+                  style={{ color: 'var(--tt-text-soft)' }}
+              >
+                <MoreVerticalIcon size="sm" aria-label="Task options" />
+              </span>
             }
             align="right"
         >

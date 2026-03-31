@@ -3,7 +3,7 @@
 import React from 'react';
 import type { UrgencyLevel } from '@/domain/task.types';
 import { PlayIcon, PauseIcon } from '@/shared';
-import { getRemainingRatio, getRingColorClass } from '@/domain/timer.ring';
+import { getRemainingRatio, getRingVisualTone } from '@/domain/timer.ring';
 
 type Props = {
     isRunning: boolean;
@@ -14,7 +14,7 @@ type Props = {
 
     urgency?: UrgencyLevel; // IMPORTANT: already computed outside (TaskRow/store selector)
     disabled?: boolean;
-    onClick?: () => void;
+    onToggleAction?: () => void;
 
     sizePx?: number; // default 28 (more compact like screenshot)
     strokeWidth?: number; // default 3
@@ -27,56 +27,89 @@ export function TimerRingButton({
                                     totalSec,
                                     urgency,
                                     disabled,
-                                    onClick,
+                                    onToggleAction,
                                     sizePx = 28,
                                     strokeWidth = 3,
                                 }: Props) {
-    // Calculate ratio for ring fill
+    const gradientId = React.useId();
     let ratio = getRemainingRatio(remainingSec, totalSec);
 
-    // For overdue (expired or negative time) - show FULL ring (100% filled) instead of empty
-    // This makes the black ring completely filled to emphasize urgency
     const isOverdue = remainingSec <= 0 || urgency === 'overdue';
     if (isOverdue) {
-        ratio = 1; // Full circle for overdue state
+        ratio = 1;
     }
 
-    const colorClass = getRingColorClass({
-        ratio01: remainingSec <= 0 ? 0 : ratio, // Pass 0 for overdue to trigger black color
+    const ringTone = getRingVisualTone({
+        ratio01: remainingSec <= 0 ? 0 : ratio,
         urgency,
         disabled,
         paused: isPaused,
     });
 
-
-    // SVG geometry (viewBox 36x36)
     const r = 15;
     const cx = 18;
     const cy = 18;
     const circ = 2 * Math.PI * r;
     const dashoffset = circ * (1 - ratio);
 
-    const surfaceBase =
-        'border border-black/10 bg-black/5 dark:border-white/10 dark:bg-white/10';
+    const iconColor = disabled
+        ? 'var(--tt-text-soft)'
+        : ringTone === 'paused'
+            ? 'var(--tt-text-muted)'
+            : ringTone === 'warn'
+                ? 'var(--tt-chip-warning-text)'
+                : ringTone === 'danger'
+                    ? 'var(--tt-chip-danger-text)'
+                    : ringTone === 'overdue'
+                        ? 'var(--tt-chip-danger-text)'
+                        : 'var(--tt-accent)';
 
-    // Pause “mode”: warmer + sepia (optional “inversion vibe”, without breaking theme)
-    const surfacePaused =
-        'border-amber-200/50 bg-amber-50/70 dark:border-amber-400/20 dark:bg-amber-400/10 sepia saturate-50';
+    const progressStroke = disabled
+        ? 'var(--tt-border-strong)'
+        : ringTone === 'paused'
+            ? 'var(--tt-text-soft)'
+            : `url(#${gradientId}-${ringTone})`;
+
+    const buttonStyle: React.CSSProperties = disabled
+        ? {
+            background: 'var(--tt-surface-muted)',
+            color: iconColor,
+            width: sizePx,
+            height: sizePx,
+          }
+        : isPaused
+            ? {
+                background: 'var(--tt-surface-subtle)',
+                color: iconColor,
+                width: sizePx,
+                height: sizePx,
+              }
+            : ringTone === 'overdue'
+                ? {
+                    background: 'var(--tt-chip-danger-bg)',
+                    color: iconColor,
+                    width: sizePx,
+                    height: sizePx,
+                  }
+            : {
+                background: 'var(--tt-surface)',
+                color: iconColor,
+                width: sizePx,
+                height: sizePx,
+              };
 
     return (
         <button
             type="button"
-            onClick={onClick}
+            onClick={onToggleAction}
             disabled={disabled}
             aria-label={isRunning ? 'Pause timer' : 'Start timer'}
             className={[
-                'relative inline-grid shrink-0 place-items-center rounded-full',
-                'transition-colors',
-                isPaused ? surfacePaused : surfaceBase,
-                disabled ? 'cursor-not-allowed opacity-60' : 'hover:bg-black/10 dark:hover:bg-white/15',
-                colorClass, // controls ring color: dark gray when paused, black when overdue, colored otherwise
+                'relative inline-grid shrink-0 place-items-center rounded-full border border-transparent',
+                'transition-all duration-150',
+                disabled ? 'cursor-not-allowed opacity-60' : 'hover:scale-[1.02] hover:shadow-[var(--tt-shadow-soft)] active:scale-[0.98]',
             ].join(' ')}
-            style={{ width: sizePx, height: sizePx }}
+            style={buttonStyle}
         >
             <svg
                 aria-hidden
@@ -85,34 +118,50 @@ export function TimerRingButton({
                 width={sizePx}
                 height={sizePx}
             >
-                {/* track */}
+                <defs>
+                    <linearGradient id={`${gradientId}-normal`} x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="var(--tt-ring-normal-from)" />
+                        <stop offset="100%" stopColor="var(--tt-ring-normal-to)" />
+                    </linearGradient>
+                    <linearGradient id={`${gradientId}-warn`} x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="var(--tt-ring-warn-from)" />
+                        <stop offset="100%" stopColor="var(--tt-ring-warn-to)" />
+                    </linearGradient>
+                    <linearGradient id={`${gradientId}-danger`} x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="var(--tt-ring-danger-from)" />
+                        <stop offset="100%" stopColor="var(--tt-ring-danger-to)" />
+                    </linearGradient>
+                    <linearGradient id={`${gradientId}-overdue`} x1="4" y1="4" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stopColor="var(--tt-ring-overdue-from)" />
+                        <stop offset="100%" stopColor="var(--tt-ring-overdue-to)" />
+                    </linearGradient>
+                </defs>
                 <circle
                     cx={cx}
                     cy={cy}
                     r={r}
                     fill="none"
-                    stroke="rgba(148, 163, 184, 0.35)"
+                    stroke="var(--tt-ring-track)"
                     strokeWidth={strokeWidth}
                 />
-                {/* progress */}
                 <circle
                     cx={cx}
                     cy={cy}
                     r={r}
                     fill="none"
-                    stroke="currentColor"
+                    stroke={progressStroke}
                     strokeWidth={strokeWidth}
                     strokeLinecap="round"
                     strokeDasharray={circ}
                     strokeDashoffset={dashoffset}
                     transform={`rotate(-90 ${cx} ${cy})`}
+                    style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.2s ease' }}
                 />
             </svg>
 
             <span className="relative z-10">
-        {/* UX: running -> pause, paused -> play (resume) */}
                 {isRunning ? <PauseIcon size="sm" /> : <PlayIcon size="sm" />}
-      </span>
+            </span>
         </button>
     );
 }

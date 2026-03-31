@@ -18,18 +18,21 @@ export function PrioritySelect({ priority, onChange }: PrioritySelectProps) {
 
   return (
     <fieldset className="flex flex-col">
-      <legend className="text-xs font-medium text-gray-700 mb-1">
+      <legend className="mb-2 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
         Priority
       </legend>
-      <div className="inline-flex rounded-lg border border-gray-300 p-0.5 bg-white w-fit">
+      <div
+        className="inline-flex w-fit rounded-xl border p-1"
+        style={{
+          borderColor: 'var(--tt-border)',
+          background: 'var(--tt-surface-muted)',
+          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.7)',
+        }}
+      >
         {PRIORITY_OPTIONS.map((option) => (
           <label
             key={option.id}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              priority === option.id
-                ? 'bg-gray-900 text-white'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}
+            className="cursor-pointer rounded-lg"
           >
             <input
               type="radio"
@@ -39,7 +42,19 @@ export function PrioritySelect({ priority, onChange }: PrioritySelectProps) {
               onChange={() => onChange(option.id)}
               className="sr-only"
             />
-            {option.label}
+            <span
+              className="inline-flex rounded-lg px-3 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
+              style={priority === option.id
+                ? {
+                    background: option.id === 'urgent' ? 'var(--tt-chip-danger-bg)' : 'var(--tt-chip-active-bg)',
+                    color: option.id === 'urgent' ? 'var(--tt-chip-danger-text)' : 'var(--tt-chip-active-text)',
+                  }
+                : {
+                    color: 'var(--tt-text-muted)',
+                  }}
+            >
+              {option.label}
+            </span>
           </label>
         ))}
       </div>
