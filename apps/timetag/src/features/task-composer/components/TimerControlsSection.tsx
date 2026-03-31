@@ -27,8 +27,8 @@ export function TimerControlsSection({
     onOverdueEnabledChange,
 }: TimerControlsSectionProps) {
     return (
-        <div className="pt-3 border-t border-gray-200">
-            <label className="text-xs font-medium text-gray-700 mb-2 block">Timer Controls</label>
+        <div className="border-t pt-3" style={{ borderColor: 'rgba(15, 23, 42, 0.05)' }}>
+            <label className="mb-2 block text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>Timer Controls</label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Auto Start toggle - ALL MODES */}
                 <TimerControlToggle

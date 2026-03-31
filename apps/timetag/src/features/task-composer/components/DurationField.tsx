@@ -73,7 +73,7 @@ export function DurationField({
 
     return (
         <div className="flex flex-col">
-            <label htmlFor="duration-value" className="mb-1 text-xs font-medium text-gray-700">
+            <label htmlFor="duration-value" className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
                 Duration
             </label>
 
@@ -86,14 +86,24 @@ export function DurationField({
                     value={inputValue}
                     onChange={handleValueChange}
                     onBlur={handleBlur}
-                    className="w-24 min-w-[96px] rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-24 min-w-[96px] rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-[var(--tt-ring)]"
+                    style={{
+                        borderColor: 'var(--tt-border)',
+                        background: 'var(--tt-input-bg)',
+                        color: 'var(--tt-text)',
+                    }}
                     aria-label="Duration value"
                 />
 
                 <select
                     value={unit}
                     onChange={handleUnitChange}
-                    className="rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-[var(--tt-ring)]"
+                    style={{
+                        borderColor: 'var(--tt-border)',
+                        background: 'var(--tt-input-bg)',
+                        color: 'var(--tt-text)',
+                    }}
                     aria-label="Duration unit"
                 >
                     {UNIT_OPTIONS.map((option) => (
@@ -105,7 +115,7 @@ export function DurationField({
             </div>
 
             {presetLabel ? (
-                <div className="mt-1 text-xs text-gray-500">Preset: {presetLabel}</div>
+                <div className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>Preset: {presetLabel}</div>
             ) : null}
         </div>
     );

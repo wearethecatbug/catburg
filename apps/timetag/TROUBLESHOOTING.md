@@ -14,12 +14,14 @@ Require stack:
 Эта ошибка возникает когда в переменной окружения `NODE_OPTIONS` установлен флаг `--require ts-node/register`, но модуль `ts-node` не установлен или не требуется для этого проекта.
 
 ### Решение
-Проект уже настроен для автоматической очистки `NODE_OPTIONS` с помощью пакета `cross-env`:
+Проект уже настроен для автоматической очистки `NODE_OPTIONS`:
 
-```json
-"scripts": {
-  "dev": "cross-env NODE_OPTIONS='' next dev --turbopack --port 3003",
-  "build": "cross-env NODE_OPTIONS='' next build"
+```text
+{
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "build": "node ./scripts/build.mjs"
+  }
 }
 ```
 
@@ -60,6 +62,52 @@ echo $NODE_OPTIONS
 Get-NetTCPConnection -LocalPort 3003 | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
 
 # Или запустите на другом порту
-pnpm exec next dev --turbopack --port 3004
+pnpm dev -- --port 3004
+```
+
+## Internal Server Error in dev after edits / hot reload
+
+### Symptoms
+
+- Browser shows `Internal Server Error`
+- Dev/build output may contain errors like:
+
+```text
+ENOENT: no such file or directory, open '.next\\server\\app\\page\\app-build-manifest.json'
+ENOENT: no such file or directory, open '.next\\static\\development\\_buildManifest.js.tmp...'
+Cannot find module '../chunks/ssr/[turbopack]_runtime.js'
+```
+
+### Cause
+
+On Windows with Turbopack, stale `.next` artifacts can break both dev reloads and later builds.
+
+### Current default behavior
+
+- `pnpm dev` runs through `scripts/dev.mjs`
+- `pnpm build` runs through `scripts/build.mjs`
+
+Both commands remove the local `.next` directory before starting.
+
+### Recommended commands
+
+```powershell
+pnpm dev
+pnpm build
+```
+
+To use another dev port:
+
+```powershell
+pnpm dev -- --port 3004
+```
+
+### Manual recovery
+
+If you are running raw Next.js commands and still hit this state:
+
+```powershell
+Remove-Item -Recurse -Force .next
+pnpm exec next dev --turbopack --port 3003
 ```
 

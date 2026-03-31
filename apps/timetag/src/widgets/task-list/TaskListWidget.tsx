@@ -85,14 +85,26 @@ export function TaskListWidget() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-gray-100" style={{ background: 'var(--tt-app-bg)' }}>
+    <div className="flex h-screen flex-col" style={{ background: 'var(--tt-app-bg)' }}>
       <Header onOpenSettings={() => setIsSettingsOpen(true)} />
       <WorkspaceSwitch />
       <StatusFilters />
 
-      <main className="flex-1 flex flex-col overflow-hidden bg-white" style={{ background: 'var(--tt-surface-elevated)' }}>
+      <main
+        className="flex-1 flex flex-col overflow-hidden border-t"
+        style={{
+          background: 'var(--tt-surface-elevated)',
+          borderColor: 'rgba(15, 23, 42, 0.04)',
+        }}
+      >
         {/* List Controls + Composer area */}
-        <div className="space-y-3 border-b bg-white p-4" style={{ background: 'var(--tt-surface)', borderColor: 'var(--tt-border)' }}>
+        <div
+          className="space-y-3 border-b p-4"
+          style={{
+            background: 'var(--tt-surface)',
+            borderColor: 'var(--tt-border)',
+          }}
+        >
           {/* Add Task Input (Composer) */}
           <AddTaskInput ref={addInputRef} />
 
@@ -108,7 +120,7 @@ export function TaskListWidget() {
 
               {/* AR Chip */}
               {state.filter.approachingRed.enabled && (
-                <Chip onRemove={disableApproachingRed}>
+                <Chip tone="info" onRemove={disableApproachingRed}>
                   AR {state.filter.approachingRed.windowMinutes}m
                 </Chip>
               )}

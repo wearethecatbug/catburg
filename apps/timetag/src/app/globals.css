@@ -3,28 +3,47 @@
 @tailwind utilities;
 
 :root {
-  --background: #f3f6fb;
-  --foreground: #172033;
-  --tt-app-bg: #f3f6fb;
-  --tt-app-bg-color: #f3f6fb;
+  --background: #f6f8fb;
+  --foreground: #1e293b;
+  --tt-app-bg: #f6f8fb;
+  --tt-app-bg-color: #f6f8fb;
   --tt-surface: #ffffff;
-  --tt-surface-muted: rgba(255, 255, 255, 0.84);
-  --tt-surface-subtle: #f8fafc;
-  --tt-surface-hover: #f1f5f9;
+  --tt-surface-muted: #fcfdff;
+  --tt-surface-subtle: #f2f4f8;
+  --tt-surface-hover: #f8fafc;
   --tt-surface-elevated: #ffffff;
-  --tt-border: #d6deea;
-  --tt-border-strong: #c4cfdf;
-  --tt-text: #172033;
-  --tt-text-muted: #556179;
-  --tt-text-soft: #8390a8;
-  --tt-accent: #2563eb;
-  --tt-accent-hover: #1d4ed8;
-  --tt-accent-soft: rgba(37, 99, 235, 0.16);
+  --tt-border: #e6eaf0;
+  --tt-border-strong: #d7dee7;
+  --tt-text: #1e293b;
+  --tt-text-muted: #64748b;
+  --tt-text-soft: #94a3b8;
+  --tt-accent: #4f7df3;
+  --tt-accent-hover: #3f6ae0;
+  --tt-accent-soft: #e8f0ff;
   --tt-accent-contrast: #ffffff;
   --tt-input-bg: #ffffff;
-  --tt-overlay: rgba(15, 23, 42, 0.2);
-  --tt-shadow: 0 18px 60px rgba(15, 23, 42, 0.14);
-  --tt-ring: rgba(37, 99, 235, 0.36);
+  --tt-chip-bg: #f1f5f9;
+  --tt-chip-text: #334155;
+  --tt-chip-active-bg: #e8f0ff;
+  --tt-chip-active-text: #3b5ccc;
+  --tt-chip-warning-bg: #fff7e6;
+  --tt-chip-warning-text: #9a6700;
+  --tt-chip-danger-bg: #fff1f1;
+  --tt-chip-danger-text: #a74f4f;
+  --tt-ring-track: #e6eaf0;
+  --tt-ring-normal-from: #d8e5ff;
+  --tt-ring-normal-to: #7fa6f6;
+  --tt-ring-warn-from: #f7e4b5;
+  --tt-ring-warn-to: #f2c96d;
+  --tt-ring-danger-from: #f3c4c4;
+  --tt-ring-danger-to: #e88b8b;
+  --tt-ring-overdue-from: #d8b3b3;
+  --tt-ring-overdue-to: #9f5a5a;
+  --tt-row-hover: #f8fafc;
+  --tt-overlay: rgba(15, 23, 42, 0.14);
+  --tt-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  --tt-shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --tt-ring: rgba(79, 125, 243, 0.15);
 }
 
 html {

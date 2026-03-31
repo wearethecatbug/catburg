@@ -20,7 +20,10 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
 
   if (filteredTasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 px-4">
+      <div
+        className="flex flex-col items-center justify-center px-4 py-12"
+        style={{ background: 'var(--tt-surface)' }}
+      >
         <ClipboardIcon size="lg" color="text-gray-300" className="mb-4" />
         <p className="text-center" style={{ color: 'var(--tt-text-muted)' }}>
           No tasks found.
@@ -50,8 +53,11 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="divide-y divide-[var(--tt-border)]">
+    <div className="flex-1 overflow-auto" style={{ background: 'var(--tt-surface)' }}>
+      <div
+        className="divide-y divide-[var(--tt-border)]"
+        style={{ background: 'var(--tt-surface)' }}
+      >
         {visibleTasks.map((task) => (
           <TaskRow
             key={task.id}
@@ -70,14 +76,19 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
 
       {/* Pagination Control */}
       {hasMore && (
-        <div className="flex justify-center border-t py-4" style={{ borderColor: 'var(--tt-border)' }}>
+        <div
+          className="flex justify-center border-t px-4 py-4"
+          style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface-muted)' }}
+        >
           <button
             type="button"
             onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
-            className="rounded-lg px-4 py-2 text-sm"
+            className="rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface)]"
             style={{
               color: 'var(--tt-accent)',
-              background: 'var(--tt-accent-soft)',
+              background: 'var(--tt-surface)',
+              borderColor: 'var(--tt-border)',
+              boxShadow: 'var(--tt-shadow-soft)',
             }}
           >
             Show more ({filteredTasks.length - visibleCount} remaining)

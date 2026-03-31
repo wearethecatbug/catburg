@@ -3,6 +3,7 @@
 import React from 'react';
 import { TASK_NOTE_MAX_LENGTH, type TaskPriority, type TimerMode } from '@/domain/task.types';
 import type { DurationUnit } from '@/domain/duration';
+import { CheckIcon } from '@/shared';
 import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
@@ -44,6 +45,9 @@ interface DetailsPanelProps {
     onPlayEnabledChange: (value: boolean) => void;
     onAutoResetEnabledChange: (value: boolean) => void;
     onOverdueEnabledChange: (value: boolean) => void;
+    onCancel: () => void;
+    onReset: () => void;
+    canSubmit: boolean;
 }
 
 export function DetailsPanel({
@@ -76,11 +80,25 @@ export function DetailsPanel({
                                  onPlayEnabledChange,
                                  onAutoResetEnabledChange,
                                  onOverdueEnabledChange,
+                                  onCancel,
+                                  onReset,
+                                  canSubmit,
                              }: DetailsPanelProps) {
+    const fieldStyle: React.CSSProperties = {
+        borderColor: 'var(--tt-border)',
+        background: 'var(--tt-input-bg)',
+        color: 'var(--tt-text)',
+    };
+
     return (
         <div
             id="task-composer-details"
-            className="space-y-3 rounded-md border border-gray-100 bg-gray-50 p-3"
+            className="space-y-4 border-t px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4"
+            style={{
+                borderColor: 'var(--tt-border)',
+                background: 'linear-gradient(180deg, var(--tt-surface) 0%, var(--tt-surface-subtle) 100%)',
+                boxShadow: 'inset 0 1px 0 rgba(15, 23, 42, 0.03)',
+            }}
         >
             <ModeSelector timerMode={timerMode} onChange={onTimerModeChange} />
 
@@ -97,7 +115,7 @@ export function DetailsPanel({
                 />
             ) : timerMode === 'deadline' ? (
                 <div className="flex flex-col">
-                    <label htmlFor="deadline-picker" className="mb-1 text-xs font-medium text-gray-700">
+                    <label htmlFor="deadline-picker" className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
                         Deadline
                     </label>
                     <input
@@ -105,10 +123,11 @@ export function DetailsPanel({
                         type="datetime-local"
                         value={deadlineDate}
                         onChange={(e) => onDeadlineDateChange(e.target.value)}
-                        className="rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                        style={fieldStyle}
                         aria-label="Deadline date and time"
                     />
-                    <div className="mt-1 text-xs text-gray-500">
+                    <div className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
                         Set specific date and time for this task
                     </div>
                 </div>
@@ -126,10 +145,10 @@ export function DetailsPanel({
 
             <div className="flex flex-col">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                    <label htmlFor="task-note" className="text-xs font-medium text-gray-700">
+                    <label htmlFor="task-note" className="text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
                         Note
                     </label>
-                    <span className="text-[11px] text-gray-500" aria-live="polite">
+                    <span className="text-[11px]" style={{ color: 'var(--tt-text-soft)' }} aria-live="polite">
                         {note.length}/{TASK_NOTE_MAX_LENGTH}
                     </span>
                 </div>
@@ -140,10 +159,11 @@ export function DetailsPanel({
                     rows={3}
                     maxLength={TASK_NOTE_MAX_LENGTH}
                     placeholder="Add a short note…"
-                    className="resize-none rounded border border-gray-300 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus:ring-2"
+                    style={fieldStyle}
                     aria-describedby="task-note-help"
                 />
-                <div id="task-note-help" className="mt-1 text-xs text-gray-500">
+                <div id="task-note-help" className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
                     Optional note for context, reminders, or next steps.
                 </div>
             </div>
@@ -159,6 +179,49 @@ export function DetailsPanel({
                 onAutoResetEnabledChange={onAutoResetEnabledChange}
                 onOverdueEnabledChange={onOverdueEnabledChange}
             />
+
+            <div
+                className="flex flex-wrap items-center justify-end gap-2 border-t pt-3"
+                style={{ borderColor: 'rgba(15, 23, 42, 0.05)' }}
+            >
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
+                    style={{
+                        borderColor: 'var(--tt-border)',
+                        background: 'var(--tt-surface)',
+                        color: 'var(--tt-text-muted)',
+                    }}
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    onClick={onReset}
+                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
+                    style={{
+                        borderColor: 'var(--tt-border)',
+                        background: 'var(--tt-surface-muted)',
+                        color: 'var(--tt-text)',
+                    }}
+                >
+                    Reset
+                </button>
+                <button
+                    type="submit"
+                    disabled={!canSubmit}
+                    className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-transform duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                    style={{
+                        background: 'linear-gradient(180deg, #5b8cff 0%, var(--tt-accent) 100%)',
+                        color: 'var(--tt-accent-contrast)',
+                        boxShadow: '0 6px 16px rgba(79, 125, 243, 0.25)',
+                    }}
+                >
+                    <CheckIcon size="sm" />
+                    Save
+                </button>
+            </div>
         </div>
     );
 }

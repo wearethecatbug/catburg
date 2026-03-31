@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "cross-env NODE_OPTIONS='' next dev --turbopack --port 3003",
-    "build": "cross-env NODE_OPTIONS='' next build",
+    "dev": "node ./scripts/dev.mjs",
+    "build": "node ./scripts/build.mjs",
     "start": "cross-env NODE_OPTIONS='' next start",
     "lint": "cross-env NODE_OPTIONS='' next lint"
   },

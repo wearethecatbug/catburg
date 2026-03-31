@@ -489,10 +489,30 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         }
     };
 
+    const canSubmit = value.trim().length > 0;
+
+    const handleCancelDetails = () => {
+        setShowDetails(false);
+        requestAnimationFrame(() => localInputRef.current?.focus());
+    };
+
+    const handleResetDetails = () => {
+        resetComposerToSettingsDefaults();
+        requestAnimationFrame(() => localInputRef.current?.focus());
+    };
+
     return (
-        <form onSubmit={(e) => handleSubmit(e)} className="space-y-2">
-            <div className="flex items-center gap-2">
-                <div className="relative flex-1">
+        <form onSubmit={(e) => handleSubmit(e)} className="space-y-0">
+            <div
+                className="relative overflow-visible rounded-[18px] border"
+                style={{
+                    borderColor: 'var(--tt-border)',
+                    background: 'var(--tt-surface)',
+                    boxShadow: 'var(--tt-shadow)',
+                }}
+            >
+                <div className="flex flex-wrap items-center gap-2.5 p-2.5">
+                    <div className="relative min-w-[220px] flex-1">
                     <label className="sr-only" htmlFor="task-title">
                         Task title
                     </label>
@@ -503,7 +523,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         placeholder="Add a new task..."
-                        className="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none"
+                        className="w-full rounded-xl border px-3 py-2.5 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] focus:outline-none focus-visible:ring-4 focus-visible:ring-[var(--tt-ring)]"
                         style={{
                             borderColor: 'var(--tt-border)',
                             background: 'var(--tt-input-bg)',
@@ -511,9 +531,9 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         }}
                         aria-label="Add a new task"
                     />
-                </div>
+                    </div>
 
-                <Dropdown
+                    <Dropdown
                     id="task-mode-btn"
                     label="Timer mode"
                     icon={<ModeIcon size="sm" />}
@@ -531,10 +551,10 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     onClose={() => setModeOpen(false)}
                     title="Timer mode"
                     ariaLabel="Timer mode options"
-                />
+                    />
 
-                {timerMode !== 'deadline' && (
-                    <Dropdown
+                    {timerMode !== 'deadline' && (
+                        <Dropdown
                         id="task-preset-btn"
                         label={timerMode === 'pomodoro' ? 'Pomodoro preset' : 'Preset duration'}
                         icon={<ClockIcon size="sm" />}
@@ -551,11 +571,11 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         onSelect={handlePresetSelect}
                         onClose={() => setPresetOpen(false)}
                         title={timerMode === 'pomodoro' ? 'Pomodoro preset' : 'Preset duration'}
-                    />
-                )}
+                        />
+                    )}
 
-                {timerMode === 'deadline' && (
-                    <Dropdown
+                    {timerMode === 'deadline' && (
+                        <Dropdown
                         id="task-deadline-preset-btn"
                         label="Deadline preset"
                         icon={<ClockIcon size="sm" />}
@@ -577,46 +597,47 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                         onClose={() => setPresetOpen(false)}
                         title="Deadline preset"
                         ariaLabel="Deadline preset options"
-                    />
-                )}
+                        />
+                    )}
 
-                <div className="flex-shrink-0">
-                    <button
-                        type="button"
-                        onClick={() => setShowDetails((s) => !s)}
-                        className="flex items-center gap-1 rounded-md border px-3 py-2 text-sm focus:outline-none"
-                        style={{
-                            borderColor: 'var(--tt-border)',
-                            background: 'var(--tt-surface-subtle)',
-                            color: 'var(--tt-text)',
-                        }}
-                        aria-expanded={showDetails}
-                        aria-controls="task-composer-details"
-                        title="Show details"
-                    >
-                        + Details
-                    </button>
+                    <div className="flex-shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setShowDetails((s) => !s)}
+                            className="flex items-center gap-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus:outline-none hover:bg-[var(--tt-surface-hover)]"
+                            style={{
+                                borderColor: showDetails ? 'rgba(79, 125, 243, 0.08)' : 'var(--tt-border)',
+                                background: showDetails ? 'var(--tt-chip-active-bg)' : 'var(--tt-surface-subtle)',
+                                color: showDetails ? 'var(--tt-chip-active-text)' : 'var(--tt-text)',
+                            }}
+                            aria-expanded={showDetails}
+                            aria-controls="task-composer-details"
+                            title="Show details"
+                        >
+                            {showDetails ? 'Hide details' : '+ Details'}
+                        </button>
+                    </div>
+
+                    <div className="flex-shrink-0">
+                        <button
+                            type="submit"
+                            className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-transform duration-150 hover:-translate-y-px active:translate-y-0 focus:outline-none"
+                            style={{
+                                background: 'linear-gradient(180deg, #5b8cff 0%, var(--tt-accent) 100%)',
+                                color: 'var(--tt-accent-contrast)',
+                                boxShadow: '0 6px 16px rgba(79, 125, 243, 0.25)',
+                            }}
+                            aria-label="Add task"
+                            title="Add task"
+                        >
+                            <PlusIcon size="sm" />
+                            Add
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex-shrink-0">
-                    <button
-                        type="submit"
-                        className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium focus:outline-none"
-                        style={{
-                            background: 'var(--tt-accent)',
-                            color: 'var(--tt-accent-contrast)',
-                        }}
-                        aria-label="Add task"
-                        title="Add task"
-                    >
-                        <PlusIcon size="sm" />
-                        Add
-                    </button>
-                </div>
-            </div>
-
-            {showDetails && (
-                <DetailsPanel
+                {showDetails && (
+                    <DetailsPanel
                     timerMode={timerMode}
                     priority={priority}
                     note={note}
@@ -646,8 +667,12 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
                     onPlayEnabledChange={setPlayEnabled}
                     onAutoResetEnabledChange={handleAutoResetChange}
                     onOverdueEnabledChange={handleOverdueChange}
-                />
-            )}
+                    onCancel={handleCancelDetails}
+                    onReset={handleResetDetails}
+                    canSubmit={canSubmit}
+                    />
+                )}
+            </div>
         </form>
     );
 });

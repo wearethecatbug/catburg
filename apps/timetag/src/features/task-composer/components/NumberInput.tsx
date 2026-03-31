@@ -21,9 +21,15 @@ export function NumberInput({
     unit,
     ariaLabel,
 }: NumberInputProps) {
+    const fieldStyle: React.CSSProperties = {
+        borderColor: 'var(--tt-border)',
+        background: 'var(--tt-input-bg)',
+        color: 'var(--tt-text)',
+    };
+
     return (
         <div className="flex flex-col">
-            <label htmlFor={id} className="text-xs font-medium text-gray-700 mb-1">
+            <label htmlFor={id} className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
                 {label}
             </label>
             <input
@@ -39,10 +45,11 @@ export function NumberInput({
                     }
                     onChange(clampedValue);
                 }}
-                className="py-2 px-2 text-gray-700 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-[var(--tt-ring)]"
+                style={fieldStyle}
                 aria-label={ariaLabel}
             />
-            {unit && <span className="text-xs text-gray-500 mt-1">{unit}</span>}
+            {unit && <span className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>{unit}</span>}
         </div>
     );
 }

@@ -47,8 +47,27 @@ export interface ThemeTokens {
   accentSoft: string;
   accentContrast: string;
   inputBackground: string;
+  chip: string;
+  chipText: string;
+  chipActive: string;
+  chipActiveText: string;
+  chipWarning: string;
+  chipWarningText: string;
+  chipDanger: string;
+  chipDangerText: string;
+  ringTrack: string;
+  ringNormalFrom: string;
+  ringNormalTo: string;
+  ringWarnFrom: string;
+  ringWarnTo: string;
+  ringDangerFrom: string;
+  ringDangerTo: string;
+  ringOverdueFrom: string;
+  ringOverdueTo: string;
+  rowHover: string;
   overlay: string;
   shadow: string;
+  shadowSoft: string;
   ring: string;
   isGlass: boolean;
   colorScheme: 'light' | 'dark';
@@ -68,12 +87,12 @@ interface ThemePalette {
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
 const LIGHT_THEME: ThemePalette = {
-  background: '#f3f6fb',
-  backgroundColor: '#f3f6fb',
+  background: '#f6f8fb',
+  backgroundColor: '#f6f8fb',
   surface: '#ffffff',
-  accent: '#2563eb',
-  text: '#172033',
-  border: '#d6deea',
+  accent: '#4f7df3',
+  text: '#1e293b',
+  border: '#e6eaf0',
   glass: false,
   colorScheme: 'light',
 };
@@ -258,21 +277,102 @@ function buildThemePalette(mode: ThemeMode, customTheme: CustomThemeSettings): T
 export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSettings = DEFAULT_CUSTOM_THEME_SETTINGS): ThemeTokens {
   const palette = buildThemePalette(mode, normalizeCustomThemeSettings(customTheme));
   const backgroundReference = palette.backgroundColor;
-  const surfaceMuted = palette.glass ? alphaHex(palette.surface, 0.46) : mixHex(palette.surface, backgroundReference, 0.12);
-  const surfaceSubtle = palette.glass ? alphaHex(palette.surface, 0.30) : mixHex(palette.surface, backgroundReference, 0.24);
-  const surfaceHover = palette.glass ? alphaHex(palette.surface, 0.88) : mixHex(palette.surface, palette.accent, 0.05);
+  const isSolidLightTheme = !palette.glass && palette.colorScheme === 'light';
+  const surfaceMuted = palette.glass
+    ? alphaHex(palette.surface, 0.46)
+    : isSolidLightTheme
+      ? '#fcfdff'
+      : mixHex(palette.surface, backgroundReference, 0.12);
+  const surfaceSubtle = palette.glass
+    ? alphaHex(palette.surface, 0.30)
+    : isSolidLightTheme
+      ? '#f2f4f8'
+      : mixHex(palette.surface, backgroundReference, 0.24);
+  const surfaceHover = palette.glass
+    ? alphaHex(palette.surface, 0.88)
+    : isSolidLightTheme
+      ? '#f8fafc'
+      : mixHex(palette.surface, palette.accent, 0.05);
   const surfaceElevated = palette.glass
     ? alphaHex(palette.surface, 0.74)
     : palette.colorScheme === 'dark'
       ? mixHex(palette.surface, '#1f2937', 0.18)
-      : palette.surface;
-  const textMuted = mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.34 : 0.44);
-  const textSoft = mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.54 : 0.62);
-  const accentHover = darkenHex(palette.accent, palette.colorScheme === 'dark' ? 0.08 : 0.14);
-  const accentSoft = alphaHex(palette.accent, palette.glass ? 0.22 : 0.16);
+      : isSolidLightTheme
+        ? '#ffffff'
+        : palette.surface;
+  const textMuted = isSolidLightTheme
+    ? '#64748b'
+    : mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.34 : 0.44);
+  const textSoft = isSolidLightTheme
+    ? '#94a3b8'
+    : mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.54 : 0.62);
+  const accentHover = isSolidLightTheme
+    ? '#3f6ae0'
+    : darkenHex(palette.accent, palette.colorScheme === 'dark' ? 0.08 : 0.14);
+  const accentSoft = palette.glass
+    ? alphaHex(palette.accent, 0.22)
+    : isSolidLightTheme
+      ? '#e8f0ff'
+      : alphaHex(palette.accent, 0.16);
   const border = palette.glass ? alphaHex(palette.border, 0.60) : palette.border;
-  const borderStrong = palette.glass ? alphaHex(palette.border, 0.84) : darkenHex(palette.border, palette.colorScheme === 'dark' ? 0.05 : 0.08);
-  const inputBackground = palette.glass ? alphaHex(palette.surface, 0.58) : mixHex(palette.surface, backgroundReference, 0.08);
+  const borderStrong = palette.glass
+    ? alphaHex(palette.border, 0.84)
+    : isSolidLightTheme
+      ? '#d7dee7'
+      : darkenHex(palette.border, palette.colorScheme === 'dark' ? 0.05 : 0.08);
+  const inputBackground = palette.glass
+    ? alphaHex(palette.surface, 0.58)
+    : isSolidLightTheme
+      ? '#ffffff'
+      : mixHex(palette.surface, backgroundReference, 0.08);
+  const chip = palette.colorScheme === 'dark'
+    ? alphaHex('#94a3b8', 0.14)
+    : isSolidLightTheme
+      ? '#f1f5f9'
+      : mixHex(palette.surface, backgroundReference, 0.22);
+  const chipText = palette.colorScheme === 'dark'
+    ? mixHex(palette.text, '#94a3b8', 0.22)
+    : isSolidLightTheme
+      ? '#334155'
+      : textMuted;
+  const chipActive = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.22)
+    : isSolidLightTheme
+      ? '#e8f0ff'
+      : accentSoft;
+  const chipActiveText = palette.colorScheme === 'dark'
+    ? mixHex(palette.accent, '#ffffff', 0.18)
+    : isSolidLightTheme
+      ? '#3b5ccc'
+      : palette.accent;
+  const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
+  const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+  const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
+  const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
+  const ringTrack = palette.colorScheme === 'dark'
+    ? mixHex(palette.border, '#ffffff', 0.08)
+    : isSolidLightTheme
+      ? '#e6eaf0'
+      : border;
+  const ringNormalFrom = palette.colorScheme === 'dark'
+    ? mixHex(palette.accent, '#ffffff', 0.22)
+    : isSolidLightTheme
+      ? '#d8e5ff'
+      : mixHex(palette.accent, '#ffffff', 0.56);
+  const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : isSolidLightTheme ? '#7fa6f6' : palette.accent;
+  const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
+  const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
+  const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
+  const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+  const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
+  const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+  const rowHover = palette.glass
+    ? alphaHex(palette.surface, 0.84)
+    : palette.colorScheme === 'dark'
+      ? mixHex(palette.surface, '#ffffff', 0.04)
+      : isSolidLightTheme
+        ? '#f8fafc'
+        : surfaceHover;
 
   return {
     appBackground: palette.background,
@@ -292,13 +392,32 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     accentSoft,
     accentContrast: getAccentContrast(palette.accent),
     inputBackground,
-    overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.20)',
+    chip,
+    chipText,
+    chipActive,
+    chipActiveText,
+    chipWarning,
+    chipWarningText,
+    chipDanger,
+    chipDangerText,
+    ringTrack,
+    ringNormalFrom,
+    ringNormalTo,
+    ringWarnFrom,
+    ringWarnTo,
+    ringDangerFrom,
+    ringDangerTo,
+    ringOverdueFrom,
+    ringOverdueTo,
+    rowHover,
+    overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
     shadow: palette.glass
       ? '0 18px 60px rgba(84, 102, 171, 0.24)'
       : palette.colorScheme === 'dark'
         ? '0 18px 60px rgba(0, 0, 0, 0.42)'
-        : '0 18px 60px rgba(15, 23, 42, 0.14)',
-    ring: alphaHex(palette.accent, 0.36),
+        : '0 8px 24px rgba(15, 23, 42, 0.04)',
+    shadowSoft: palette.colorScheme === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.24)' : '0 1px 2px rgba(15, 23, 42, 0.04)',
+    ring: alphaHex(palette.accent, palette.colorScheme === 'dark' ? 0.36 : isSolidLightTheme ? 0.15 : 0.36),
     isGlass: palette.glass,
     colorScheme: palette.colorScheme,
   };
@@ -324,8 +443,27 @@ const THEME_VARIABLE_NAMES = {
   accentSoft: '--tt-accent-soft',
   accentContrast: '--tt-accent-contrast',
   inputBackground: '--tt-input-bg',
+  chip: '--tt-chip-bg',
+  chipText: '--tt-chip-text',
+  chipActive: '--tt-chip-active-bg',
+  chipActiveText: '--tt-chip-active-text',
+  chipWarning: '--tt-chip-warning-bg',
+  chipWarningText: '--tt-chip-warning-text',
+  chipDanger: '--tt-chip-danger-bg',
+  chipDangerText: '--tt-chip-danger-text',
+  ringTrack: '--tt-ring-track',
+  ringNormalFrom: '--tt-ring-normal-from',
+  ringNormalTo: '--tt-ring-normal-to',
+  ringWarnFrom: '--tt-ring-warn-from',
+  ringWarnTo: '--tt-ring-warn-to',
+  ringDangerFrom: '--tt-ring-danger-from',
+  ringDangerTo: '--tt-ring-danger-to',
+  ringOverdueFrom: '--tt-ring-overdue-from',
+  ringOverdueTo: '--tt-ring-overdue-to',
+  rowHover: '--tt-row-hover',
   overlay: '--tt-overlay',
   shadow: '--tt-shadow',
+  shadowSoft: '--tt-shadow-soft',
   ring: '--tt-ring',
 } as const;
 
@@ -362,8 +500,27 @@ export function applyThemeToDocument(
   root.style.setProperty(THEME_VARIABLE_NAMES.accentSoft, tokens.accentSoft);
   root.style.setProperty(THEME_VARIABLE_NAMES.accentContrast, tokens.accentContrast);
   root.style.setProperty(THEME_VARIABLE_NAMES.inputBackground, tokens.inputBackground);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chip, tokens.chip);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipText, tokens.chipText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipActive, tokens.chipActive);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveText, tokens.chipActiveText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipWarning, tokens.chipWarning);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningText, tokens.chipWarningText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipDanger, tokens.chipDanger);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipDangerText, tokens.chipDangerText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringTrack, tokens.ringTrack);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringNormalFrom, tokens.ringNormalFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringNormalTo, tokens.ringNormalTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringWarnFrom, tokens.ringWarnFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringWarnTo, tokens.ringWarnTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringDangerFrom, tokens.ringDangerFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringDangerTo, tokens.ringDangerTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueFrom, tokens.ringOverdueFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueTo, tokens.ringOverdueTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.rowHover, tokens.rowHover);
   root.style.setProperty(THEME_VARIABLE_NAMES.overlay, tokens.overlay);
   root.style.setProperty(THEME_VARIABLE_NAMES.shadow, tokens.shadow);
+  root.style.setProperty(THEME_VARIABLE_NAMES.shadowSoft, tokens.shadowSoft);
   root.style.setProperty(THEME_VARIABLE_NAMES.ring, tokens.ring);
 
   return tokens;
@@ -454,17 +611,36 @@ export function getThemeInitScript(storageKey: string): string {
     };
     const buildTokens = (palette) => {
       const backgroundReference = palette.backgroundColor;
-      const surfaceMuted = palette.glass ? alphaHex(palette.surface, 0.46) : mixHex(palette.surface, backgroundReference, 0.12);
-      const surfaceSubtle = palette.glass ? alphaHex(palette.surface, 0.30) : mixHex(palette.surface, backgroundReference, 0.24);
-      const surfaceHover = palette.glass ? alphaHex(palette.surface, 0.88) : mixHex(palette.surface, palette.accent, 0.05);
-      const surfaceElevated = palette.glass ? alphaHex(palette.surface, 0.74) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#1f2937', 0.18) : palette.surface);
-      const textMuted = mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.34 : 0.44);
-      const textSoft = mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.54 : 0.62);
-      const accentHover = darkenHex(palette.accent, palette.colorScheme === 'dark' ? 0.08 : 0.14);
-      const accentSoft = alphaHex(palette.accent, palette.glass ? 0.22 : 0.16);
+      const isSolidLightTheme = !palette.glass && palette.colorScheme === 'light';
+      const surfaceMuted = palette.glass ? alphaHex(palette.surface, 0.46) : (isSolidLightTheme ? '#fcfdff' : mixHex(palette.surface, backgroundReference, 0.12));
+      const surfaceSubtle = palette.glass ? alphaHex(palette.surface, 0.30) : (isSolidLightTheme ? '#f2f4f8' : mixHex(palette.surface, backgroundReference, 0.24));
+      const surfaceHover = palette.glass ? alphaHex(palette.surface, 0.88) : (isSolidLightTheme ? '#f8fafc' : mixHex(palette.surface, palette.accent, 0.05));
+      const surfaceElevated = palette.glass ? alphaHex(palette.surface, 0.74) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#1f2937', 0.18) : (isSolidLightTheme ? '#ffffff' : palette.surface));
+      const textMuted = isSolidLightTheme ? '#64748b' : mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.34 : 0.44);
+      const textSoft = isSolidLightTheme ? '#94a3b8' : mixHex(palette.text, backgroundReference, palette.colorScheme === 'dark' ? 0.54 : 0.62);
+      const accentHover = isSolidLightTheme ? '#3f6ae0' : darkenHex(palette.accent, palette.colorScheme === 'dark' ? 0.08 : 0.14);
+      const accentSoft = palette.glass ? alphaHex(palette.accent, 0.22) : (isSolidLightTheme ? '#e8f0ff' : alphaHex(palette.accent, 0.16));
       const border = palette.glass ? alphaHex(palette.border, 0.60) : palette.border;
-      const borderStrong = palette.glass ? alphaHex(palette.border, 0.84) : darkenHex(palette.border, palette.colorScheme === 'dark' ? 0.05 : 0.08);
-      const inputBackground = palette.glass ? alphaHex(palette.surface, 0.58) : mixHex(palette.surface, backgroundReference, 0.08);
+      const borderStrong = palette.glass ? alphaHex(palette.border, 0.84) : (isSolidLightTheme ? '#d7dee7' : darkenHex(palette.border, palette.colorScheme === 'dark' ? 0.05 : 0.08));
+      const inputBackground = palette.glass ? alphaHex(palette.surface, 0.58) : (isSolidLightTheme ? '#ffffff' : mixHex(palette.surface, backgroundReference, 0.08));
+      const chip = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.14) : (isSolidLightTheme ? '#f1f5f9' : mixHex(palette.surface, backgroundReference, 0.22));
+      const chipText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.22) : (isSolidLightTheme ? '#334155' : textMuted);
+      const chipActive = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.22) : (isSolidLightTheme ? '#e8f0ff' : accentSoft);
+      const chipActiveText = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.18) : (isSolidLightTheme ? '#3b5ccc' : palette.accent);
+      const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
+      const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+      const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
+      const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
+      const ringTrack = palette.colorScheme === 'dark' ? mixHex(palette.border, '#ffffff', 0.08) : (isSolidLightTheme ? '#e6eaf0' : border);
+      const ringNormalFrom = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.22) : (isSolidLightTheme ? '#d8e5ff' : mixHex(palette.accent, '#ffffff', 0.56));
+      const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : (isSolidLightTheme ? '#7fa6f6' : palette.accent);
+      const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
+      const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
+      const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
+      const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+      const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
+      const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+      const rowHover = palette.glass ? alphaHex(palette.surface, 0.84) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#ffffff', 0.04) : (isSolidLightTheme ? '#f8fafc' : surfaceHover));
       return {
         appBackground: palette.background,
         appBackgroundColor: palette.backgroundColor,
@@ -483,9 +659,28 @@ export function getThemeInitScript(storageKey: string): string {
         accentSoft,
         accentContrast: getAccentContrast(palette.accent),
         inputBackground,
-        overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.20)',
-        shadow: palette.glass ? '0 18px 60px rgba(84, 102, 171, 0.24)' : (palette.colorScheme === 'dark' ? '0 18px 60px rgba(0, 0, 0, 0.42)' : '0 18px 60px rgba(15, 23, 42, 0.14)'),
-        ring: alphaHex(palette.accent, 0.36),
+        chip,
+        chipText,
+        chipActive,
+        chipActiveText,
+        chipWarning,
+        chipWarningText,
+        chipDanger,
+        chipDangerText,
+        ringTrack,
+        ringNormalFrom,
+        ringNormalTo,
+        ringWarnFrom,
+        ringWarnTo,
+        ringDangerFrom,
+        ringDangerTo,
+        ringOverdueFrom,
+        ringOverdueTo,
+        rowHover,
+        overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
+        shadow: palette.glass ? '0 18px 60px rgba(84, 102, 171, 0.24)' : (palette.colorScheme === 'dark' ? '0 18px 60px rgba(0, 0, 0, 0.42)' : '0 8px 24px rgba(15, 23, 42, 0.04)'),
+        shadowSoft: palette.colorScheme === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.24)' : '0 1px 2px rgba(15, 23, 42, 0.04)',
+        ring: alphaHex(palette.accent, palette.colorScheme === 'dark' ? 0.36 : (isSolidLightTheme ? 0.15 : 0.36)),
         isGlass: palette.glass,
         colorScheme: palette.colorScheme,
       };
@@ -524,8 +719,27 @@ export function getThemeInitScript(storageKey: string): string {
       root.style.setProperty('--tt-accent-soft', tokens.accentSoft);
       root.style.setProperty('--tt-accent-contrast', tokens.accentContrast);
       root.style.setProperty('--tt-input-bg', tokens.inputBackground);
+      root.style.setProperty('--tt-chip-bg', tokens.chip);
+      root.style.setProperty('--tt-chip-text', tokens.chipText);
+      root.style.setProperty('--tt-chip-active-bg', tokens.chipActive);
+      root.style.setProperty('--tt-chip-active-text', tokens.chipActiveText);
+      root.style.setProperty('--tt-chip-warning-bg', tokens.chipWarning);
+      root.style.setProperty('--tt-chip-warning-text', tokens.chipWarningText);
+      root.style.setProperty('--tt-chip-danger-bg', tokens.chipDanger);
+      root.style.setProperty('--tt-chip-danger-text', tokens.chipDangerText);
+      root.style.setProperty('--tt-ring-track', tokens.ringTrack);
+      root.style.setProperty('--tt-ring-normal-from', tokens.ringNormalFrom);
+      root.style.setProperty('--tt-ring-normal-to', tokens.ringNormalTo);
+      root.style.setProperty('--tt-ring-warn-from', tokens.ringWarnFrom);
+      root.style.setProperty('--tt-ring-warn-to', tokens.ringWarnTo);
+      root.style.setProperty('--tt-ring-danger-from', tokens.ringDangerFrom);
+      root.style.setProperty('--tt-ring-danger-to', tokens.ringDangerTo);
+      root.style.setProperty('--tt-ring-overdue-from', tokens.ringOverdueFrom);
+      root.style.setProperty('--tt-ring-overdue-to', tokens.ringOverdueTo);
+      root.style.setProperty('--tt-row-hover', tokens.rowHover);
       root.style.setProperty('--tt-overlay', tokens.overlay);
       root.style.setProperty('--tt-shadow', tokens.shadow);
+      root.style.setProperty('--tt-shadow-soft', tokens.shadowSoft);
       root.style.setProperty('--tt-ring', tokens.ring);
     } catch (error) {
       const root = document.documentElement;
