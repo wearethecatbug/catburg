@@ -37,8 +37,9 @@ export function TaskMetaCluster({
         <span
           data-testid="task-note-trigger"
           className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
+          role="img"
           title={noteTitle}
-          aria-label={noteTitle || 'Task note'}
+          aria-label="Task has note"
         >
           <span
             className="inline-flex h-4 w-4 items-center justify-center"

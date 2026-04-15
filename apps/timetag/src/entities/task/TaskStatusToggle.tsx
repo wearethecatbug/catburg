@@ -13,11 +13,11 @@ export function TaskStatusToggle({ status, isSelected, onToggle }: TaskStatusTog
   const [isHovered, setIsHovered] = React.useState(false);
   const isDone = status === 'done';
   const isArchived = status === 'archived';
-  const hoverBorderColor = 'rgba(79, 125, 243, 0.72)';
+  const hoverBorderColor = 'var(--tt-accent-hover)';
 
   const statusButtonStyle: React.CSSProperties = status === 'done'
     ? {
-        background: isHovered ? 'rgba(79, 125, 243, 0.88)' : 'var(--tt-accent)',
+        background: isHovered ? 'var(--tt-accent-hover)' : 'var(--tt-accent)',
         borderColor: isHovered ? hoverBorderColor : 'var(--tt-accent)',
         borderWidth: isHovered ? 1 : 2,
         color: 'var(--tt-accent-contrast)',
@@ -27,12 +27,12 @@ export function TaskStatusToggle({ status, isSelected, onToggle }: TaskStatusTog
     : {
         borderColor: isHovered ? hoverBorderColor : 'var(--tt-border-strong)',
         background: isHovered
-          ? 'rgba(79, 125, 243, 0.06)'
+          ? 'var(--tt-accent-soft)'
           : isSelected
-            ? 'rgba(255, 255, 255, 0.78)'
+            ? 'var(--tt-surface-hover)'
             : 'var(--tt-surface)',
         borderWidth: isHovered ? 1 : 2,
-        color: isHovered ? 'var(--tt-accent)' : 'rgba(79, 125, 243, 0)',
+        color: isHovered ? 'var(--tt-accent)' : 'transparent',
         boxShadow: 'none',
         transform: isHovered ? 'scale(1.02)' : 'scale(1)',
       };

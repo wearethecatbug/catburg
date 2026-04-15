@@ -254,9 +254,9 @@ function PreviewRow({
     <div
       className="flex items-center gap-2 rounded-xl px-3 py-2.5"
       style={{
-        background: selectedRow ? 'rgba(59,130,246,0.03)' : 'var(--tt-surface)',
+        background: selectedRow ? 'var(--tt-selected-row-bg)' : 'var(--tt-surface)',
         boxShadow: selectedRow
-          ? 'inset 0 0 0 1px rgba(59, 130, 246, 0.08)'
+          ? 'inset 0 0 0 1px var(--tt-selected-row-border)'
           : 'inset 0 0 0 1px var(--tt-border)',
       }}
     >

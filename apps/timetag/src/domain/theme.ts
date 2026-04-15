@@ -55,11 +55,13 @@ export interface ThemeTokens {
   chipActive: string;
   chipActiveText: string;
   chipActiveIcon: string;
+  chipActiveBorder: string;
   chipPausedBg: string;
   chipPausedText: string;
   chipPausedIcon: string;
   chipWarning: string;
   chipWarningText: string;
+  chipWarningBorder: string;
   chipDanger: string;
   chipDangerText: string;
   chipZeroBg: string;
@@ -82,6 +84,8 @@ export interface ThemeTokens {
   ringDangerTo: string;
   ringOverdueFrom: string;
   ringOverdueTo: string;
+  selectedRowBg: string;
+  selectedRowBorder: string;
   rowHover: string;
   overlay: string;
   shadow: string;
@@ -383,11 +387,15 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     : isSolidLightTheme
       ? '#5b7cf6'
       : palette.accent;
+  const chipActiveBorder = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.20)
+    : alphaHex(palette.accent, 0.10);
   const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
   const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
   const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
   const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
   const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
+  const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
   const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
   const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
   const chipZeroBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.18) : 'rgba(239, 68, 68, 0.14)';
@@ -418,6 +426,12 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
   const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
   const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
   const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+  const selectedRowBg = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.12)
+    : alphaHex(palette.accent, isSolidLightTheme ? 0.03 : 0.06);
+  const selectedRowBorder = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.20)
+    : alphaHex(palette.accent, isSolidLightTheme ? 0.08 : 0.12);
   const rowHover = palette.glass
     ? alphaHex(palette.surface, 0.84)
     : palette.colorScheme === 'dark'
@@ -452,11 +466,13 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     chipActive,
     chipActiveText,
     chipActiveIcon,
+    chipActiveBorder,
     chipPausedBg,
     chipPausedText,
     chipPausedIcon,
     chipWarning,
     chipWarningText,
+    chipWarningBorder,
     chipDanger,
     chipDangerText,
     chipZeroBg,
@@ -479,6 +495,8 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     ringDangerTo,
     ringOverdueFrom,
     ringOverdueTo,
+    selectedRowBg,
+    selectedRowBorder,
     rowHover,
     overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
     shadow: palette.glass
@@ -521,11 +539,13 @@ const THEME_VARIABLE_NAMES = {
   chipActive: '--tt-chip-active-bg',
   chipActiveText: '--tt-chip-active-text',
   chipActiveIcon: '--tt-chip-active-icon',
+  chipActiveBorder: '--tt-chip-active-border',
   chipPausedBg: '--tt-chip-paused-bg',
   chipPausedText: '--tt-chip-paused-text',
   chipPausedIcon: '--tt-chip-paused-icon',
   chipWarning: '--tt-chip-warning-bg',
   chipWarningText: '--tt-chip-warning-text',
+  chipWarningBorder: '--tt-chip-warning-border',
   chipDanger: '--tt-chip-danger-bg',
   chipDangerText: '--tt-chip-danger-text',
   chipZeroBg: '--tt-chip-zero-bg',
@@ -548,6 +568,8 @@ const THEME_VARIABLE_NAMES = {
   ringDangerTo: '--tt-ring-danger-to',
   ringOverdueFrom: '--tt-ring-overdue-from',
   ringOverdueTo: '--tt-ring-overdue-to',
+  selectedRowBg: '--tt-selected-row-bg',
+  selectedRowBorder: '--tt-selected-row-border',
   rowHover: '--tt-row-hover',
   overlay: '--tt-overlay',
   shadow: '--tt-shadow',
@@ -596,11 +618,13 @@ export function applyThemeToDocument(
   root.style.setProperty(THEME_VARIABLE_NAMES.chipActive, tokens.chipActive);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveText, tokens.chipActiveText);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveIcon, tokens.chipActiveIcon);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveBorder, tokens.chipActiveBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedBg, tokens.chipPausedBg);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedText, tokens.chipPausedText);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedIcon, tokens.chipPausedIcon);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarning, tokens.chipWarning);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningText, tokens.chipWarningText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningBorder, tokens.chipWarningBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipDanger, tokens.chipDanger);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipDangerText, tokens.chipDangerText);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipZeroBg, tokens.chipZeroBg);
@@ -623,6 +647,8 @@ export function applyThemeToDocument(
   root.style.setProperty(THEME_VARIABLE_NAMES.ringDangerTo, tokens.ringDangerTo);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueFrom, tokens.ringOverdueFrom);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueTo, tokens.ringOverdueTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.selectedRowBg, tokens.selectedRowBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.selectedRowBorder, tokens.selectedRowBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.rowHover, tokens.rowHover);
   root.style.setProperty(THEME_VARIABLE_NAMES.overlay, tokens.overlay);
   root.style.setProperty(THEME_VARIABLE_NAMES.shadow, tokens.shadow);
@@ -737,11 +763,13 @@ export function getThemeInitScript(storageKey: string): string {
       const chipActive = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.22) : (isSolidLightTheme ? '#e8f0ff' : accentSoft);
       const chipActiveText = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.18) : (isSolidLightTheme ? '#3b5ccc' : palette.accent);
       const chipActiveIcon = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.12) : (isSolidLightTheme ? '#5b7cf6' : palette.accent);
+      const chipActiveBorder = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.20) : alphaHex(palette.accent, 0.10);
       const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
       const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
       const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
       const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
       const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
+      const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
       const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
       const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
       const chipZeroBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.18) : 'rgba(239, 68, 68, 0.14)';
@@ -764,6 +792,12 @@ export function getThemeInitScript(storageKey: string): string {
       const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
       const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
       const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+      const selectedRowBg = palette.colorScheme === 'dark'
+        ? alphaHex(palette.accent, 0.12)
+        : alphaHex(palette.accent, isSolidLightTheme ? 0.03 : 0.06);
+      const selectedRowBorder = palette.colorScheme === 'dark'
+        ? alphaHex(palette.accent, 0.20)
+        : alphaHex(palette.accent, isSolidLightTheme ? 0.08 : 0.12);
       const rowHover = palette.glass ? alphaHex(palette.surface, 0.84) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#ffffff', 0.04) : (isSolidLightTheme ? '#f8fafc' : surfaceHover));
       return {
         appBackground: palette.background,
@@ -791,11 +825,13 @@ export function getThemeInitScript(storageKey: string): string {
         chipActive,
         chipActiveText,
         chipActiveIcon,
+        chipActiveBorder,
         chipPausedBg,
         chipPausedText,
         chipPausedIcon,
         chipWarning,
         chipWarningText,
+        chipWarningBorder,
         chipDanger,
         chipDangerText,
         chipZeroBg,
@@ -818,6 +854,8 @@ export function getThemeInitScript(storageKey: string): string {
         ringDangerTo,
         ringOverdueFrom,
         ringOverdueTo,
+        selectedRowBg,
+        selectedRowBorder,
         rowHover,
         overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
         shadow: palette.glass ? '0 18px 60px rgba(84, 102, 171, 0.24)' : (palette.colorScheme === 'dark' ? '0 18px 60px rgba(0, 0, 0, 0.42)' : '0 8px 24px rgba(15, 23, 42, 0.04)'),
@@ -869,11 +907,13 @@ export function getThemeInitScript(storageKey: string): string {
       root.style.setProperty('--tt-chip-active-bg', tokens.chipActive);
       root.style.setProperty('--tt-chip-active-text', tokens.chipActiveText);
       root.style.setProperty('--tt-chip-active-icon', tokens.chipActiveIcon);
+      root.style.setProperty('--tt-chip-active-border', tokens.chipActiveBorder);
       root.style.setProperty('--tt-chip-paused-bg', tokens.chipPausedBg);
       root.style.setProperty('--tt-chip-paused-text', tokens.chipPausedText);
       root.style.setProperty('--tt-chip-paused-icon', tokens.chipPausedIcon);
       root.style.setProperty('--tt-chip-warning-bg', tokens.chipWarning);
       root.style.setProperty('--tt-chip-warning-text', tokens.chipWarningText);
+      root.style.setProperty('--tt-chip-warning-border', tokens.chipWarningBorder);
       root.style.setProperty('--tt-chip-danger-bg', tokens.chipDanger);
       root.style.setProperty('--tt-chip-danger-text', tokens.chipDangerText);
       root.style.setProperty('--tt-chip-zero-bg', tokens.chipZeroBg);
@@ -896,6 +936,8 @@ export function getThemeInitScript(storageKey: string): string {
       root.style.setProperty('--tt-ring-danger-to', tokens.ringDangerTo);
       root.style.setProperty('--tt-ring-overdue-from', tokens.ringOverdueFrom);
       root.style.setProperty('--tt-ring-overdue-to', tokens.ringOverdueTo);
+      root.style.setProperty('--tt-selected-row-bg', tokens.selectedRowBg);
+      root.style.setProperty('--tt-selected-row-border', tokens.selectedRowBorder);
       root.style.setProperty('--tt-row-hover', tokens.rowHover);
       root.style.setProperty('--tt-overlay', tokens.overlay);
       root.style.setProperty('--tt-shadow', tokens.shadow);

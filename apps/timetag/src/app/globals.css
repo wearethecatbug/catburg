@@ -30,12 +30,14 @@
   --tt-chip-active-bg: rgba(91, 124, 246, 0.1);
   --tt-chip-active-text: #3e5fcc;
   --tt-chip-active-icon: #5b7cf6;
+  --tt-chip-active-border: rgba(79, 125, 243, 0.10);
   --tt-chip-paused-bg: #e5eaf2;
   --tt-chip-paused-text: #475569;
   --tt-chip-paused-icon: #64748b;
   --tt-chip-warning-bg: rgba(241, 225, 123, 0.18);
   --tt-chip-warning-text: #8a741f;
   --tt-chip-warning-icon: #b09a30;
+  --tt-chip-warning-border: rgba(221, 198, 82, 0.24);
   --tt-chip-zero-bg: rgba(239, 68, 68, 0.14);
   --tt-chip-zero-text: #dc2626;
   --tt-chip-zero-border: rgba(239, 68, 68, 0.24);
@@ -58,6 +60,8 @@
   --tt-ring-danger-to: #dc2626;
   --tt-ring-overdue-from: #e58c8c;
   --tt-ring-overdue-to: #b91c1c;
+  --tt-selected-row-bg: rgba(59, 130, 246, 0.03);
+  --tt-selected-row-border: rgba(59, 130, 246, 0.08);
   --tt-row-hover: #f8fafc;
   --tt-overlay: rgba(15, 23, 42, 0.14);
   --tt-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);

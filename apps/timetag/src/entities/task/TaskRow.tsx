@@ -85,8 +85,8 @@ export function TaskRow({
     return timeDisplay.full;
   };
 
-  const rowBackground = isSelected ? 'rgba(59, 130, 246, 0.03)' : 'transparent';
-  const rowBoxShadow = isSelected ? 'inset 0 0 0 1px rgba(59, 130, 246, 0.08)' : undefined;
+  const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
+  const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
   const isPaused = task.timerStatus === 'paused';
   const isRunning = task.timerStatus === 'running';
   const timerVisualState = getTimerClusterVisualState({
@@ -121,13 +121,13 @@ export function TaskRow({
         ? {
             background: 'var(--tt-chip-active-bg)',
             color: 'var(--tt-chip-active-text)',
-            boxShadow: 'inset 0 0 0 1px rgba(79, 125, 243, 0.10)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-active-border)',
           }
       : timerVisualState === 'warn'
         ? {
             background: 'var(--tt-chip-warning-bg)',
             color: 'var(--tt-chip-warning-text)',
-            boxShadow: 'inset 0 0 0 1px rgba(221, 198, 82, 0.24)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-warning-border)',
           }
       : timerVisualState === 'danger'
         ? {
