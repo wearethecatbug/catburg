@@ -146,6 +146,19 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         }
     };
 
+    function buildDeadlineLocalValue(offsetSec: number) {
+        const now = new Date();
+        now.setSeconds(now.getSeconds() + offsetSec);
+
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
     const applyPomodoroPreset = React.useCallback((preset: (typeof POMODORO_PRESETS)[number]) => {
         setPomodoroPresetId(preset.id);
         setPomoCycles(preset.cycles);
@@ -205,18 +218,6 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
         setPresetLabel(preset.label);
     };
 
-    const buildDeadlineLocalValue = (offsetSec: number) => {
-        const now = new Date();
-        now.setSeconds(now.getSeconds() + offsetSec);
-
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
-    };
 
     const handleSubmit = (e?: React.FormEvent) => {
         if (e && typeof e.preventDefault === 'function') e.preventDefault();
