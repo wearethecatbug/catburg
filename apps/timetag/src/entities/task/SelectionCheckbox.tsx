@@ -8,48 +8,48 @@ interface SelectionCheckboxProps {
   ariaLabel: string;
 }
 
+const balancedVariant = {
+  baseBorder: 'rgba(215, 222, 231, 0.78)',
+  baseBackground: 'rgba(255,255,255,0.30)',
+  hoverBorder: 'rgba(79, 125, 243, 0.76)',
+  hoverBackground: 'rgba(79, 125, 243, 0.04)',
+  selectedBorder: 'rgba(79, 125, 243, 0.82)',
+  selectedBackground: 'rgba(79, 125, 243, 0.11)',
+  innerBaseBorder: 'rgba(71, 85, 105, 0.76)',
+  innerHoverBorder: 'rgba(51, 65, 85, 0.84)',
+  innerSelectedBorder: 'rgba(63, 106, 224, 0.9)',
+  innerBaseFill: 'rgba(255, 255, 255, 0.68)',
+  innerHoverFill: 'rgba(255, 255, 255, 0.82)',
+  innerSelectedFill: 'rgba(245, 248, 255, 0.92)',
+  outerShadow: 'inset 0 1px 0 rgba(255,255,255,0.34)',
+};
+
 export function SelectionCheckbox({ checked, onChange, ariaLabel }: SelectionCheckboxProps) {
   const [isHovered, setIsHovered] = React.useState(false);
 
-  const balancedVariant = {
-	baseBorder: 'rgba(215, 222, 231, 0.78)',
-	baseBackground: 'rgba(255,255,255,0.30)',
-	hoverBorder: 'rgba(79, 125, 243, 0.76)',
-	hoverBackground: 'rgba(79, 125, 243, 0.04)',
-	selectedBorder: 'rgba(79, 125, 243, 0.82)',
-	selectedBackground: 'rgba(79, 125, 243, 0.11)',
-	innerBaseBorder: 'rgba(71, 85, 105, 0.76)',
-	innerHoverBorder: 'rgba(51, 65, 85, 0.84)',
-	innerSelectedBorder: 'rgba(63, 106, 224, 0.9)',
-	innerBaseFill: 'rgba(255, 255, 255, 0.68)',
-	innerHoverFill: 'rgba(255, 255, 255, 0.82)',
-	innerSelectedFill: 'rgba(245, 248, 255, 0.92)',
-	outerShadow: 'inset 0 1px 0 rgba(255,255,255,0.34)',
-  };
-
   const borderColor = checked
-	? balancedVariant.selectedBorder
-	: isHovered
-	  ? balancedVariant.hoverBorder
-	  : balancedVariant.baseBorder;
+    ? balancedVariant.selectedBorder
+    : isHovered
+      ? balancedVariant.hoverBorder
+      : balancedVariant.baseBorder;
 
   const background = checked
-	? balancedVariant.selectedBackground
-	: isHovered
-	  ? balancedVariant.hoverBackground
-	  : balancedVariant.baseBackground;
+    ? balancedVariant.selectedBackground
+    : isHovered
+      ? balancedVariant.hoverBackground
+      : balancedVariant.baseBackground;
 
   const innerBorderColor = checked
-	? balancedVariant.innerSelectedBorder
-	: isHovered
-	  ? balancedVariant.innerHoverBorder
-	  : balancedVariant.innerBaseBorder;
+    ? balancedVariant.innerSelectedBorder
+    : isHovered
+      ? balancedVariant.innerHoverBorder
+      : balancedVariant.innerBaseBorder;
 
   const innerFill = checked
-	? balancedVariant.innerSelectedFill
-	: isHovered
-	  ? balancedVariant.innerHoverFill
-	  : balancedVariant.innerBaseFill;
+    ? balancedVariant.innerSelectedFill
+    : isHovered
+      ? balancedVariant.innerHoverFill
+      : balancedVariant.innerBaseFill;
 
   return (
 	<label
