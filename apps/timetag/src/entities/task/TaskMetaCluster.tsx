@@ -14,6 +14,8 @@ export function TaskMetaCluster({
   hasNote,
   noteTitle,
 }: TaskMetaClusterProps) {
+  const noteDescriptionId = React.useId();
+
   if (!showUrgentIndicator && !hasNote) {
     return null;
   }
@@ -38,8 +40,10 @@ export function TaskMetaCluster({
           data-testid="task-note-trigger"
           className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
           role="img"
+          tabIndex={0}
           title={noteTitle}
           aria-label="Task has note"
+          aria-describedby={noteTitle ? noteDescriptionId : undefined}
         >
           <span
             className="inline-flex h-4 w-4 items-center justify-center"
@@ -48,6 +52,11 @@ export function TaskMetaCluster({
           >
             <NoteIcon size="sm" />
           </span>
+          {noteTitle && (
+            <span id={noteDescriptionId} className="sr-only">
+              {noteTitle}
+            </span>
+          )}
         </span>
       )}
     </span>

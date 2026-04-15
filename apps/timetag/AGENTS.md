@@ -7,8 +7,8 @@
 ## Commands (default: run from `apps/timetag`)
 - Runtime requirement: Node.js `>=20.9.0`
 - Install deps (run from repo root): `pnpm install`
-- Dev: `pnpm dev` (default `3003`)
-- Alternate dev port: `pnpm exec next dev --turbopack --port <free-port>`
+- Dev: `pnpm dev` (default `3008`)
+- Alternate dev port: `pnpm exec next dev --turbopack --port <free-port>` (use a free port other than `3008`)
 - Build: `pnpm build`
 - Lint: `pnpm lint`
 

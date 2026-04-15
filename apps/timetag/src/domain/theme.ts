@@ -59,6 +59,7 @@ export interface ThemeTokens {
   chipPausedBg: string;
   chipPausedText: string;
   chipPausedIcon: string;
+  chipPausedBorder: string;
   chipWarning: string;
   chipWarningText: string;
   chipWarningBorder: string;
@@ -393,6 +394,7 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
   const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
   const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
   const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
+  const chipPausedBorder = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.24) : 'rgba(148, 163, 184, 0.16)';
   const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
   const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
   const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
@@ -470,6 +472,7 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     chipPausedBg,
     chipPausedText,
     chipPausedIcon,
+    chipPausedBorder,
     chipWarning,
     chipWarningText,
     chipWarningBorder,
@@ -543,6 +546,7 @@ const THEME_VARIABLE_NAMES = {
   chipPausedBg: '--tt-chip-paused-bg',
   chipPausedText: '--tt-chip-paused-text',
   chipPausedIcon: '--tt-chip-paused-icon',
+  chipPausedBorder: '--tt-chip-paused-border',
   chipWarning: '--tt-chip-warning-bg',
   chipWarningText: '--tt-chip-warning-text',
   chipWarningBorder: '--tt-chip-warning-border',
@@ -622,6 +626,7 @@ export function applyThemeToDocument(
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedBg, tokens.chipPausedBg);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedText, tokens.chipPausedText);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedIcon, tokens.chipPausedIcon);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedBorder, tokens.chipPausedBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarning, tokens.chipWarning);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningText, tokens.chipWarningText);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningBorder, tokens.chipWarningBorder);
@@ -767,6 +772,7 @@ export function getThemeInitScript(storageKey: string): string {
       const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
       const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
       const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
+      const chipPausedBorder = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.24) : 'rgba(148, 163, 184, 0.16)';
       const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
       const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
       const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
@@ -829,6 +835,7 @@ export function getThemeInitScript(storageKey: string): string {
         chipPausedBg,
         chipPausedText,
         chipPausedIcon,
+        chipPausedBorder,
         chipWarning,
         chipWarningText,
         chipWarningBorder,
@@ -911,6 +918,7 @@ export function getThemeInitScript(storageKey: string): string {
       root.style.setProperty('--tt-chip-paused-bg', tokens.chipPausedBg);
       root.style.setProperty('--tt-chip-paused-text', tokens.chipPausedText);
       root.style.setProperty('--tt-chip-paused-icon', tokens.chipPausedIcon);
+      root.style.setProperty('--tt-chip-paused-border', tokens.chipPausedBorder);
       root.style.setProperty('--tt-chip-warning-bg', tokens.chipWarning);
       root.style.setProperty('--tt-chip-warning-text', tokens.chipWarningText);
       root.style.setProperty('--tt-chip-warning-border', tokens.chipWarningBorder);

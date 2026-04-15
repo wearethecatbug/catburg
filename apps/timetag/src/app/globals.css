@@ -34,6 +34,7 @@
   --tt-chip-paused-bg: #e5eaf2;
   --tt-chip-paused-text: #475569;
   --tt-chip-paused-icon: #64748b;
+  --tt-chip-paused-border: rgba(148, 163, 184, 0.16);
   --tt-chip-warning-bg: rgba(241, 225, 123, 0.18);
   --tt-chip-warning-text: #8a741f;
   --tt-chip-warning-icon: #b09a30;

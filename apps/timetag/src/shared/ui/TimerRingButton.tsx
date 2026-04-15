@@ -106,7 +106,7 @@ export function TimerRingButton({
                 color: iconColor,
                 width: sizePx,
                 height: sizePx,
-                boxShadow: 'inset 0 0 0 1px rgba(148, 163, 184, 0.16)',
+                boxShadow: 'inset 0 0 0 1px var(--tt-chip-paused-border)',
               }
             : visualState === 'warn'
                 ? {

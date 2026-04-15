@@ -44,7 +44,7 @@ pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3003](http://localhost:3003) in your browser.
+Open [http://localhost:3008](http://localhost:3008) in your browser.
 
 ## Tech Stack
 
