@@ -1,31 +1,18 @@
 import { spawn } from 'node:child_process';
-import { rmSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const appDir = resolve(__dirname, '..');
-const nextDir = resolve(appDir, '.next');
 const cliArgs = process.argv.slice(2);
-const shouldCleanNext = process.platform === 'win32' || process.env.TIMETAG_CLEAN_NEXT === '1';
+const command = process.platform === 'win32' ? 'cmd.exe' : 'pnpm';
+const args = process.platform === 'win32'
+  ? ['/d', '/s', '/c', 'pnpm', 'exec', 'next', 'build', ...cliArgs]
+  : ['exec', 'next', 'build', ...cliArgs];
 
-if (shouldCleanNext) {
-  rmSync(nextDir, { recursive: true, force: true });
-}
-
-const child = spawn(
-  'pnpm',
-  ['exec', 'next', 'build', ...cliArgs],
-  {
-    cwd: appDir,
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-    env: {
-      ...process.env,
-      NODE_OPTIONS: '',
-    },
+const child = spawn(command, args, {
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    NODE_OPTIONS: '',
   },
-);
+});
 
 child.on('exit', (code, signal) => {
   if (signal) {
@@ -35,4 +22,5 @@ child.on('exit', (code, signal) => {
 
   process.exit(code ?? 0);
 });
+
 

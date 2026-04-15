@@ -49,21 +49,44 @@ export interface ThemeTokens {
   inputBackground: string;
   chip: string;
   chipText: string;
+  chipIdleBg: string;
+  chipIdleText: string;
+  chipIdleIcon: string;
   chipActive: string;
   chipActiveText: string;
+  chipActiveIcon: string;
+  chipActiveBorder: string;
+  chipPausedBg: string;
+  chipPausedText: string;
+  chipPausedIcon: string;
+  chipPausedBorder: string;
   chipWarning: string;
   chipWarningText: string;
+  chipWarningBorder: string;
   chipDanger: string;
   chipDangerText: string;
+  chipZeroBg: string;
+  chipZeroText: string;
+  chipZeroBorder: string;
+  chipOverdueBg: string;
+  chipOverdueText: string;
   ringTrack: string;
   ringNormalFrom: string;
   ringNormalTo: string;
+  ringRunningFrom: string;
+  ringRunningTo: string;
+  ringPausedFrom: string;
+  ringPausedTo: string;
+  ringZeroFrom: string;
+  ringZeroTo: string;
   ringWarnFrom: string;
   ringWarnTo: string;
   ringDangerFrom: string;
   ringDangerTo: string;
   ringOverdueFrom: string;
   ringOverdueTo: string;
+  selectedRowBg: string;
+  selectedRowBorder: string;
   rowHover: string;
   overlay: string;
   shadow: string;
@@ -335,6 +358,21 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     : isSolidLightTheme
       ? '#334155'
       : textMuted;
+  const chipIdleBg = palette.colorScheme === 'dark'
+    ? alphaHex('#94a3b8', 0.08)
+    : isSolidLightTheme
+      ? '#f8fafc'
+      : surfaceHover;
+  const chipIdleText = palette.colorScheme === 'dark'
+    ? mixHex(palette.text, '#94a3b8', 0.28)
+    : isSolidLightTheme
+      ? '#475569'
+      : textMuted;
+  const chipIdleIcon = palette.colorScheme === 'dark'
+    ? mixHex(palette.text, backgroundReference, 0.54)
+    : isSolidLightTheme
+      ? '#94a3b8'
+      : textSoft;
   const chipActive = palette.colorScheme === 'dark'
     ? alphaHex(palette.accent, 0.22)
     : isSolidLightTheme
@@ -345,10 +383,28 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     : isSolidLightTheme
       ? '#3b5ccc'
       : palette.accent;
-  const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
-  const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+  const chipActiveIcon = palette.colorScheme === 'dark'
+    ? mixHex(palette.accent, '#ffffff', 0.12)
+    : isSolidLightTheme
+      ? '#5b7cf6'
+      : palette.accent;
+  const chipActiveBorder = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.20)
+    : alphaHex(palette.accent, 0.10);
+  const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
+  const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
+  const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
+  const chipPausedBorder = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.24) : 'rgba(148, 163, 184, 0.16)';
+  const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
+  const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
+  const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
   const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
   const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
+  const chipZeroBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.18) : 'rgba(239, 68, 68, 0.14)';
+  const chipZeroText = palette.colorScheme === 'dark' ? '#f87171' : '#dc2626';
+  const chipZeroBorder = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.30) : 'rgba(239, 68, 68, 0.24)';
+  const chipOverdueBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.14) : 'rgba(239, 68, 68, 0.10)';
+  const chipOverdueText = palette.colorScheme === 'dark' ? '#f87171' : '#b91c1c';
   const ringTrack = palette.colorScheme === 'dark'
     ? mixHex(palette.border, '#ffffff', 0.08)
     : isSolidLightTheme
@@ -360,12 +416,24 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
       ? '#d8e5ff'
       : mixHex(palette.accent, '#ffffff', 0.56);
   const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : isSolidLightTheme ? '#7fa6f6' : palette.accent;
-  const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
-  const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
-  const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
-  const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+  const ringRunningFrom = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.28) : '#b2c2ff';
+  const ringRunningTo = palette.colorScheme === 'dark' ? palette.accent : '#5b7cf6';
+  const ringPausedFrom = palette.colorScheme === 'dark' ? mixHex('#94a3b8', '#ffffff', 0.16) : '#d1d9e4';
+  const ringPausedTo = palette.colorScheme === 'dark' ? mixHex('#94a3b8', backgroundReference, 0.18) : '#9ca9ba';
+  const ringZeroFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+  const ringZeroTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
+  const ringWarnFrom = palette.colorScheme === 'dark' ? '#f3e88f' : '#f6efb8';
+  const ringWarnTo = palette.colorScheme === 'dark' ? '#d8c246' : '#ddc652';
+  const ringDangerFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+  const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
   const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
   const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+  const selectedRowBg = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.12)
+    : alphaHex(palette.accent, isSolidLightTheme ? 0.03 : 0.06);
+  const selectedRowBorder = palette.colorScheme === 'dark'
+    ? alphaHex(palette.accent, 0.20)
+    : alphaHex(palette.accent, isSolidLightTheme ? 0.08 : 0.12);
   const rowHover = palette.glass
     ? alphaHex(palette.surface, 0.84)
     : palette.colorScheme === 'dark'
@@ -394,21 +462,44 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     inputBackground,
     chip,
     chipText,
+    chipIdleBg,
+    chipIdleText,
+    chipIdleIcon,
     chipActive,
     chipActiveText,
+    chipActiveIcon,
+    chipActiveBorder,
+    chipPausedBg,
+    chipPausedText,
+    chipPausedIcon,
+    chipPausedBorder,
     chipWarning,
     chipWarningText,
+    chipWarningBorder,
     chipDanger,
     chipDangerText,
+    chipZeroBg,
+    chipZeroText,
+    chipZeroBorder,
+    chipOverdueBg,
+    chipOverdueText,
     ringTrack,
     ringNormalFrom,
     ringNormalTo,
+    ringRunningFrom,
+    ringRunningTo,
+    ringPausedFrom,
+    ringPausedTo,
+    ringZeroFrom,
+    ringZeroTo,
     ringWarnFrom,
     ringWarnTo,
     ringDangerFrom,
     ringDangerTo,
     ringOverdueFrom,
     ringOverdueTo,
+    selectedRowBg,
+    selectedRowBorder,
     rowHover,
     overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
     shadow: palette.glass
@@ -445,21 +536,44 @@ const THEME_VARIABLE_NAMES = {
   inputBackground: '--tt-input-bg',
   chip: '--tt-chip-bg',
   chipText: '--tt-chip-text',
+  chipIdleBg: '--tt-chip-idle-bg',
+  chipIdleText: '--tt-chip-idle-text',
+  chipIdleIcon: '--tt-chip-idle-icon',
   chipActive: '--tt-chip-active-bg',
   chipActiveText: '--tt-chip-active-text',
+  chipActiveIcon: '--tt-chip-active-icon',
+  chipActiveBorder: '--tt-chip-active-border',
+  chipPausedBg: '--tt-chip-paused-bg',
+  chipPausedText: '--tt-chip-paused-text',
+  chipPausedIcon: '--tt-chip-paused-icon',
+  chipPausedBorder: '--tt-chip-paused-border',
   chipWarning: '--tt-chip-warning-bg',
   chipWarningText: '--tt-chip-warning-text',
+  chipWarningBorder: '--tt-chip-warning-border',
   chipDanger: '--tt-chip-danger-bg',
   chipDangerText: '--tt-chip-danger-text',
+  chipZeroBg: '--tt-chip-zero-bg',
+  chipZeroText: '--tt-chip-zero-text',
+  chipZeroBorder: '--tt-chip-zero-border',
+  chipOverdueBg: '--tt-chip-overdue-bg',
+  chipOverdueText: '--tt-chip-overdue-text',
   ringTrack: '--tt-ring-track',
   ringNormalFrom: '--tt-ring-normal-from',
   ringNormalTo: '--tt-ring-normal-to',
+  ringRunningFrom: '--tt-ring-running-from',
+  ringRunningTo: '--tt-ring-running-to',
+  ringPausedFrom: '--tt-ring-paused-from',
+  ringPausedTo: '--tt-ring-paused-to',
+  ringZeroFrom: '--tt-ring-zero-from',
+  ringZeroTo: '--tt-ring-zero-to',
   ringWarnFrom: '--tt-ring-warn-from',
   ringWarnTo: '--tt-ring-warn-to',
   ringDangerFrom: '--tt-ring-danger-from',
   ringDangerTo: '--tt-ring-danger-to',
   ringOverdueFrom: '--tt-ring-overdue-from',
   ringOverdueTo: '--tt-ring-overdue-to',
+  selectedRowBg: '--tt-selected-row-bg',
+  selectedRowBorder: '--tt-selected-row-border',
   rowHover: '--tt-row-hover',
   overlay: '--tt-overlay',
   shadow: '--tt-shadow',
@@ -502,21 +616,44 @@ export function applyThemeToDocument(
   root.style.setProperty(THEME_VARIABLE_NAMES.inputBackground, tokens.inputBackground);
   root.style.setProperty(THEME_VARIABLE_NAMES.chip, tokens.chip);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipText, tokens.chipText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipIdleBg, tokens.chipIdleBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipIdleText, tokens.chipIdleText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipIdleIcon, tokens.chipIdleIcon);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipActive, tokens.chipActive);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveText, tokens.chipActiveText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveIcon, tokens.chipActiveIcon);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipActiveBorder, tokens.chipActiveBorder);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedBg, tokens.chipPausedBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedText, tokens.chipPausedText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedIcon, tokens.chipPausedIcon);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipPausedBorder, tokens.chipPausedBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarning, tokens.chipWarning);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningText, tokens.chipWarningText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipWarningBorder, tokens.chipWarningBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipDanger, tokens.chipDanger);
   root.style.setProperty(THEME_VARIABLE_NAMES.chipDangerText, tokens.chipDangerText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipZeroBg, tokens.chipZeroBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipZeroText, tokens.chipZeroText);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipZeroBorder, tokens.chipZeroBorder);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipOverdueBg, tokens.chipOverdueBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.chipOverdueText, tokens.chipOverdueText);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringTrack, tokens.ringTrack);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringNormalFrom, tokens.ringNormalFrom);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringNormalTo, tokens.ringNormalTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringRunningFrom, tokens.ringRunningFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringRunningTo, tokens.ringRunningTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringPausedFrom, tokens.ringPausedFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringPausedTo, tokens.ringPausedTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringZeroFrom, tokens.ringZeroFrom);
+  root.style.setProperty(THEME_VARIABLE_NAMES.ringZeroTo, tokens.ringZeroTo);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringWarnFrom, tokens.ringWarnFrom);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringWarnTo, tokens.ringWarnTo);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringDangerFrom, tokens.ringDangerFrom);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringDangerTo, tokens.ringDangerTo);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueFrom, tokens.ringOverdueFrom);
   root.style.setProperty(THEME_VARIABLE_NAMES.ringOverdueTo, tokens.ringOverdueTo);
+  root.style.setProperty(THEME_VARIABLE_NAMES.selectedRowBg, tokens.selectedRowBg);
+  root.style.setProperty(THEME_VARIABLE_NAMES.selectedRowBorder, tokens.selectedRowBorder);
   root.style.setProperty(THEME_VARIABLE_NAMES.rowHover, tokens.rowHover);
   root.style.setProperty(THEME_VARIABLE_NAMES.overlay, tokens.overlay);
   root.style.setProperty(THEME_VARIABLE_NAMES.shadow, tokens.shadow);
@@ -625,21 +762,48 @@ export function getThemeInitScript(storageKey: string): string {
       const inputBackground = palette.glass ? alphaHex(palette.surface, 0.58) : (isSolidLightTheme ? '#ffffff' : mixHex(palette.surface, backgroundReference, 0.08));
       const chip = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.14) : (isSolidLightTheme ? '#f1f5f9' : mixHex(palette.surface, backgroundReference, 0.22));
       const chipText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.22) : (isSolidLightTheme ? '#334155' : textMuted);
+      const chipIdleBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.08) : (isSolidLightTheme ? '#f8fafc' : surfaceHover);
+      const chipIdleText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.28) : (isSolidLightTheme ? '#475569' : textMuted);
+      const chipIdleIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, backgroundReference, 0.54) : (isSolidLightTheme ? '#94a3b8' : textSoft);
       const chipActive = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.22) : (isSolidLightTheme ? '#e8f0ff' : accentSoft);
       const chipActiveText = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.18) : (isSolidLightTheme ? '#3b5ccc' : palette.accent);
-      const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
-      const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+      const chipActiveIcon = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.12) : (isSolidLightTheme ? '#5b7cf6' : palette.accent);
+      const chipActiveBorder = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.20) : alphaHex(palette.accent, 0.10);
+      const chipPausedBg = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.18) : '#e5eaf2';
+      const chipPausedText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.26) : '#475569';
+      const chipPausedIcon = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.38) : '#64748b';
+      const chipPausedBorder = palette.colorScheme === 'dark' ? alphaHex('#94a3b8', 0.24) : 'rgba(148, 163, 184, 0.16)';
+      const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
+      const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
+      const chipWarningBorder = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.30) : 'rgba(221, 198, 82, 0.24)';
       const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
       const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
+      const chipZeroBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.18) : 'rgba(239, 68, 68, 0.14)';
+      const chipZeroText = palette.colorScheme === 'dark' ? '#f87171' : '#dc2626';
+      const chipZeroBorder = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.30) : 'rgba(239, 68, 68, 0.24)';
+      const chipOverdueBg = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.14) : 'rgba(239, 68, 68, 0.10)';
+      const chipOverdueText = palette.colorScheme === 'dark' ? '#f87171' : '#b91c1c';
       const ringTrack = palette.colorScheme === 'dark' ? mixHex(palette.border, '#ffffff', 0.08) : (isSolidLightTheme ? '#e6eaf0' : border);
       const ringNormalFrom = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.22) : (isSolidLightTheme ? '#d8e5ff' : mixHex(palette.accent, '#ffffff', 0.56));
       const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : (isSolidLightTheme ? '#7fa6f6' : palette.accent);
-      const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
-      const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
-      const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
-      const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+      const ringRunningFrom = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.28) : '#b2c2ff';
+      const ringRunningTo = palette.colorScheme === 'dark' ? palette.accent : '#5b7cf6';
+      const ringPausedFrom = palette.colorScheme === 'dark' ? mixHex('#94a3b8', '#ffffff', 0.16) : '#d1d9e4';
+      const ringPausedTo = palette.colorScheme === 'dark' ? mixHex('#94a3b8', backgroundReference, 0.18) : '#9ca9ba';
+      const ringZeroFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+      const ringZeroTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
+      const ringWarnFrom = palette.colorScheme === 'dark' ? '#f3e88f' : '#f6efb8';
+      const ringWarnTo = palette.colorScheme === 'dark' ? '#d8c246' : '#ddc652';
+      const ringDangerFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+      const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
       const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
       const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
+      const selectedRowBg = palette.colorScheme === 'dark'
+        ? alphaHex(palette.accent, 0.12)
+        : alphaHex(palette.accent, isSolidLightTheme ? 0.03 : 0.06);
+      const selectedRowBorder = palette.colorScheme === 'dark'
+        ? alphaHex(palette.accent, 0.20)
+        : alphaHex(palette.accent, isSolidLightTheme ? 0.08 : 0.12);
       const rowHover = palette.glass ? alphaHex(palette.surface, 0.84) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#ffffff', 0.04) : (isSolidLightTheme ? '#f8fafc' : surfaceHover));
       return {
         appBackground: palette.background,
@@ -661,21 +825,44 @@ export function getThemeInitScript(storageKey: string): string {
         inputBackground,
         chip,
         chipText,
+        chipIdleBg,
+        chipIdleText,
+        chipIdleIcon,
         chipActive,
         chipActiveText,
+        chipActiveIcon,
+        chipActiveBorder,
+        chipPausedBg,
+        chipPausedText,
+        chipPausedIcon,
+        chipPausedBorder,
         chipWarning,
         chipWarningText,
+        chipWarningBorder,
         chipDanger,
         chipDangerText,
+        chipZeroBg,
+        chipZeroText,
+        chipZeroBorder,
+        chipOverdueBg,
+        chipOverdueText,
         ringTrack,
         ringNormalFrom,
         ringNormalTo,
+        ringRunningFrom,
+        ringRunningTo,
+        ringPausedFrom,
+        ringPausedTo,
+        ringZeroFrom,
+        ringZeroTo,
         ringWarnFrom,
         ringWarnTo,
         ringDangerFrom,
         ringDangerTo,
         ringOverdueFrom,
         ringOverdueTo,
+        selectedRowBg,
+        selectedRowBorder,
         rowHover,
         overlay: palette.colorScheme === 'dark' ? 'rgba(2, 6, 23, 0.62)' : 'rgba(15, 23, 42, 0.14)',
         shadow: palette.glass ? '0 18px 60px rgba(84, 102, 171, 0.24)' : (palette.colorScheme === 'dark' ? '0 18px 60px rgba(0, 0, 0, 0.42)' : '0 8px 24px rgba(15, 23, 42, 0.04)'),
@@ -721,21 +908,44 @@ export function getThemeInitScript(storageKey: string): string {
       root.style.setProperty('--tt-input-bg', tokens.inputBackground);
       root.style.setProperty('--tt-chip-bg', tokens.chip);
       root.style.setProperty('--tt-chip-text', tokens.chipText);
+      root.style.setProperty('--tt-chip-idle-bg', tokens.chipIdleBg);
+      root.style.setProperty('--tt-chip-idle-text', tokens.chipIdleText);
+      root.style.setProperty('--tt-chip-idle-icon', tokens.chipIdleIcon);
       root.style.setProperty('--tt-chip-active-bg', tokens.chipActive);
       root.style.setProperty('--tt-chip-active-text', tokens.chipActiveText);
+      root.style.setProperty('--tt-chip-active-icon', tokens.chipActiveIcon);
+      root.style.setProperty('--tt-chip-active-border', tokens.chipActiveBorder);
+      root.style.setProperty('--tt-chip-paused-bg', tokens.chipPausedBg);
+      root.style.setProperty('--tt-chip-paused-text', tokens.chipPausedText);
+      root.style.setProperty('--tt-chip-paused-icon', tokens.chipPausedIcon);
+      root.style.setProperty('--tt-chip-paused-border', tokens.chipPausedBorder);
       root.style.setProperty('--tt-chip-warning-bg', tokens.chipWarning);
       root.style.setProperty('--tt-chip-warning-text', tokens.chipWarningText);
+      root.style.setProperty('--tt-chip-warning-border', tokens.chipWarningBorder);
       root.style.setProperty('--tt-chip-danger-bg', tokens.chipDanger);
       root.style.setProperty('--tt-chip-danger-text', tokens.chipDangerText);
+      root.style.setProperty('--tt-chip-zero-bg', tokens.chipZeroBg);
+      root.style.setProperty('--tt-chip-zero-text', tokens.chipZeroText);
+      root.style.setProperty('--tt-chip-zero-border', tokens.chipZeroBorder);
+      root.style.setProperty('--tt-chip-overdue-bg', tokens.chipOverdueBg);
+      root.style.setProperty('--tt-chip-overdue-text', tokens.chipOverdueText);
       root.style.setProperty('--tt-ring-track', tokens.ringTrack);
       root.style.setProperty('--tt-ring-normal-from', tokens.ringNormalFrom);
       root.style.setProperty('--tt-ring-normal-to', tokens.ringNormalTo);
+      root.style.setProperty('--tt-ring-running-from', tokens.ringRunningFrom);
+      root.style.setProperty('--tt-ring-running-to', tokens.ringRunningTo);
+      root.style.setProperty('--tt-ring-paused-from', tokens.ringPausedFrom);
+      root.style.setProperty('--tt-ring-paused-to', tokens.ringPausedTo);
+      root.style.setProperty('--tt-ring-zero-from', tokens.ringZeroFrom);
+      root.style.setProperty('--tt-ring-zero-to', tokens.ringZeroTo);
       root.style.setProperty('--tt-ring-warn-from', tokens.ringWarnFrom);
       root.style.setProperty('--tt-ring-warn-to', tokens.ringWarnTo);
       root.style.setProperty('--tt-ring-danger-from', tokens.ringDangerFrom);
       root.style.setProperty('--tt-ring-danger-to', tokens.ringDangerTo);
       root.style.setProperty('--tt-ring-overdue-from', tokens.ringOverdueFrom);
       root.style.setProperty('--tt-ring-overdue-to', tokens.ringOverdueTo);
+      root.style.setProperty('--tt-selected-row-bg', tokens.selectedRowBg);
+      root.style.setProperty('--tt-selected-row-border', tokens.selectedRowBorder);
       root.style.setProperty('--tt-row-hover', tokens.rowHover);
       root.style.setProperty('--tt-overlay', tokens.overlay);
       root.style.setProperty('--tt-shadow', tokens.shadow);

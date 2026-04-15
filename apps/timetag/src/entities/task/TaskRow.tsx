@@ -3,21 +3,20 @@
 import React from 'react';
 import type { Task } from '@/domain/task.types';
 import {
-  Chip,
   Dropdown,
   DropdownItem,
   DropdownDivider,
-  Checkbox,
-  CheckIcon,
   MoreVerticalIcon,
-  NoteIcon,
   TimerRingButton,
-  UrgentWarningIcon,
 } from '@/shared';
 import { useSettings } from '@/store';
 import { formatTimeBadge } from '@/domain/helpers';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
 import { getUrgencyLevel } from '@/domain/task.urgency';
+import { getTimerClusterVisualState } from '@/domain/timer.ring';
+import { SelectionCheckbox } from './SelectionCheckbox';
+import { TaskMetaCluster } from './TaskMetaCluster';
+import { TaskStatusToggle } from './TaskStatusToggle';
 
 interface TaskRowProps {
   task: Task;
@@ -43,22 +42,13 @@ export function TaskRow({
                           onDelete,
                         }: TaskRowProps) {
   const { settings } = useSettings();
-  const notePreviewRef = React.useRef<HTMLSpanElement | null>(null);
-  const notePopoverId = React.useId();
-  const [isNoteHovered, setIsNoteHovered] = React.useState(false);
-  const [isNoteFocused, setIsNoteFocused] = React.useState(false);
-  const [isNotePinned, setIsNotePinned] = React.useState(false);
-  const [suppressTransientPreview, setSuppressTransientPreview] = React.useState(false);
-
-  const preventMouseFocus = (event: React.MouseEvent<HTMLSpanElement>) => {
-    event.preventDefault();
-  };
 
   const isTimerDisabled = task.status !== 'active';
   const trimmedNote = task.note?.trim() ?? '';
   const hasNote = Boolean(trimmedNote);
+  const showUrgentIndicator = settings.general.showUrgencyIndicator && task.priority === 'urgent';
+  const showMetaCluster = showUrgentIndicator || hasNote;
   const notePreview = hasNote ? trimmedNote.split(/\r?\n/, 1)[0] : '';
-  const isNotePreviewOpen = hasNote && (isNotePinned || (!suppressTransientPreview && (isNoteHovered || isNoteFocused)));
 
   // Calculate urgency level for timer ring visualization
   const urgency = getUrgencyLevel(task);
@@ -95,228 +85,186 @@ export function TaskRow({
     return timeDisplay.full;
   };
 
-  const rowBackground = isSelected ? 'var(--tt-accent-soft)' : 'transparent';
-  const rowBoxShadow = isSelected ? 'inset 0 0 0 1px rgba(79, 125, 243, 0.10)' : undefined;
-  const statusButtonStyle: React.CSSProperties = task.status === 'done'
-    ? {
-        background: '#16a34a',
-        borderColor: '#16a34a',
-        color: '#ffffff',
-      }
-    : {
-        borderColor: 'var(--tt-border-strong)',
-        background: isSelected ? 'rgba(255, 255, 255, 0.78)' : 'var(--tt-surface)',
-        color: 'var(--tt-text-soft)',
-      };
+  const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
+  const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
   const isPaused = task.timerStatus === 'paused';
-  const timeChipTone = task.status === 'archived'
-    ? 'neutral'
-    : urgency === 'overdue'
-      ? 'danger'
-      : isPaused
-        ? 'neutral'
-        : urgency === 'danger'
-          ? 'danger'
-          : urgency === 'warn'
-            ? 'warning'
-            : task.timerStatus === 'running'
-              ? 'info'
-              : 'neutral';
-  const timeChipStyle: React.CSSProperties = task.status === 'archived'
+  const isRunning = task.timerStatus === 'running';
+  const timerVisualState = getTimerClusterVisualState({
+    remainingSec: task.remainingSec,
+    timerStatus: task.timerStatus,
+    urgency,
+    disabled: isTimerDisabled,
+  });
+  const timerClusterStyle: React.CSSProperties = task.status === 'archived'
     ? {
+        background: 'var(--tt-surface-subtle)',
         color: 'var(--tt-text-soft)',
-        opacity: 0.78,
+        opacity: 0.8,
       }
-    : isPaused
+    : task.status === 'done'
       ? {
-          borderColor: 'var(--tt-border)',
-          background: 'var(--tt-surface-subtle)',
-          color: 'var(--tt-text-muted)',
+          background: 'var(--tt-surface-hover)',
+          color: 'var(--tt-text-soft)',
+          opacity: 0.72,
         }
-    : urgency === 'overdue'
+    : timerVisualState === 'disabled' || timerVisualState === 'idle'
       ? {
-          background: '#f8eded',
-          color: '#8a4747',
+          background: 'var(--tt-chip-idle-bg)',
+          color: 'var(--tt-chip-idle-text)',
         }
-    : {};
-
-  const handleNoteToggle = () => {
-    setIsNotePinned((prev) => {
-      const next = !prev;
-      setSuppressTransientPreview(!next);
-      return next;
-    });
-  };
-
-  React.useEffect(() => {
-    if (!isNotePinned) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!notePreviewRef.current?.contains(event.target as Node)) {
-        setIsNotePinned(false);
-        setSuppressTransientPreview(true);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setIsNotePinned(false);
-      setSuppressTransientPreview(true);
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [isNotePinned]);
+      : timerVisualState === 'paused'
+        ? {
+            background: 'var(--tt-chip-paused-bg)',
+            color: 'var(--tt-chip-paused-text)',
+          }
+      : timerVisualState === 'running'
+        ? {
+            background: 'var(--tt-chip-active-bg)',
+            color: 'var(--tt-chip-active-text)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-active-border)',
+          }
+      : timerVisualState === 'warn'
+        ? {
+            background: 'var(--tt-chip-warning-bg)',
+            color: 'var(--tt-chip-warning-text)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-warning-border)',
+          }
+      : timerVisualState === 'danger'
+        ? {
+            background: 'var(--tt-chip-zero-bg)',
+            color: 'var(--tt-chip-zero-text)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-zero-border)',
+          }
+      : timerVisualState === 'zero'
+        ? {
+            background: 'var(--tt-chip-zero-bg)',
+            color: 'var(--tt-chip-zero-text)',
+            boxShadow: 'inset 0 0 0 1px var(--tt-chip-zero-border)',
+          }
+      : timerVisualState === 'overdue'
+      ? {
+          background: 'var(--tt-chip-overdue-bg)',
+          color: 'var(--tt-chip-overdue-text)',
+        }
+      : {
+          background: 'var(--tt-chip-idle-bg)',
+          color: 'var(--tt-chip-idle-text)',
+        };
+  const timerValueStyle: React.CSSProperties = task.status === 'archived'
+    ? { color: 'var(--tt-text-soft)' }
+    : task.status === 'done'
+      ? { color: 'var(--tt-text-soft)' }
+    : timerVisualState === 'disabled' || timerVisualState === 'idle'
+      ? { color: 'var(--tt-chip-idle-text)' }
+      : timerVisualState === 'paused'
+        ? { color: 'var(--tt-chip-paused-text)' }
+      : timerVisualState === 'running'
+        ? { color: 'var(--tt-chip-active-text)' }
+      : timerVisualState === 'warn'
+        ? { color: 'var(--tt-chip-warning-text)' }
+      : timerVisualState === 'danger'
+          ? { color: 'var(--tt-chip-zero-text)' }
+      : timerVisualState === 'zero'
+        ? { color: 'var(--tt-chip-zero-text)' }
+      : timerVisualState === 'overdue'
+          ? { color: 'var(--tt-chip-overdue-text)' }
+      : { color: 'var(--tt-chip-idle-text)' };
 
   return (
       <div
-          className="group flex items-center gap-3.5 px-4 py-3 transition-[background-color,box-shadow] hover:bg-[var(--tt-row-hover)] hover:shadow-[var(--tt-shadow-soft)]"
+          data-testid="task-row"
+          data-task-id={task.id}
+          className="group flex items-center gap-2 px-3 py-2.5 transition-[background-color,box-shadow] hover:bg-[var(--tt-row-hover)] hover:shadow-[var(--tt-shadow-soft)]"
           style={{
             background: rowBackground,
             boxShadow: rowBoxShadow,
           }}
       >
-        <Checkbox
+        <SelectionCheckbox
             checked={isSelected}
             onChange={() => onToggleSelect(task.id)}
-            aria-label={`Select ${task.title}`}
+            ariaLabel={`Select ${task.title}`}
         />
 
-        <button
-            type="button"
-            onClick={() => onToggleStatus(task.id)}
-            className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                task.status === 'archived' ? 'opacity-50' : 'hover:scale-[1.03]'
-            }`}
-            style={statusButtonStyle}
-            aria-label={task.status === 'done' ? 'Mark as active' : 'Mark as done'}
-            disabled={task.status === 'archived'}
-        >
-          {task.status === 'done' && <CheckIcon size="xs" />}
-        </button>
+        <TaskStatusToggle
+            status={task.status}
+            isSelected={isSelected}
+            onToggle={() => onToggleStatus(task.id)}
+        />
 
         <div className="min-w-0 flex-1 pr-2">
-          <div className="flex min-w-0 items-start gap-2 text-sm">
-            {settings.general.showUrgencyIndicator && task.priority === 'urgent' && (
-                <span
-                    className="inline-flex h-5 w-5 shrink-0 items-center justify-center pt-0.5"
-                    title="Urgent"
-                    aria-label="Urgent priority"
-                >
-                  <UrgentWarningIcon size="md" aria-hidden />
-                </span>
+          <div className="flex min-w-0 items-start text-sm">
+            {showMetaCluster && (
+                <TaskMetaCluster
+                    showUrgentIndicator={showUrgentIndicator}
+                    hasNote={hasNote}
+                    noteTitle={trimmedNote}
+                />
             )}
-            {hasNote && (
-                <span
-                    ref={notePreviewRef}
-                    className="relative inline-flex shrink-0"
-                    onMouseEnter={() => {
-                      setIsNoteHovered(true);
-                      setSuppressTransientPreview(false);
-                    }}
-                    onMouseLeave={() => {
-                      setIsNoteHovered(false);
-                      setSuppressTransientPreview(false);
-                    }}
-                >
-                  <button
-                      type="button"
-                      tabIndex={0}
-                      onMouseDown={preventMouseFocus}
-                      onFocus={() => {
-                        setIsNoteFocused(true);
-                        setSuppressTransientPreview(false);
-                      }}
-                      onBlur={() => {
-                        setIsNoteFocused(false);
-                        setSuppressTransientPreview(false);
-                      }}
-                      onClick={handleNoteToggle}
-                      className="inline-flex h-5 w-5 items-center justify-center rounded-md outline-none transition-colors hover:bg-[var(--tt-surface-hover)] focus-visible:ring-2 focus-visible:ring-offset-1"
-                      style={{
-                        color: isNotePreviewOpen ? 'var(--tt-text-muted)' : 'var(--tt-text-soft)',
-                        background: isNotePreviewOpen ? 'var(--tt-surface-subtle)' : 'transparent',
-                      }}
-                      aria-label="Task note preview"
-                      aria-expanded={isNotePreviewOpen}
-                      aria-controls={notePopoverId}
-                  >
-                    <NoteIcon size="sm" />
-                  </button>
-                  {isNotePreviewOpen && (
-                      <span
-                          id={notePopoverId}
-                          className="absolute left-0 top-full z-20 mt-2 w-64 rounded-md border p-2 text-xs leading-5 shadow-lg"
-                          style={{
-                            borderColor: 'var(--tt-border)',
-                            background: 'var(--tt-surface-elevated)',
-                            color: 'var(--tt-text)',
-                            boxShadow: 'var(--tt-shadow)',
-                          }}
-                      >
-                        <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--tt-text-muted)' }}>
-                          Note
-                        </span>
-                        <span className="block whitespace-pre-wrap break-words">{trimmedNote}</span>
-                      </span>
-                  )}
-                </span>
-            )}
-            <span
-                className={`min-w-0 truncate text-[15px] font-medium leading-5 ${
-                    task.status === 'done' ? 'line-through' : ''
-                }`}
-                style={task.status === 'done' || task.status === 'archived'
-                  ? { color: 'var(--tt-text-soft)' }
-                  : { color: 'var(--tt-text)' }}
-            >
-              {task.title}
-            </span>
-          </div>
-
-          {hasNote && settings.general.showNotePreviewsInTaskList && (
-              <div
-                  className="mt-1 truncate pr-2 text-xs leading-5"
-                  style={{ color: task.status === 'archived' ? 'var(--tt-text-soft)' : 'var(--tt-text-muted)' }}
-                  title={trimmedNote}
+            <div className="min-w-0 flex-1">
+              <span
+                  data-testid="task-title"
+                  className={`block min-w-0 truncate text-[15px] font-medium leading-5 ${
+                      task.status === 'done' ? 'line-through' : ''
+                  }`}
+                  style={task.status === 'done'
+                    ? { color: 'var(--tt-text-soft)', opacity: 0.9 }
+                    : task.status === 'archived'
+                      ? { color: 'var(--tt-text-soft)' }
+                    : { color: 'var(--tt-text)' }}
               >
-                {notePreview}
-              </div>
-          )}
+                {task.title}
+              </span>
+
+              {hasNote && settings.general.showNotePreviewsInTaskList && (
+                  <div
+                      data-testid="task-note-preview"
+                      className="mt-1 overflow-hidden pr-2 text-[12px] leading-[1.3]"
+                      style={{
+                        color: 'var(--tt-text-soft)',
+                        opacity: task.status === 'done' ? 0.72 : 1,
+                        display: '-webkit-box',
+                        WebkitBoxOrient: 'vertical',
+                        WebkitLineClamp: 1,
+                      }}
+                      title={trimmedNote}
+                  >
+                    {notePreview}
+                  </div>
+              )}
+            </div>
+          </div>
         </div>
 
-        <TimerRingButton
-            isRunning={task.timerStatus === 'running'}
-            isPaused={task.timerStatus === 'paused'}
-            remainingSec={task.remainingSec}
-            totalSec={task.originalDurationSec}
-            urgency={urgency}
-            disabled={isTimerDisabled}
-            onToggleAction={() => onToggleTimer(task.id)}
-            sizePx={32}
-            strokeWidth={3}
-        />
+        <div
+            data-testid="task-timer-cluster"
+            title={getFullTimeText()}
+            className="ml-1 inline-flex shrink-0 items-center gap-2 rounded-full px-1.5 py-1"
+            style={timerClusterStyle}
+        >
+          <TimerRingButton
+              isRunning={isRunning}
+              isPaused={isPaused}
+              remainingSec={task.remainingSec}
+              totalSec={task.originalDurationSec}
+              urgency={urgency}
+              disabled={isTimerDisabled}
+              onToggleAction={() => onToggleTimer(task.id)}
+              sizePx={30}
+              strokeWidth={2.75}
+              embedded
+          />
 
-        {/* Time pill: fixed width for alignment, neutral gray bg + dark gray text - wrapped in div for title tooltip support */}
-        <div title={getFullTimeText()} className="flex-shrink-0 cursor-help">
-          <Chip
-              tone={timeChipTone}
-              className={[
-                'h-7 w-[76px] justify-center text-center',
-                'tabular-nums leading-none',
-              ].join(' ')}
-              style={timeChipStyle}
+          <span
+              className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
+              style={timerValueStyle}
           >
             {getDisplayTime()}
-          </Chip>
+          </span>
         </div>
 
-        <Dropdown
+        <div className="ml-3 shrink-0">
+          <Dropdown
             trigger={
               <span
                   className="rounded-lg p-1.5 transition-colors group-hover:bg-[var(--tt-row-hover)]"
@@ -326,21 +274,22 @@ export function TaskRow({
               </span>
             }
             align="right"
-        >
-          <DropdownItem onClick={() => onResetTimer(task.id)}>Reset timer</DropdownItem>
-          <DropdownItem onClick={() => onToggleStatus(task.id)}>
-            {task.status === 'done' ? 'Reopen' : 'Mark as done'}
-          </DropdownItem>
-          {task.status !== 'archived' ? (
-              <DropdownItem onClick={() => onArchive(task.id)}>Archive</DropdownItem>
-          ) : (
-              <DropdownItem onClick={() => onRestore(task.id)}>Restore</DropdownItem>
-          )}
-          <DropdownDivider />
-          <DropdownItem onClick={() => onDelete(task.id)} danger>
-            Delete
-          </DropdownItem>
-        </Dropdown>
+          >
+            <DropdownItem onClick={() => onResetTimer(task.id)}>Reset timer</DropdownItem>
+            <DropdownItem onClick={() => onToggleStatus(task.id)}>
+              {task.status === 'done' ? 'Reopen' : 'Mark as done'}
+            </DropdownItem>
+            {task.status !== 'archived' ? (
+                <DropdownItem onClick={() => onArchive(task.id)}>Archive</DropdownItem>
+            ) : (
+                <DropdownItem onClick={() => onRestore(task.id)}>Restore</DropdownItem>
+            )}
+            <DropdownDivider />
+            <DropdownItem onClick={() => onDelete(task.id)} danger>
+              Delete
+            </DropdownItem>
+          </Dropdown>
+        </div>
       </div>
   );
 }

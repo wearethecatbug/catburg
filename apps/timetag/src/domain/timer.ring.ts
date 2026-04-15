@@ -1,7 +1,9 @@
 import { UrgencyLevel } from '@/domain/task.types';
+import type { TimerStatus } from '@/domain/task.types';
 
 export type TimerRingTone = 'normal' | 'warn' | 'danger' | 'overdue';
 export type TimerRingVisualTone = TimerRingTone | 'paused' | 'disabled';
+export type TimerClusterVisualState = 'disabled' | 'idle' | 'running' | 'paused' | 'warn' | 'danger' | 'zero' | 'overdue';
 
 export function clamp01(v: number): number {
     if (Number.isNaN(v) || !Number.isFinite(v)) return 0;
@@ -87,5 +89,32 @@ export function getRingColorClass(args: {
         case 'normal':
         default:
             return 'text-blue-600 dark:text-blue-400';
+    }
+}
+
+export function getTimerClusterVisualState(args: {
+    remainingSec: number;
+    timerStatus: TimerStatus;
+    urgency?: UrgencyLevel;
+    disabled?: boolean;
+}): TimerClusterVisualState {
+    const { remainingSec, timerStatus, urgency, disabled } = args;
+
+    if (disabled) return 'disabled';
+    if (timerStatus === 'paused') return 'paused';
+    if (remainingSec < 0) return 'overdue';
+    if (remainingSec === 0) return 'zero';
+
+    if (urgency === 'danger') return 'danger';
+    if (urgency === 'warn') return 'warn';
+
+    switch (timerStatus) {
+        case 'running':
+            return 'running';
+        case 'expired':
+            return 'zero';
+        case 'idle':
+        default:
+            return 'idle';
     }
 }
