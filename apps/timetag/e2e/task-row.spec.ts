@@ -2,6 +2,21 @@ import { expect, test, type Page } from '@playwright/test';
 import { gotoSeededPage } from './helpers/seed-app';
 import { seededTasks } from './fixtures/timetag-state';
 
+async function resolveCssValue(
+  page: Page,
+  variableName: string,
+  property: 'color' | 'backgroundColor' | 'borderTopColor',
+) {
+  return page.evaluate(({ variableName, property }) => {
+    const probe = document.createElement('div');
+    probe.style.setProperty(property === 'backgroundColor' ? 'background-color' : property === 'borderTopColor' ? 'border-top-color' : 'color', `var(${variableName})`);
+    document.body.appendChild(probe);
+    const value = getComputedStyle(probe)[property as keyof CSSStyleDeclaration];
+    probe.remove();
+    return String(value);
+  }, { variableName, property });
+}
+
 function taskRow(page: Page, title: string) {
   return page.getByTestId('task-row').filter({ hasText: title }).first();
 }
@@ -41,6 +56,9 @@ test.describe('Task row states', () => {
     const selectionCheckbox = row.getByTestId('task-selection-checkbox');
     const selectionMarker = row.getByTestId('task-selection-checkbox-marker');
     const statusToggle = row.getByTestId('task-status-toggle');
+    const expectedAccentHoverBorder = await resolveCssValue(page, '--tt-accent-hover', 'borderTopColor');
+    const expectedAccentSoftBackground = await resolveCssValue(page, '--tt-accent-soft', 'backgroundColor');
+    const expectedAccentText = await resolveCssValue(page, '--tt-accent', 'color');
 
     await expect(selectionCheckbox).toHaveCSS('border-top-color', 'rgba(215, 222, 231, 0.78)');
     await expect(selectionCheckbox).toHaveCSS('border-top-width', '1px');
@@ -56,10 +74,10 @@ test.describe('Task row states', () => {
     await expect(statusToggle).toHaveCSS('border-top-color', 'rgb(215, 222, 231)');
     await expect(statusToggle).toHaveCSS('border-top-width', '2px');
     await statusToggle.hover();
-    await expect(statusToggle).toHaveCSS('border-top-color', 'rgba(79, 125, 243, 0.72)');
+    await expect(statusToggle).toHaveCSS('border-top-color', expectedAccentHoverBorder);
     await expect(statusToggle).toHaveCSS('border-top-width', '1px');
-    await expect(statusToggle).toHaveCSS('background-color', 'rgba(79, 125, 243, 0.06)');
-    await expect(statusToggle).toHaveCSS('color', 'rgb(79, 125, 243)');
+    await expect(statusToggle).toHaveCSS('background-color', expectedAccentSoftBackground);
+    await expect(statusToggle).toHaveCSS('color', expectedAccentText);
     await expect(statusToggle).toHaveCSS('box-shadow', 'none');
   });
 

@@ -11,21 +11,22 @@ import React, {
 } from 'react';
 import {
   Task,
-  PomodoroConfig,
-  Reminder,
-  TASK_NOTE_MAX_LENGTH,
-  TaskPriority,
   TaskStatus,
-  TimerMode,
   WorkspaceType,
   CreateTaskInput,
   FilterState,
   SortState,
   TimerStatus,
 } from '@/domain/task.types';
-import { applyPipeline } from '@/domain/task.pipeline';
+import { applyPipeline, createPipelineQuery } from '@/domain/task.pipeline';
+import { createDefaultTaskFilter } from '@/domain/task.filter';
+import {
+  createTask as createTaskFromInput,
+  normalizeHydratedTasks,
+  pauseOtherRunningTasks,
+} from '@/domain/task.operations';
+import { transitionStatus, toggleDoneStatus } from '@/domain/task.status';
 import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
-import { generateId } from '@/domain/helpers';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 import { useSettings } from './settings.store';
 
@@ -51,6 +52,8 @@ type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
   | { type: 'ADD_TASK'; payload: { input: CreateTaskInput; nowIso: string; pauseOthers: boolean } }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
+  | { type: 'TOGGLE_STATUS'; payload: { id: string; nowIso: string } }
+  | { type: 'SET_STATUS'; payload: { id: string; status: TaskStatus; nowIso: string } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'DELETE_SELECTED' }
   | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
@@ -66,22 +69,15 @@ type TaskAction =
   | { type: 'PAUSE_SELECTED' }
   | { type: 'PLAY_SELECTED' }
   | { type: 'RESET_SELECTED' }
-  | { type: 'MARK_DONE_SELECTED' }
-  | { type: 'ARCHIVE_SELECTED' }
+  | { type: 'MARK_DONE_SELECTED'; payload: { nowIso: string } }
+  | { type: 'ARCHIVE_SELECTED'; payload: { nowIso: string } }
   | { type: 'UNDO_DELETE' };
 
 // ============================================================================
 // Defaults
 // ============================================================================
 
-const initialFilter: FilterState = {
-  status: 'active',
-  urgency: { normal: true, warn: true, danger: true, overdue: true },
-  priority: { normal: true, urgent: true },
-  approachingRed: { enabled: false, windowMinutes: 10 },
-  mode: { duration: true, pomodoro: true, deadline: true },
-  hasReminders: 'any',
-};
+const initialFilter: FilterState = createDefaultTaskFilter();
 
 const initialSort: SortState = { field: 'createdAt', direction: 'desc' };
 
@@ -96,147 +92,6 @@ const initialState: TaskState = {
 };
 
 // ============================================================================
-// Task Factory
-// ============================================================================
-
-function createTask(input: CreateTaskInput, now: string): Task {
-  const note = typeof input.note === 'string' ? input.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) : '';
-
-  // For deadline mode: calculate remainingSec from targetAt
-  // For other modes: use durationSec with default fallback
-  const isDeadlineMode = input.timerMode === 'deadline';
-
-  let durationSec: number;
-  if (isDeadlineMode) {
-    // Calculate remaining seconds from targetAt to now
-    if (input.targetAt) {
-      const targetTime = new Date(input.targetAt).getTime();
-      const nowTime = new Date(now).getTime();
-      durationSec = Math.max(0, Math.floor((targetTime - nowTime) / 1000));
-    } else {
-      durationSec = 0;
-    }
-  } else {
-    durationSec = input.durationSec ?? 25 * 60;
-  }
-
-  return {
-    id: generateId(),
-    title: input.title,
-    note: note || undefined,
-    workspace: input.workspace ?? 'work',
-    status: 'active',
-    priority: input.priority ?? 'normal',
-    timerMode: input.timerMode ?? 'duration',
-    targetAt: input.targetAt,
-    remainingSec: durationSec,
-    originalDurationSec: durationSec,
-    timerStatus: input.timerControls?.autoStart ? 'running' : 'idle',
-    timerControls: input.timerControls ?? {
-      autoStart: false,
-      autoPlay: false,
-      autoReset: false,
-      allowOverdue: false,
-    },
-    pomodoro: input.pomodoro,
-    reminders: input.reminders ?? [],
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-function pauseOtherRunningTasks(tasks: Task[], activeId: string, nowIso: string): Task[] {
-  return tasks.map((task) => (
-    task.id !== activeId && task.timerStatus === 'running'
-      ? { ...task, timerStatus: 'paused' as TimerStatus, updatedAt: nowIso }
-      : task
-  ));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function isTaskStatus(value: unknown): value is TaskStatus {
-  return value === 'active' || value === 'done' || value === 'archived';
-}
-
-function isTaskPriority(value: unknown): value is TaskPriority {
-  return value === 'normal' || value === 'urgent';
-}
-
-function isTimerMode(value: unknown): value is TimerMode {
-  return value === 'duration' || value === 'pomodoro' || value === 'deadline';
-}
-
-function isTimerStatus(value: unknown): value is TimerStatus {
-  return value === 'running' || value === 'paused' || value === 'idle' || value === 'expired';
-}
-
-function isPomodoroConfig(value: unknown): value is PomodoroConfig {
-  if (!isRecord(value)) return false;
-  return (
-    typeof value.cycles === 'number' &&
-    Number.isFinite(value.cycles) &&
-    typeof value.workDurationMin === 'number' &&
-    Number.isFinite(value.workDurationMin) &&
-    typeof value.shortBreakMin === 'number' &&
-    Number.isFinite(value.shortBreakMin) &&
-    typeof value.longBreakMin === 'number' &&
-    Number.isFinite(value.longBreakMin)
-  );
-}
-
-function isReminder(value: unknown): value is Reminder {
-  if (!isRecord(value)) return false;
-  return typeof value.id === 'string' && typeof value.enabled === 'boolean';
-}
-
-function normalizeHydratedTasks(tasks: unknown[]): Task[] {
-  const nowIso = new Date().toISOString();
-
-  return tasks.flatMap((raw) => {
-    if (!isRecord(raw)) return [];
-
-    const remainingSec =
-      typeof raw.remainingSec === 'number' && Number.isFinite(raw.remainingSec)
-        ? raw.remainingSec
-        : 25 * 60;
-    const originalDurationSec =
-      typeof raw.originalDurationSec === 'number' && Number.isFinite(raw.originalDurationSec)
-        ? raw.originalDurationSec
-        : remainingSec;
-    const note = typeof raw.note === 'string' ? raw.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) : '';
-
-    return [{
-      id: typeof raw.id === 'string' && raw.id.trim() ? raw.id : generateId(),
-      title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Untitled task',
-      note: note || undefined,
-      workspace: typeof raw.workspace === 'string' ? (raw.workspace as WorkspaceType) : 'work',
-      status: isTaskStatus(raw.status) ? raw.status : 'active',
-      priority: isTaskPriority(raw.priority) ? raw.priority : 'normal',
-      timerMode: isTimerMode(raw.timerMode) ? raw.timerMode : 'duration',
-      targetAt: typeof raw.targetAt === 'string' ? raw.targetAt : undefined,
-      remainingSec,
-      originalDurationSec,
-      timerStatus: isTimerStatus(raw.timerStatus) ? raw.timerStatus : 'idle',
-      timerControls: isRecord(raw.timerControls)
-        ? {
-            autoStart: Boolean(raw.timerControls.autoStart),
-            autoPlay: Boolean(raw.timerControls.autoPlay),
-            autoReset: Boolean(raw.timerControls.autoReset),
-            allowOverdue: Boolean(raw.timerControls.allowOverdue),
-          }
-        : undefined,
-      pomodoro: isPomodoroConfig(raw.pomodoro) ? raw.pomodoro : undefined,
-      reminders: Array.isArray(raw.reminders) ? raw.reminders.filter(isReminder) : [],
-      createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : nowIso,
-      updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso,
-    }];
-  });
-}
-
-// ============================================================================
 // Reducer (delegates to domain functions)
 // ============================================================================
 
@@ -246,7 +101,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return { ...state, tasks: action.payload };
 
     case 'ADD_TASK': {
-      const nextTask = createTask(action.payload.input, action.payload.nowIso);
+      const nextTask = createTaskFromInput(action.payload.input, action.payload.nowIso);
       const nextTasks =
         nextTask.timerStatus === 'running' && action.payload.pauseOthers
           ? pauseOtherRunningTasks(state.tasks, nextTask.id, action.payload.nowIso)
@@ -262,6 +117,36 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         tasks: state.tasks.map((t) =>
           t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t,
         ),
+      };
+    }
+
+    case 'TOGGLE_STATUS': {
+      const targetTask = state.tasks.find((task) => task.id === action.payload.id);
+      if (!targetTask) return state;
+
+      const patch = toggleDoneStatus(targetTask, action.payload.nowIso);
+      if (!patch) return state;
+
+      return {
+        ...state,
+        tasks: state.tasks.map((task) => (
+          task.id === action.payload.id ? { ...task, ...patch } : task
+        )),
+      };
+    }
+
+    case 'SET_STATUS': {
+      const targetTask = state.tasks.find((task) => task.id === action.payload.id);
+      if (!targetTask) return state;
+
+      const patch = transitionStatus(targetTask, action.payload.status, action.payload.nowIso);
+      if (!patch) return state;
+
+      return {
+        ...state,
+        tasks: state.tasks.map((task) => (
+          task.id === action.payload.id ? { ...task, ...patch } : task
+        )),
       };
     }
 
@@ -346,13 +231,12 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     }
 
     case 'SELECT_ALL': {
-      const query = {
+      const query = createPipelineQuery({
         workspace: state.workspace,
         filter: state.filter,
         sort: state.sort,
         searchQuery: state.searchQuery,
-        showCompletedTasks: action.payload.showCompletedTasks,
-      };
+      }, action.payload.showCompletedTasks);
       const visible = applyPipeline(state.tasks, query);
       return { ...state, selectedIds: new Set(visible.map((t) => t.id)) };
     }
@@ -396,7 +280,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id)
-            ? { ...t, status: 'done' as TaskStatus, timerStatus: 'paused' as TimerStatus }
+            ? { ...t, ...(transitionStatus(t, 'done', action.payload.nowIso) ?? {}) }
             : t,
         ),
         selectedIds: new Set(),
@@ -407,7 +291,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id)
-            ? { ...t, status: 'archived' as TaskStatus, timerStatus: 'paused' as TimerStatus }
+            ? { ...t, ...(transitionStatus(t, 'archived', action.payload.nowIso) ?? {}) }
             : t,
         ),
         selectedIds: new Set(),
@@ -428,13 +312,16 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
 
 interface TaskContextValue {
   state: TaskState;
-  filteredTasks: Task[];
+  visibleTasks: Task[];
   dispatch: React.Dispatch<TaskAction>;
   addTask: (input: CreateTaskInput) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
+  toggleTaskStatus: (id: string) => void;
   toggleTimer: (id: string) => void;
   resetTimer: (id: string) => void;
+  archiveTask: (id: string) => void;
+  restoreTask: (id: string) => void;
   setWorkspace: (workspace: WorkspaceType) => void;
   setFilter: (filter: Partial<FilterState>) => void;
   setSort: (sort: SortState) => void;
@@ -505,15 +392,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [hasRunning]);
 
   // Pipeline via domain
-  const filteredTasks = useMemo(
-    () =>
-      applyPipeline(state.tasks, {
+  const visibleTasks = useMemo(
+    () => applyPipeline(
+      state.tasks,
+      createPipelineQuery({
         workspace: state.workspace,
         filter: state.filter,
         sort: state.sort,
         searchQuery: state.searchQuery,
-        showCompletedTasks: settings.general.showCompletedTasks,
-      }),
+      }, settings.general.showCompletedTasks),
+    ),
     [settings.general.showCompletedTasks, state],
   );
 
@@ -529,6 +417,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   );
   const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates } }), []);
   const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
+  const toggleTaskStatus = useCallback(
+    (id: string) => dispatch({ type: 'TOGGLE_STATUS', payload: { id, nowIso: new Date().toISOString() } }),
+    [],
+  );
   const toggleTimer = useCallback(
     (id: string) => dispatch({
       type: 'TOGGLE_TIMER',
@@ -537,6 +429,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     [shouldPauseOtherTimers],
   );
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const archiveTask = useCallback(
+    (id: string) => dispatch({ type: 'SET_STATUS', payload: { id, status: 'archived', nowIso: new Date().toISOString() } }),
+    [],
+  );
+  const restoreTask = useCallback(
+    (id: string) => dispatch({ type: 'SET_STATUS', payload: { id, status: 'active', nowIso: new Date().toISOString() } }),
+    [],
+  );
   const setWorkspace = useCallback((ws: WorkspaceType) => dispatch({ type: 'SET_WORKSPACE', payload: ws }), []);
   const setFilter = useCallback((f: Partial<FilterState>) => dispatch({ type: 'SET_FILTER', payload: f }), []);
   const setSort = useCallback((s: SortState) => dispatch({ type: 'SET_SORT', payload: s }), []);
@@ -551,19 +451,28 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED' }), []);
   const playSelected = useCallback(() => dispatch({ type: 'PLAY_SELECTED' }), []);
   const resetSelected = useCallback(() => dispatch({ type: 'RESET_SELECTED' }), []);
-  const markDoneSelected = useCallback(() => dispatch({ type: 'MARK_DONE_SELECTED' }), []);
-  const archiveSelected = useCallback(() => dispatch({ type: 'ARCHIVE_SELECTED' }), []);
+  const markDoneSelected = useCallback(
+    () => dispatch({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }),
+    [],
+  );
+  const archiveSelected = useCallback(
+    () => dispatch({ type: 'ARCHIVE_SELECTED', payload: { nowIso: new Date().toISOString() } }),
+    [],
+  );
   const undoDelete = useCallback(() => dispatch({ type: 'UNDO_DELETE' }), []);
 
   const value: TaskContextValue = {
     state,
-    filteredTasks,
+    visibleTasks,
     dispatch,
     addTask,
     updateTask,
     deleteTask,
+    toggleTaskStatus,
     toggleTimer,
     resetTimer,
+    archiveTask,
+    restoreTask,
     setWorkspace,
     setFilter,
     setSort,

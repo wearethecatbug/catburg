@@ -10,13 +10,11 @@ import {
   TimerRingButton,
 } from '@/shared';
 import { useSettings } from '@/store';
-import { formatTimeBadge } from '@/domain/helpers';
-import { getTimeDisplay } from '@/shared/utils/formatTime';
-import { getUrgencyLevel } from '@/domain/task.urgency';
 import { getTimerClusterVisualState } from '@/domain/timer.ring';
 import { SelectionCheckbox } from './SelectionCheckbox';
 import { TaskMetaCluster } from './TaskMetaCluster';
 import { TaskStatusToggle } from './TaskStatusToggle';
+import { getTaskRowViewModel } from './task-row.viewmodel';
 
 interface TaskRowProps {
   task: Task;
@@ -42,58 +40,17 @@ export function TaskRow({
                           onDelete,
                         }: TaskRowProps) {
   const { settings } = useSettings();
-
-  const isTimerDisabled = task.status !== 'active';
-  const trimmedNote = task.note?.trim() ?? '';
-  const hasNote = Boolean(trimmedNote);
-  const showUrgentIndicator = settings.general.showUrgencyIndicator && task.priority === 'urgent';
-  const showMetaCluster = showUrgentIndicator || hasNote;
-  const notePreview = hasNote ? trimmedNote.split(/\r?\n/, 1)[0] : '';
-
-  // Calculate urgency level for timer ring visualization
-  const urgency = getUrgencyLevel(task);
-
-  const getDisplayTime = (): string => {
-    // For pomodoro mode: show cycles and work duration
-    if (task.timerMode === 'pomodoro' && task.pomodoro) {
-      return `${task.pomodoro.cycles}×${task.pomodoro.workDurationMin}m`;
-    }
-
-    // For deadline mode with > 24 hours, show days; otherwise use standard format
-    if (task.timerMode === 'deadline' && task.remainingSec > 86400) {
-      const timeDisplay = getTimeDisplay(task.remainingSec);
-      return timeDisplay.short;
-    }
-
-    return formatTimeBadge(task.remainingSec);
-  };
-
-  const getFullTimeText = (): string => {
-    // For pomodoro mode: show detailed breakdown
-    if (task.timerMode === 'pomodoro' && task.pomodoro) {
-      return `${task.pomodoro.cycles} cycles: ${task.pomodoro.workDurationMin}m work, ${task.pomodoro.shortBreakMin}m break, ${task.pomodoro.longBreakMin}m long break`;
-    }
-
-    // Full tooltip text for deadline mode
-    if (task.timerMode === 'deadline') {
-      const timeDisplay = getTimeDisplay(task.remainingSec);
-      return timeDisplay.full;
-    }
-
-    // For duration mode: use full format (includes days, hours, minutes, seconds)
-    const timeDisplay = getTimeDisplay(task.remainingSec);
-    return timeDisplay.full;
-  };
+  const viewModel = getTaskRowViewModel(task, {
+    showUrgencyIndicator: settings.general.showUrgencyIndicator,
+  });
 
   const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
   const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
-  const isPaused = task.timerStatus === 'paused';
-  const isRunning = task.timerStatus === 'running';
   const timerVisualState = getTimerClusterVisualState({
     remainingSec: task.remainingSec,
     timerStatus: task.timerStatus,
-    urgency,
-    disabled: isTimerDisabled,
+    urgency: viewModel.urgency,
+    disabled: viewModel.isTimerDisabled,
   });
   const timerClusterStyle: React.CSSProperties = task.status === 'archived'
     ? {
@@ -194,11 +151,11 @@ export function TaskRow({
 
         <div className="min-w-0 flex-1 pr-2">
           <div className="flex min-w-0 items-start text-sm">
-            {showMetaCluster && (
+            {viewModel.showMetaCluster && (
                 <TaskMetaCluster
-                    showUrgentIndicator={showUrgentIndicator}
-                    hasNote={hasNote}
-                    noteTitle={trimmedNote}
+                    showUrgentIndicator={viewModel.showUrgentIndicator}
+                    hasNote={viewModel.hasNote}
+                    noteTitle={viewModel.trimmedNote}
                 />
             )}
             <div className="min-w-0 flex-1">
@@ -216,7 +173,7 @@ export function TaskRow({
                 {task.title}
               </span>
 
-              {hasNote && settings.general.showNotePreviewsInTaskList && (
+              {viewModel.hasNote && settings.general.showNotePreviewsInTaskList && (
                   <div
                       data-testid="task-note-preview"
                       className="mt-1 overflow-hidden pr-2 text-[12px] leading-[1.3]"
@@ -227,9 +184,9 @@ export function TaskRow({
                         WebkitBoxOrient: 'vertical',
                         WebkitLineClamp: 1,
                       }}
-                      title={trimmedNote}
+                      title={viewModel.trimmedNote}
                   >
-                    {notePreview}
+                    {viewModel.notePreview}
                   </div>
               )}
             </div>
@@ -238,17 +195,17 @@ export function TaskRow({
 
         <div
             data-testid="task-timer-cluster"
-            title={getFullTimeText()}
+            title={viewModel.fullTimeText}
             className="ml-1 inline-flex shrink-0 items-center gap-2 rounded-full px-1.5 py-1"
             style={timerClusterStyle}
         >
           <TimerRingButton
-              isRunning={isRunning}
-              isPaused={isPaused}
+              isRunning={viewModel.isRunning}
+              isPaused={viewModel.isPaused}
               remainingSec={task.remainingSec}
               totalSec={task.originalDurationSec}
-              urgency={urgency}
-              disabled={isTimerDisabled}
+              urgency={viewModel.urgency}
+              disabled={viewModel.isTimerDisabled}
               onToggleAction={() => onToggleTimer(task.id)}
               sizePx={30}
               strokeWidth={2.75}
@@ -259,7 +216,7 @@ export function TaskRow({
               className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
               style={timerValueStyle}
           >
-            {getDisplayTime()}
+            {viewModel.displayTime}
           </span>
         </div>
 

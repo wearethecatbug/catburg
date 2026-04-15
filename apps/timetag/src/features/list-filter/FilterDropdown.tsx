@@ -2,7 +2,16 @@
 
 import React, { useState } from 'react';
 import { Dropdown, DropdownDivider, Checkbox, FilterIcon } from '@/shared';
-import { URGENCY_FILTER_OPTIONS } from '@/domain';
+import {
+  URGENCY_FILTER_OPTIONS,
+  createResettableTaskFilterPatch,
+  setApproachingRedEnabled,
+  setApproachingRedWindow,
+  setHasRemindersFilter,
+  toggleModeFilter,
+  togglePriorityFilter,
+  toggleUrgencyFilter,
+} from '@/domain';
 import { useTasks } from '@/store';
 import type { UrgencyLevel, TimerMode, TaskPriority } from '@/domain/task.types';
 
@@ -23,47 +32,31 @@ export function FilterDropdown() {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleUrgency = (urgency: UrgencyLevel) => {
-    setFilter({
-      urgency: { ...state.filter.urgency, [urgency]: !state.filter.urgency[urgency] },
-    });
+    setFilter(toggleUrgencyFilter(state.filter, urgency));
   };
 
   const togglePriority = (priority: TaskPriority) => {
-    setFilter({
-      priority: { ...state.filter.priority, [priority]: !state.filter.priority[priority] },
-    });
+    setFilter(togglePriorityFilter(state.filter, priority));
   };
 
   const toggleMode = (mode: TimerMode) => {
-    setFilter({
-      mode: { ...state.filter.mode, [mode]: !state.filter.mode[mode] },
-    });
+    setFilter(toggleModeFilter(state.filter, mode));
   };
 
   const setHasReminders = (value: 'any' | 'yes' | 'no') => {
-    setFilter({ hasReminders: value });
+    setFilter(setHasRemindersFilter(value));
   };
 
   const toggleApproachingRed = () => {
-    setFilter({
-      approachingRed: { ...state.filter.approachingRed, enabled: !state.filter.approachingRed.enabled },
-    });
+    setFilter(setApproachingRedEnabled(state.filter));
   };
 
   const setARWindow = (windowMinutes: number) => {
-    setFilter({
-      approachingRed: { ...state.filter.approachingRed, windowMinutes },
-    });
+    setFilter(setApproachingRedWindow(state.filter, windowMinutes));
   };
 
   const clearAll = () => {
-    setFilter({
-      urgency: { normal: true, warn: true, danger: true, overdue: true },
-      priority: { normal: true, urgent: true },
-      mode: { duration: true, pomodoro: true, deadline: true },
-      approachingRed: { enabled: false, windowMinutes: 10 },
-      hasReminders: 'any',
-    });
+    setFilter(createResettableTaskFilterPatch());
   };
 
   return (

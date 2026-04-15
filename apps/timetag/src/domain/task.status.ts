@@ -25,6 +25,7 @@ export function canTransition(from: TaskStatus, to: TaskStatus): boolean {
 export function transitionStatus(
   task: Task,
   targetStatus: TaskStatus,
+  nowIso: string,
 ): Partial<Task> | null {
   if (!canTransition(task.status, targetStatus)) {
     return null;
@@ -32,7 +33,7 @@ export function transitionStatus(
 
   const updates: Partial<Task> = {
     status: targetStatus,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso,
   };
 
   // Pause timer when leaving active
@@ -46,12 +47,12 @@ export function transitionStatus(
 /**
  * Toggle between active and done
  */
-export function toggleDoneStatus(task: Task): Partial<Task> | null {
+export function toggleDoneStatus(task: Task, nowIso: string): Partial<Task> | null {
   if (task.status === 'active') {
-    return transitionStatus(task, 'done');
+    return transitionStatus(task, 'done', nowIso);
   }
   if (task.status === 'done') {
-    return transitionStatus(task, 'active');
+    return transitionStatus(task, 'active', nowIso);
   }
   return null;
 }
