@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import type { AssignableWorkspaceType } from '@/domain/task.types';
 import {
   ALL_WORKSPACE_TAB,
@@ -20,12 +20,12 @@ export function WorkspaceSwitch() {
   const { settings, updateGeneral } = useSettings();
   const { workspaces: userWorkspaces, setWorkspaces: setUserWorkspaces } = usePersistedWorkspaces();
 
-  // Track if component is mounted (client-side) to prevent flash
-  const isMounted = React.useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+  // Keep the initial client render aligned with SSR output to avoid a tab flash.
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // State for inline add input
   const [isAdding, setIsAdding] = useState(false);

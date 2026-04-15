@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { NoteIcon } from '@/shared';
+import { NoteIcon, UrgentWarningIcon } from '@/shared';
 
 interface TaskMetaClusterProps {
   showUrgentIndicator: boolean;
@@ -27,25 +27,10 @@ export function TaskMetaCluster({
         <span
           data-testid="task-urgent-icon"
           className="inline-flex h-4 w-4 items-center justify-center"
-          style={{ color: '#F59E0B', opacity: 0.9 }}
+          style={{ color: 'var(--tt-chip-warning-text)', opacity: 0.9 }}
           aria-hidden="true"
         >
-          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none">
-            <path
-              d="M12 3.5L20.4 18.6A1.2 1.2 0 0119.35 20.4H4.65A1.2 1.2 0 013.6 18.6L12 3.5z"
-              fill="#FFFFFF"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M12 8.1v6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-            <circle cx="12" cy="17.2" r="1.1" fill="currentColor" />
-          </svg>
+          <UrgentWarningIcon size="sm" aria-hidden />
         </span>
       )}
       {hasNote && (
@@ -57,7 +42,7 @@ export function TaskMetaCluster({
         >
           <span
             className="inline-flex h-4 w-4 items-center justify-center"
-            style={{ color: '#9CA3AF', opacity: 0.6 }}
+            style={{ color: 'var(--tt-text-soft)', opacity: 0.6 }}
             aria-hidden="true"
           >
             <NoteIcon size="sm" />

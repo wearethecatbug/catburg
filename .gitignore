@@ -90,6 +90,7 @@ node_modules
 
 # Testing
 coverage
+apps/timetag/test-results/
 
 # Turbo
 .turbo

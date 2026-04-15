@@ -1,10 +1,13 @@
 import { spawn } from 'node:child_process';
 
-const args = process.argv.slice(2);
-const quotedArgs = args.map((arg) => (arg.includes(' ') ? `"${arg}"` : arg));
-const child = spawn(`pnpm exec next dev --turbopack ${quotedArgs.join(' ')}`.trim(), {
+const cliArgs = process.argv.slice(2);
+const command = process.platform === 'win32' ? 'cmd.exe' : 'pnpm';
+const args = process.platform === 'win32'
+  ? ['/d', '/s', '/c', 'pnpm', 'exec', 'next', 'dev', '--turbopack', ...cliArgs]
+  : ['exec', 'next', 'dev', '--turbopack', ...cliArgs];
+
+const child = spawn(command, args, {
   stdio: 'inherit',
-  shell: true,
   env: {
     ...process.env,
     NODE_OPTIONS: '',

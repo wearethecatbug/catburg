@@ -34,6 +34,8 @@ Visual indicators based on **percentage of original duration remaining** (fair f
 
 ## Getting Started
 
+**Requirements:** Node.js `>=20.9.0`
+
 ```bash
 # Install dependencies
 pnpm install
@@ -46,7 +48,7 @@ Open [http://localhost:3003](http://localhost:3003) in your browser.
 
 ## Tech Stack
 
-- Next.js 15 (App Router)
+- Next.js 16 (App Router)
 - React 19
 - TypeScript 5
 - Tailwind CSS

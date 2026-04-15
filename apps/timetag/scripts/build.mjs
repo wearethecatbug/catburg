@@ -1,8 +1,13 @@
 import { spawn } from 'node:child_process';
 
-const child = spawn('pnpm exec next build', {
+const cliArgs = process.argv.slice(2);
+const command = process.platform === 'win32' ? 'cmd.exe' : 'pnpm';
+const args = process.platform === 'win32'
+  ? ['/d', '/s', '/c', 'pnpm', 'exec', 'next', 'build', ...cliArgs]
+  : ['exec', 'next', 'build', ...cliArgs];
+
+const child = spawn(command, args, {
   stdio: 'inherit',
-  shell: true,
   env: {
     ...process.env,
     NODE_OPTIONS: '',

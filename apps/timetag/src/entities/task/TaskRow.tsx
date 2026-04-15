@@ -103,7 +103,7 @@ export function TaskRow({
       }
     : task.status === 'done'
       ? {
-          background: '#F8FAFC',
+          background: 'var(--tt-surface-hover)',
           color: 'var(--tt-text-soft)',
           opacity: 0.72,
         }
@@ -208,7 +208,7 @@ export function TaskRow({
                       task.status === 'done' ? 'line-through' : ''
                   }`}
                   style={task.status === 'done'
-                    ? { color: '#94A3B8', opacity: 0.9 }
+                    ? { color: 'var(--tt-text-soft)', opacity: 0.9 }
                     : task.status === 'archived'
                       ? { color: 'var(--tt-text-soft)' }
                     : { color: 'var(--tt-text)' }}
@@ -221,8 +221,8 @@ export function TaskRow({
                       data-testid="task-note-preview"
                       className="mt-1 overflow-hidden pr-2 text-[12px] leading-[1.3]"
                       style={{
-                        color: task.status === 'done' ? '#CBD5E1' : 'var(--tt-text-soft)',
-                        opacity: 1,
+                        color: 'var(--tt-text-soft)',
+                        opacity: task.status === 'done' ? 0.72 : 1,
                         display: '-webkit-box',
                         WebkitBoxOrient: 'vertical',
                         WebkitLineClamp: 1,

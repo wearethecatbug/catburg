@@ -5,6 +5,7 @@
 - Prefer changes inside this app unless the task explicitly asks for cross-app edits.
 
 ## Commands (default: run from `apps/timetag`)
+- Runtime requirement: Node.js `>=20.9.0`
 - Install deps (run from repo root): `pnpm install`
 - Dev: `pnpm dev` (default `3003`)
 - Alternate dev port: `pnpm exec next dev --turbopack --port <free-port>`
