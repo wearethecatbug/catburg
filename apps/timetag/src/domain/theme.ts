@@ -345,8 +345,8 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
     : isSolidLightTheme
       ? '#3b5ccc'
       : palette.accent;
-  const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
-  const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+  const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
+  const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
   const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
   const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
   const ringTrack = palette.colorScheme === 'dark'
@@ -360,10 +360,10 @@ export function resolveThemeTokens(mode: ThemeMode, customTheme: CustomThemeSett
       ? '#d8e5ff'
       : mixHex(palette.accent, '#ffffff', 0.56);
   const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : isSolidLightTheme ? '#7fa6f6' : palette.accent;
-  const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
-  const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
-  const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
-  const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+  const ringWarnFrom = palette.colorScheme === 'dark' ? '#f3e88f' : '#f6efb8';
+  const ringWarnTo = palette.colorScheme === 'dark' ? '#d8c246' : '#ddc652';
+  const ringDangerFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+  const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
   const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
   const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
   const rowHover = palette.glass
@@ -627,17 +627,17 @@ export function getThemeInitScript(storageKey: string): string {
       const chipText = palette.colorScheme === 'dark' ? mixHex(palette.text, '#94a3b8', 0.22) : (isSolidLightTheme ? '#334155' : textMuted);
       const chipActive = palette.colorScheme === 'dark' ? alphaHex(palette.accent, 0.22) : (isSolidLightTheme ? '#e8f0ff' : accentSoft);
       const chipActiveText = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.18) : (isSolidLightTheme ? '#3b5ccc' : palette.accent);
-      const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#f59e0b', 0.16) : '#fff7e6';
-      const chipWarningText = palette.colorScheme === 'dark' ? '#fcd34d' : '#9a6700';
+      const chipWarning = palette.colorScheme === 'dark' ? alphaHex('#e4d468', 0.22) : 'rgba(241, 225, 123, 0.18)';
+      const chipWarningText = palette.colorScheme === 'dark' ? '#f2e58a' : '#8a741f';
       const chipDanger = palette.colorScheme === 'dark' ? alphaHex('#ef4444', 0.16) : '#fff1f1';
       const chipDangerText = palette.colorScheme === 'dark' ? '#fca5a5' : '#a74f4f';
       const ringTrack = palette.colorScheme === 'dark' ? mixHex(palette.border, '#ffffff', 0.08) : (isSolidLightTheme ? '#e6eaf0' : border);
       const ringNormalFrom = palette.colorScheme === 'dark' ? mixHex(palette.accent, '#ffffff', 0.22) : (isSolidLightTheme ? '#d8e5ff' : mixHex(palette.accent, '#ffffff', 0.56));
       const ringNormalTo = palette.colorScheme === 'dark' ? palette.accent : (isSolidLightTheme ? '#7fa6f6' : palette.accent);
-      const ringWarnFrom = palette.colorScheme === 'dark' ? '#f8d98b' : '#f7e4b5';
-      const ringWarnTo = palette.colorScheme === 'dark' ? '#f59e0b' : '#f2c96d';
-      const ringDangerFrom = palette.colorScheme === 'dark' ? '#f4b3b3' : '#f3c4c4';
-      const ringDangerTo = palette.colorScheme === 'dark' ? '#ef6b6b' : '#e88b8b';
+      const ringWarnFrom = palette.colorScheme === 'dark' ? '#f3e88f' : '#f6efb8';
+      const ringWarnTo = palette.colorScheme === 'dark' ? '#d8c246' : '#ddc652';
+      const ringDangerFrom = palette.colorScheme === 'dark' ? '#ffb2ba' : '#ffb2ba';
+      const ringDangerTo = palette.colorScheme === 'dark' ? '#dc2626' : '#dc2626';
       const ringOverdueFrom = palette.colorScheme === 'dark' ? '#c89a9a' : '#d8b3b3';
       const ringOverdueTo = palette.colorScheme === 'dark' ? '#f0d7d7' : '#9f5a5a';
       const rowHover = palette.glass ? alphaHex(palette.surface, 0.84) : (palette.colorScheme === 'dark' ? mixHex(palette.surface, '#ffffff', 0.04) : (isSolidLightTheme ? '#f8fafc' : surfaceHover));
