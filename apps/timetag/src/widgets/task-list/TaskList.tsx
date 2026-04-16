@@ -12,13 +12,22 @@ interface TaskListProps {
 }
 
 export function TaskList({ onDeleteTask }: TaskListProps) {
-  const { filteredTasks, toggleTimer, resetTimer, updateTask, toggleSelect, state } = useTasks();
+  const {
+    visibleTasks,
+    toggleTimer,
+    resetTimer,
+    toggleTaskStatus,
+    archiveTask,
+    restoreTask,
+    toggleSelect,
+    state,
+  } = useTasks();
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
-  const hasMore = visibleCount < filteredTasks.length;
-  const visibleTasks = filteredTasks.slice(0, visibleCount);
+  const hasMore = visibleCount < visibleTasks.length;
+  const pagedTasks = visibleTasks.slice(0, visibleCount);
 
-  if (filteredTasks.length === 0) {
+  if (visibleTasks.length === 0) {
     return (
       <div
         className="flex flex-col items-center justify-center px-4 py-12"
@@ -34,41 +43,23 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
     );
   }
 
-  const handleToggleStatus = (id: string) => {
-    const task = state.tasks.find((t) => t.id === id);
-    if (!task) return;
-    if (task.status === 'active') {
-      updateTask(id, { status: 'done', timerStatus: 'paused' });
-    } else if (task.status === 'done') {
-      updateTask(id, { status: 'active' });
-    }
-  };
-
-  const handleArchive = (id: string) => {
-    updateTask(id, { status: 'archived', timerStatus: 'paused' });
-  };
-
-  const handleRestore = (id: string) => {
-    updateTask(id, { status: 'active' });
-  };
-
   return (
     <div className="flex-1 overflow-auto" style={{ background: 'var(--tt-surface)' }}>
       <div
         className="divide-y divide-[var(--tt-border)]"
         style={{ background: 'var(--tt-surface)' }}
       >
-        {visibleTasks.map((task) => (
+        {pagedTasks.map((task) => (
           <TaskRow
             key={task.id}
             task={task}
             isSelected={state.selectedIds.has(task.id)}
             onToggleSelect={toggleSelect}
-            onToggleStatus={handleToggleStatus}
+            onToggleStatus={toggleTaskStatus}
             onToggleTimer={toggleTimer}
             onResetTimer={resetTimer}
-            onArchive={handleArchive}
-            onRestore={handleRestore}
+            onArchive={archiveTask}
+            onRestore={restoreTask}
             onDelete={onDeleteTask}
           />
         ))}
@@ -90,7 +81,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
               boxShadow: 'var(--tt-shadow-soft)',
             }}
           >
-            Show more ({filteredTasks.length - visibleCount} remaining)
+            Show more ({visibleTasks.length - visibleCount} remaining)
           </button>
         </div>
       )}

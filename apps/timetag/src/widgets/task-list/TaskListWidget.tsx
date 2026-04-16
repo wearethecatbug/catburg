@@ -16,6 +16,7 @@ import { TaskList } from '@/widgets';
 import { useToast, Chip } from '@/shared/ui';
 import { useKeyboardShortcuts } from '@/shared/hooks';
 import { useSettings, useTasks } from '@/store';
+import { setApproachingRedEnabled } from '@/domain/task.filter';
 
 /**
  * TaskListWidget — Screen assembler.
@@ -79,9 +80,7 @@ export function TaskListWidget() {
   }, [setFilter, settings.general.showCompletedTasks, state.filter.status]);
 
   const disableApproachingRed = () => {
-    setFilter({
-      approachingRed: { ...state.filter.approachingRed, enabled: false },
-    });
+    setFilter(setApproachingRedEnabled(state.filter, false));
   };
 
   return (

@@ -17,6 +17,16 @@ export interface PipelineQuery {
   showCompletedTasks: boolean;
 }
 
+export function createPipelineQuery(
+  queryState: Pick<PipelineQuery, 'workspace' | 'filter' | 'sort' | 'searchQuery'>,
+  showCompletedTasks: boolean,
+): PipelineQuery {
+  return {
+    ...queryState,
+    showCompletedTasks,
+  };
+}
+
 // ============================================================================
 // Single source of truth: Workspace → Status → Filter → Search → Sort
 // ============================================================================
