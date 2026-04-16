@@ -25,16 +25,16 @@ interface TaskRowProps {
 }
 
 export function TaskRow({
-                          task,
-                          isSelected,
-                          onToggleSelect,
-                          onToggleStatus,
-                          onToggleTimer,
-                          onResetTimer,
-                          onArchive,
-                          onRestore,
-                          onDelete,
-                        }: TaskRowProps) {
+  task,
+  isSelected,
+  onToggleSelect,
+  onToggleStatus,
+  onToggleTimer,
+  onResetTimer,
+  onArchive,
+  onRestore,
+  onDelete,
+}: TaskRowProps) {
   const { settings } = useSettings();
   const viewModel = getTaskRowViewModel(task, {
     showUrgencyIndicator: settings.general.showUrgencyIndicator,
