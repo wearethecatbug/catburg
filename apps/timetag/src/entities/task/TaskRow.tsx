@@ -2,18 +2,14 @@
 
 import React from 'react';
 import type { Task } from '@/domain/task.types';
-import {
-  Dropdown,
-  DropdownItem,
-  DropdownDivider,
-  MoreVerticalIcon,
-  TimerRingButton,
-} from '@/shared';
 import { useSettings } from '@/store';
-import { getTimerClusterVisualState } from '@/domain/timer.ring';
-import { SelectionCheckbox } from './SelectionCheckbox';
-import { TaskMetaCluster } from './TaskMetaCluster';
-import { TaskStatusToggle } from './TaskStatusToggle';
+import {
+  SelectionCheckbox,
+  TaskMetaCluster,
+  TaskRowActionsMenu,
+  TaskStatusToggle,
+  TaskTimerCluster,
+} from './components';
 import { getTaskRowViewModel } from './task-row.viewmodel';
 
 interface TaskRowProps {
@@ -46,86 +42,6 @@ export function TaskRow({
 
   const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
   const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
-  const timerVisualState = getTimerClusterVisualState({
-    remainingSec: task.remainingSec,
-    timerStatus: task.timerStatus,
-    urgency: viewModel.urgency,
-    disabled: viewModel.isTimerDisabled,
-  });
-  const timerClusterStyle: React.CSSProperties = task.status === 'archived'
-    ? {
-        background: 'var(--tt-surface-subtle)',
-        color: 'var(--tt-text-soft)',
-        opacity: 0.8,
-      }
-    : task.status === 'done'
-      ? {
-          background: 'var(--tt-surface-hover)',
-          color: 'var(--tt-text-soft)',
-          opacity: 0.72,
-        }
-    : timerVisualState === 'disabled' || timerVisualState === 'idle'
-      ? {
-          background: 'var(--tt-chip-idle-bg)',
-          color: 'var(--tt-chip-idle-text)',
-        }
-      : timerVisualState === 'paused'
-        ? {
-            background: 'var(--tt-chip-paused-bg)',
-            color: 'var(--tt-chip-paused-text)',
-          }
-      : timerVisualState === 'running'
-        ? {
-            background: 'var(--tt-chip-active-bg)',
-            color: 'var(--tt-chip-active-text)',
-            boxShadow: 'inset 0 0 0 1px var(--tt-chip-active-border)',
-          }
-      : timerVisualState === 'warn'
-        ? {
-            background: 'var(--tt-chip-warning-bg)',
-            color: 'var(--tt-chip-warning-text)',
-            boxShadow: 'inset 0 0 0 1px var(--tt-chip-warning-border)',
-          }
-      : timerVisualState === 'danger'
-        ? {
-            background: 'var(--tt-chip-zero-bg)',
-            color: 'var(--tt-chip-zero-text)',
-            boxShadow: 'inset 0 0 0 1px var(--tt-chip-zero-border)',
-          }
-      : timerVisualState === 'zero'
-        ? {
-            background: 'var(--tt-chip-zero-bg)',
-            color: 'var(--tt-chip-zero-text)',
-            boxShadow: 'inset 0 0 0 1px var(--tt-chip-zero-border)',
-          }
-      : timerVisualState === 'overdue'
-      ? {
-          background: 'var(--tt-chip-overdue-bg)',
-          color: 'var(--tt-chip-overdue-text)',
-        }
-      : {
-          background: 'var(--tt-chip-idle-bg)',
-          color: 'var(--tt-chip-idle-text)',
-        };
-  const timerValueStyle: React.CSSProperties = task.status === 'archived'
-    ? { color: 'var(--tt-text-soft)' }
-    : task.status === 'done'
-      ? { color: 'var(--tt-text-soft)' }
-    : timerVisualState === 'disabled' || timerVisualState === 'idle'
-      ? { color: 'var(--tt-chip-idle-text)' }
-      : timerVisualState === 'paused'
-        ? { color: 'var(--tt-chip-paused-text)' }
-      : timerVisualState === 'running'
-        ? { color: 'var(--tt-chip-active-text)' }
-      : timerVisualState === 'warn'
-        ? { color: 'var(--tt-chip-warning-text)' }
-      : timerVisualState === 'danger'
-          ? { color: 'var(--tt-chip-zero-text)' }
-      : timerVisualState === 'zero'
-        ? { color: 'var(--tt-chip-zero-text)' }
-      : timerVisualState === 'overdue'
-          ? { color: 'var(--tt-chip-overdue-text)' }
-      : { color: 'var(--tt-chip-idle-text)' };
 
   return (
       <div
@@ -193,60 +109,27 @@ export function TaskRow({
           </div>
         </div>
 
-        <div
-            data-testid="task-timer-cluster"
-            title={viewModel.fullTimeText}
-            className="ml-1 inline-flex shrink-0 items-center gap-2 rounded-full px-1.5 py-1"
-            style={timerClusterStyle}
-        >
-          <TimerRingButton
-              isRunning={viewModel.isRunning}
-              isPaused={viewModel.isPaused}
-              remainingSec={task.remainingSec}
-              totalSec={task.originalDurationSec}
-              urgency={viewModel.urgency}
-              disabled={viewModel.isTimerDisabled}
-              onToggleAction={() => onToggleTimer(task.id)}
-              sizePx={30}
-              strokeWidth={2.75}
-              embedded
-          />
+        <TaskTimerCluster
+          status={task.status}
+          remainingSec={task.remainingSec}
+          totalSec={task.originalDurationSec}
+          urgency={viewModel.urgency}
+          isRunning={viewModel.isRunning}
+          isPaused={viewModel.isPaused}
+          isTimerDisabled={viewModel.isTimerDisabled}
+          displayTime={viewModel.displayTime}
+          fullTimeText={viewModel.fullTimeText}
+          onToggleTimer={() => onToggleTimer(task.id)}
+        />
 
-          <span
-              className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
-              style={timerValueStyle}
-          >
-            {viewModel.displayTime}
-          </span>
-        </div>
-
-        <div className="ml-3 shrink-0">
-          <Dropdown
-            trigger={
-              <span
-                  className="rounded-lg p-1.5 transition-colors group-hover:bg-[var(--tt-row-hover)]"
-                  style={{ color: 'var(--tt-text-soft)' }}
-              >
-                <MoreVerticalIcon size="sm" aria-label="Task options" />
-              </span>
-            }
-            align="right"
-          >
-            <DropdownItem onClick={() => onResetTimer(task.id)}>Reset timer</DropdownItem>
-            <DropdownItem onClick={() => onToggleStatus(task.id)}>
-              {task.status === 'done' ? 'Reopen' : 'Mark as done'}
-            </DropdownItem>
-            {task.status !== 'archived' ? (
-                <DropdownItem onClick={() => onArchive(task.id)}>Archive</DropdownItem>
-            ) : (
-                <DropdownItem onClick={() => onRestore(task.id)}>Restore</DropdownItem>
-            )}
-            <DropdownDivider />
-            <DropdownItem onClick={() => onDelete(task.id)} danger>
-              Delete
-            </DropdownItem>
-          </Dropdown>
-        </div>
+        <TaskRowActionsMenu
+          status={task.status}
+          onResetTimer={() => onResetTimer(task.id)}
+          onToggleStatus={() => onToggleStatus(task.id)}
+          onArchive={() => onArchive(task.id)}
+          onRestore={() => onRestore(task.id)}
+          onDelete={() => onDelete(task.id)}
+        />
       </div>
   );
 }
