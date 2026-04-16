@@ -27,8 +27,8 @@
   --tt-chip-idle-bg: #f8fafc;
   --tt-chip-idle-text: #475569;
   --tt-chip-idle-icon: #94a3b8;
-  --tt-chip-active-bg: rgba(91, 124, 246, 0.1);
-  --tt-chip-active-text: #3e5fcc;
+  --tt-chip-active-bg: #e8f0ff;
+  --tt-chip-active-text: #3b5ccc;
   --tt-chip-active-icon: #5b7cf6;
   --tt-chip-active-border: rgba(79, 125, 243, 0.10);
   --tt-chip-paused-bg: #e5eaf2;
@@ -37,7 +37,6 @@
   --tt-chip-paused-border: rgba(148, 163, 184, 0.16);
   --tt-chip-warning-bg: rgba(241, 225, 123, 0.18);
   --tt-chip-warning-text: #8a741f;
-  --tt-chip-warning-icon: #b09a30;
   --tt-chip-warning-border: rgba(221, 198, 82, 0.24);
   --tt-chip-zero-bg: rgba(239, 68, 68, 0.14);
   --tt-chip-zero-text: #dc2626;
@@ -47,8 +46,8 @@
   --tt-chip-overdue-bg: rgba(239, 68, 68, 0.10);
   --tt-chip-overdue-text: #b91c1c;
   --tt-ring-track: #e6eaf0;
-  --tt-ring-normal-from: #dde5ee;
-  --tt-ring-normal-to: #b9c5d3;
+  --tt-ring-normal-from: #d8e5ff;
+  --tt-ring-normal-to: #7fa6f6;
   --tt-ring-running-from: #b2c2ff;
   --tt-ring-running-to: #5b7cf6;
   --tt-ring-paused-from: #d1d9e4;
@@ -59,10 +58,10 @@
   --tt-ring-warn-to: #ddc652;
   --tt-ring-danger-from: #ffb2ba;
   --tt-ring-danger-to: #dc2626;
-  --tt-ring-overdue-from: #e58c8c;
-  --tt-ring-overdue-to: #b91c1c;
-  --tt-selected-row-bg: rgba(59, 130, 246, 0.03);
-  --tt-selected-row-border: rgba(59, 130, 246, 0.08);
+  --tt-ring-overdue-from: #d8b3b3;
+  --tt-ring-overdue-to: #9f5a5a;
+  --tt-selected-row-bg: rgba(79, 125, 243, 0.03);
+  --tt-selected-row-border: rgba(79, 125, 243, 0.08);
   --tt-row-hover: #f8fafc;
   --tt-overlay: rgba(15, 23, 42, 0.14);
   --tt-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
