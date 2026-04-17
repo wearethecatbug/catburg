@@ -17,6 +17,21 @@ async function resolveCssValue(
   }, { variableName, property });
 }
 
+async function resolveCssExpression(
+  page: Page,
+  cssValue: string,
+  property: 'color' | 'backgroundColor' | 'borderTopColor',
+) {
+  return page.evaluate(({ cssValue, property }) => {
+    const probe = document.createElement('div');
+    probe.style.setProperty(property === 'backgroundColor' ? 'background-color' : property === 'borderTopColor' ? 'border-top-color' : 'color', cssValue);
+    document.body.appendChild(probe);
+    const value = getComputedStyle(probe)[property as keyof CSSStyleDeclaration];
+    probe.remove();
+    return String(value);
+  }, { cssValue, property });
+}
+
 function taskRow(page: Page, title: string) {
   return page.getByTestId('task-row').filter({ hasText: title }).first();
 }
@@ -25,22 +40,71 @@ test.describe('Task row states', () => {
   test('renders seeded urgent, note, and completed tasks consistently', async ({ page }) => {
     await gotoSeededPage(page, seededTasks);
 
+    const expectedUrgentBar = await resolveCssExpression(
+      page,
+      'color-mix(in srgb, var(--tt-text-muted) 54%, white)',
+      'backgroundColor',
+    );
+
     const urgentRow = taskRow(page, 'Urgent note task');
     await expect(urgentRow).toBeVisible();
-    await expect(urgentRow.getByTestId('task-meta-cluster')).toBeVisible();
-    await expect(urgentRow.getByTestId('task-urgent-icon')).toBeVisible();
-    await expect(urgentRow.getByTestId('task-note-trigger')).toBeVisible();
-    await expect(urgentRow.getByTestId('task-note-trigger')).toHaveAttribute('title', 'Important follow-up note');
+    await expect(urgentRow.getByTestId('task-priority-slot')).toBeVisible();
+    await expect(urgentRow.getByTestId('task-content-block')).toBeVisible();
+    await expect(urgentRow.getByTestId('task-priority-bar')).toBeVisible();
+    await expect(urgentRow.getByTestId('task-note-trigger')).toHaveCount(0);
     await expect(urgentRow.getByTestId('task-note-preview')).toContainText('Important follow-up note');
 
     const urgentTitle = urgentRow.getByTestId('task-title');
+    const urgentBar = urgentRow.getByTestId('task-priority-bar');
+    const urgentContentBlock = urgentRow.getByTestId('task-content-block');
     const urgentNotePreview = urgentRow.getByTestId('task-note-preview');
     const titleBox = await urgentTitle.boundingBox();
+    const barBox = await urgentBar.boundingBox();
+    const contentBox = await urgentContentBlock.boundingBox();
     const noteBox = await urgentNotePreview.boundingBox();
     expect(titleBox).not.toBeNull();
+    expect(barBox).not.toBeNull();
+    expect(contentBox).not.toBeNull();
     expect(noteBox).not.toBeNull();
+    await expect(urgentBar).toHaveCSS('background-color', expectedUrgentBar);
+    expect((barBox?.x ?? 0)).toBeLessThan((contentBox?.x ?? 0));
+    expect((contentBox?.height ?? 0)).toBeGreaterThan(38);
+    expect(Math.abs((barBox?.height ?? 0) - 32)).toBeLessThan(2);
+    expect((barBox?.width ?? 0)).toBeLessThan(2.5);
+    expect((barBox?.height ?? 0)).toBeGreaterThan((titleBox?.height ?? 0) + 10);
     expect((noteBox?.y ?? 0) ?? 0).toBeGreaterThan((titleBox?.y ?? 0) ?? 0);
     expect(Math.abs((noteBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThan(4);
+
+    const urgentPlainRow = taskRow(page, 'Urgent plain task');
+    await expect(urgentPlainRow).toBeVisible();
+    await expect(urgentPlainRow.getByTestId('task-priority-slot')).toBeVisible();
+    await expect(urgentPlainRow.getByTestId('task-priority-bar')).toBeVisible();
+    await expect(urgentPlainRow.getByTestId('task-note-preview')).toHaveCount(0);
+
+    const urgentPlainBar = urgentPlainRow.getByTestId('task-priority-bar');
+    const urgentPlainTitle = urgentPlainRow.getByTestId('task-title');
+    const urgentPlainContent = urgentPlainRow.getByTestId('task-content-block');
+    const urgentPlainBarBox = await urgentPlainBar.boundingBox();
+    const urgentPlainTitleBox = await urgentPlainTitle.boundingBox();
+    const urgentPlainContentBox = await urgentPlainContent.boundingBox();
+    expect(urgentPlainBarBox).not.toBeNull();
+    expect(urgentPlainTitleBox).not.toBeNull();
+    expect(urgentPlainContentBox).not.toBeNull();
+    expect(Math.abs((urgentPlainBarBox?.height ?? 0) - (barBox?.height ?? 0))).toBeLessThan(2);
+    expect(Math.abs((urgentPlainContentBox?.height ?? 0) - (contentBox?.height ?? 0))).toBeLessThan(2);
+
+    const plainRow = taskRow(page, 'Plain task');
+    await expect(plainRow).toBeVisible();
+    await expect(plainRow.getByTestId('task-priority-slot')).toBeVisible();
+    await expect(plainRow.getByTestId('task-content-block')).toBeVisible();
+    await expect(plainRow.getByTestId('task-priority-bar')).toHaveCount(0);
+    await expect(plainRow.getByTestId('task-note-preview')).toHaveCount(0);
+
+    const plainTitle = plainRow.getByTestId('task-title');
+    const plainTitleBox = await plainTitle.boundingBox();
+    expect(plainTitleBox).not.toBeNull();
+    expect(Math.abs((plainTitleBox?.x ?? 0) - (titleBox?.x ?? 0))).toBeLessThan(4);
+    expect(Math.abs((plainTitleBox?.x ?? 0) - (urgentPlainTitleBox?.x ?? 0))).toBeLessThan(4);
 
     const completedRow = taskRow(page, 'Completed task with note');
     await expect(completedRow).toBeVisible();
@@ -84,6 +148,12 @@ test.describe('Task row states', () => {
   test('adds a task with urgent priority and note, then marks it completed', async ({ page }) => {
     await gotoSeededPage(page, []);
 
+    const expectedMutedBar = await resolveCssExpression(
+      page,
+      'color-mix(in srgb, var(--tt-text-soft) 42%, white)',
+      'backgroundColor',
+    );
+
     await page.getByLabel('Add a new task').fill('Playwright urgent task');
     await page.getByRole('button', { name: /details/i }).click();
     await page.getByText('Urgent', { exact: true }).click();
@@ -92,13 +162,16 @@ test.describe('Task row states', () => {
 
     const createdRow = taskRow(page, 'Playwright urgent task');
     await expect(createdRow).toBeVisible();
-    await expect(createdRow.getByTestId('task-meta-cluster')).toBeVisible();
-    await expect(createdRow.getByTestId('task-urgent-icon')).toBeVisible();
+    await expect(createdRow.getByTestId('task-priority-slot')).toBeVisible();
+    await expect(createdRow.getByTestId('task-content-block')).toBeVisible();
+    await expect(createdRow.getByTestId('task-priority-bar')).toBeVisible();
+    await expect(createdRow.getByTestId('task-note-trigger')).toHaveCount(0);
     await expect(createdRow.getByTestId('task-note-preview')).toContainText('Created from Playwright test');
 
     await createdRow.getByTestId('task-status-toggle').evaluate((element: HTMLButtonElement) => element.click());
     await expect(createdRow.getByTestId('task-status-toggle')).toHaveAttribute('aria-label', 'Mark as active');
     await expect(createdRow.getByTestId('task-title')).toHaveCSS('text-decoration-line', 'line-through');
+    await expect(createdRow.getByTestId('task-priority-bar')).toHaveCSS('background-color', expectedMutedBar);
   });
 });
 

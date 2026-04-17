@@ -3,6 +3,7 @@
 
 export * from './duration';
 export * from './task.types';
+export * from './task.meta';
 export * from './settings.types';
 export * from './settings.guards';
 export * from './settings.normalize';
