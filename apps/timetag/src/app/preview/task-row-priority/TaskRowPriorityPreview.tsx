@@ -497,7 +497,7 @@ export default function TaskRowPriorityPreview() {
           </h1>
           <p className="mt-3 text-sm leading-6" style={{ color: 'var(--tt-text-muted)' }}>
             This route now collects every explored direction in one place: the separate yellow bar, the typography-only signal, the muted neutral bar micro-variants, and three additional structural marker concepts.
-            The production `TaskRow` stays unchanged; this host is only for side-by-side visual review.
+            It serves as a side-by-side visual review host for comparing these treatments alongside the current production behavior.
           </p>
           <div
             className="mt-4 rounded-xl border px-4 py-3 text-sm leading-6"

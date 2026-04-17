@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { gotoSeededPage } from './helpers/seed-app';
-import { seededTasks } from './fixtures/timetag-state';
+import { seededTasks, testSettings } from './fixtures/timetag-state';
 
 async function resolveCssValue(
   page: Page,
@@ -172,6 +172,73 @@ test.describe('Task row states', () => {
     await expect(createdRow.getByTestId('task-status-toggle')).toHaveAttribute('aria-label', 'Mark as active');
     await expect(createdRow.getByTestId('task-title')).toHaveCSS('text-decoration-line', 'line-through');
     await expect(createdRow.getByTestId('task-priority-bar')).toHaveCSS('background-color', expectedMutedBar);
+  });
+
+  test('keeps note discoverability when note previews are disabled', async ({ page }) => {
+    await gotoSeededPage(page, seededTasks, {
+      ...testSettings,
+      general: {
+        ...testSettings.general,
+        showUrgencyIndicator: false,
+        showNotePreviewsInTaskList: false,
+      },
+    });
+
+    const noteRow = taskRow(page, 'Urgent note task');
+    const plainRow = taskRow(page, 'Plain task');
+
+    await expect(noteRow).toBeVisible();
+    await expect(noteRow.getByTestId('task-note-preview')).toHaveCount(0);
+    await expect(noteRow.getByTestId('task-priority-slot')).toHaveCount(0);
+    await expect(noteRow.getByTestId('task-note-slot')).toBeVisible();
+    await expect(noteRow.getByTestId('task-note-indicator')).toBeVisible();
+    await expect(noteRow.getByTestId('task-note-indicator')).toHaveAttribute('title', 'Important follow-up note');
+
+    await expect(plainRow).toBeVisible();
+    await expect(plainRow.getByTestId('task-priority-slot')).toHaveCount(0);
+    await expect(plainRow.getByTestId('task-note-slot')).toBeVisible();
+    await expect(plainRow.getByTestId('task-note-indicator')).toHaveCount(0);
+
+    const noteTitleBox = await noteRow.getByTestId('task-title').boundingBox();
+    const plainTitleBox = await plainRow.getByTestId('task-title').boundingBox();
+    expect(noteTitleBox).not.toBeNull();
+    expect(plainTitleBox).not.toBeNull();
+    expect(Math.abs((noteTitleBox?.x ?? 0) - (plainTitleBox?.x ?? 0))).toBeLessThan(4);
+  });
+
+  test('removes the priority gutter when urgency indicators are disabled', async ({ page }) => {
+    await gotoSeededPage(page, seededTasks);
+
+    const enabledUrgentTitleBox = await taskRow(page, 'Urgent note task').getByTestId('task-title').boundingBox();
+    expect(enabledUrgentTitleBox).not.toBeNull();
+
+    await gotoSeededPage(page, seededTasks, {
+      ...testSettings,
+      general: {
+        ...testSettings.general,
+        showUrgencyIndicator: false,
+      },
+    });
+
+    const urgentRow = taskRow(page, 'Urgent note task');
+    const plainRow = taskRow(page, 'Plain task');
+
+    await expect(urgentRow).toBeVisible();
+    await expect(urgentRow.getByTestId('task-priority-slot')).toHaveCount(0);
+    await expect(urgentRow.getByTestId('task-priority-bar')).toHaveCount(0);
+    await expect(urgentRow.getByTestId('task-note-slot')).toHaveCount(0);
+
+    await expect(plainRow).toBeVisible();
+    await expect(plainRow.getByTestId('task-priority-slot')).toHaveCount(0);
+    await expect(plainRow.getByTestId('task-priority-bar')).toHaveCount(0);
+    await expect(plainRow.getByTestId('task-note-slot')).toHaveCount(0);
+
+    const disabledUrgentTitleBox = await urgentRow.getByTestId('task-title').boundingBox();
+    const disabledPlainTitleBox = await plainRow.getByTestId('task-title').boundingBox();
+    expect(disabledUrgentTitleBox).not.toBeNull();
+    expect(disabledPlainTitleBox).not.toBeNull();
+    expect(Math.abs((disabledUrgentTitleBox?.x ?? 0) - (disabledPlainTitleBox?.x ?? 0))).toBeLessThan(4);
+    expect((enabledUrgentTitleBox?.x ?? 0) - (disabledUrgentTitleBox?.x ?? 0)).toBeGreaterThan(8);
   });
 });
 

@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { SETTINGS_STORAGE_KEY, TASKS_STORAGE_KEY, testSettings, type StoredTask } from '../fixtures/timetag-state';
 
-export async function seedAppState(page: Page, tasks: StoredTask[]) {
+export async function seedAppState(page: Page, tasks: StoredTask[], settings = testSettings) {
   await page.addInitScript(
     ({ tasks, settings, tasksKey, settingsKey }) => {
       window.localStorage.clear();
@@ -10,15 +10,15 @@ export async function seedAppState(page: Page, tasks: StoredTask[]) {
     },
     {
       tasks,
-      settings: testSettings,
+      settings,
       tasksKey: TASKS_STORAGE_KEY,
       settingsKey: SETTINGS_STORAGE_KEY,
     },
   );
 }
 
-export async function gotoSeededPage(page: Page, tasks: StoredTask[]) {
-  await seedAppState(page, tasks);
+export async function gotoSeededPage(page: Page, tasks: StoredTask[], settings = testSettings) {
+  await seedAppState(page, tasks, settings);
   await page.goto('/');
 }
 

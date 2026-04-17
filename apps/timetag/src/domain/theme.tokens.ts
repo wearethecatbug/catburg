@@ -185,7 +185,7 @@ export function buildChipTokens(
 
 export function buildPriorityTokens(
   context: ThemeTokenContext,
-  args: Pick<ThemeTokens, 'chipWarningText' | 'textSoft'>,
+  args: Pick<ThemeTokens, 'textSoft'>,
 ): Pick<ThemeTokens, 'priorityUrgentBar' | 'priorityUrgentBarBorder' | 'priorityUrgentBarGlow' | 'priorityDoneBar' | 'priorityDoneBarBorder'> {
   const { variant } = context;
   const { textSoft } = args;
@@ -361,7 +361,6 @@ export function resolveThemeTokens(
     textSoft: textTokens.textSoft,
   });
   const priorityTokens = buildPriorityTokens(context, {
-    chipWarningText: chipTokens.chipWarningText,
     textSoft: textTokens.textSoft,
   });
   const ringTokens = buildRingTokens(context, { border: surfaceTokens.border });

@@ -1,19 +1,56 @@
 'use client';
 
 import type { TaskStatus } from '@/domain/task.types';
+import { NoteIcon } from '@/shared';
 
 interface TaskMetaClusterProps {
   showUrgentIndicator: boolean;
+  reservePrioritySlot?: boolean;
+  showNoteIndicator?: boolean;
+  reserveNoteSlot?: boolean;
+  noteTitle?: string;
   status: TaskStatus;
   visualVariant?: 'soft-inset' | 'legacy-bar';
 }
 
 export function TaskMetaCluster({
   showUrgentIndicator,
+  reservePrioritySlot = true,
+  showNoteIndicator = false,
+  reserveNoteSlot = false,
+  noteTitle,
   status,
   visualVariant = 'soft-inset',
 }: TaskMetaClusterProps) {
   const isDone = status === 'done';
+  const showPrioritySlot = reservePrioritySlot;
+  const shouldRenderCluster = showPrioritySlot || reserveNoteSlot;
+  const noteIndicatorStyle = isDone
+    ? { color: 'var(--tt-text-soft)', opacity: 0.76 }
+    : { color: 'var(--tt-text-soft)', opacity: 0.94 };
+
+  if (!shouldRenderCluster) {
+    return null;
+  }
+
+  const noteSlot = reserveNoteSlot ? (
+    <div
+      data-testid="task-note-slot"
+      className={`${showPrioritySlot ? 'ml-[2px] ' : ''}flex h-[40px] w-[14px] shrink-0 items-start justify-center pt-[4px]`}
+      aria-hidden={showNoteIndicator ? undefined : 'true'}
+    >
+      {showNoteIndicator && (
+        <span
+          data-testid="task-note-indicator"
+          className="inline-flex h-3 w-3 items-center justify-center"
+          title={noteTitle}
+          style={noteIndicatorStyle}
+        >
+          <NoteIcon size="xs" aria-label="Task has a note" />
+        </span>
+      )}
+    </div>
+  ) : null;
 
   if (visualVariant === 'legacy-bar') {
     const barColor = isDone ? 'var(--tt-priority-done-bar)' : 'var(--tt-priority-urgent-bar)';
@@ -34,23 +71,29 @@ export function TaskMetaCluster({
           #fff7b8 100%)`;
 
     return (
-      <div
-        data-testid="task-priority-slot"
-        className="mr-[5px] flex h-[40px] w-[10px] shrink-0 items-stretch justify-end py-[3px] pr-[1px]"
-        aria-hidden="true"
-      >
-        {showUrgentIndicator && (
-          <span
-            data-testid="task-priority-bar"
-            className="inline-flex h-full w-[2px] rounded-full"
-            style={{
-              backgroundColor: barColor,
-              backgroundImage: barGradient,
-              boxShadow: `0 0 0 0.5px ${barBorder}, 0 0 4px ${barGlow}`,
-              opacity: 1,
-            }}
-          />
+      <div className="mr-[5px] flex shrink-0 items-start">
+        {showPrioritySlot && (
+          <div
+            data-testid="task-priority-slot"
+            className="flex h-[40px] w-[10px] shrink-0 items-stretch justify-end py-[3px] pr-[1px]"
+            aria-hidden="true"
+          >
+            {showUrgentIndicator && (
+              <span
+                data-testid="task-priority-bar"
+                className="inline-flex h-full w-[2px] rounded-full"
+                style={{
+                  backgroundColor: barColor,
+                  backgroundImage: barGradient,
+                  boxShadow: `0 0 0 0.5px ${barBorder}, 0 0 4px ${barGlow}`,
+                  opacity: 1,
+                }}
+              />
+            )}
+          </div>
         )}
+
+        {noteSlot}
       </div>
     );
   }
@@ -66,23 +109,29 @@ export function TaskMetaCluster({
       color-mix(in srgb, ${insetColor} 38%, white) 100%)`;
 
   return (
-    <div
-      data-testid="task-priority-slot"
-      className="mr-[5px] flex h-[40px] w-[10px] shrink-0 items-stretch justify-center py-[4px]"
-      aria-hidden="true"
-    >
-      {showUrgentIndicator && (
-        <span
-          data-testid="task-priority-bar"
-          className="inline-flex h-full w-[1.5px] rounded-full"
-          style={{
-            backgroundColor: insetColor,
-            backgroundImage: insetGradient,
-            boxShadow: `inset 0 0 0 0.5px ${insetBorder}`,
-            opacity: 1,
-          }}
-        />
+    <div className="mr-[5px] flex shrink-0 items-start">
+      {showPrioritySlot && (
+        <div
+          data-testid="task-priority-slot"
+          className="flex h-[40px] w-[10px] shrink-0 items-stretch justify-center py-[4px]"
+          aria-hidden="true"
+        >
+          {showUrgentIndicator && (
+            <span
+              data-testid="task-priority-bar"
+              className="inline-flex h-full w-[1.5px] rounded-full"
+              style={{
+                backgroundColor: insetColor,
+                backgroundImage: insetGradient,
+                boxShadow: `inset 0 0 0 0.5px ${insetBorder}`,
+                opacity: 1,
+              }}
+            />
+          )}
+        </div>
       )}
+
+      {noteSlot}
     </div>
   );
 }

@@ -36,9 +36,11 @@ export function TaskRow({
   onDelete,
 }: TaskRowProps) {
   const { settings } = useSettings();
+  const showUrgencyIndicator = settings.general.showUrgencyIndicator;
   const viewModel = getTaskRowViewModel(task, {
-    showUrgencyIndicator: settings.general.showUrgencyIndicator,
+    showUrgencyIndicator,
   });
+  const showNotePreview = settings.general.showNotePreviewsInTaskList;
 
   const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
   const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
@@ -69,6 +71,10 @@ export function TaskRow({
           <div className="flex min-w-0 items-start text-sm">
             <TaskMetaCluster
               showUrgentIndicator={viewModel.showUrgentIndicator}
+              reservePrioritySlot={showUrgencyIndicator}
+              showNoteIndicator={viewModel.hasNoteText && !showNotePreview}
+              reserveNoteSlot={!showNotePreview}
+              noteTitle={viewModel.hasNoteText ? viewModel.noteText : undefined}
               status={task.status}
             />
 
@@ -87,7 +93,7 @@ export function TaskRow({
                 {task.title}
               </span>
 
-              {viewModel.hasNoteText && settings.general.showNotePreviewsInTaskList && (
+              {viewModel.hasNoteText && showNotePreview && (
                   <div
                       data-testid="task-note-preview"
                       className="mt-1 overflow-hidden pr-2 text-[12px] leading-[1.3]"
