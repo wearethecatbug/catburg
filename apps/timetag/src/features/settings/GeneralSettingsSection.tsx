@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DEFAULT_USER_WORKSPACES, getSafeDefaultWorkspace } from '@/domain/workspace';
+import { getSafeDefaultWorkspace, getWorkspaceLabel } from '@/domain/workspace';
 import type { AppSettings, GeneralSettings, GeneralTabId } from '@/domain/settings.types';
 import type { AssignableWorkspaceType } from '@/domain/task.types';
 import { usePersistedWorkspaces } from '@/shared';
@@ -26,16 +26,17 @@ function Field({ label, description, children }: { label: string; description?: 
 
 export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: GeneralSettingsSectionProps) {
   const { workspaces, isHydrated: areWorkspacesHydrated } = usePersistedWorkspaces();
-  const workspaceOptions = workspaces.length > 0 ? workspaces : DEFAULT_USER_WORKSPACES;
+  const hasWorkspaceTabs = workspaces.length > 0;
+  const fallbackWorkspaceLabel = getWorkspaceLabel(workspaces, settings.general.defaultWorkspace);
 
   React.useEffect(() => {
     if (!areWorkspacesHydrated) return;
 
-    const safeWorkspace = getSafeDefaultWorkspace(workspaceOptions, settings.general.defaultWorkspace);
+    const safeWorkspace = getSafeDefaultWorkspace(workspaces, settings.general.defaultWorkspace);
     if (safeWorkspace !== settings.general.defaultWorkspace) {
       updateGeneral({ defaultWorkspace: safeWorkspace });
     }
-  }, [areWorkspacesHydrated, settings.general.defaultWorkspace, updateGeneral, workspaceOptions]);
+  }, [areWorkspacesHydrated, settings.general.defaultWorkspace, updateGeneral, workspaces]);
 
   if (activeTab === 'behavior') {
     return (
@@ -83,19 +84,33 @@ export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: G
     return (
       <div className="space-y-3">
 
-        <Field label="Default workspace" description="Used when creating a task from All workspaces.">
-          <select
-            value={settings.general.defaultWorkspace}
-            onChange={(e) => updateGeneral({ defaultWorkspace: e.target.value as AssignableWorkspaceType })}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700"
-            aria-label="Default workspace"
-          >
-            {workspaceOptions.map((workspace) => (
-              <option key={workspace.id} value={workspace.id}>
-                {workspace.label}
-              </option>
-            ))}
-          </select>
+        <Field
+          label="Default workspace"
+          description={hasWorkspaceTabs
+            ? 'Used when creating a task from All workspaces.'
+            : `No removable workspace tabs are available right now. New tasks from All will fall back to ${fallbackWorkspaceLabel} until a workspace tab is created.`}
+        >
+          {hasWorkspaceTabs ? (
+            <select
+              value={settings.general.defaultWorkspace}
+              onChange={(e) => updateGeneral({ defaultWorkspace: e.target.value as AssignableWorkspaceType })}
+              className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700"
+              aria-label="Default workspace"
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span
+              className="inline-flex items-center rounded-md border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500"
+              aria-label="Default workspace empty state"
+            >
+              No workspace tabs available
+            </span>
+          )}
         </Field>
 
         <Field label="Default task view" description="Used as the initial status view when the app opens.">

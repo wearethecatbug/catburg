@@ -20,8 +20,13 @@ import {
 } from '@/domain/duration';
 import { useSettings, useTasks } from '@/store';
 import { usePersistedWorkspaces } from '@/shared';
-import type { TaskPriority, TimerMode, WorkspaceType } from '@/domain/task.types';
+import type { AssignableWorkspaceType, TaskPriority, TimerMode } from '@/domain/task.types';
 import type { DropdownOption } from './components';
+import {
+  getWorkspaceLabel,
+  hasWorkspace,
+  resolveCurrentWorkspaceContext,
+} from '@/domain/workspace';
 import {
   buildCreateTaskInput,
   buildDeadlineLocalValue,
@@ -34,8 +39,10 @@ import {
   getDurationUnitFromSec,
 } from './task-composer.mappers';
 
+export const USE_CURRENT_WORKSPACE_OPTION_ID = '__use-current-workspace__';
+
 interface UseTaskComposerStateOptions {
-  defaultWorkspace?: WorkspaceType;
+  defaultWorkspace?: AssignableWorkspaceType;
   forwardedRef?: React.ForwardedRef<HTMLInputElement>;
 }
 
@@ -43,6 +50,7 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const { settings, isHydrated: areSettingsHydrated } = useSettings();
   const { addTask, state } = useTasks();
   const { workspaces } = usePersistedWorkspaces();
+  const hasWorkspaceTabs = workspaces.length > 0;
 
   const visibleDurationPresets = getVisibleDurationPresets(settings.timer.hiddenDurationPresetIds);
   const visiblePomodoroPresets = getVisiblePomodoroPresets(settings.timer.hiddenPomodoroPresetIds);
@@ -91,6 +99,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const [overdueEnabled, setOverdueEnabled] = React.useState(false);
   const [presetOpen, setPresetOpen] = React.useState(false);
   const [modeOpen, setModeOpen] = React.useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
+  const [workspaceOverride, setWorkspaceOverride] = React.useState<AssignableWorkspaceType | undefined>(undefined);
 
   const localInputRef = React.useRef<HTMLInputElement | null>(null);
 
@@ -122,6 +132,42 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setDeadlineDate(buildDeadlineLocalValue(preset.offsetSec));
   }, []);
 
+  const resolvedCurrentWorkspace = React.useMemo(
+    () => resolveCurrentWorkspaceContext({
+      workspaces,
+      currentWorkspace: state.workspace,
+      lastConcreteWorkspace: state.lastConcreteWorkspace,
+      fallbackWorkspace: settings.general.defaultWorkspace,
+      defaultWorkspace,
+    }),
+    [defaultWorkspace, settings.general.defaultWorkspace, state.lastConcreteWorkspace, state.workspace, workspaces],
+  );
+
+  const hasLastSelectedWorkspace = React.useMemo(
+    () => state.workspace === 'all' && hasWorkspace(workspaces, state.lastConcreteWorkspace),
+    [state.lastConcreteWorkspace, state.workspace, workspaces],
+  );
+
+  const currentWorkspaceLabel = React.useMemo(
+    () => getWorkspaceLabel(workspaces, resolvedCurrentWorkspace),
+    [resolvedCurrentWorkspace, workspaces],
+  );
+  const currentWorkspaceOptionLabel = hasLastSelectedWorkspace
+    ? `Use last selected (${currentWorkspaceLabel})`
+    : `Use current (${currentWorkspaceLabel})`;
+
+  const showWorkspaceDropdown = hasWorkspaceTabs && (state.workspace === 'all' || workspaces.length > 1);
+  const showWorkspaceEmptyState = !hasWorkspaceTabs;
+  const fallbackWorkspaceLabel = React.useMemo(
+    () => getWorkspaceLabel(workspaces, settings.general.defaultWorkspace),
+    [settings.general.defaultWorkspace, workspaces],
+  );
+  const workspaceHelperText = showWorkspaceEmptyState
+    ? `Only “All” remains. Create a workspace tab to choose a destination. Until then, new tasks fall back to ${fallbackWorkspaceLabel}.`
+    : showWorkspaceDropdown
+      ? 'Choose a different workspace without changing the current task list context.'
+      : 'Only one workspace tab is available, so new tasks will use the current workspace.';
+
   const resetComposerToSettingsDefaults = React.useCallback(() => {
     setPresetId(defaultDurationPreset.id);
     setPomodoroPresetId(defaultPomodoroPreset.id);
@@ -136,6 +182,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setPlayEnabled(true);
     setAutoResetEnabled(false);
     setOverdueEnabled(false);
+    setWorkspaceOverride(undefined);
+    setWorkspaceOpen(false);
     setPomoCycles(settings.timer.pomodoroDefaults.cycles);
     setPomoWorkMin(settings.timer.pomodoroDefaults.workDurationMin);
     setPomoShortBreakMin(settings.timer.pomodoroDefaults.shortBreakMin);
@@ -154,6 +202,19 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     settings.timer.pomodoroDefaults.shortBreakMin,
     settings.timer.pomodoroDefaults.workDurationMin,
   ]);
+
+  React.useEffect(() => {
+    if (!workspaceOverride) return;
+    if (hasWorkspace(workspaces, workspaceOverride)) return;
+
+    setWorkspaceOverride(undefined);
+  }, [workspaceOverride, workspaces]);
+
+  React.useEffect(() => {
+    if (!showWorkspaceDropdown && workspaceOpen) {
+      setWorkspaceOpen(false);
+    }
+  }, [showWorkspaceDropdown, workspaceOpen]);
 
   React.useEffect(() => {
     if (!areSettingsHydrated) return;
@@ -177,7 +238,9 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
       title,
       note,
       defaultWorkspace,
+      workspaceOverride,
       currentWorkspace: state.workspace,
+      lastConcreteWorkspace: state.lastConcreteWorkspace,
       workspaces,
       fallbackWorkspace: settings.general.defaultWorkspace,
       priority,
@@ -217,9 +280,11 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     priority,
     resetComposerToSettingsDefaults,
     settings.general.defaultWorkspace,
+    state.lastConcreteWorkspace,
     state.workspace,
     timerMode,
     title,
+    workspaceOverride,
     workspaces,
   ]);
 
@@ -278,6 +343,16 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
       ? [{ id: CUSTOM_DEADLINE_PRESET_ID, label: formatDeadlineOffsetLabel(settings.timer.deadlineDefaults.offsetSec) }]
       : []),
   ];
+  const workspaceOptions: DropdownOption[] = [
+    {
+      id: USE_CURRENT_WORKSPACE_OPTION_ID,
+      label: currentWorkspaceOptionLabel,
+    },
+    ...workspaces.map((workspace) => ({
+      id: workspace.id,
+      label: workspace.label,
+    })),
+  ];
 
   const customDurationLabel = formatCompactDurationLabel(durationSec);
   const safeDurationPresetId = visibleDurationPresets.some((preset) => preset.id === presetId)
@@ -324,6 +399,14 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     ? formatDeadlineOffsetLabel(settings.timer.deadlineDefaults.offsetSec)
     : visibleDeadlinePresets.find((preset) => preset.id === safeDeadlinePresetId)?.label ?? 'Preset';
   const selectedDeadlinePresetId = isUsingCustomDeadlineDefault ? CUSTOM_DEADLINE_PRESET_ID : safeDeadlinePresetId;
+  const selectedWorkspaceOptionId = workspaceOverride ?? USE_CURRENT_WORKSPACE_OPTION_ID;
+  const selectedWorkspaceLabel = showWorkspaceEmptyState
+    ? 'No workspace tabs available'
+    : workspaceOverride
+      ? getWorkspaceLabel(workspaces, workspaceOverride)
+      : showWorkspaceDropdown
+        ? currentWorkspaceOptionLabel
+        : currentWorkspaceLabel;
 
   const handlePresetSelect = React.useCallback((id: string) => {
     if (timerMode === 'pomodoro') {
@@ -394,6 +477,12 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     settings.timer.hiddenDeadlinePresetIds,
   ]);
 
+  const handleWorkspaceOverrideSelect = React.useCallback((id: string) => {
+    setWorkspaceOverride(id === USE_CURRENT_WORKSPACE_OPTION_ID ? undefined : id as AssignableWorkspaceType);
+    setWorkspaceOpen(false);
+    focusInput();
+  }, [focusInput]);
+
   const handleAutoResetChange = React.useCallback((enabled: boolean) => {
     setAutoResetEnabled(enabled);
     if (enabled && overdueEnabled) {
@@ -459,6 +548,14 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     autoResetEnabled,
     overdueEnabled,
     presetLabel,
+    workspaceOpen,
+    setWorkspaceOpen,
+    showWorkspaceDropdown,
+    showWorkspaceEmptyState,
+    workspaceHelperText,
+    workspaceOptions,
+    selectedWorkspaceOptionId,
+    selectedWorkspaceLabel,
     modeOpen,
     setModeOpen,
     presetOpen,
@@ -474,6 +571,7 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     handleModeSelect,
     handlePresetSelect,
     handleDeadlinePresetSelect,
+    handleWorkspaceOverrideSelect,
     handleDurationSecChange,
     handleDurationUnitChange,
     handleAutoResetChange,

@@ -72,7 +72,7 @@ export interface Task {
   id: string;
   title: string;
   note?: string;
-  workspace: WorkspaceType;
+  workspace: AssignableWorkspaceType;
   status: TaskStatus;
   priority: TaskPriority;
   timerMode: TimerMode;
@@ -96,7 +96,7 @@ export interface Task {
 export interface CreateTaskInput {
   title: string;
   note?: string;
-  workspace?: WorkspaceType;
+  workspace?: AssignableWorkspaceType;
   priority?: TaskPriority;
   timerMode?: TimerMode;
   targetAt?: string;

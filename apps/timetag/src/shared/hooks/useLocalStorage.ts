@@ -2,6 +2,36 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+let nextLocalStorageListenerId = 0;
+const localStorageListeners = new Map<string, Map<number, () => void>>();
+
+function subscribeToLocalStorageKey(key: string, id: number, listener: () => void) {
+  const listenersForKey = localStorageListeners.get(key) ?? new Map<number, () => void>();
+  listenersForKey.set(id, listener);
+  localStorageListeners.set(key, listenersForKey);
+
+  return () => {
+    const currentListeners = localStorageListeners.get(key);
+    if (!currentListeners) return;
+
+    currentListeners.delete(id);
+    if (currentListeners.size === 0) {
+      localStorageListeners.delete(key);
+    }
+  };
+}
+
+function notifyLocalStorageKeyListeners(key: string, sourceId?: number) {
+  const listenersForKey = localStorageListeners.get(key);
+  if (!listenersForKey) return;
+
+  listenersForKey.forEach((listener, id) => {
+    if (id !== sourceId) {
+      listener();
+    }
+  });
+}
+
 /**
  * Custom hook for localStorage with SSR-safe hydration
  */
@@ -13,7 +43,29 @@ export function useLocalStorage<T>(
   const [storedValue, setStoredValue] = useState<T>(initialValue);
   const [isHydrated, setIsHydrated] = useState(false);
   const initialValueRef = useRef(initialValue);
+  const storedValueRef = useRef(storedValue);
+  const listenerIdRef = useRef<number | null>(null);
   initialValueRef.current = initialValue;
+  storedValueRef.current = storedValue;
+
+  if (listenerIdRef.current === null) {
+    nextLocalStorageListenerId += 1;
+    listenerIdRef.current = nextLocalStorageListenerId;
+  }
+
+  const listenerId = listenerIdRef.current;
+
+  const readStoredValue = useCallback(() => {
+    if (typeof window === 'undefined') return initialValueRef.current;
+
+    const item = window.localStorage.getItem(key);
+    if (item !== null) {
+      return JSON.parse(item) as T;
+    }
+
+    window.localStorage.setItem(key, JSON.stringify(initialValueRef.current));
+    return initialValueRef.current;
+  }, [key]);
 
   // Read from localStorage after mount to avoid SSR hydration mismatch.
   useEffect(() => {
@@ -22,38 +74,62 @@ export function useLocalStorage<T>(
     setIsHydrated(false);
 
     try {
-      const item = window.localStorage.getItem(key);
-      if (item !== null) {
-        setStoredValue(JSON.parse(item) as T);
-      } else {
-        window.localStorage.setItem(key, JSON.stringify(initialValueRef.current));
-        setStoredValue(initialValueRef.current);
-      }
+      setStoredValue(readStoredValue());
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
       setStoredValue(initialValueRef.current);
     } finally {
       setIsHydrated(true);
     }
-  }, [key]);
+  }, [key, readStoredValue]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncFromStorage = () => {
+      try {
+        const nextValue = readStoredValue();
+        setStoredValue(nextValue);
+        storedValueRef.current = nextValue;
+      } catch (error) {
+        console.error(`Error syncing localStorage key "${key}":`, error);
+        setStoredValue(initialValueRef.current);
+        storedValueRef.current = initialValueRef.current;
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== key) return;
+      syncFromStorage();
+    };
+
+    const unsubscribe = subscribeToLocalStorageKey(key, listenerId, syncFromStorage);
+
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [key, listenerId, readStoredValue]);
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
-      setStoredValue((prev) => {
-        const valueToStore = value instanceof Function ? value(prev) : value;
+      const valueToStore = value instanceof Function ? value(storedValueRef.current) : value;
 
-        try {
-          if (typeof window !== 'undefined') {
-            window.localStorage.setItem(key, JSON.stringify(valueToStore));
-          }
-        } catch (error) {
-          console.error(`Error setting localStorage key "${key}":`, error);
+      setStoredValue(valueToStore);
+      storedValueRef.current = valueToStore;
+
+      try {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          notifyLocalStorageKeyListeners(key, listenerId);
         }
-
-        return valueToStore;
-      });
+      } catch (error) {
+        console.error(`Error setting localStorage key "${key}":`, error);
+      }
     },
-    [key],
+    [key, listenerId],
   );
 
   return [storedValue, setValue, isHydrated];

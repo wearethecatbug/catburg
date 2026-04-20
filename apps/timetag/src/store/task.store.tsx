@@ -10,6 +10,7 @@ import React, {
   useRef,
 } from 'react';
 import {
+  AssignableWorkspaceType,
   Task,
   TaskStatus,
   WorkspaceType,
@@ -37,6 +38,7 @@ import { useSettings } from './settings.store';
 interface TaskState {
   tasks: Task[];
   workspace: WorkspaceType;
+  lastConcreteWorkspace?: AssignableWorkspaceType;
   filter: FilterState;
   sort: SortState;
   searchQuery: string;
@@ -84,6 +86,7 @@ const initialSort: SortState = { field: 'createdAt', direction: 'desc' };
 const initialState: TaskState = {
   tasks: [],
   workspace: 'all',
+  lastConcreteWorkspace: undefined,
   filter: initialFilter,
   sort: initialSort,
   searchQuery: '',
@@ -211,7 +214,12 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
 
     // Query actions
     case 'SET_WORKSPACE':
-      return { ...state, workspace: action.payload, selectedIds: new Set() };
+      return {
+        ...state,
+        workspace: action.payload,
+        lastConcreteWorkspace: action.payload !== 'all' ? action.payload : state.lastConcreteWorkspace,
+        selectedIds: new Set(),
+      };
 
     case 'SET_FILTER':
       return { ...state, filter: { ...state.filter, ...action.payload } };
