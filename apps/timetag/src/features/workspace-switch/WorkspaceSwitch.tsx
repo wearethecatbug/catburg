@@ -5,7 +5,6 @@ import type { AssignableWorkspaceType } from '@/domain/task.types';
 import {
   ALL_WORKSPACE_TAB,
   createWorkspaceId,
-  getSafeDefaultWorkspace,
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { useSettings, useTasks } from '@/store';
@@ -32,7 +31,7 @@ export function WorkspaceSwitch() {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
 
 
-  // Combined tabs for rendering: user tabs (order preserved) + All tab
+  // Combined tabs for rendering: All tab first, then user tabs (order preserved)
   const tabs = [ALL_WORKSPACE_TAB, ...userWorkspaces];
   const canRemoveWorkspace = userWorkspaces.length > 1;
 
@@ -93,8 +92,8 @@ export function WorkspaceSwitch() {
           setWorkspace('all');
         }
 
-        if (settings.general.defaultWorkspace === id) {
-          updateGeneral({ defaultWorkspace: getSafeDefaultWorkspace(next, undefined) });
+        if (settings.general.defaultWorkspace === id && next[0]) {
+          updateGeneral({ defaultWorkspace: next[0].id });
         }
       },
       [settings.general.defaultWorkspace, setUserWorkspaces, setWorkspace, state.workspace, updateGeneral, userWorkspaces],

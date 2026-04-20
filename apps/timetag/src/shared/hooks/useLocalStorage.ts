@@ -55,7 +55,7 @@ export function useLocalStorage<T>(
 
   const listenerId = listenerIdRef.current;
 
-  const readStoredValue = useCallback(() => {
+  const readStoredValue = useCallback((initializeMissing = true) => {
     if (typeof window === 'undefined') return initialValueRef.current;
 
     const item = window.localStorage.getItem(key);
@@ -63,7 +63,10 @@ export function useLocalStorage<T>(
       return JSON.parse(item) as T;
     }
 
-    window.localStorage.setItem(key, JSON.stringify(initialValueRef.current));
+    if (initializeMissing) {
+      window.localStorage.setItem(key, JSON.stringify(initialValueRef.current));
+    }
+
     return initialValueRef.current;
   }, [key]);
 
@@ -89,7 +92,7 @@ export function useLocalStorage<T>(
 
     const syncFromStorage = () => {
       try {
-        const nextValue = readStoredValue();
+        const nextValue = readStoredValue(false);
         setStoredValue(nextValue);
         storedValueRef.current = nextValue;
       } catch (error) {
@@ -100,7 +103,7 @@ export function useLocalStorage<T>(
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key !== key) return;
+      if (event.key !== null && event.key !== key) return;
       syncFromStorage();
     };
 
