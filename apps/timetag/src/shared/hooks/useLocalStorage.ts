@@ -48,7 +48,7 @@ export function useLocalStorage<T>(
   initialValueRef.current = initialValue;
   storedValueRef.current = storedValue;
 
-  if (listenerIdRef.current === null) {
+  if (typeof window !== 'undefined' && listenerIdRef.current === null) {
     nextLocalStorageListenerId += 1;
     listenerIdRef.current = nextLocalStorageListenerId;
   }
@@ -85,6 +85,7 @@ export function useLocalStorage<T>(
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (listenerId === null) return;
 
     const syncFromStorage = () => {
       try {
@@ -123,7 +124,9 @@ export function useLocalStorage<T>(
       try {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(key, JSON.stringify(valueToStore));
-          notifyLocalStorageKeyListeners(key, listenerId);
+          if (listenerId !== null) {
+            notifyLocalStorageKeyListeners(key, listenerId);
+          }
         }
       } catch (error) {
         console.error(`Error setting localStorage key "${key}":`, error);

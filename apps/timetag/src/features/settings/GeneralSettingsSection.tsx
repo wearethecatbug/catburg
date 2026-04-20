@@ -31,6 +31,7 @@ export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: G
 
   React.useEffect(() => {
     if (!areWorkspacesHydrated) return;
+    if (workspaces.length === 0) return;
 
     const safeWorkspace = getSafeDefaultWorkspace(workspaces, settings.general.defaultWorkspace);
     if (safeWorkspace !== settings.general.defaultWorkspace) {
