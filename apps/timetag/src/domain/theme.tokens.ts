@@ -183,6 +183,43 @@ export function buildChipTokens(
   };
 }
 
+export function buildPriorityTokens(
+  context: ThemeTokenContext,
+  args: Pick<ThemeTokens, 'textSoft'>,
+): Pick<ThemeTokens, 'priorityUrgentBar' | 'priorityUrgentBarBorder' | 'priorityUrgentBarGlow' | 'priorityDoneBar' | 'priorityDoneBarBorder'> {
+  const { variant } = context;
+  const { textSoft } = args;
+  const mutedDoneBar = mixHex(textSoft, '#ffffff', variant === 'dark' ? 0.18 : 0.26);
+
+  if (variant === 'dark') {
+    return {
+      priorityUrgentBar: mixHex('#ffe200', '#fff4a8', 0.22),
+      priorityUrgentBarBorder: alphaHex('#d2be21', 0.18),
+      priorityUrgentBarGlow: alphaHex('#ffe200', 0.10),
+      priorityDoneBar: mutedDoneBar,
+      priorityDoneBarBorder: alphaHex(mutedDoneBar, 0.14),
+    };
+  }
+
+  if (variant === 'light') {
+    return {
+      priorityUrgentBar: '#ffe200',
+      priorityUrgentBarBorder: alphaHex('#d2be21', 0.16),
+      priorityUrgentBarGlow: alphaHex('#ffe200', 0.08),
+      priorityDoneBar: mutedDoneBar,
+      priorityDoneBarBorder: alphaHex(mutedDoneBar, 0.14),
+    };
+  }
+
+  return {
+    priorityUrgentBar: '#ffe200',
+    priorityUrgentBarBorder: alphaHex('#d2be21', 0.14),
+    priorityUrgentBarGlow: alphaHex('#ffe200', 0.06),
+    priorityDoneBar: mutedDoneBar,
+    priorityDoneBarBorder: alphaHex(mutedDoneBar, 0.12),
+  };
+}
+
 export function buildRingTokens(
   context: ThemeTokenContext,
   args: Pick<ThemeTokens, 'border'>,
@@ -323,6 +360,9 @@ export function resolveThemeTokens(
     textMuted: textTokens.textMuted,
     textSoft: textTokens.textSoft,
   });
+  const priorityTokens = buildPriorityTokens(context, {
+    textSoft: textTokens.textSoft,
+  });
   const ringTokens = buildRingTokens(context, { border: surfaceTokens.border });
   const selectionTokens = buildSelectionTokens(context, { surfaceHover: surfaceTokens.surfaceHover });
   const shadowTokens = buildShadowTokens(context);
@@ -334,6 +374,7 @@ export function resolveThemeTokens(
     ...textTokens,
     ...accentTokens,
     ...chipTokens,
+    ...priorityTokens,
     ...ringTokens,
     ...selectionTokens,
     ...shadowTokens,

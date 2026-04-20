@@ -19,6 +19,7 @@ import {
 import {
   buildAccentTokens,
   buildChipTokens,
+  buildPriorityTokens,
   buildRingTokens,
   buildSelectionTokens,
   buildShadowTokens,
@@ -64,6 +65,7 @@ export function getThemeInitScript(storageKey: string): string {
     buildTextTokens,
     buildAccentTokens,
     buildChipTokens,
+    buildPriorityTokens,
     buildRingTokens,
     buildSelectionTokens,
     buildShadowTokens,

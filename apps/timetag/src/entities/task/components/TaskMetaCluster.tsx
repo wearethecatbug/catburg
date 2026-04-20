@@ -1,65 +1,138 @@
 'use client';
 
-import React from 'react';
-import { NoteIcon, UrgentWarningIcon } from '@/shared';
+import type { TaskStatus } from '@/domain/task.types';
+import { NoteIcon } from '@/shared';
 
 interface TaskMetaClusterProps {
   showUrgentIndicator: boolean;
-  hasNote: boolean;
+  reservePrioritySlot?: boolean;
+  showNoteIndicator?: boolean;
+  reserveNoteSlot?: boolean;
   noteTitle?: string;
+  status: TaskStatus;
+  visualVariant?: 'soft-inset' | 'legacy-bar';
 }
 
 export function TaskMetaCluster({
   showUrgentIndicator,
-  hasNote,
+  reservePrioritySlot = true,
+  showNoteIndicator = false,
+  reserveNoteSlot = false,
   noteTitle,
+  status,
+  visualVariant = 'soft-inset',
 }: TaskMetaClusterProps) {
-  const noteDescriptionId = React.useId();
+  const isDone = status === 'done';
+  const showPrioritySlot = reservePrioritySlot;
+  const shouldRenderCluster = showPrioritySlot || reserveNoteSlot;
+  const noteIndicatorStyle = isDone
+    ? { color: 'var(--tt-text-soft)', opacity: 0.76 }
+    : { color: 'var(--tt-text-soft)', opacity: 0.94 };
 
-  if (!showUrgentIndicator && !hasNote) {
+  if (!shouldRenderCluster) {
     return null;
   }
 
-  return (
-    <span
-      data-testid="task-meta-cluster"
-      className="mr-[10px] inline-flex h-5 shrink-0 items-center gap-1.5 self-center"
+  const noteSlot = reserveNoteSlot ? (
+    <div
+      data-testid="task-note-slot"
+      className={`${showPrioritySlot ? 'ml-[2px] ' : ''}flex h-[40px] w-[14px] shrink-0 items-start justify-center pt-[4px]`}
+      aria-hidden={showNoteIndicator ? undefined : 'true'}
     >
-      {showUrgentIndicator && (
+      {showNoteIndicator && (
         <span
-          data-testid="task-urgent-icon"
-          className="inline-flex h-4 w-4 items-center justify-center"
-          style={{ color: 'var(--tt-chip-warning-text)', opacity: 0.9 }}
-          aria-hidden="true"
+          data-testid="task-note-indicator"
+          className="inline-flex h-3 w-3 items-center justify-center"
+          title={noteTitle}
+          style={noteIndicatorStyle}
         >
-          <UrgentWarningIcon size="sm" aria-hidden />
+          <NoteIcon size="xs" aria-label="Task has a note" />
         </span>
       )}
-      {hasNote && (
-        <span
-          data-testid="task-note-trigger"
-          className="relative inline-flex h-4 w-4 shrink-0 items-center justify-center"
-          role="img"
-          tabIndex={0}
-          title={noteTitle}
-          aria-label="Task has note"
-          aria-describedby={noteTitle ? noteDescriptionId : undefined}
-        >
-          <span
-            className="inline-flex h-4 w-4 items-center justify-center"
-            style={{ color: 'var(--tt-text-soft)', opacity: 0.6 }}
+    </div>
+  ) : null;
+
+  if (visualVariant === 'legacy-bar') {
+    const barColor = isDone ? 'var(--tt-priority-done-bar)' : 'var(--tt-priority-urgent-bar)';
+    const barBorder = isDone ? 'var(--tt-priority-done-bar-border)' : 'var(--tt-priority-urgent-bar-border)';
+    const barGlow = isDone ? 'transparent' : 'var(--tt-priority-urgent-bar-glow)';
+    const barGradient = isDone
+      ? `linear-gradient(180deg,
+          color-mix(in srgb, ${barColor} 16%, transparent) 0%,
+          color-mix(in srgb, ${barColor} 52%, transparent) 24%,
+          ${barColor} 54%,
+          color-mix(in srgb, ${barColor} 56%, white) 78%,
+          color-mix(in srgb, ${barColor} 34%, white) 100%)`
+      : `linear-gradient(180deg,
+          color-mix(in srgb, ${barColor} 24%, transparent) 0%,
+          color-mix(in srgb, ${barColor} 72%, transparent) 28%,
+          ${barColor} 54%,
+          color-mix(in srgb, ${barColor} 58%, #fff7b8) 78%,
+          #fff7b8 100%)`;
+
+    return (
+      <div className="mr-[5px] flex shrink-0 items-start">
+        {showPrioritySlot && (
+          <div
+            data-testid="task-priority-slot"
+            className="flex h-[40px] w-[10px] shrink-0 items-stretch justify-end py-[3px] pr-[1px]"
             aria-hidden="true"
           >
-            <NoteIcon size="sm" />
-          </span>
-          {noteTitle && (
-            <span id={noteDescriptionId} className="sr-only">
-              {noteTitle}
-            </span>
+            {showUrgentIndicator && (
+              <span
+                data-testid="task-priority-bar"
+                className="inline-flex h-full w-[2px] rounded-full"
+                style={{
+                  backgroundColor: barColor,
+                  backgroundImage: barGradient,
+                  boxShadow: `0 0 0 0.5px ${barBorder}, 0 0 4px ${barGlow}`,
+                  opacity: 1,
+                }}
+              />
+            )}
+          </div>
+        )}
+
+        {noteSlot}
+      </div>
+    );
+  }
+
+  const insetColor = isDone
+    ? 'color-mix(in srgb, var(--tt-text-soft) 42%, white)'
+    : 'color-mix(in srgb, var(--tt-text-muted) 54%, white)';
+  const insetBorder = `color-mix(in srgb, ${insetColor} 26%, transparent)`;
+  const insetGradient = `linear-gradient(180deg,
+      color-mix(in srgb, ${insetColor} 22%, transparent) 0%,
+      color-mix(in srgb, ${insetColor} 58%, transparent) 28%,
+      ${insetColor} 60%,
+      color-mix(in srgb, ${insetColor} 38%, white) 100%)`;
+
+  return (
+    <div className="mr-[5px] flex shrink-0 items-start">
+      {showPrioritySlot && (
+        <div
+          data-testid="task-priority-slot"
+          className="flex h-[40px] w-[10px] shrink-0 items-stretch justify-center py-[4px]"
+          aria-hidden="true"
+        >
+          {showUrgentIndicator && (
+            <span
+              data-testid="task-priority-bar"
+              className="inline-flex h-full w-[1.5px] rounded-full"
+              style={{
+                backgroundColor: insetColor,
+                backgroundImage: insetGradient,
+                boxShadow: `inset 0 0 0 0.5px ${insetBorder}`,
+                opacity: 1,
+              }}
+            />
           )}
-        </span>
+        </div>
       )}
-    </span>
+
+      {noteSlot}
+    </div>
   );
 }
 

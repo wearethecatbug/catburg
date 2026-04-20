@@ -1,14 +1,14 @@
-import type { Task, UrgencyLevel } from '@/domain/task.types';
 import { formatTimeBadge } from '@/domain/helpers';
+import { getTaskMetadataState } from '@/domain/task.meta';
 import { getUrgencyLevel } from '@/domain/task.urgency';
+import type { Task, UrgencyLevel } from '@/domain/task.types';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
 
 export interface TaskRowViewModel {
-  trimmedNote: string;
-  hasNote: boolean;
+  noteText: string;
+  hasNoteText: boolean;
   notePreview: string;
   showUrgentIndicator: boolean;
-  showMetaCluster: boolean;
   urgency: UrgencyLevel;
   isTimerDisabled: boolean;
   isPaused: boolean;
@@ -21,17 +21,15 @@ export function getTaskRowViewModel(
   task: Task,
   options: { showUrgencyIndicator: boolean },
 ): TaskRowViewModel {
-  const trimmedNote = task.note?.trim() ?? '';
-  const hasNote = Boolean(trimmedNote);
-  const showUrgentIndicator = options.showUrgencyIndicator && task.priority === 'urgent';
+  const metadata = getTaskMetadataState(task);
+  const showUrgentIndicator = options.showUrgencyIndicator && metadata.isUrgentPriority;
   const urgency = getUrgencyLevel(task);
 
   return {
-    trimmedNote,
-    hasNote,
-    notePreview: hasNote ? trimmedNote.split(/\r?\n/, 1)[0] : '',
+    noteText: metadata.noteText,
+    hasNoteText: metadata.hasNoteText,
+    notePreview: metadata.hasNoteText ? metadata.noteText.split(/\r?\n/, 1)[0] : '',
     showUrgentIndicator,
-    showMetaCluster: showUrgentIndicator || hasNote,
     urgency,
     isTimerDisabled: task.status !== 'active',
     isPaused: task.timerStatus === 'paused',
@@ -60,4 +58,3 @@ function getTaskFullTimeText(task: Task): string {
 
   return getTimeDisplay(task.remainingSec).full;
 }
-

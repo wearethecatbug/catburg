@@ -81,6 +81,11 @@ export interface ThemeTokens {
   chipZeroBorder: string;
   chipOverdueBg: string;
   chipOverdueText: string;
+  priorityUrgentBar: string;
+  priorityUrgentBarBorder: string;
+  priorityUrgentBarGlow: string;
+  priorityDoneBar: string;
+  priorityDoneBarBorder: string;
   ringTrack: string;
   ringNormalFrom: string;
   ringNormalTo: string;

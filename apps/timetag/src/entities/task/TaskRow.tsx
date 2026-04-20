@@ -36,9 +36,11 @@ export function TaskRow({
   onDelete,
 }: TaskRowProps) {
   const { settings } = useSettings();
+  const showUrgencyIndicator = settings.general.showUrgencyIndicator;
   const viewModel = getTaskRowViewModel(task, {
-    showUrgencyIndicator: settings.general.showUrgencyIndicator,
+    showUrgencyIndicator,
   });
+  const showNotePreview = settings.general.showNotePreviewsInTaskList;
 
   const rowBackground = isSelected ? 'var(--tt-selected-row-bg)' : 'transparent';
   const rowBoxShadow = isSelected ? 'inset 0 0 0 1px var(--tt-selected-row-border)' : undefined;
@@ -67,14 +69,16 @@ export function TaskRow({
 
         <div className="min-w-0 flex-1 pr-2">
           <div className="flex min-w-0 items-start text-sm">
-            {viewModel.showMetaCluster && (
-                <TaskMetaCluster
-                    showUrgentIndicator={viewModel.showUrgentIndicator}
-                    hasNote={viewModel.hasNote}
-                    noteTitle={viewModel.trimmedNote}
-                />
-            )}
-            <div className="min-w-0 flex-1">
+            <TaskMetaCluster
+              showUrgentIndicator={viewModel.showUrgentIndicator}
+              reservePrioritySlot={showUrgencyIndicator}
+              showNoteIndicator={viewModel.hasNoteText && !showNotePreview}
+              reserveNoteSlot={!showNotePreview}
+              noteTitle={viewModel.hasNoteText ? viewModel.noteText : undefined}
+              status={task.status}
+            />
+
+            <div data-testid="task-content-block" className="min-h-[40px] min-w-0 flex-1">
               <span
                   data-testid="task-title"
                   className={`block min-w-0 truncate text-[15px] font-medium leading-5 ${
@@ -89,7 +93,7 @@ export function TaskRow({
                 {task.title}
               </span>
 
-              {viewModel.hasNote && settings.general.showNotePreviewsInTaskList && (
+              {viewModel.hasNoteText && showNotePreview && (
                   <div
                       data-testid="task-note-preview"
                       className="mt-1 overflow-hidden pr-2 text-[12px] leading-[1.3]"
@@ -100,7 +104,7 @@ export function TaskRow({
                         WebkitBoxOrient: 'vertical',
                         WebkitLineClamp: 1,
                       }}
-                      title={viewModel.trimmedNote}
+                      title={viewModel.noteText}
                   >
                     {viewModel.notePreview}
                   </div>

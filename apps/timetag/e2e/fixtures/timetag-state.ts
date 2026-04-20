@@ -126,6 +126,13 @@ export const seededTasks: StoredTask[] = [
     remainingSec: 1800,
     originalDurationSec: 1800,
   }),
+  createTask({
+    id: 'task-urgent-plain',
+    title: 'Urgent plain task',
+    priority: 'urgent',
+    remainingSec: 900,
+    originalDurationSec: 1800,
+  }),
 ];
 
 
