@@ -1,253 +1,357 @@
 # TimeTag file structure report
 
-## What was updated
+_Last verified: 2026-04-20_
 
-The source tree in `apps/timetag/src` already matched the requested layered structure almost completely.
+## Scope
+- This report covers the current structure of `apps/timetag/src`.
+- It reflects the verified file tree in the workspace at the time of this update.
+- The goal is to document what exists now, correct stale paths, and highlight the few areas that changed since the previous report.
 
-To make the structure fully consistent and easier to consume, I aligned the barrel exports and added the missing utility barrel:
+## Executive summary
 
-- added `src/shared/utils/index.ts`
-- updated `src/shared/index.ts` to re-export `shared/utils`
-- updated `src/domain/index.ts` to re-export `duration` and `theme`
-- updated `src/features/index.ts` to re-export `features/settings`
-- updated `src/widgets/index.ts` to re-export `widgets/settings-panel`
+The `apps/timetag/src` tree still follows the intended layered structure:
 
-## Implemented follow-up splits
+- `app/` — Next.js App Router entry and internal preview routes
+- `domain/` — pure business logic, settings normalization, theme pipeline, timer logic
+- `entities/` — entity-level UI composition for tasks
+- `features/` — focused user-facing interactions and editors
+- `shared/` — reusable hooks, icons, UI primitives, utils
+- `store/` — context providers and persistence wiring
+- `widgets/` — screen-level assembled UI blocks
 
-Based on the recommendations below, the following extractions were implemented:
+The overall architecture is still in good shape. No destructive reorganization is needed.
 
-- added `src/domain/settings.guards.ts`
-- added `src/domain/settings.normalize.ts`
-- moved settings normalization logic out of `src/store/settings.store.tsx`
-- added `src/features/task-composer/task-composer.mappers.ts`
-- added `src/features/task-composer/useTaskComposerState.ts`
-- moved composer state/orchestration out of `src/features/task-composer/AddTaskInput.tsx`
-- added `src/widgets/settings-panel/useSettingsDraft.ts`
-- added `src/widgets/settings-panel/SettingsPanelFooter.tsx`
-- added `src/widgets/settings-panel/settings-panel.config.ts`
-- added `src/widgets/settings-panel/SettingsPanelSection.tsx`
-- moved settings draft-state/footer logic out of `src/widgets/settings-panel/SettingsPanel.tsx`
-- moved settings section metadata/render branching out of `src/widgets/settings-panel/SettingsPanel.tsx`
-- grouped task-row subcomponents under `src/entities/task/components/*`
-- extracted timer-cluster styles and actions menu out of `src/entities/task/TaskRow.tsx`
+## What changed since the previous report
 
-## Requested structure status
+The previous report had several stale details. These are now corrected here:
 
-### Matches the requested structure
-- `app/*`
-- `domain/*` including `settings.types.ts`, `theme.ts`, `timer.presets.ts`
-- `features/settings/*`
-- `shared/hooks/usePersistedWorkspaces.ts`
-- `store/settings.store.tsx`
-- `widgets/settings-panel/*`
+- `task.meta.ts` exists in `src/domain` and is part of the current domain layer.
+- Theme logic is now split across dedicated modules in `src/domain`:
+  - `theme.colors.ts`
+  - `theme.css-vars.ts`
+  - `theme.init-script.ts`
+  - `theme.palette.ts`
+  - `theme.presets.ts`
+  - `theme.tokens.ts`
+  - `theme.types.ts`
+  - `theme.ts`
+- Task-row subcomponents are grouped under `src/entities/task/components/*`.
+- The canonical paths for task-row building blocks are now:
+  - `src/entities/task/components/SelectionCheckbox.tsx`
+  - `src/entities/task/components/TaskStatusToggle.tsx`
+  - `src/entities/task/components/TaskMetaCluster.tsx`
+  - `src/entities/task/components/TaskTimerCluster.tsx`
+  - `src/entities/task/components/TaskRowActionsMenu.tsx`
+- `TaskMetaCluster` currently handles:
+  - the fixed urgent-priority slot
+  - the production soft-inset priority marker
+  - the preview-only legacy bar variant
+  - the note-indicator slot used when note previews are hidden
+- Internal preview routes now include:
+  - `src/app/preview/select-checkbox/*`
+  - `src/app/preview/task-row-priority/*`
+  - `src/app/preview/task-row-priority-neutral-bar/page.tsx` (redirect alias to the consolidated preview)
+- `src/widgets/settings-panel/index.ts` currently exports only `SettingsPanel`.
+- `src/features/index.ts` re-exports feature components, but not widget-level settings-panel files.
 
-### Existing additive files not shown in the example
-These are already useful and should stay:
+## Current top-level `src` structure
 
-- `src/domain/task.filter.ts` — filter state helpers and patch builders
-- `src/domain/task.operations.ts` — task creation, hydration normalization, running-task pause helper
-- `src/domain/workspace.ts` — workspace ids, defaults, normalization
-- `src/entities/task/SelectionCheckbox.tsx` — row selection control
-- `src/entities/task/TaskStatusToggle.tsx` — done/active toggle
-- `src/entities/task/TaskMetaCluster.tsx` — row-level metadata cluster for note/urgent indicators
-- `src/entities/task/task-row.viewmodel.ts` — derived row presentation model
-- `src/features/task-composer/components/PrioritySelect.tsx` — urgent/normal selector
-- `src/app/preview/select-checkbox/*` — internal UI preview route
+```text
+src/
+  app/
+  domain/
+  entities/
+  features/
+  shared/
+  store/
+  widgets/
+```
 
-These files are additive refactors, not structure drift.
-
----
-
-## Responsibility by file
+## Current structure status by layer
 
 ### `app`
-- `src/app/globals.css` — global CSS variables, resets, and app-wide visual tokens.
-- `src/app/layout.tsx` — root App Router layout; wires providers, initial theme script, metadata, and hydration-safe setup.
-- `src/app/page.tsx` — main route entry that renders the assembled task list screen.
-- `src/app/ThemeController.tsx` — client-side theme sync between persisted settings and DOM CSS variables.
+Current files/folders:
+- `src/app/globals.css`
+- `src/app/layout.tsx`
+- `src/app/page.tsx`
+- `src/app/ThemeController.tsx`
+- `src/app/preview/select-checkbox/*`
+- `src/app/preview/task-row-priority/*`
+- `src/app/preview/task-row-priority-neutral-bar/page.tsx`
+
+Assessment:
+- Matches the expected Next.js App Router entry layer.
+- Preview routes are additive internal tooling and should remain outside the main feature/widget hierarchy.
+- `task-row-priority-neutral-bar` is now an alias route that redirects to the consolidated priority preview host.
 
 ### `domain`
-- `src/domain/duration.ts` — duration units, preset catalogs, clamping, formatting, and conversion helpers for duration mode.
-- `src/domain/helpers.ts` — generic pure helpers such as id generation and compact time badge formatting.
-- `src/domain/index.ts` — domain barrel export for pure business logic and types.
-- `src/domain/settings.guards.ts` — shared runtime guards and clamping helpers for settings parsing.
-- `src/domain/settings.normalize.ts` — pure normalization/migration pipeline for persisted settings payloads.
-- `src/domain/settings.types.ts` — central app settings schema, defaults, storage key, tabs/sections ids, and settings-related types.
-- `src/domain/task.pipeline.ts` — applies workspace/filter/search/sort pipeline to derive the visible task list.
-- `src/domain/task.status.ts` — deterministic task status transitions such as active/done/archived.
-- `src/domain/task.types.ts` — canonical task, filter, sort, timer, reminder, and workspace type definitions.
-- `src/domain/task.urgency.ts` — urgency calculation and urgency-filter option definitions based on remaining/original ratio.
-- `src/domain/theme.ts` — theme modes, custom theme presets, token resolution, and DOM theme application helpers.
-- `src/domain/timer.logic.ts` — timer state machine operations like toggle, reset, and tick.
-- `src/domain/timer.presets.ts` — pomodoro/deadline preset catalogs, validation, and formatting helpers.
-- `src/domain/timer.ring.ts` — visual-state derivation for timer ring UI from ratios, urgency, and timer status.
+Current files:
+- `src/domain/duration.ts`
+- `src/domain/helpers.ts`
+- `src/domain/index.ts`
+- `src/domain/settings.guards.ts`
+- `src/domain/settings.normalize.ts`
+- `src/domain/settings.types.ts`
+- `src/domain/task.filter.ts`
+- `src/domain/task.meta.ts`
+- `src/domain/task.operations.ts`
+- `src/domain/task.pipeline.ts`
+- `src/domain/task.status.ts`
+- `src/domain/task.types.ts`
+- `src/domain/task.urgency.ts`
+- `src/domain/theme.colors.ts`
+- `src/domain/theme.css-vars.ts`
+- `src/domain/theme.init-script.ts`
+- `src/domain/theme.palette.ts`
+- `src/domain/theme.presets.ts`
+- `src/domain/theme.tokens.ts`
+- `src/domain/theme.ts`
+- `src/domain/theme.types.ts`
+- `src/domain/timer.logic.ts`
+- `src/domain/timer.presets.ts`
+- `src/domain/timer.ring.ts`
+- `src/domain/workspace.ts`
+
+Assessment:
+- Strong and still appropriately pure.
+- The settings normalization split remains correct.
+- The theme system is now clearly modularized and should be treated as a sub-area of the domain layer rather than a single-file concern.
+- `task.meta.ts` is an important current module for derived presentation metadata and should stay documented.
 
 ### `entities`
-- `src/entities/task/index.ts` — task entity barrel for `TaskRow` and canonical task-row subcomponents.
-- `src/entities/task/components/index.ts` — barrel for internal task-row building blocks.
-- `src/entities/task/components/TaskRowActionsMenu.tsx` — task-row dropdown menu with reset/status/archive/delete actions.
-- `src/entities/task/components/TaskTimerCluster.tsx` — task-row timer pill with ring button, display value, and tooltip title.
-- `src/entities/task/components/SelectionCheckbox.tsx` — task-row selection checkbox with the shipped visual variant.
-- `src/entities/task/components/TaskStatusToggle.tsx` — task-row done/active status toggle.
-- `src/entities/task/components/TaskMetaCluster.tsx` — compact metadata renderer for urgent and note indicators inside the row.
-- `src/entities/task/task-timer-cluster.styles.ts` — pure timer-cluster style mapping for idle/running/paused/warn/zero/overdue states.
-- `src/entities/task/TaskRow.tsx` — the main task-row entity; composes task controls, timer ring, menu, and metadata for one task.
-- `src/entities/index.ts` — top-level entity barrel.
+Current files/folders:
+- `src/entities/index.ts`
+- `src/entities/task/index.ts`
+- `src/entities/task/TaskRow.tsx`
+- `src/entities/task/task-row.viewmodel.ts`
+- `src/entities/task/task-timer-cluster.styles.ts`
+- `src/entities/task/components/index.ts`
+- `src/entities/task/components/SelectionCheckbox.tsx`
+- `src/entities/task/components/TaskMetaCluster.tsx`
+- `src/entities/task/components/TaskRowActionsMenu.tsx`
+- `src/entities/task/components/TaskStatusToggle.tsx`
+- `src/entities/task/components/TaskTimerCluster.tsx`
+
+Assessment:
+- This layer improved further.
+- `TaskRow.tsx` remains the main entity composer.
+- View-model derivation stays in `task-row.viewmodel.ts`.
+- Timer-cluster styles are split into a pure mapping file.
+- The metadata/timer/action subcomponents are correctly grouped under `components/`.
 
 ### `features`
-- `src/features/bulk-actions/BulkDropdown.tsx` — bulk actions menu for selected tasks.
-- `src/features/bulk-actions/index.ts` — barrel for bulk-actions feature.
-- `src/features/list-filter/FilterDropdown.tsx` — advanced list filters (urgency, approaching-red, reminders, mode, priority).
-- `src/features/list-filter/index.ts` — barrel for list-filter feature.
-- `src/features/list-search/index.ts` — barrel for search feature.
-- `src/features/list-search/SearchInput.tsx` — controlled search box bound to task query state.
-- `src/features/list-sort/index.ts` — barrel for sort feature.
-- `src/features/list-sort/SortDropdown.tsx` — sort field/direction selector.
-- `src/features/settings/AppearanceSettingsSection.tsx` — appearance settings editor (theme, layout, ring, custom colors).
-- `src/features/settings/GeneralSettingsSection.tsx` — general behavior/defaults/interface settings editor.
-- `src/features/settings/index.ts` — settings feature barrel.
-- `src/features/settings/SettingsSidebar.tsx` — left navigation between General / Timer / Appearance settings sections.
-- `src/features/settings/SettingsTabs.tsx` — reusable tab strip for subsections inside settings.
-- `src/features/settings/TimerSettingsSection.tsx` — timer-mode defaults, runtime behavior, and preset visibility editor.
-- `src/features/status-filters/index.ts` — barrel for status-filter feature.
-- `src/features/status-filters/StatusFilters.tsx` — active/all/done/archived filter tabs.
-- `src/features/task-composer/AddTaskInput.tsx` — thin task creation view that renders the composer UI and delegates state/orchestration to feature-local helpers.
-- `src/features/task-composer/index.ts` — task-composer barrel.
-- `src/features/task-composer/task-composer.mappers.ts` — pure helpers for duration/deadline labels and mapping composer draft state into `CreateTaskInput`.
-- `src/features/task-composer/useTaskComposerState.ts` — local hook that owns task-composer draft state, preset synchronization, and submit/reset handlers.
-- `src/features/task-composer/components/DetailsPanel.tsx` — expanded composer form for note, priority, timer mode, and advanced task details.
-- `src/features/task-composer/components/Dropdown.tsx` — local dropdown primitive used inside the composer.
-- `src/features/task-composer/components/DurationField.tsx` — duration input with unit switching and clamping.
-- `src/features/task-composer/components/index.ts` — composer-components barrel.
-- `src/features/task-composer/components/ModeSelector.tsx` — segmented selector for duration / pomodoro / deadline modes.
-- `src/features/task-composer/components/NumberInput.tsx` — numeric field primitive for pomodoro settings.
-- `src/features/task-composer/components/PomodoroSettings.tsx` — grouped pomodoro parameter inputs.
-- `src/features/task-composer/components/README.md` — local composer component notes.
-- `src/features/task-composer/components/TimerControlsSection.tsx` — auto-start / auto-play / auto-reset / overdue toggle group.
-- `src/features/task-composer/components/TimerControlToggle.tsx` — reusable switch row for timer controls.
-- `src/features/workspace-switch/index.ts` — workspace-switch barrel.
-- `src/features/workspace-switch/WorkspaceSwitch.tsx` — workspace tab bar with built-in + user-created workspaces and persistence.
-- `src/features/index.ts` — top-level features barrel.
+Current folders:
+- `src/features/bulk-actions/*`
+- `src/features/list-filter/*`
+- `src/features/list-search/*`
+- `src/features/list-sort/*`
+- `src/features/settings/*`
+- `src/features/status-filters/*`
+- `src/features/task-composer/*`
+- `src/features/workspace-switch/*`
+- `src/features/index.ts`
+
+Important current files:
+- `src/features/task-composer/AddTaskInput.tsx`
+- `src/features/task-composer/task-composer.mappers.ts`
+- `src/features/task-composer/useTaskComposerState.ts`
+- `src/features/task-composer/components/*`
+- `src/features/settings/AppearanceSettingsSection.tsx`
+- `src/features/settings/GeneralSettingsSection.tsx`
+- `src/features/settings/SettingsSidebar.tsx`
+- `src/features/settings/SettingsTabs.tsx`
+- `src/features/settings/TimerSettingsSection.tsx`
+
+Assessment:
+- Still aligned with the intended feature layer.
+- The task-composer split remains valid and useful.
+- Settings remains a feature layer, while the overlay shell stays in `widgets/settings-panel`.
 
 ### `shared`
-- `src/shared/hooks/index.ts` — hooks barrel.
-- `src/shared/hooks/useKeyboardShortcuts.ts` — global keyboard shortcut registration for add/search/escape actions.
-- `src/shared/hooks/useLocalStorage.ts` — SSR-safe localStorage hook with delayed hydration.
-- `src/shared/hooks/usePersistedWorkspaces.ts` — persisted workspace list hook built on top of `useLocalStorage`.
-- `src/shared/icons/IconBase.tsx` — common SVG icon wrapper and size mapping.
-- `src/shared/icons/icons.tsx` — concrete icon components.
-- `src/shared/icons/index.ts` — icon barrel.
-- `src/shared/ui/Badge.tsx` — small status/time badge primitive.
-- `src/shared/ui/Checkbox.tsx` — shared checkbox primitive.
-- `src/shared/ui/Chip.tsx` — removable chip/tag primitive.
-- `src/shared/ui/Dropdown.tsx` — shared dropdown/menu primitive.
-- `src/shared/ui/index.ts` — shared UI barrel.
-- `src/shared/ui/TimerRingButton.tsx` — circular timer progress button component.
-- `src/shared/ui/Toast.tsx` — toast hook + toast container/presentation.
-- `src/shared/utils/formatTime.ts` — full/short human-readable time formatting helpers.
-- `src/shared/utils/index.ts` — utilities barrel.
-- `src/shared/index.ts` — top-level shared barrel.
+Current folders:
+- `src/shared/hooks/*`
+- `src/shared/icons/*`
+- `src/shared/ui/*`
+- `src/shared/utils/*`
+- `src/shared/index.ts`
+
+Verified current files:
+- hooks:
+  - `src/shared/hooks/index.ts`
+  - `src/shared/hooks/useKeyboardShortcuts.ts`
+  - `src/shared/hooks/useLocalStorage.ts`
+  - `src/shared/hooks/usePersistedWorkspaces.ts`
+- ui:
+  - `src/shared/ui/Badge.tsx`
+  - `src/shared/ui/Checkbox.tsx`
+  - `src/shared/ui/Chip.tsx`
+  - `src/shared/ui/Dropdown.tsx`
+  - `src/shared/ui/TimerRingButton.tsx`
+  - `src/shared/ui/Toast.tsx`
+  - `src/shared/ui/index.ts`
+- utils:
+  - `src/shared/utils/formatTime.ts`
+  - `src/shared/utils/index.ts`
+
+Assessment:
+- Still clean and reusable.
+- `src/shared/index.ts` currently re-exports hooks, icons, UI, and utils.
+- `useFocusRef` is currently re-exported from `src/shared/hooks/index.ts` via `useKeyboardShortcuts.ts`.
 
 ### `store`
-- `src/store/index.ts` — store barrel.
-- `src/store/settings.store.tsx` — settings context/provider, normalization, persistence, and update APIs.
-- `src/store/task.store.tsx` — task source of truth: reducer, visible list derivation, selection, timers, bulk actions, persistence.
+Current files:
+- `src/store/index.ts`
+- `src/store/settings.store.tsx`
+- `src/store/task.store.tsx`
+
+Assessment:
+- Current split remains appropriate.
+- `settings.store.tsx` is slimmer than before thanks to the extracted domain normalization helpers.
+- `task.store.tsx` remains the central source of truth for task state and visible-list derivation.
 
 ### `widgets`
-- `src/widgets/header/Header.tsx` — app header with settings trigger and top-level controls.
-- `src/widgets/header/index.ts` — header barrel.
-- `src/widgets/settings-panel/index.ts` — settings-panel barrel.
-- `src/widgets/settings-panel/settings-panel.config.ts` — static section labels and tab definitions for the settings drawer.
-- `src/widgets/settings-panel/SettingsPanelSection.tsx` — isolated renderer for the active settings section and its tabbed content.
-- `src/widgets/settings-panel/useSettingsDraft.ts` — local hook that manages draft settings state, dirty tracking, save/cancel/reset, and Escape handling.
-- `src/widgets/settings-panel/SettingsPanelFooter.tsx` — extracted footer with Reset / Cancel / Save actions for the settings drawer.
-- `src/widgets/settings-panel/SettingsPanel.tsx` — settings overlay widget that assembles sidebar, tabs, and extracted draft-state/footer pieces.
-- `src/widgets/task-list/index.ts` — task-list barrel.
-- `src/widgets/task-list/TaskList.tsx` — paginated visible task list renderer and empty state.
-- `src/widgets/task-list/TaskListWidget.tsx` — screen assembler that combines header, filters, composer, list, settings panel, toasts, and shortcuts.
-- `src/widgets/index.ts` — top-level widgets barrel.
+Current folders/files:
+- `src/widgets/header/*`
+- `src/widgets/settings-panel/*`
+- `src/widgets/task-list/*`
+- `src/widgets/index.ts`
 
----
+Verified settings-panel files:
+- `src/widgets/settings-panel/SettingsPanel.tsx`
+- `src/widgets/settings-panel/SettingsPanelFooter.tsx`
+- `src/widgets/settings-panel/SettingsPanelSection.tsx`
+- `src/widgets/settings-panel/settings-panel.config.ts`
+- `src/widgets/settings-panel/useSettingsDraft.ts`
+- `src/widgets/settings-panel/index.ts`
+
+Assessment:
+- The widget layer remains well separated from feature logic.
+- `widgets/index.ts` currently exports:
+  - `Header`
+  - `SettingsPanel`
+  - `TaskList`
+  - `TaskListWidget`
+- `widgets/settings-panel/index.ts` currently exports only `SettingsPanel`.
+
+## Current barrel status
+
+### Verified current barrels
+- `src/domain/index.ts`
+  - re-exports `duration`, `task.meta`, `settings.*`, `task.*`, `theme`, `timer.*`, `helpers`, `workspace`
+- `src/shared/index.ts`
+  - re-exports shared UI, icons, hooks, and utils
+- `src/features/index.ts`
+  - re-exports feature-level controls and settings feature sections
+- `src/widgets/index.ts`
+  - re-exports `Header`, `SettingsPanel`, `TaskListWidget`, and `TaskList`
+- `src/entities/task/components/index.ts`
+  - re-exports the canonical task-row subcomponents
+
+Assessment:
+- Barrel consistency is good.
+- The main stale point in the previous report was not the presence of barrels, but outdated descriptions of what they actually expose.
+
+## Responsibility notes for the most important current files
+
+### `src/domain/task.meta.ts`
+- Holds derived metadata state for task rows.
+- Keeps note-related and urgent-priority derivation outside `TaskRow.tsx`.
+
+### `src/domain/theme.tokens.ts`
+- Builds token groups for surfaces, text, accents, chips, priority markers, rings, selection, and shadows.
+- Feeds `resolveThemeTokens()` for runtime and pre-hydration theme application.
+
+### `src/domain/theme.init-script.ts`
+- Serializes the theme bootstrap helpers used before hydration.
+- Must stay in sync with `resolveThemeTokens()` whenever token-builder dependencies change.
+
+### `src/entities/task/TaskRow.tsx`
+- Main row layout composer.
+- Wires settings-driven note/urgency behavior into `TaskMetaCluster`.
+- Keeps title/note rendering separate from timer/menu controls.
+
+### `src/entities/task/components/TaskMetaCluster.tsx`
+- Renders the reserved metadata area before the content block.
+- Owns:
+  - priority-slot reservation
+  - soft-inset urgent marker in production
+  - legacy bar preview variant
+  - note slot / note indicator when note previews are hidden
+- Returns `null` when neither priority nor note slots are needed.
+
+### `src/entities/task/task-row.viewmodel.ts`
+- Builds derived row presentation data from a `Task` plus row settings.
+- Keeps `TaskRow.tsx` lighter and presentation-oriented.
+
+### `src/app/preview/task-row-priority/TaskRowPriorityPreview.tsx`
+- Consolidated internal host for side-by-side urgent-priority visual comparisons.
+- Used for previewing historical and alternative marker treatments without creating new production variants.
+
+### `src/app/preview/task-row-priority-neutral-bar/page.tsx`
+- Redirect-only compatibility route.
+- Exists so old preview links still land on the consolidated priority preview page.
+
+## Existing additive files that are justified and should stay
+
+These files are not structure drift; they are useful extractions:
+
+- `src/domain/task.filter.ts`
+- `src/domain/task.meta.ts`
+- `src/domain/task.operations.ts`
+- `src/domain/workspace.ts`
+- `src/domain/theme.colors.ts`
+- `src/domain/theme.css-vars.ts`
+- `src/domain/theme.init-script.ts`
+- `src/domain/theme.palette.ts`
+- `src/domain/theme.presets.ts`
+- `src/domain/theme.tokens.ts`
+- `src/domain/theme.types.ts`
+- `src/entities/task/task-row.viewmodel.ts`
+- `src/entities/task/task-timer-cluster.styles.ts`
+- `src/entities/task/components/TaskMetaCluster.tsx`
+- `src/entities/task/components/TaskTimerCluster.tsx`
+- `src/entities/task/components/TaskRowActionsMenu.tsx`
+- `src/features/task-composer/task-composer.mappers.ts`
+- `src/features/task-composer/useTaskComposerState.ts`
+- `src/app/preview/select-checkbox/*`
+- `src/app/preview/task-row-priority/*`
 
 ## Recommended next splits
 
-### 1. `src/store/settings.store.tsx`
-**Status:** improved.
+### 1. `src/entities/task/TaskRow.tsx`
+Status: acceptable, but watch growth.
 
-The provider is now focused on:
-- context/provider wiring
-- persistence integration
-- patch-based update actions
+Potential future split if needed:
+- extract the title + note content block into a dedicated presentational subcomponent
+- move row spacing/constants into a small config module if more layout tuning continues
 
-Completed extraction:
-- `src/domain/settings.normalize.ts`
-- `src/domain/settings.guards.ts`
+Priority: low to medium
 
-**Next optional refinement:** extract patch helpers if the provider grows again.
+### 2. `src/store/task.store.tsx`
+Status: still the biggest remaining architectural pressure point.
 
-### 2. `src/features/task-composer/AddTaskInput.tsx`
-**Status:** improved.
+Potential future split if it grows further:
+- persistence helpers
+- selection helpers
+- reducer action builders or grouped reducer utilities
 
-The view is now mostly responsible for rendering and wiring props into presentational controls.
+Priority: medium
 
-Completed extraction:
-- `src/features/task-composer/useTaskComposerState.ts`
-- `src/features/task-composer/task-composer.mappers.ts`
+### 3. `src/features/task-composer/AddTaskInput.tsx`
+Status: improved and currently reasonable.
 
-**Next optional refinement:** add `components/PresetSelectors.tsx` if the header row grows further.
+Potential future split if the header row grows again:
+- extract preset selectors / header controls into a dedicated component
 
-### 3. `src/widgets/settings-panel/SettingsPanel.tsx`
-**Status:** improved.
+Priority: low
 
-Completed extraction:
-- `src/widgets/settings-panel/useSettingsDraft.ts`
-- `src/widgets/settings-panel/SettingsPanelFooter.tsx`
+## Final verdict
 
-**Completed additional refinement:**
-- `src/widgets/settings-panel/settings-panel.config.ts`
-- `src/widgets/settings-panel/SettingsPanelSection.tsx`
+The requested layered structure is still implemented in practice.
 
-### 4. `src/entities/task/*`
-**Status:** improved.
-
-Completed cleanup:
-- removed stale empty files: `MetadataCluster.tsx`, `DoneToggle.tsx`, `NoteIcon.tsx`, `UrgentIcon.tsx`
-- kept `TaskMetaCluster.tsx` as the canonical metadata component
-- expanded `src/entities/task/index.ts` to expose the real task-row building blocks
-- grouped task-row subcomponents into `src/entities/task/components/*`
-- extracted timer cluster and actions menu out of `TaskRow.tsx`
-
-**Next optional refinement:**
-- extract title/content block if `TaskRow.tsx` still grows, or move row layout constants into a dedicated config module
-
-**Priority:** low to medium
-
-### 5. `src/domain`
-**Current assessment:** mostly good.
-
-The extra files not shown in the requested example are justified:
-- `task.filter.ts`
-- `task.operations.ts`
-- `workspace.ts`
-
-I would keep them as separate pure modules instead of merging them back into bigger files.
-
-**Priority:** low, keep as-is
-
-## Overall evaluation
-
-### Structure quality
-- **Layering:** good
-- **Feature isolation:** good
-- **Barrel consistency:** now good after the export updates
-- **Purity of domain layer:** good
-- **Big-file pressure:** mainly in `AddTaskInput.tsx` and `settings.store.tsx`
-
-### Final verdict
-The requested structure is already implemented in practice. The codebase does **not** need a destructive reorganization. The best approach is exactly what was done here:
-
+The right strategy remains:
 1. keep the current layered tree,
-2. preserve useful additive files,
-3. improve barrels/documentation,
-4. continue splitting only the few dense files.
-
+2. preserve useful additive modules,
+3. keep barrels honest and current,
+4. continue only small, targeted extractions where file pressure appears,
+5. update docs when paths or responsibilities move.
