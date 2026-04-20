@@ -19,6 +19,9 @@ interface DropdownProps {
     onClose: () => void;
     title?: string;
     ariaLabel?: string;
+    fullWidth?: boolean;
+    menuAlign?: 'left' | 'right';
+    menuWidth?: 'fixed' | 'trigger';
 }
 
 export function Dropdown({
@@ -34,6 +37,9 @@ export function Dropdown({
     onClose,
     title,
     ariaLabel,
+    fullWidth = false,
+    menuAlign = 'right',
+    menuWidth = 'fixed',
 }: DropdownProps) {
     const wrapperRef = useRef<HTMLDivElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -72,7 +78,7 @@ export function Dropdown({
     }, [isOpen, onToggle, onClose]);
 
     return (
-        <div ref={wrapperRef} className="relative flex-shrink-0">
+        <div ref={wrapperRef} className={`relative ${fullWidth ? 'w-full' : 'flex-shrink-0'}`}>
             <label className="sr-only" htmlFor={id}>
                 {label}
             </label>
@@ -83,7 +89,7 @@ export function Dropdown({
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
                 onClick={onToggle}
-                className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm focus:outline-none"
+                className={`${fullWidth ? 'flex w-full justify-between' : 'inline-flex'} items-center gap-2 rounded-md border px-3 py-2 text-sm focus:outline-none`}
                 style={{
                     borderColor: 'var(--tt-border)',
                     background: 'var(--tt-input-bg)',
@@ -99,7 +105,7 @@ export function Dropdown({
                 <div
                     role="menu"
                     aria-label={ariaLabel || label}
-                    className="absolute right-0 z-40 mt-2 w-44 rounded-md border"
+                    className={`absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} ${menuWidth === 'trigger' ? 'w-full min-w-full' : 'w-44'} z-40 mt-2 rounded-md border`}
                     style={{
                         background: 'var(--tt-surface-elevated)',
                         borderColor: 'var(--tt-border)',

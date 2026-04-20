@@ -1,4 +1,5 @@
 import type {
+  AssignableWorkspaceType,
   CreateTaskInput,
   PomodoroConfig,
   Reminder,
@@ -7,10 +8,10 @@ import type {
   TaskStatus,
   TimerMode,
   TimerStatus,
-  WorkspaceType,
 } from './task.types';
 import { TASK_NOTE_MAX_LENGTH } from './task.types';
 import { generateId } from './helpers';
+import { normalizeTaskWorkspace } from './workspace';
 
 export function createTask(input: CreateTaskInput, nowIso: string): Task {
   const note = typeof input.note === 'string'
@@ -31,11 +32,13 @@ export function createTask(input: CreateTaskInput, nowIso: string): Task {
     durationSec = input.durationSec ?? 25 * 60;
   }
 
+  const workspace: AssignableWorkspaceType = normalizeTaskWorkspace(input.workspace);
+
   return {
     id: generateId(),
     title: input.title,
     note: note || undefined,
-    workspace: input.workspace ?? 'work',
+    workspace,
     status: 'active',
     priority: input.priority ?? 'normal',
     timerMode: input.timerMode ?? 'duration',
@@ -128,7 +131,7 @@ export function normalizeHydratedTasks(tasks: unknown[], nowIso: string = new Da
       id: typeof raw.id === 'string' && raw.id.trim() ? raw.id : generateId(),
       title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : 'Untitled task',
       note: note || undefined,
-      workspace: typeof raw.workspace === 'string' ? (raw.workspace as WorkspaceType) : 'work',
+      workspace: normalizeTaskWorkspace(raw.workspace),
       status: isTaskStatus(raw.status) ? raw.status : 'active',
       priority: isTaskPriority(raw.priority) ? raw.priority : 'normal',
       timerMode: isTimerMode(raw.timerMode) ? raw.timerMode : 'duration',

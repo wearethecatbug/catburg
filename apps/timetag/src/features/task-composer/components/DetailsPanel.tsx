@@ -3,7 +3,9 @@
 import React from 'react';
 import { TASK_NOTE_MAX_LENGTH, type TaskPriority, type TimerMode } from '@/domain/task.types';
 import type { DurationUnit } from '@/domain/duration';
-import { CheckIcon } from '@/shared';
+import { CheckIcon, ChevronDownIcon, ClipboardIcon } from '@/shared';
+import type { DropdownOption } from './Dropdown';
+import { Dropdown } from './Dropdown';
 import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
@@ -28,8 +30,17 @@ interface DetailsPanelProps {
     autoResetEnabled: boolean;
     overdueEnabled: boolean;
     presetLabel?: string;
+    workspaceOpen: boolean;
+    showWorkspaceDropdown: boolean;
+    showWorkspaceEmptyState: boolean;
+    workspaceHelperText: string;
+    workspaceOptions: DropdownOption[];
+    selectedWorkspaceOptionId: string;
+    selectedWorkspaceLabel: string;
 
     onTimerModeChange: (mode: TimerMode) => void;
+    onWorkspaceOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
+    onWorkspaceSelect: (id: string) => void;
     onPriorityChange: (priority: TaskPriority) => void;
     onNoteChange: (value: string) => void;
 
@@ -51,43 +62,55 @@ interface DetailsPanelProps {
 }
 
 export function DetailsPanel({
-                                 timerMode,
-                                 priority,
-                                  note,
-                                 durationSec,
-                                 durationUnit,
-                                 deadlineDate,
-                                 pomoCycles,
-                                 pomoWorkMin,
-                                 pomoShortBreakMin,
-                                 pomoLongBreakMin,
-                                 autoEnabled,
-                                 playEnabled,
-                                 autoResetEnabled,
-                                 overdueEnabled,
-                                 presetLabel,
-                                 onTimerModeChange,
-                                 onPriorityChange,
-                                  onNoteChange,
-                                 onDurationSecChange,
-                                 onDurationUnitChange,
-                                 onDeadlineDateChange,
-                                 onPomoCyclesChange,
-                                 onPomoWorkMinChange,
-                                 onPomoShortBreakMinChange,
-                                 onPomoLongBreakMinChange,
-                                 onAutoEnabledChange,
-                                 onPlayEnabledChange,
-                                 onAutoResetEnabledChange,
-                                 onOverdueEnabledChange,
-                                  onCancel,
-                                  onReset,
-                                  canSubmit,
-                             }: DetailsPanelProps) {
+    timerMode,
+    priority,
+    note,
+    durationSec,
+    durationUnit,
+    deadlineDate,
+    pomoCycles,
+    pomoWorkMin,
+    pomoShortBreakMin,
+    pomoLongBreakMin,
+    autoEnabled,
+    playEnabled,
+    autoResetEnabled,
+    overdueEnabled,
+    presetLabel,
+    workspaceOpen,
+    showWorkspaceDropdown,
+    showWorkspaceEmptyState,
+    workspaceHelperText,
+    workspaceOptions,
+    selectedWorkspaceOptionId,
+    selectedWorkspaceLabel,
+    onTimerModeChange,
+    onWorkspaceOpenChange,
+    onWorkspaceSelect,
+    onPriorityChange,
+    onNoteChange,
+    onDurationSecChange,
+    onDurationUnitChange,
+    onDeadlineDateChange,
+    onPomoCyclesChange,
+    onPomoWorkMinChange,
+    onPomoShortBreakMinChange,
+    onPomoLongBreakMinChange,
+    onAutoEnabledChange,
+    onPlayEnabledChange,
+    onAutoResetEnabledChange,
+    onOverdueEnabledChange,
+    onCancel,
+    onReset,
+    canSubmit,
+}: DetailsPanelProps) {
     const fieldStyle: React.CSSProperties = {
         borderColor: 'var(--tt-border)',
         background: 'var(--tt-input-bg)',
         color: 'var(--tt-text)',
+    };
+    const workspaceFadeStyle: React.CSSProperties = {
+        background: 'linear-gradient(90deg, transparent 0%, var(--tt-input-bg) 72%)',
     };
 
     return (
@@ -142,6 +165,65 @@ export function DetailsPanel({
             )}
 
             <PrioritySelect priority={priority} onChange={onPriorityChange} />
+
+            <div className="flex flex-col">
+                <div className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
+                    Workspace
+                </div>
+
+                <div className="w-full max-w-[18rem]">
+                    {showWorkspaceDropdown ? (
+                        <Dropdown
+                            id="task-workspace-btn"
+                            label="Workspace"
+                            icon={<ClipboardIcon size="sm" />}
+                            buttonContent={
+                                <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                                    <span className="relative min-w-0 flex-1 text-left">
+                                        <span className="block truncate pr-3">{selectedWorkspaceLabel}</span>
+                                        <span
+                                            aria-hidden="true"
+                                            className="pointer-events-none absolute inset-y-0 right-0 w-8"
+                                            style={workspaceFadeStyle}
+                                        />
+                                    </span>
+                                    <ChevronDownIcon size="sm" />
+                                </span>
+                            }
+                            options={workspaceOptions}
+                            selectedId={selectedWorkspaceOptionId}
+                            isOpen={workspaceOpen}
+                            onToggle={() => onWorkspaceOpenChange((current) => !current)}
+                            onSelect={onWorkspaceSelect}
+                            onClose={() => onWorkspaceOpenChange(false)}
+                            title="Workspace"
+                            ariaLabel="Workspace options"
+                            fullWidth
+                            menuAlign="left"
+                            menuWidth="trigger"
+                        />
+                    ) : (
+                        <div
+                            data-testid="task-workspace-state"
+                            className={`rounded-xl border px-3 py-2 text-sm ${showWorkspaceEmptyState ? 'border-dashed' : ''}`}
+                            style={fieldStyle}
+                        >
+                            <span className="relative block min-w-0">
+                                <span className="block truncate pr-3">{selectedWorkspaceLabel}</span>
+                                <span
+                                    aria-hidden="true"
+                                    className="pointer-events-none absolute inset-y-0 right-0 w-8"
+                                    style={workspaceFadeStyle}
+                                />
+                            </span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
+                    {workspaceHelperText}
+                </div>
+            </div>
 
             <div className="flex flex-col">
                 <div className="mb-1 flex items-center justify-between gap-2">

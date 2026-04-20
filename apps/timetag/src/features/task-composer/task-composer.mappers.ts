@@ -6,12 +6,16 @@ import {
 } from '@/domain/duration';
 import {
   TASK_NOTE_MAX_LENGTH,
+  type AssignableWorkspaceType,
   type CreateTaskInput,
   type TaskPriority,
   type TimerMode,
   type WorkspaceType,
 } from '@/domain/task.types';
-import { getSafeDefaultWorkspace, type WorkspaceTab } from '@/domain/workspace';
+import {
+  resolveTaskWorkspace,
+  type WorkspaceTab,
+} from '@/domain/workspace';
 
 export const CUSTOM_DURATION_PRESET_ID = '__custom-duration-default__';
 export const CUSTOM_POMODORO_PRESET_ID = '__custom-pomodoro-default__';
@@ -60,10 +64,12 @@ export function getDurationPresetLabel(durationSec: number, presetId: DurationPr
 interface BuildCreateTaskInputArgs {
   title: string;
   note: string;
-  defaultWorkspace?: WorkspaceType;
+  defaultWorkspace?: AssignableWorkspaceType;
+  workspaceOverride?: AssignableWorkspaceType;
   currentWorkspace: WorkspaceType;
+  lastConcreteWorkspace?: AssignableWorkspaceType;
   workspaces: WorkspaceTab[];
-  fallbackWorkspace: WorkspaceType;
+  fallbackWorkspace: AssignableWorkspaceType;
   priority: TaskPriority;
   timerMode: TimerMode;
   durationSec: number;
@@ -82,7 +88,9 @@ export function buildCreateTaskInput({
   title,
   note,
   defaultWorkspace,
+  workspaceOverride,
   currentWorkspace,
+  lastConcreteWorkspace,
   workspaces,
   fallbackWorkspace,
   priority,
@@ -100,11 +108,14 @@ export function buildCreateTaskInput({
 }: BuildCreateTaskInputArgs): CreateTaskInput {
   const trimmedTitle = title.trim();
   const normalizedNote = note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined;
-  const workspace =
-    defaultWorkspace ??
-    (currentWorkspace === 'all'
-      ? getSafeDefaultWorkspace(workspaces, fallbackWorkspace)
-      : currentWorkspace);
+  const workspace = resolveTaskWorkspace({
+    workspaces,
+    explicitWorkspace: workspaceOverride,
+    currentWorkspace,
+    lastConcreteWorkspace,
+    fallbackWorkspace,
+    defaultWorkspace,
+  });
   const nextDurationSec =
     timerMode === 'deadline'
       ? undefined

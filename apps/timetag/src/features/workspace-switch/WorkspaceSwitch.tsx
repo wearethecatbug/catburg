@@ -5,7 +5,6 @@ import type { AssignableWorkspaceType } from '@/domain/task.types';
 import {
   ALL_WORKSPACE_TAB,
   createWorkspaceId,
-  getSafeDefaultWorkspace,
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { useSettings, useTasks } from '@/store';
@@ -32,8 +31,9 @@ export function WorkspaceSwitch() {
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
 
 
-  // Combined tabs for rendering: user tabs (order preserved) + All tab
+  // Combined tabs for rendering: All tab first, then user tabs (order preserved)
   const tabs = [ALL_WORKSPACE_TAB, ...userWorkspaces];
+  const canRemoveWorkspace = userWorkspaces.length > 1;
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {
@@ -81,6 +81,10 @@ export function WorkspaceSwitch() {
   // Remove workspace (only from userWorkspaces, cannot remove 'all')
   const handleRemove = useCallback(
       (id: AssignableWorkspaceType) => {
+        if (userWorkspaces.length <= 1) {
+          return;
+        }
+
         const next = userWorkspaces.filter((w) => w.id !== id);
         setUserWorkspaces(next);
         // if removed one was active, fallback to 'all'
@@ -88,8 +92,8 @@ export function WorkspaceSwitch() {
           setWorkspace('all');
         }
 
-        if (settings.general.defaultWorkspace === id) {
-          updateGeneral({ defaultWorkspace: getSafeDefaultWorkspace(next, undefined) });
+        if (settings.general.defaultWorkspace === id && next[0]) {
+          updateGeneral({ defaultWorkspace: next[0].id });
         }
       },
       [settings.general.defaultWorkspace, setUserWorkspaces, setWorkspace, state.workspace, updateGeneral, userWorkspaces],
@@ -97,7 +101,7 @@ export function WorkspaceSwitch() {
 
   return (
       <div
-        className="flex items-center border-b px-2"
+        className="flex items-stretch border-b px-2"
         role="tablist"
         aria-label="Workspaces"
         style={{
@@ -116,14 +120,15 @@ export function WorkspaceSwitch() {
             <>
               {tabs.map((ws) => {
                 const selected = state.workspace === ws.id;
+                const showRemoveControl = ws.id !== ALL_WORKSPACE_TAB.id;
                 return (
-                    <div key={ws.id} className="relative flex items-center">
+                    <div key={ws.id} className="relative flex items-stretch">
                       <button
                           type="button"
                           role="tab"
                           aria-selected={selected}
                           onClick={() => setWorkspace(ws.id)}
-                          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                          className={`flex h-10 items-center border-b-2 px-4 text-sm font-medium transition-colors ${
                               selected
                                    ? ''
                                    : 'border-transparent'
@@ -135,21 +140,34 @@ export function WorkspaceSwitch() {
                         <span className="whitespace-nowrap">{ws.label}</span>
                       </button>
 
+                      <span
+                        className="mr-1 flex h-10 w-6 shrink-0 items-center justify-center border-b-2 border-transparent"
+                        aria-hidden={showRemoveControl ? undefined : 'true'}
+                      >
                       {/* render remove control for user-owned tabs (not All) */}
-                      {ws.id !== ALL_WORKSPACE_TAB.id && (
+                      {showRemoveControl ? (
                           <button
                               type="button"
                               aria-label={`Remove workspace ${ws.label}`}
-                              title={`Remove ${ws.label}`}
+                              title={canRemoveWorkspace ? `Remove ${ws.label}` : 'At least one workspace must remain'}
                               onClick={() => handleRemove(ws.id)}
-                              className="ml-0 mr-1 focus:outline-none"
-                              style={{ lineHeight: 0, color: 'var(--tt-text-soft)' }}
+                              className="inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-[var(--tt-surface-hover)] focus:outline-none disabled:hover:bg-transparent"
+                              disabled={!canRemoveWorkspace}
+                              aria-disabled={!canRemoveWorkspace}
+                              style={{
+                                lineHeight: 0,
+                                color: 'var(--tt-text-soft)',
+                                background: canRemoveWorkspace ? 'transparent' : 'color-mix(in srgb, var(--tt-surface-subtle) 72%, transparent)',
+                                opacity: canRemoveWorkspace ? 1 : 0.45,
+                                cursor: canRemoveWorkspace ? 'pointer' : 'not-allowed',
+                              }}
                           >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                               <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
-                      )}
+                      ) : null}
+                      </span>
                     </div>
                 );
               })}

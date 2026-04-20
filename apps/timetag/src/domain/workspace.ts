@@ -69,4 +69,83 @@ export function getSafeDefaultWorkspace(
   return hasWorkspace(workspaces, workspaceId) ? workspaceId : fallback;
 }
 
+export function normalizeTaskWorkspace(
+  workspaceId: unknown,
+  fallback: AssignableWorkspaceType = DEFAULT_USER_WORKSPACES[0].id,
+): AssignableWorkspaceType {
+  return isAssignableWorkspaceType(workspaceId) ? workspaceId : fallback;
+}
+
+interface ResolveCurrentWorkspaceArgs {
+  workspaces: WorkspaceTab[];
+  currentWorkspace: WorkspaceType;
+  lastConcreteWorkspace?: AssignableWorkspaceType;
+  fallbackWorkspace: AssignableWorkspaceType;
+  defaultWorkspace?: AssignableWorkspaceType;
+}
+
+export function resolveCurrentWorkspaceContext({
+  workspaces,
+  currentWorkspace,
+  lastConcreteWorkspace,
+  fallbackWorkspace,
+  defaultWorkspace,
+}: ResolveCurrentWorkspaceArgs): AssignableWorkspaceType {
+  if (currentWorkspace !== 'all' && isAssignableWorkspaceType(currentWorkspace)) {
+    return currentWorkspace;
+  }
+
+  if (hasWorkspace(workspaces, lastConcreteWorkspace)) {
+    return lastConcreteWorkspace;
+  }
+
+  if (hasWorkspace(workspaces, defaultWorkspace)) {
+    return defaultWorkspace;
+  }
+
+  if (hasWorkspace(workspaces, fallbackWorkspace)) {
+    return fallbackWorkspace;
+  }
+
+  if (workspaces[0]) {
+    return workspaces[0].id;
+  }
+
+  return getSafeDefaultWorkspace(workspaces, fallbackWorkspace, fallbackWorkspace);
+}
+
+interface ResolveTaskWorkspaceArgs extends ResolveCurrentWorkspaceArgs {
+  explicitWorkspace?: AssignableWorkspaceType;
+}
+
+export function resolveTaskWorkspace({
+  workspaces,
+  explicitWorkspace,
+  currentWorkspace,
+  lastConcreteWorkspace,
+  fallbackWorkspace,
+  defaultWorkspace,
+}: ResolveTaskWorkspaceArgs): AssignableWorkspaceType {
+  if (hasWorkspace(workspaces, explicitWorkspace)) {
+    return explicitWorkspace;
+  }
+
+  return resolveCurrentWorkspaceContext({
+    workspaces,
+    currentWorkspace,
+    lastConcreteWorkspace,
+    fallbackWorkspace,
+    defaultWorkspace,
+  });
+}
+
+export function getWorkspaceLabel(
+  workspaces: WorkspaceTab[],
+  workspaceId: AssignableWorkspaceType,
+): string {
+  return workspaces.find((workspace) => workspace.id === workspaceId)?.label
+    ?? DEFAULT_USER_WORKSPACES.find((workspace) => workspace.id === workspaceId)?.label
+    ?? workspaceId;
+}
+
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
-import type { TimerMode, WorkspaceType } from '@/domain/task.types';
+import type { AssignableWorkspaceType, TimerMode } from '@/domain/task.types';
 import {
   PlusIcon,
   ClockIcon,
@@ -14,7 +14,7 @@ import { Dropdown, DetailsPanel, type DropdownOption } from './components';
 import { useTaskComposerState } from './useTaskComposerState';
 
 interface AddTaskInputProps {
-  defaultWorkspace?: WorkspaceType;
+  defaultWorkspace?: AssignableWorkspaceType;
 }
 
 const MODE_OPTIONS: DropdownOption[] = [
@@ -62,6 +62,14 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     autoResetEnabled,
     overdueEnabled,
     presetLabel,
+    workspaceOpen,
+    setWorkspaceOpen,
+    showWorkspaceDropdown,
+    showWorkspaceEmptyState,
+    workspaceHelperText,
+    workspaceOptions,
+    selectedWorkspaceOptionId,
+    selectedWorkspaceLabel,
     modeOpen,
     setModeOpen,
     presetOpen,
@@ -77,6 +85,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     handleModeSelect,
     handlePresetSelect,
     handleDeadlinePresetSelect,
+    handleWorkspaceOverrideSelect,
     handleDurationSecChange,
     handleDurationUnitChange,
     handleAutoResetChange,
@@ -243,7 +252,16 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             autoResetEnabled={autoResetEnabled}
             overdueEnabled={overdueEnabled}
             presetLabel={presetLabel}
+            workspaceOpen={workspaceOpen}
+            showWorkspaceDropdown={showWorkspaceDropdown}
+            showWorkspaceEmptyState={showWorkspaceEmptyState}
+            workspaceHelperText={workspaceHelperText}
+            workspaceOptions={workspaceOptions}
+            selectedWorkspaceOptionId={selectedWorkspaceOptionId}
+            selectedWorkspaceLabel={selectedWorkspaceLabel}
             onTimerModeChange={handleModeSelect}
+            onWorkspaceOpenChange={setWorkspaceOpen}
+            onWorkspaceSelect={handleWorkspaceOverrideSelect}
             onPriorityChange={setPriority}
             onNoteChange={setNote}
             onDurationSecChange={handleDurationSecChange}
