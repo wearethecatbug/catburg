@@ -58,5 +58,3 @@ function getTaskFullTimeText(task: Task): string {
 
   return getTimeDisplay(task.remainingSec).full;
 }
-
-
