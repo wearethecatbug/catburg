@@ -55,7 +55,7 @@ interface TaskState {
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
   | { type: 'ADD_TASK'; payload: { input: CreateTaskInput; nowIso: string; pauseOthers: boolean } }
-  | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
+  | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task>; nowIso: string } }
   | { type: 'TOGGLE_STATUS'; payload: { id: string; nowIso: string } }
   | { type: 'SET_STATUS'; payload: { id: string; status: TaskStatus; nowIso: string } }
   | { type: 'DELETE_TASK'; payload: string }
@@ -116,8 +116,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     }
 
     case 'UPDATE_TASK': {
-      const { id, updates } = action.payload;
-      const nowIso = new Date().toISOString();
+      const { id, updates, nowIso } = action.payload;
       return {
         ...state,
         tasks: state.tasks.map((t) => (t.id === id ? mergeTaskUpdates(t, updates, nowIso) : t)),
@@ -430,7 +429,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }),
     [shouldPauseOtherTimers],
   );
-  const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates } }), []);
+  const updateTask = useCallback(
+    (id: string, updates: Partial<Task>) => dispatch({
+      type: 'UPDATE_TASK',
+      payload: { id, updates, nowIso: new Date().toISOString() },
+    }),
+    [],
+  );
   const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
   const toggleTaskStatus = useCallback(
     (id: string) => dispatch({ type: 'TOGGLE_STATUS', payload: { id, nowIso: new Date().toISOString() } }),
