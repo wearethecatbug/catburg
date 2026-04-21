@@ -33,7 +33,7 @@ export function TaskRowActionsMenu({
         }
         align="right"
       >
-            {showResetTimer && <DropdownItem onClick={onResetTimer}>Reset timer</DropdownItem>}
+        {showResetTimer && <DropdownItem onClick={onResetTimer}>Reset timer</DropdownItem>}
         <DropdownItem onClick={onToggleStatus}>
           {status === 'done' ? 'Reopen' : 'Mark as done'}
         </DropdownItem>

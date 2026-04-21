@@ -11,10 +11,7 @@ export interface TaskRowViewModel {
   notePreview: string;
   showUrgentIndicator: boolean;
   urgency: UrgencyLevel;
-  isTimedMode: boolean;
-  canRunTimer: boolean;
   showTimerButton: boolean;
-  showTime: boolean;
   isTimerDisabled: boolean;
   isPaused: boolean;
   isRunning: boolean;
@@ -38,10 +35,7 @@ export function getTaskRowViewModel(
     notePreview: metadata.hasNoteText ? metadata.noteText.split(/\r?\n/, 1)[0] : '',
     showUrgentIndicator,
     urgency,
-    isTimedMode,
-    canRunTimer,
     showTimerButton: isTimedMode,
-    showTime: true,
     isTimerDisabled: !canRunTimer,
     isPaused: isTimedMode && task.timerStatus === 'paused',
     isRunning: isTimedMode && task.timerStatus === 'running',
