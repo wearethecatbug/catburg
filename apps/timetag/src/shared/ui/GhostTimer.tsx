@@ -36,18 +36,21 @@ export function GhostTimer({
 }: GhostTimerProps) {
   const radius = 15;
   const center = 18;
+  const labelWidthPx = showLabel
+    ? GHOST_TIMER_LAYOUT.labelMinWidthPx +
+      GHOST_TIMER_LAYOUT.labelRightPaddingPx +
+      GHOST_TIMER_LAYOUT.ringLabelGapPx
+    : 0;
   const tokenWidthPx =
     sizePx +
     GHOST_TIMER_LAYOUT.horizontalPaddingPx +
-    GHOST_TIMER_LAYOUT.labelMinWidthPx +
-    GHOST_TIMER_LAYOUT.labelRightPaddingPx +
-    GHOST_TIMER_LAYOUT.ringLabelGapPx;
+    labelWidthPx;
 
   return (
     <div
       data-testid="ghost-timer"
-      aria-hidden="true"
-      role="presentation"
+      aria-label={showLabel ? undefined : label}
+      role={showLabel ? undefined : 'img'}
       className={[
         'inline-flex h-[38px] shrink-0 items-center justify-start gap-1 rounded-full px-1.5 py-1 align-middle',
         className,

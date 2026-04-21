@@ -255,11 +255,15 @@ export function normalizeHydratedTasks(tasks: unknown[], nowIso: string = new Da
 }
 
 export function mergeTaskUpdates(task: Task, updates: Partial<Task>, nowIso: string): Task {
+  const hasNoteUpdate = Object.prototype.hasOwnProperty.call(updates, 'note');
+
   const merged = {
     ...task,
     ...updates,
-    note: typeof updates.note === 'string'
-      ? updates.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined
+    note: hasNoteUpdate
+      ? (typeof updates.note === 'string'
+          ? updates.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined
+          : updates.note)
       : task.note,
     workspace: normalizeTaskWorkspace(updates.workspace ?? task.workspace),
     updatedAt: nowIso,
