@@ -109,4 +109,3 @@ test.describe('Task query pipeline', () => {
   });
 });
 
-

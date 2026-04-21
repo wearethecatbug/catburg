@@ -14,7 +14,7 @@ export function isOvertimeBehavior(value: unknown): value is OvertimeBehavior {
 }
 
 export function isTimerMode(value: unknown): value is TimerMode {
-  return value === 'duration' || value === 'pomodoro' || value === 'deadline';
+  return value === 'duration' || value === 'pomodoro' || value === 'deadline' || value === 'note';
 }
 
 export function clampNumber(value: unknown, fallback: number, min: number, max: number): number {

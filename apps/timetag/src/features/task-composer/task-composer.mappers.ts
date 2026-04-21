@@ -16,6 +16,7 @@ import {
   resolveTaskWorkspace,
   type WorkspaceTab,
 } from '@/domain/workspace';
+import { supportsTimer } from '@/domain/task.mode';
 
 export const CUSTOM_DURATION_PRESET_ID = '__custom-duration-default__';
 export const CUSTOM_POMODORO_PRESET_ID = '__custom-pomodoro-default__';
@@ -117,7 +118,7 @@ export function buildCreateTaskInput({
     defaultWorkspace,
   });
   const nextDurationSec =
-    timerMode === 'deadline'
+    !supportsTimer(timerMode) || timerMode === 'deadline'
       ? undefined
       : timerMode === 'pomodoro'
         ? Math.max(1, Math.floor(Number(pomoWorkMin))) * 60
@@ -139,12 +140,14 @@ export function buildCreateTaskInput({
     timerMode,
     durationSec: nextDurationSec,
     targetAt,
-    timerControls: {
-      autoStart: autoEnabled,
-      autoPlay: playEnabled,
-      autoReset: autoResetEnabled,
-      allowOverdue: overdueEnabled,
-    },
+    timerControls: supportsTimer(timerMode)
+      ? {
+          autoStart: autoEnabled,
+          autoPlay: playEnabled,
+          autoReset: autoResetEnabled,
+          allowOverdue: overdueEnabled,
+        }
+      : undefined,
   };
 
   if (timerMode === 'pomodoro') {

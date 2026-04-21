@@ -1,7 +1,7 @@
 import React from 'react';
+import type { TimerMode } from '@/domain/task.types';
+import { supportsTimer } from '@/domain/task.mode';
 import { TimerControlToggle } from './TimerControlToggle';
-
-type TimerMode = 'duration' | 'deadline' | 'pomodoro';
 
 interface TimerControlsSectionProps {
     timerMode: TimerMode;
@@ -26,6 +26,10 @@ export function TimerControlsSection({
     onAutoResetEnabledChange,
     onOverdueEnabledChange,
 }: TimerControlsSectionProps) {
+    if (!supportsTimer(timerMode)) {
+        return null;
+    }
+
     return (
         <div className="border-t pt-3" style={{ borderColor: 'var(--tt-border)' }}>
             <label className="mb-2 block text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>Timer Controls</label>

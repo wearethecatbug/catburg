@@ -118,6 +118,7 @@ export function TaskRow({
           remainingSec={task.remainingSec}
           totalSec={task.originalDurationSec}
           urgency={viewModel.urgency}
+          showTimerButton={viewModel.showTimerButton}
           isRunning={viewModel.isRunning}
           isPaused={viewModel.isPaused}
           isTimerDisabled={viewModel.isTimerDisabled}
@@ -128,6 +129,7 @@ export function TaskRow({
 
         <TaskRowActionsMenu
           status={task.status}
+          showResetTimer={viewModel.showTimerButton}
           onResetTimer={() => onResetTimer(task.id)}
           onToggleStatus={() => onToggleStatus(task.id)}
           onArchive={() => onArchive(task.id)}

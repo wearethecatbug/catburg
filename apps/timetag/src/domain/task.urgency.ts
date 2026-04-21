@@ -1,4 +1,5 @@
 import { Task, UrgencyLevel } from './task.types';
+import { supportsUrgency } from './task.mode';
 
 export const URGENCY_NORMAL_MIN_RATIO = 0.5;
 export const URGENCY_WARN_MIN_RATIO = 0.2;
@@ -31,6 +32,10 @@ export const URGENCY_FILTER_OPTIONS: ReadonlyArray<{ id: UrgencyLevel; label: st
  * - overdue: time expired (remainingSec < 0)
  */
 export function getUrgencyLevel(task: Task): UrgencyLevel {
+  if (!supportsUrgency(task.timerMode)) {
+    return 'normal';
+  }
+
   if (task.timerStatus === 'expired' || task.remainingSec < 0) {
     return 'overdue';
   }
@@ -55,6 +60,10 @@ export function getUrgencyLevel(task: Task): UrgencyLevel {
  * - AND within the user-specified window (5/10/30 min) of reaching 'danger' zone
  */
 export function isApproachingRed(task: Task, windowMinutes: number): boolean {
+  if (!supportsUrgency(task.timerMode)) {
+    return false;
+  }
+
   const urgency = getUrgencyLevel(task);
 
   // Already danger or overdue — not "approaching"

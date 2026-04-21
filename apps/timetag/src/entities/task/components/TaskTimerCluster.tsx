@@ -1,7 +1,7 @@
 import React from 'react';
 import { getTimerClusterVisualState } from '@/domain/timer.ring';
 import type { TaskStatus, UrgencyLevel } from '@/domain/task.types';
-import { TimerRingButton } from '@/shared';
+import { GhostTimer, TimerRingButton } from '@/shared';
 import { getTaskTimerClusterStyles } from '../task-timer-cluster.styles';
 
 interface TaskTimerClusterProps {
@@ -9,6 +9,7 @@ interface TaskTimerClusterProps {
   remainingSec: number;
   totalSec: number;
   urgency: UrgencyLevel;
+  showTimerButton: boolean;
   isRunning: boolean;
   isPaused: boolean;
   isTimerDisabled: boolean;
@@ -22,6 +23,7 @@ export function TaskTimerCluster({
   remainingSec,
   totalSec,
   urgency,
+  showTimerButton,
   isRunning,
   isPaused,
   isTimerDisabled,
@@ -29,6 +31,10 @@ export function TaskTimerCluster({
   fullTimeText,
   onToggleTimer,
 }: TaskTimerClusterProps) {
+  if (!showTimerButton) {
+    return <GhostTimer className="ml-1" label={displayTime} sizePx={30} />;
+  }
+
   const visualState = getTimerClusterVisualState({
     remainingSec,
     timerStatus: isPaused ? 'paused' : isRunning ? 'running' : 'idle',
@@ -39,6 +45,7 @@ export function TaskTimerCluster({
     status,
     visualState,
   });
+
 
   return (
     <div

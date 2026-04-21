@@ -36,6 +36,10 @@ function taskRow(page: Page, title: string) {
   return page.getByTestId('task-row').filter({ hasText: title }).first();
 }
 
+function detailsPanel(page: Page) {
+  return page.locator('#task-composer-details');
+}
+
 test.describe('Task row states', () => {
   test('renders seeded urgent, note, and completed tasks consistently', async ({ page }) => {
     await gotoSeededPage(page, seededTasks);
@@ -157,7 +161,7 @@ test.describe('Task row states', () => {
     await page.getByLabel('Add a new task').fill('Playwright urgent task');
     await page.getByRole('button', { name: /details/i }).click();
     await page.getByText('Urgent', { exact: true }).click();
-    await page.getByLabel('Note').fill('Created from Playwright test');
+    await page.getByRole('textbox', { name: 'Details' }).fill('Created from Playwright test');
     await page.getByRole('button', { name: 'Save' }).click();
 
     const createdRow = taskRow(page, 'Playwright urgent task');
@@ -172,6 +176,50 @@ test.describe('Task row states', () => {
     await expect(createdRow.getByTestId('task-status-toggle')).toHaveAttribute('aria-label', 'Mark as active');
     await expect(createdRow.getByTestId('task-title')).toHaveCSS('text-decoration-line', 'line-through');
     await expect(createdRow.getByTestId('task-priority-bar')).toHaveCSS('background-color', expectedMutedBar);
+  });
+
+  test('creates untimed note entries without timer affordances and persists note mode safely', async ({ page }) => {
+    await gotoSeededPage(page, []);
+
+    await page.getByLabel('Add a new task').fill('Playwright note entry');
+    await page.getByTitle('Timer mode').click();
+    await page.getByRole('menuitem', { name: 'Note' }).click();
+    await page.getByRole('button', { name: /details/i }).click();
+    await detailsPanel(page).getByRole('textbox', { name: 'Details' }).fill('Created as an untimed note entry');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: /hide details/i }).click();
+
+    const createdRow = taskRow(page, 'Playwright note entry');
+    await expect(createdRow).toBeVisible();
+    await expect(createdRow.getByTestId('ghost-timer')).toBeVisible();
+    await expect(createdRow.getByTestId('ghost-timer')).toContainText('no timer');
+    await expect(createdRow.getByTestId('task-timer-cluster')).toHaveCount(0);
+    await expect(createdRow.getByLabel('Start timer')).toHaveCount(0);
+    await expect(createdRow.getByLabel('Pause timer')).toHaveCount(0);
+
+    await createdRow.locator('button[aria-haspopup="true"]').click();
+    await expect(page.getByRole('menuitem', { name: 'Reset timer' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+
+    await expect.poll(async () => page.evaluate(() => {
+      const raw = window.localStorage.getItem('timetag-tasks');
+      if (!raw) return null;
+
+      const storedTask = JSON.parse(raw).find((task: { title?: string }) => task.title === 'Playwright note entry');
+      if (!storedTask) return null;
+
+      return {
+        timerMode: storedTask.timerMode,
+        remainingSec: storedTask.remainingSec,
+        originalDurationSec: storedTask.originalDurationSec,
+        timerControls: storedTask.timerControls ?? null,
+      };
+    })).toEqual({
+      timerMode: 'note',
+      remainingSec: 0,
+      originalDurationSec: 0,
+      timerControls: null,
+    });
   });
 
   test('keeps note discoverability when note previews are disabled', async ({ page }) => {

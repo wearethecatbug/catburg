@@ -1,7 +1,6 @@
 import React from 'react';
-import { HourglassIcon, CalendarIcon, PomodoroIcon } from '@/shared/icons';
-
-type TimerMode = 'duration' | 'deadline' | 'pomodoro';
+import { HourglassIcon, CalendarIcon, NoteIcon, PomodoroIcon } from '@/shared/icons';
+import type { TimerMode } from '@/domain/task.types';
 
 interface ModeSelectorProps {
     timerMode: TimerMode;
@@ -13,6 +12,7 @@ export function ModeSelector({ timerMode, onChange }: ModeSelectorProps) {
         { value: 'duration', label: 'Duration', Icon: HourglassIcon },
         { value: 'pomodoro', label: 'Pomodoro', Icon: PomodoroIcon },
         { value: 'deadline', label: 'Deadline', Icon: CalendarIcon },
+        { value: 'note', label: 'Note', Icon: NoteIcon },
     ];
 
     return (

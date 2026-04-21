@@ -3,6 +3,7 @@ import type { TaskStatus } from '@/domain/task.types';
 
 interface TaskRowActionsMenuProps {
   status: TaskStatus;
+  showResetTimer: boolean;
   onResetTimer: () => void;
   onToggleStatus: () => void;
   onArchive: () => void;
@@ -12,6 +13,7 @@ interface TaskRowActionsMenuProps {
 
 export function TaskRowActionsMenu({
   status,
+  showResetTimer,
   onResetTimer,
   onToggleStatus,
   onArchive,
@@ -31,7 +33,7 @@ export function TaskRowActionsMenu({
         }
         align="right"
       >
-        <DropdownItem onClick={onResetTimer}>Reset timer</DropdownItem>
+        {showResetTimer && <DropdownItem onClick={onResetTimer}>Reset timer</DropdownItem>}
         <DropdownItem onClick={onToggleStatus}>
           {status === 'done' ? 'Reopen' : 'Mark as done'}
         </DropdownItem>

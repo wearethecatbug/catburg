@@ -1,4 +1,5 @@
 import { formatTimeBadge } from '@/domain/helpers';
+import { supportsTimer } from '@/domain/task.mode';
 import { getTaskMetadataState } from '@/domain/task.meta';
 import { getUrgencyLevel } from '@/domain/task.urgency';
 import type { Task, UrgencyLevel } from '@/domain/task.types';
@@ -10,6 +11,7 @@ export interface TaskRowViewModel {
   notePreview: string;
   showUrgentIndicator: boolean;
   urgency: UrgencyLevel;
+  showTimerButton: boolean;
   isTimerDisabled: boolean;
   isPaused: boolean;
   isRunning: boolean;
@@ -23,7 +25,9 @@ export function getTaskRowViewModel(
 ): TaskRowViewModel {
   const metadata = getTaskMetadataState(task);
   const showUrgentIndicator = options.showUrgencyIndicator && metadata.isUrgentPriority;
+  const isTimedMode = supportsTimer(task.timerMode);
   const urgency = getUrgencyLevel(task);
+  const canRunTimer = isTimedMode && task.status === 'active';
 
   return {
     noteText: metadata.noteText,
@@ -31,15 +35,20 @@ export function getTaskRowViewModel(
     notePreview: metadata.hasNoteText ? metadata.noteText.split(/\r?\n/, 1)[0] : '',
     showUrgentIndicator,
     urgency,
-    isTimerDisabled: task.status !== 'active',
-    isPaused: task.timerStatus === 'paused',
-    isRunning: task.timerStatus === 'running',
+    showTimerButton: isTimedMode,
+    isTimerDisabled: !canRunTimer,
+    isPaused: isTimedMode && task.timerStatus === 'paused',
+    isRunning: isTimedMode && task.timerStatus === 'running',
     displayTime: getTaskDisplayTime(task),
     fullTimeText: getTaskFullTimeText(task),
   };
 }
 
 function getTaskDisplayTime(task: Task): string {
+  if (!supportsTimer(task.timerMode)) {
+    return 'no timer';
+  }
+
   if (task.timerMode === 'pomodoro' && task.pomodoro) {
     return `${task.pomodoro.cycles}×${task.pomodoro.workDurationMin}m`;
   }
@@ -52,6 +61,10 @@ function getTaskDisplayTime(task: Task): string {
 }
 
 function getTaskFullTimeText(task: Task): string {
+  if (!supportsTimer(task.timerMode)) {
+    return 'Task without timer';
+  }
+
   if (task.timerMode === 'pomodoro' && task.pomodoro) {
     return `${task.pomodoro.cycles} cycles: ${task.pomodoro.workDurationMin}m work, ${task.pomodoro.shortBreakMin}m break, ${task.pomodoro.longBreakMin}m long break`;
   }

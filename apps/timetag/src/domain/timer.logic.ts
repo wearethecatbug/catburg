@@ -1,4 +1,5 @@
 import { Task, TimerStatus } from './task.types';
+import { supportsTimer } from './task.mode';
 
 // ============================================================================
 // Timer State Machine (pure, deterministic)
@@ -11,6 +12,8 @@ export type TimerEvent = 'toggle' | 'reset' | 'tick';
  * running → paused, paused/idle → running, expired → expired (no-op)
  */
 export function toggleTimerState(task: Task, nowIso: string): Partial<Task> {
+  if (!supportsTimer(task.timerMode)) return {};
+
   let newStatus: TimerStatus;
 
   if (task.timerStatus === 'running') newStatus = 'paused';
@@ -30,6 +33,8 @@ export function toggleTimerState(task: Task, nowIso: string): Partial<Task> {
  * Reset timer to original duration.
  */
 export function resetTimerState(task: Task, nowIso: string): Partial<Task> {
+  if (!supportsTimer(task.timerMode)) return {};
+
   return {
     remainingSec: task.originalDurationSec,
     timerStatus: 'idle',
@@ -42,6 +47,7 @@ export function resetTimerState(task: Task, nowIso: string): Partial<Task> {
  * Returns updated fields, or null if task is not running.
  */
 export function tickTimer(task: Task): Partial<Task> | null {
+  if (!supportsTimer(task.timerMode)) return null;
   if (task.timerStatus !== 'running') return null;
 
   const allowOverdue = task.timerControls?.allowOverdue ?? false;
@@ -96,6 +102,10 @@ export function formatMinutes(totalSec: number): string {
  * - idle: show original duration as Xm
  */
 export function getRowTimerLabel(task: Task): string {
+  if (!supportsTimer(task.timerMode)) {
+    return 'Note';
+  }
+
   if (
       task.timerStatus === 'running' ||
       task.timerStatus === 'paused' ||
