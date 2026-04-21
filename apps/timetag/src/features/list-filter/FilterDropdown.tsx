@@ -19,6 +19,7 @@ const MODE_OPTIONS: { id: TimerMode; label: string }[] = [
   { id: 'duration', label: 'Duration' },
   { id: 'pomodoro', label: 'Pomodoro' },
   { id: 'deadline', label: 'Deadline' },
+  { id: 'note', label: 'Note' },
 ];
 
 const AR_WINDOWS: { value: number; label: string }[] = [

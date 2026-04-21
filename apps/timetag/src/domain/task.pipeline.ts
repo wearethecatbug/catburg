@@ -72,6 +72,8 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   // 3. Urgency filter
   result = result.filter((t) => {
     if (!supportsUrgency(t.timerMode)) {
+      // Untimed note tasks do not participate in urgency semantics and should not
+      // disappear when users narrow timed tasks by urgency buckets.
       return true;
     }
 
