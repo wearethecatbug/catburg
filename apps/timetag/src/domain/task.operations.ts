@@ -255,10 +255,12 @@ export function normalizeHydratedTasks(tasks: unknown[], nowIso: string = new Da
 
 export function mergeTaskUpdates(task: Task, updates: Partial<Task>, nowIso: string): Task {
   const hasNoteUpdate = Object.prototype.hasOwnProperty.call(updates, 'note');
+  const nextTimerMode = isTimerMode(updates.timerMode) ? updates.timerMode : task.timerMode;
 
   const merged = {
     ...task,
     ...updates,
+    timerMode: nextTimerMode,
     note: hasNoteUpdate
       ? (typeof updates.note === 'string'
           ? updates.note.trim().slice(0, TASK_NOTE_MAX_LENGTH) || undefined
