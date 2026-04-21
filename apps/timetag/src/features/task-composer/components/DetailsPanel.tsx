@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TASK_NOTE_MAX_LENGTH, type TaskPriority, type TimerMode } from '@/domain/task.types';
+import { supportsTimer } from '@/domain/task.mode';
 import type { DurationUnit } from '@/domain/duration';
 import { CheckIcon, ChevronDownIcon, ClipboardIcon } from '@/shared';
 import type { DropdownOption } from './Dropdown';
@@ -154,7 +155,7 @@ export function DetailsPanel({
                         Set specific date and time for this task
                     </div>
                 </div>
-            ) : (
+            ) : timerMode === 'duration' ? (
                 <DurationField
                     durationSec={durationSec}
                     unit={durationUnit}
@@ -162,6 +163,19 @@ export function DetailsPanel({
                     onDurationSecChange={onDurationSecChange}
                     onUnitChange={onDurationUnitChange}
                 />
+            ) : null}
+
+            {!supportsTimer(timerMode) && (
+                <div
+                    className="rounded-xl border border-dashed px-3 py-2 text-sm"
+                    style={{
+                        borderColor: 'var(--tt-border)',
+                        background: 'var(--tt-surface-muted)',
+                        color: 'var(--tt-text-soft)',
+                    }}
+                >
+                    Note mode keeps this entry untimed and skips timer, duration, deadline, and urgency behavior.
+                </div>
             )}
 
             <PrioritySelect priority={priority} onChange={onPriorityChange} />
@@ -228,7 +242,7 @@ export function DetailsPanel({
             <div className="flex flex-col">
                 <div className="mb-1 flex items-center justify-between gap-2">
                     <label htmlFor="task-note" className="text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
-                        Note
+                        Details
                     </label>
                     <span className="text-[11px]" style={{ color: 'var(--tt-text-soft)' }} aria-live="polite">
                         {note.length}/{TASK_NOTE_MAX_LENGTH}
@@ -240,27 +254,29 @@ export function DetailsPanel({
                     onChange={(e) => onNoteChange(e.target.value.slice(0, TASK_NOTE_MAX_LENGTH))}
                     rows={3}
                     maxLength={TASK_NOTE_MAX_LENGTH}
-                    placeholder="Add a short note…"
+                    placeholder="Add details, context, or next steps…"
                     className="resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]"
                     style={fieldStyle}
                     aria-describedby="task-note-help"
                 />
                 <div id="task-note-help" className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
-                    Optional note for context, reminders, or next steps.
+                    Optional details for context, reminders, or next steps.
                 </div>
             </div>
 
-            <TimerControlsSection
-                timerMode={timerMode}
-                autoEnabled={autoEnabled}
-                playEnabled={playEnabled}
-                autoResetEnabled={autoResetEnabled}
-                overdueEnabled={overdueEnabled}
-                onAutoEnabledChange={onAutoEnabledChange}
-                onPlayEnabledChange={onPlayEnabledChange}
-                onAutoResetEnabledChange={onAutoResetEnabledChange}
-                onOverdueEnabledChange={onOverdueEnabledChange}
-            />
+            {supportsTimer(timerMode) && (
+                <TimerControlsSection
+                    timerMode={timerMode}
+                    autoEnabled={autoEnabled}
+                    playEnabled={playEnabled}
+                    autoResetEnabled={autoResetEnabled}
+                    overdueEnabled={overdueEnabled}
+                    onAutoEnabledChange={onAutoEnabledChange}
+                    onPlayEnabledChange={onPlayEnabledChange}
+                    onAutoResetEnabledChange={onAutoResetEnabledChange}
+                    onOverdueEnabledChange={onOverdueEnabledChange}
+                />
+            )}
 
             <div
                 className="flex flex-wrap items-center justify-end gap-2 border-t pt-3"

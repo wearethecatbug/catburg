@@ -1,7 +1,7 @@
 import React from 'react';
 import { getTimerClusterVisualState } from '@/domain/timer.ring';
 import type { TaskStatus, UrgencyLevel } from '@/domain/task.types';
-import { TimerRingButton } from '@/shared';
+import { NoteIcon, TimerRingButton } from '@/shared';
 import { getTaskTimerClusterStyles } from '../task-timer-cluster.styles';
 
 interface TaskTimerClusterProps {
@@ -9,6 +9,7 @@ interface TaskTimerClusterProps {
   remainingSec: number;
   totalSec: number;
   urgency: UrgencyLevel;
+  showTimerButton: boolean;
   isRunning: boolean;
   isPaused: boolean;
   isTimerDisabled: boolean;
@@ -22,6 +23,7 @@ export function TaskTimerCluster({
   remainingSec,
   totalSec,
   urgency,
+  showTimerButton,
   isRunning,
   isPaused,
   isTimerDisabled,
@@ -39,6 +41,31 @@ export function TaskTimerCluster({
     status,
     visualState,
   });
+
+  if (!showTimerButton) {
+    return (
+      <div
+        data-testid="task-note-mode-chip"
+        title={fullTimeText}
+        className="ml-1 inline-flex shrink-0 items-center gap-2 rounded-full px-2.5 py-1"
+        style={clusterStyle}
+      >
+        <span
+          className="inline-flex h-[30px] w-[30px] items-center justify-center rounded-full"
+          style={{ background: 'color-mix(in srgb, var(--tt-surface) 70%, transparent)' }}
+        >
+          <NoteIcon size="sm" aria-label="Note mode" />
+        </span>
+
+        <span
+          className="min-w-[56px] pr-1 text-right text-[13px] font-medium leading-none"
+          style={valueStyle}
+        >
+          {displayTime}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

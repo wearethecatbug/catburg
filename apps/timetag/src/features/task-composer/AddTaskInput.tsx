@@ -2,12 +2,14 @@
 
 import React, { forwardRef } from 'react';
 import type { AssignableWorkspaceType, TimerMode } from '@/domain/task.types';
+import { supportsTimer } from '@/domain/task.mode';
 import {
   PlusIcon,
   ClockIcon,
   ChevronDownIcon,
   HourglassIcon,
   CalendarIcon,
+  NoteIcon,
   PomodoroIcon,
 } from '@/shared';
 import { Dropdown, DetailsPanel, type DropdownOption } from './components';
@@ -21,6 +23,7 @@ const MODE_OPTIONS: DropdownOption[] = [
   { id: 'duration', label: 'Duration', icon: <HourglassIcon size="sm" /> },
   { id: 'pomodoro', label: 'Pomodoro', icon: <PomodoroIcon size="sm" /> },
   { id: 'deadline', label: 'Deadline', icon: <CalendarIcon size="sm" /> },
+  { id: 'note', label: 'Note', icon: <NoteIcon size="sm" /> },
 ];
 
 function getModeLabel(timerMode: TimerMode): string {
@@ -28,13 +31,16 @@ function getModeLabel(timerMode: TimerMode): string {
     ? 'Duration'
     : timerMode === 'deadline'
       ? 'Deadline'
-      : 'Pomodoro';
+      : timerMode === 'pomodoro'
+        ? 'Pomodoro'
+        : 'Note';
 }
 
 function renderModeIcon(timerMode: TimerMode) {
   if (timerMode === 'duration') return <HourglassIcon size="sm" />;
   if (timerMode === 'deadline') return <CalendarIcon size="sm" />;
-  return <PomodoroIcon size="sm" />;
+  if (timerMode === 'pomodoro') return <PomodoroIcon size="sm" />;
+  return <NoteIcon size="sm" />;
 }
 
 export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(function AddTaskInput(
@@ -156,7 +162,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             ariaLabel="Timer mode options"
           />
 
-          {timerMode !== 'deadline' && (
+          {supportsTimer(timerMode) && timerMode !== 'deadline' && (
             <Dropdown
               id="task-preset-btn"
               label={timerMode === 'pomodoro' ? 'Pomodoro preset' : 'Preset duration'}
@@ -177,7 +183,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             />
           )}
 
-          {timerMode === 'deadline' && (
+          {supportsTimer(timerMode) && timerMode === 'deadline' && (
             <Dropdown
               id="task-deadline-preset-btn"
               label="Deadline preset"

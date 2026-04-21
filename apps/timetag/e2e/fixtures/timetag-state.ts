@@ -1,3 +1,5 @@
+import type { AppSettings } from '@/domain/settings.types';
+
 export const TASKS_STORAGE_KEY = 'timetag-tasks';
 export const SETTINGS_STORAGE_KEY = 'timetag-settings';
 
@@ -8,7 +10,7 @@ export type StoredTask = {
   workspace: string;
   status: 'active' | 'done' | 'archived';
   priority: 'normal' | 'urgent';
-  timerMode: 'duration' | 'pomodoro' | 'deadline';
+  timerMode: 'duration' | 'pomodoro' | 'deadline' | 'note';
   targetAt?: string;
   remainingSec: number;
   originalDurationSec: number;
@@ -24,7 +26,7 @@ export type StoredTask = {
   updatedAt: string;
 };
 
-export const testSettings = {
+export const testSettings: AppSettings = {
   version: 3,
   general: {
     autoStartTimerWhenTaskCreated: false,
@@ -71,7 +73,7 @@ export const testSettings = {
     roundedCorners: 12,
     ringThickness: 3,
   },
-} as const;
+};
 
 const ISO_NOW = '2026-04-02T09:00:00.000Z';
 

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { gotoSeededPage, type StoredWorkspace } from './helpers/seed-app';
 import { testSettings } from './fixtures/timetag-state';
+import type { AppSettings } from '@/domain/settings.types';
 
 const DEFAULT_WORKSPACES: StoredWorkspace[] = [
   { id: 'work', label: 'Work' },
@@ -43,7 +44,7 @@ test.describe('Task composer workspace override', () => {
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Home)');
 
     await panel.getByText('Urgent', { exact: true }).click();
-    await panel.getByLabel('Note').fill('Workspace override note');
+    await panel.getByRole('textbox', { name: 'Details' }).fill('Workspace override note');
     await panel.getByTitle('Workspace').click();
     await page.getByRole('menuitem', { name: 'Work' }).click();
     await page.getByRole('button', { name: 'Save' }).click();
@@ -177,16 +178,18 @@ test.describe('Task composer workspace override', () => {
   });
 
   test('creates a task from All-only state using the default workspace fallback and never stores all', async ({ page }) => {
+    const allOnlySettings: AppSettings = {
+      ...testSettings,
+      general: {
+        ...testSettings.general,
+        defaultWorkspace: 'home',
+      },
+    };
+
     await gotoSeededPage(
       page,
       [],
-      {
-        ...testSettings,
-        general: {
-          ...testSettings.general,
-          defaultWorkspace: 'home',
-        },
-      },
+      allOnlySettings,
       [],
     );
 
@@ -232,7 +235,7 @@ test.describe('Task composer workspace override', () => {
     const panel = detailsPanel(page);
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
     await panel.getByText('Urgent', { exact: true }).click();
-    await panel.getByLabel('Note').fill('Preserves details fields');
+    await panel.getByRole('textbox', { name: 'Details' }).fill('Preserves details fields');
     await page.getByRole('button', { name: 'Save' }).click();
 
     await expect.poll(async () => page.evaluate(() => {

@@ -23,9 +23,11 @@ import { applyPipeline, createPipelineQuery } from '@/domain/task.pipeline';
 import { createDefaultTaskFilter } from '@/domain/task.filter';
 import {
   createTask as createTaskFromInput,
+  mergeTaskUpdates,
   normalizeHydratedTasks,
   pauseOtherRunningTasks,
 } from '@/domain/task.operations';
+import { supportsTimer } from '@/domain/task.mode';
 import { transitionStatus, toggleDoneStatus } from '@/domain/task.status';
 import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
@@ -106,7 +108,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     case 'ADD_TASK': {
       const nextTask = createTaskFromInput(action.payload.input, action.payload.nowIso);
       const nextTasks =
-        nextTask.timerStatus === 'running' && action.payload.pauseOthers
+        supportsTimer(nextTask.timerMode) && nextTask.timerStatus === 'running' && action.payload.pauseOthers
           ? pauseOtherRunningTasks(state.tasks, nextTask.id, action.payload.nowIso)
           : state.tasks;
 
@@ -115,11 +117,10 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
 
     case 'UPDATE_TASK': {
       const { id, updates } = action.payload;
+      const nowIso = new Date().toISOString();
       return {
         ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t,
-        ),
+        tasks: state.tasks.map((t) => (t.id === id ? mergeTaskUpdates(t, updates, nowIso) : t)),
       };
     }
 
@@ -176,7 +177,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     // Timer actions — delegated to domain/timer.logic
     case 'TOGGLE_TIMER': {
       const targetTask = state.tasks.find((task) => task.id === action.payload.id);
-      if (!targetTask) return state;
+      if (!targetTask || !supportsTimer(targetTask.timerMode)) return state;
 
       const patch = toggleTimerState(targetTask, action.payload.nowIso);
       const nextTimerStatus = (patch.timerStatus ?? targetTask.timerStatus) as TimerStatus;
@@ -196,6 +197,10 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     }
 
     case 'RESET_TIMER':
+      if (!state.tasks.some((task) => task.id === action.payload.id && supportsTimer(task.timerMode))) {
+        return state;
+      }
+
       return {
         ...state,
         tasks: state.tasks.map((t) =>
@@ -257,7 +262,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          state.selectedIds.has(t.id) && t.timerStatus === 'running'
+          state.selectedIds.has(t.id) && supportsTimer(t.timerMode) && t.timerStatus === 'running'
             ? { ...t, timerStatus: 'paused' as TimerStatus }
             : t,
         ),
@@ -267,7 +272,9 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          state.selectedIds.has(t.id) && (t.timerStatus === 'paused' || t.timerStatus === 'idle')
+          state.selectedIds.has(t.id) &&
+          supportsTimer(t.timerMode) &&
+          (t.timerStatus === 'paused' || t.timerStatus === 'idle')
             ? { ...t, timerStatus: 'running' as TimerStatus }
             : t,
         ),
@@ -277,7 +284,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          state.selectedIds.has(t.id)
+          state.selectedIds.has(t.id) && supportsTimer(t.timerMode)
             ? { ...t, remainingSec: t.originalDurationSec, timerStatus: 'idle' as TimerStatus }
             : t,
         ),

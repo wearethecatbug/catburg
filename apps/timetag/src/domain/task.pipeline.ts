@@ -4,6 +4,7 @@ import {
   SortState,
   WorkspaceType,
 } from './task.types';
+import { supportsTimer, supportsUrgency } from './task.mode';
 import { getUrgencyLevel, isApproachingRed } from './task.urgency';
 
 // ============================================================================
@@ -36,6 +37,17 @@ export function createPipelineQuery(
  */
 const getTaskPriority = (task: Task) => task.priority ?? 'normal';
 
+function compareTimedTasksFirst(a: Task, b: Task): number {
+  const aIsTimed = supportsTimer(a.timerMode);
+  const bIsTimed = supportsTimer(b.timerMode);
+
+  if (aIsTimed === bIsTimed) {
+    return 0;
+  }
+
+  return aIsTimed ? -1 : 1;
+}
+
 /**
  * Apply the full list processing pipeline.
  * Pure function — no side effects.
@@ -59,6 +71,10 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
 
   // 3. Urgency filter
   result = result.filter((t) => {
+    if (!supportsUrgency(t.timerMode)) {
+      return true;
+    }
+
     const urgency = getUrgencyLevel(t);
     return query.filter.urgency[urgency];
   });
@@ -70,9 +86,11 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   if (query.filter.approachingRed.enabled) {
     result = result.filter(
       (t) =>
-        isApproachingRed(t, query.filter.approachingRed.windowMinutes) ||
-        getUrgencyLevel(t) === 'danger' ||
-        getUrgencyLevel(t) === 'overdue',
+        supportsUrgency(t.timerMode) && (
+          isApproachingRed(t, query.filter.approachingRed.windowMinutes) ||
+          getUrgencyLevel(t) === 'danger' ||
+          getUrgencyLevel(t) === 'overdue'
+        ),
     );
   }
 
@@ -99,6 +117,13 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   // 9. Sort
   result = [...result].sort((a, b) => {
     let cmp = 0;
+
+    if (query.sort.field === 'remainingSec') {
+      const timedCmp = compareTimedTasksFirst(a, b);
+      if (timedCmp !== 0) {
+        return timedCmp;
+      }
+    }
 
     switch (query.sort.field) {
       case 'createdAt':

@@ -11,7 +11,7 @@ export type TimerStatus = 'running' | 'paused' | 'idle' | 'expired';
 // ============================================================================
 // Timer Mode
 // ============================================================================
-export type TimerMode = 'duration' | 'pomodoro' | 'deadline';
+export type TimerMode = 'duration' | 'pomodoro' | 'deadline' | 'note';
 
 // ============================================================================
 // Urgency Level (derived from remaining time)
@@ -132,6 +132,7 @@ export interface FilterState {
     duration: boolean;
     pomodoro: boolean;
     deadline: boolean;
+    note: boolean;
   };
   hasReminders?: 'any' | 'yes' | 'no';
 }

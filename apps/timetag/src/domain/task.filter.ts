@@ -11,7 +11,7 @@ export function createDefaultTaskFilter(): FilterState {
     urgency: { normal: true, warn: true, danger: true, overdue: true },
     priority: { normal: true, urgent: true },
     approachingRed: { enabled: false, windowMinutes: 10 },
-    mode: { duration: true, pomodoro: true, deadline: true },
+    mode: { duration: true, pomodoro: true, deadline: true, note: true },
     hasReminders: 'any',
   };
 }
@@ -93,5 +93,4 @@ export function setApproachingRedWindow(
     },
   };
 }
-
 
