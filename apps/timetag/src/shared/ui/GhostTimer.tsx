@@ -23,6 +23,7 @@ const GHOST_RING_STYLE = {
 
 const GHOST_TIMER_LAYOUT = {
   horizontalPaddingPx: 12,
+  verticalPaddingPx: 4,
   labelMinWidthPx: 56,
   labelRightPaddingPx: 4,
   ringLabelGapPx: 4,
@@ -36,6 +37,7 @@ export function GhostTimer({
 }: GhostTimerProps) {
   const radius = 15;
   const center = 18;
+  const wrapperHeightPx = sizePx + GHOST_TIMER_LAYOUT.verticalPaddingPx * 2;
   const labelWidthPx = showLabel
     ? GHOST_TIMER_LAYOUT.labelMinWidthPx +
       GHOST_TIMER_LAYOUT.labelRightPaddingPx +
@@ -52,13 +54,17 @@ export function GhostTimer({
       aria-label={showLabel ? undefined : label}
       role={showLabel ? undefined : 'img'}
       className={[
-        'inline-flex h-[38px] shrink-0 items-center justify-start gap-1 rounded-full px-1.5 py-1 align-middle',
+        'inline-flex shrink-0 items-center justify-start rounded-full align-middle',
         className,
       ].filter(Boolean).join(' ')}
       style={{
         color: GHOST_TIMER_STYLE.textColor,
         opacity: GHOST_TIMER_STYLE.wrapperOpacity,
+        height: wrapperHeightPx,
         minWidth: tokenWidthPx,
+        gap: GHOST_TIMER_LAYOUT.ringLabelGapPx,
+        paddingInline: GHOST_TIMER_LAYOUT.horizontalPaddingPx / 2,
+        paddingBlock: GHOST_TIMER_LAYOUT.verticalPaddingPx,
         background: GHOST_TIMER_STYLE.capsuleBackground,
         boxShadow: `inset 0 0 0 1px ${GHOST_TIMER_STYLE.capsuleBorder}`,
       }}
@@ -92,7 +98,13 @@ export function GhostTimer({
       </span>
 
       {showLabel && (
-        <span className="inline-flex h-full min-w-[56px] items-center justify-end whitespace-nowrap pr-1 text-right text-[13px] font-medium tracking-[-0.01em] leading-none">
+        <span
+          className="inline-flex h-full items-center justify-end whitespace-nowrap text-right text-[13px] font-medium tracking-[-0.01em] leading-none"
+          style={{
+            minWidth: GHOST_TIMER_LAYOUT.labelMinWidthPx,
+            paddingRight: GHOST_TIMER_LAYOUT.labelRightPaddingPx,
+          }}
+        >
           {label}
         </span>
       )}

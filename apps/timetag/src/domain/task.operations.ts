@@ -81,9 +81,7 @@ function normalizeTaskTiming(
   const timerControls = normalizeTimerControls(input.timerControls);
   const timerStatus = isTimerStatus(input.timerStatus)
     ? input.timerStatus
-    : timerControls.autoStart
-      ? 'running'
-      : 'idle';
+    : 'idle';
 
   if (input.timerMode === 'deadline') {
     const targetAt = typeof input.targetAt === 'string' ? input.targetAt : undefined;
@@ -141,6 +139,7 @@ export function createTask(input: CreateTaskInput, nowIso: string): Task {
     nowIso,
     targetAt: input.targetAt,
     durationSec: input.durationSec,
+    timerStatus: input.timerControls?.autoStart ? 'running' : 'idle',
     timerControls: input.timerControls,
     pomodoro: input.pomodoro,
   });
