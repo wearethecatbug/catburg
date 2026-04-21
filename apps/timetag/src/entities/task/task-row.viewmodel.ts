@@ -46,7 +46,7 @@ export function getTaskRowViewModel(
 
 function getTaskDisplayTime(task: Task): string {
   if (!supportsTimer(task.timerMode)) {
-    return 'Note';
+    return 'no timer';
   }
 
   if (task.timerMode === 'pomodoro' && task.pomodoro) {
@@ -62,7 +62,7 @@ function getTaskDisplayTime(task: Task): string {
 
 function getTaskFullTimeText(task: Task): string {
   if (!supportsTimer(task.timerMode)) {
-    return 'Untimed note';
+    return 'Task without timer';
   }
 
   if (task.timerMode === 'pomodoro' && task.pomodoro) {

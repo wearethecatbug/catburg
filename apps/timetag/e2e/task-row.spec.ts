@@ -191,7 +191,9 @@ test.describe('Task row states', () => {
 
     const createdRow = taskRow(page, 'Playwright note entry');
     await expect(createdRow).toBeVisible();
-    await expect(createdRow.getByTestId('task-note-mode-chip')).toBeVisible();
+    await expect(createdRow.getByTestId('ghost-timer')).toBeVisible();
+    await expect(createdRow.getByTestId('ghost-timer')).toContainText('no timer');
+    await expect(createdRow.getByTestId('task-timer-cluster')).toHaveCount(0);
     await expect(createdRow.getByLabel('Start timer')).toHaveCount(0);
     await expect(createdRow.getByLabel('Pause timer')).toHaveCount(0);
 
