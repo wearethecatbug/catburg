@@ -214,15 +214,17 @@ function useWorkspacePreviewRail() {
     }
 
     const id = createWorkspaceId(label);
-    if (workspaces.some((workspace) => workspace.id === id)) {
-      return;
-    }
+    setWorkspaces((current) => {
+      if (current.some((workspace) => workspace.id === id)) {
+        return current;
+      }
 
-    setWorkspaces((current) => [...current, { id, label }]);
+      return [...current, { id, label }];
+    });
     setActiveId(id);
     setIsAdding(false);
     setDraftName('');
-  }, [draftName, workspaces]);
+  }, [draftName]);
 
   return {
     viewportRef,
@@ -539,6 +541,7 @@ function WorkspaceRailPreview({ variant }: { variant: VariantConfig }) {
                       type="button"
                       data-workspace-id={workspace.id}
                       aria-pressed={selected}
+                      aria-current={selected ? 'true' : undefined}
                       onClick={() => setActiveId(workspace.id)}
                       className={isFlow
                         ? 'shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors'
@@ -625,6 +628,8 @@ function WrappedRailPreview({ variant }: { variant: VariantConfig }) {
                   <button
                     key={workspace.id}
                     type="button"
+                    aria-pressed={selected}
+                    aria-current={selected ? 'true' : undefined}
                     onClick={() => setActiveId(workspace.id)}
                     className="rounded-full border px-4 py-2 text-sm font-medium transition-colors"
                     style={{
@@ -672,6 +677,7 @@ function ActiveOverflowPreview({ variant }: { variant: VariantConfig }) {
   } = useWorkspacePreviewRail();
   const [isOverflowOpen, setIsOverflowOpen] = React.useState(false);
   const popoverRef = React.useRef<HTMLDivElement | null>(null);
+  const overflowPanelId = `workspace-overflow-panel-${variant.id}`;
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId) ?? workspaces[0];
   const secondaryWorkspaces = workspaces.filter((workspace) => workspace.id !== activeId).slice(0, 2);
@@ -743,6 +749,8 @@ function ActiveOverflowPreview({ variant }: { variant: VariantConfig }) {
                 <button
                   type="button"
                   onClick={() => setIsOverflowOpen((current) => !current)}
+                  aria-expanded={isOverflowOpen}
+                  aria-controls={overflowPanelId}
                   className="rounded-full border px-3.5 py-2 text-sm font-medium transition-colors"
                   style={{ borderColor: 'var(--tt-border)', background: isOverflowOpen ? 'var(--tt-surface-elevated)' : 'var(--tt-surface)', color: 'var(--tt-text)' }}
                 >
@@ -752,6 +760,7 @@ function ActiveOverflowPreview({ variant }: { variant: VariantConfig }) {
 
               {isOverflowOpen ? (
                 <div
+                  id={overflowPanelId}
                   className="absolute left-0 top-full z-20 mt-2 w-[14rem] rounded-2xl border p-2"
                   style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface-elevated)', boxShadow: 'var(--tt-shadow)' }}
                 >
@@ -812,6 +821,7 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
   } = useWorkspacePreviewRail();
   const [isOpen, setIsOpen] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement | null>(null);
+  const switcherPanelId = `workspace-switcher-panel-${variant.id}`;
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId) ?? workspaces[0];
 
   React.useEffect(() => {
@@ -858,6 +868,8 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
               <button
                 type="button"
                 onClick={() => setIsOpen((current) => !current)}
+                aria-expanded={isOpen}
+                aria-controls={switcherPanelId}
                 className="inline-flex min-w-[12rem] items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]"
                 style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface)', color: 'var(--tt-text)' }}
               >
@@ -869,6 +881,7 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
 
             {isOpen ? (
               <div
+                id={switcherPanelId}
                 className="absolute left-2 top-full z-20 mt-2 w-[16rem] rounded-2xl border p-2"
                 style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface-elevated)', boxShadow: 'var(--tt-shadow)' }}
               >
@@ -882,6 +895,8 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
                       <button
                         key={workspace.id}
                         type="button"
+                        aria-pressed={selected}
+                        aria-current={selected ? 'true' : undefined}
                         onClick={() => {
                           setActiveId(workspace.id);
                           setIsOpen(false);

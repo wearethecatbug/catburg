@@ -159,7 +159,7 @@ test.describe('Task row states', () => {
     );
 
     await page.getByLabel('Add a new task').fill('Playwright urgent task');
-    await page.getByRole('button', { name: /^Note$/ }).click();
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await page.locator('#task-note-inline-input').fill('Created from Playwright test');
     await page.getByRole('button', { name: /more options/i }).click();
     await morePanel(page).getByText('Urgent', { exact: true }).click();
@@ -186,7 +186,7 @@ test.describe('Task row states', () => {
     await page.getByTitle('Timer mode').click();
     await page.getByRole('menuitem', { name: 'Note' }).click();
     await expect(page.locator('#task-note-inline-input')).toHaveCount(0);
-    await page.getByRole('button', { name: /^Note$/ }).click();
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await expect(page.locator('#task-note-inline-input')).toBeVisible();
     await page.locator('#task-note-inline-input').fill('Created as an untimed note entry');
     await page.getByRole('button', { name: 'Add task' }).click();

@@ -303,6 +303,7 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setTimerMode(mode);
     setModeOpen(false);
     setAdvancedModeOpen(false);
+    setPresetOpen(false);
 
     if (mode === 'pomodoro') {
       setPomodoroPresetId(defaultPomodoroPreset.id);
@@ -537,6 +538,9 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
 
   const handleCancelDetails = React.useCallback(() => {
     setShowMore(false);
+    setPresetOpen(false);
+    setModeOpen(false);
+    setAdvancedModeOpen(false);
     focusInput();
   }, [focusInput]);
 

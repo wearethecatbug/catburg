@@ -74,9 +74,13 @@ export function Dropdown({
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     const nextMaxWidth = Math.max(180, viewportWidth - VIEWPORT_PADDING_PX * 2);
-    const nextMaxHeight = Math.max(
+    const spaceBelow = Math.max(
       0,
       viewportHeight - wrapperRect.bottom - VIEWPORT_PADDING_PX - MENU_OFFSET_PX,
+    );
+    const spaceAbove = Math.max(
+      0,
+      wrapperRect.top - VIEWPORT_PADDING_PX - MENU_OFFSET_PX,
     );
     const nextMenuWidthPx = menuWidth === 'trigger'
       ? Math.min(wrapperRect.width, nextMaxWidth)
@@ -90,7 +94,11 @@ export function Dropdown({
       Math.max(VIEWPORT_PADDING_PX, projectedLeft),
       Math.max(VIEWPORT_PADDING_PX, viewportWidth - VIEWPORT_PADDING_PX - effectiveWidth),
     );
-    const nextTop = Math.max(VIEWPORT_PADDING_PX, wrapperRect.bottom + MENU_OFFSET_PX);
+    const shouldOpenUpward = spaceAbove > spaceBelow;
+    const nextMaxHeight = shouldOpenUpward ? spaceAbove : spaceBelow;
+    const nextTop = shouldOpenUpward
+      ? Math.max(VIEWPORT_PADDING_PX, wrapperRect.top - MENU_OFFSET_PX - nextMaxHeight)
+      : Math.max(VIEWPORT_PADDING_PX, wrapperRect.bottom + MENU_OFFSET_PX);
 
     setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
     setMenuMaxHeight((current) => current === nextMaxHeight ? current : nextMaxHeight);

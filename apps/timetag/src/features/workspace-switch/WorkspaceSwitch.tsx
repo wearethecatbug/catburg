@@ -8,7 +8,7 @@ import {
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { useSettings, useTasks } from '@/store';
- import { AppContentContainer, Dropdown, DropdownItem, useCarouselNavigation, usePersistedWorkspaces } from '@/shared';
+import { AppContentContainer, Dropdown, DropdownItem, useCarouselNavigation, usePersistedWorkspaces } from '@/shared';
 
 const WORKSPACE_SELECTOR_WIDTH = 'calc(8ch + 4.5rem)';
 

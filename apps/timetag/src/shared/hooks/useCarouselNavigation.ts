@@ -113,13 +113,19 @@ export function useCarouselNavigation<TId extends string>({
     }
 
     const handleResize = () => updateScrollState();
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => updateScrollState())
+      : null;
+
     updateScrollState();
     viewport.addEventListener('scroll', updateScrollState, { passive: true });
     window.addEventListener('resize', handleResize);
+    resizeObserver?.observe(viewport);
 
     return () => {
       viewport.removeEventListener('scroll', updateScrollState);
       window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
     };
   }, [isEnabled, updateScrollState, viewportRef]);
 
@@ -148,8 +154,17 @@ export function useCarouselNavigation<TId extends string>({
       return;
     }
 
+    const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    const newLeft = viewport.scrollLeft + event.deltaY;
+
+    if ((newLeft <= 0 && event.deltaY < 0) || (newLeft >= maxScrollLeft && event.deltaY > 0)) {
+      return;
+    }
+
+    const clampedLeft = Math.max(0, Math.min(newLeft, maxScrollLeft));
+
     event.preventDefault();
-    viewport.scrollTo({ left: viewport.scrollLeft + event.deltaY, behavior: 'auto' });
+    viewport.scrollTo({ left: clampedLeft, behavior: 'auto' });
   }, [hasOverflow, viewportRef]);
 
   const handleKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
