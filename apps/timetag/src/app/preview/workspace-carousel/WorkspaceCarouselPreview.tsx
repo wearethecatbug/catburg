@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { createWorkspaceId } from '@/domain/workspace';
+import { useCarouselNavigation } from '@/shared/hooks';
 
 type PreviewVariantId =
   | 'edge-arrows'
@@ -175,122 +176,25 @@ function useWorkspacePreviewRail() {
   const [activeId, setActiveId] = React.useState(BASE_WORKSPACES[1].id);
   const [isAdding, setIsAdding] = React.useState(false);
   const [draftName, setDraftName] = React.useState('');
-  const [hasOverflow, setHasOverflow] = React.useState(false);
-  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
-  const [canScrollRight, setCanScrollRight] = React.useState(false);
   const [isActive, setIsActive] = React.useState(false);
-
-  const updateScrollState = React.useCallback(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) {
-      setHasOverflow(false);
-      setCanScrollLeft(false);
-      setCanScrollRight(false);
-      return;
-    }
-
-    const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-    setHasOverflow(maxScrollLeft > 4);
-    setCanScrollLeft(viewport.scrollLeft > 4);
-    setCanScrollRight(viewport.scrollLeft < maxScrollLeft - 4);
-  }, []);
-
-  const scrollByStep = React.useCallback((direction: 'left' | 'right') => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    viewport.scrollBy({
-      left: direction === 'left' ? -180 : 180,
-      behavior: 'smooth',
-    });
-  }, []);
-
-  const focusWorkspaceTab = React.useCallback((workspaceId: string) => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const target = viewport.querySelector<HTMLElement>(`[data-workspace-id="${workspaceId}"]`);
-    target?.focus();
-    target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, []);
+  const {
+    hasOverflow,
+    canScrollLeft,
+    canScrollRight,
+    updateScrollState,
+    scrollByStep,
+    handleWheel,
+    handleKeyDown,
+  } = useCarouselNavigation({
+    viewportRef,
+    items: workspaces,
+    activeId,
+    onActiveChange: setActiveId,
+  });
 
   React.useEffect(() => {
     updateScrollState();
-  }, [updateScrollState, workspaces.length, isAdding]);
-
-  React.useEffect(() => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const handleResize = () => updateScrollState();
-    updateScrollState();
-    viewport.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', handleResize);
-    return () => {
-      viewport.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [updateScrollState]);
-
-  React.useEffect(() => {
-    window.requestAnimationFrame(() => focusWorkspaceTab(activeId));
-  }, [activeId, focusWorkspaceTab]);
-
-  const handleWheel = React.useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    const viewport = viewportRef.current;
-    if (!viewport || !hasOverflow) {
-      return;
-    }
-
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
-      return;
-    }
-
-    event.preventDefault();
-    viewport.scrollTo({ left: viewport.scrollLeft + event.deltaY, behavior: 'auto' });
-  }, [hasOverflow]);
-
-  const handleKeyDown = React.useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    const currentIndex = workspaces.findIndex((workspace) => workspace.id === activeId);
-    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      const next = workspaces[Math.max(0, safeIndex - 1)];
-      if (next) setActiveId(next.id);
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      const next = workspaces[Math.min(workspaces.length - 1, safeIndex + 1)];
-      if (next) setActiveId(next.id);
-      return;
-    }
-
-    if (event.key === 'Home') {
-      event.preventDefault();
-      setActiveId(workspaces[0].id);
-      return;
-    }
-
-    if (event.key === 'End') {
-      event.preventDefault();
-      setActiveId(workspaces[workspaces.length - 1].id);
-      return;
-    }
-
-    if (event.key === 'PageUp') {
-      event.preventDefault();
-      scrollByStep('left');
-      return;
-    }
-
-    if (event.key === 'PageDown') {
-      event.preventDefault();
-      scrollByStep('right');
-    }
-  }, [activeId, scrollByStep, workspaces]);
+  }, [isAdding, updateScrollState]);
 
   const handleAddToggle = React.useCallback(() => {
     setIsAdding((current) => !current);
@@ -767,10 +671,37 @@ function ActiveOverflowPreview({ variant }: { variant: VariantConfig }) {
     handleConfirmAdd,
   } = useWorkspacePreviewRail();
   const [isOverflowOpen, setIsOverflowOpen] = React.useState(false);
+  const popoverRef = React.useRef<HTMLDivElement | null>(null);
 
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId) ?? workspaces[0];
   const secondaryWorkspaces = workspaces.filter((workspace) => workspace.id !== activeId).slice(0, 2);
   const hiddenWorkspaces = workspaces.filter((workspace) => workspace.id !== activeId).slice(2);
+
+  React.useEffect(() => {
+    if (!isOverflowOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!popoverRef.current?.contains(event.target as Node)) {
+        setIsOverflowOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOverflowOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOverflowOpen]);
 
   return (
     <section className="rounded-2xl border p-5" style={{ background: 'var(--tt-surface-elevated)', borderColor: 'var(--tt-border)', boxShadow: 'var(--tt-shadow-soft)' }}>
@@ -786,7 +717,7 @@ function ActiveOverflowPreview({ variant }: { variant: VariantConfig }) {
       <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface)' }}>
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1 rounded-2xl p-2" style={{ background: 'var(--tt-surface-muted)' }}>
-            <div className="relative flex flex-wrap items-center gap-2">
+            <div ref={popoverRef} className="relative flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 className="rounded-full border px-4 py-2 text-sm font-semibold transition-colors"
@@ -880,7 +811,34 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
     handleConfirmAdd,
   } = useWorkspacePreviewRail();
   const [isOpen, setIsOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement | null>(null);
   const activeWorkspace = workspaces.find((workspace) => workspace.id === activeId) ?? workspaces[0];
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   return (
     <section className="rounded-2xl border p-5" style={{ background: 'var(--tt-surface-elevated)', borderColor: 'var(--tt-border)', boxShadow: 'var(--tt-shadow-soft)' }}>
@@ -895,7 +853,7 @@ function DropdownSwitcherPreview({ variant }: { variant: VariantConfig }) {
 
       <div className="rounded-2xl border p-3" style={{ borderColor: 'var(--tt-border)', background: 'var(--tt-surface)' }}>
         <div className="flex items-start gap-3">
-          <div className="relative min-w-0 flex-1 rounded-2xl p-2" style={{ background: 'var(--tt-surface-muted)' }}>
+          <div ref={dropdownRef} className="relative min-w-0 flex-1 rounded-2xl p-2" style={{ background: 'var(--tt-surface-muted)' }}>
             <div className="flex items-center gap-2">
               <button
                 type="button"

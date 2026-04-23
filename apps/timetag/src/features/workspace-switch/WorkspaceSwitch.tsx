@@ -8,7 +8,7 @@ import {
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { useSettings, useTasks } from '@/store';
-import { AppContentContainer, Dropdown, DropdownItem, usePersistedWorkspaces } from '@/shared';
+ import { AppContentContainer, Dropdown, DropdownItem, useCarouselNavigation, usePersistedWorkspaces } from '@/shared';
 
 const WORKSPACE_SELECTOR_WIDTH = 'calc(8ch + 4.5rem)';
 
@@ -38,90 +38,44 @@ export function WorkspaceSwitch() {
 
   // Keep the initial client render aligned with SSR output to avoid a tab flash.
   const [isMounted, setIsMounted] = useState(false);
-  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const updateScrollState = useCallback(() => {
-    const viewport = tabsViewportRef.current;
-    if (!viewport) {
-      setCanScrollLeft(false);
-      setCanScrollRight(false);
-      return;
-    }
-
-    const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-    setHasHorizontalOverflow(maxScrollLeft > 4);
-    setCanScrollLeft(viewport.scrollLeft > 4);
-    setCanScrollRight(viewport.scrollLeft < maxScrollLeft - 4);
-  }, []);
-
-  const handleViewportWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    const viewport = tabsViewportRef.current;
-    if (!viewport || !hasHorizontalOverflow) {
-      return;
-    }
-
-    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
-      return;
-    }
-
-    event.preventDefault();
-    viewport.scrollTo({
-      left: viewport.scrollLeft + event.deltaY,
-      behavior: 'auto',
-    });
-  }, [hasHorizontalOverflow]);
-
-  useEffect(() => {
-    if (!isMounted || !tabsViewportRef.current) {
-      return;
-    }
-
-    const activeTab = tabsViewportRef.current.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-    activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    window.requestAnimationFrame(updateScrollState);
-  }, [isMounted, state.workspace, updateScrollState, userWorkspaces.length]);
-
-  useEffect(() => {
-    if (!isMounted || !tabsViewportRef.current) {
-      return;
-    }
-
-    const viewport = tabsViewportRef.current;
-    const handleResize = () => updateScrollState();
-
-    updateScrollState();
-    viewport.addEventListener('scroll', updateScrollState, { passive: true });
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      viewport.removeEventListener('scroll', updateScrollState);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [isMounted, updateScrollState, userWorkspaces.length]);
-
   // State for inline add input
   const [isAdding, setIsAdding] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [isCarouselActive, setIsCarouselActive] = useState(false);
+
+
+  // Combined tabs for rendering: All tab first, then user tabs (order preserved)
+  const tabs = React.useMemo(() => [ALL_WORKSPACE_TAB, ...userWorkspaces], [userWorkspaces]);
+  const {
+    hasOverflow: hasHorizontalOverflow,
+    canScrollLeft,
+    canScrollRight,
+    updateScrollState,
+    scheduleFocusItem: scheduleFocusWorkspaceTab,
+    handleWheel: handleViewportWheel,
+    handleKeyDown: handleViewportKeyDown,
+  } = useCarouselNavigation({
+    viewportRef: tabsViewportRef,
+    items: tabs,
+    activeId: state.workspace,
+    onActiveChange: setWorkspace,
+    isEnabled: isMounted,
+    focusOnActiveChange: false,
+  });
 
   useEffect(() => {
     if (!isMounted) {
       return;
     }
 
-    window.requestAnimationFrame(updateScrollState);
+    updateScrollState();
   }, [isAdding, isMounted, updateScrollState]);
-
-
-  // Combined tabs for rendering: All tab first, then user tabs (order preserved)
-  const tabs = React.useMemo(() => [ALL_WORKSPACE_TAB, ...userWorkspaces], [userWorkspaces]);
   const canRemoveWorkspace = userWorkspaces.length > 1;
   const activeWorkspaceLabel = tabs.find((workspace) => workspace.id === state.workspace)?.label ?? ALL_WORKSPACE_TAB.label;
   const addWorkspaceVariant = getWorkspaceAddButtonVariant(settings.appearance.contentWidthMode);
@@ -147,73 +101,11 @@ export function WorkspaceSwitch() {
           background: 'transparent',
         };
 
-  const focusWorkspaceTab = useCallback((workspaceId: AssignableWorkspaceType | 'all') => {
-    const viewport = tabsViewportRef.current;
-    if (!viewport) {
-      return;
-    }
-
-    const targetTab = viewport.querySelector<HTMLElement>(`[role="tab"][data-workspace-id="${workspaceId}"]`);
-    targetTab?.focus();
-    targetTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, []);
-
   const handleWorkspaceSelectFromDropdown = useCallback((workspaceId: AssignableWorkspaceType | 'all') => {
     setWorkspace(workspaceId);
     setSelectorOpen(false);
-    window.requestAnimationFrame(() => focusWorkspaceTab(workspaceId));
-  }, [focusWorkspaceTab, setWorkspace]);
-
-  const handleViewportKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    const currentIndex = tabs.findIndex((workspace) => workspace.id === state.workspace);
-    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-
-    if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      const previousWorkspace = tabs[Math.max(0, safeIndex - 1)];
-      if (previousWorkspace) {
-        setWorkspace(previousWorkspace.id);
-        window.requestAnimationFrame(() => focusWorkspaceTab(previousWorkspace.id));
-      }
-      return;
-    }
-
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      const nextWorkspace = tabs[Math.min(tabs.length - 1, safeIndex + 1)];
-      if (nextWorkspace) {
-        setWorkspace(nextWorkspace.id);
-        window.requestAnimationFrame(() => focusWorkspaceTab(nextWorkspace.id));
-      }
-      return;
-    }
-
-    if (event.key === 'Home') {
-      event.preventDefault();
-      setWorkspace(tabs[0].id);
-      window.requestAnimationFrame(() => focusWorkspaceTab(tabs[0].id));
-      return;
-    }
-
-    if (event.key === 'End') {
-      event.preventDefault();
-      const lastWorkspace = tabs[tabs.length - 1];
-      setWorkspace(lastWorkspace.id);
-      window.requestAnimationFrame(() => focusWorkspaceTab(lastWorkspace.id));
-      return;
-    }
-
-    if (event.key === 'PageUp') {
-      event.preventDefault();
-      tabsViewportRef.current?.scrollBy({ left: -180, behavior: 'smooth' });
-      return;
-    }
-
-    if (event.key === 'PageDown') {
-      event.preventDefault();
-      tabsViewportRef.current?.scrollBy({ left: 180, behavior: 'smooth' });
-    }
-  }, [focusWorkspaceTab, setWorkspace, state.workspace, tabs]);
+    scheduleFocusWorkspaceTab(workspaceId);
+  }, [scheduleFocusWorkspaceTab, setWorkspace]);
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {

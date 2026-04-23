@@ -17,5 +17,5 @@ export {
 export * from './icons';
 
 // Hooks
-export { usePersistedWorkspaces } from './hooks';
+export { useCarouselNavigation, usePersistedWorkspaces } from './hooks';
 

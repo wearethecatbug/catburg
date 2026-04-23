@@ -8,22 +8,16 @@ import type {
   TimerTabId,
 } from '@/domain/settings.types';
 import { SettingsSidebar } from '@/features/settings';
-import { ClipboardIcon, CloseIcon, HourglassIcon, SettingsIcon, SunIcon } from '@/shared';
+import { CloseIcon, SettingsIcon } from '@/shared';
 import { SettingsPanelFooter } from './SettingsPanelFooter';
 import { SettingsPanelSection } from './SettingsPanelSection';
-import { SECTION_LABELS } from './settings-panel.config';
+import { SECTION_LABELS, SETTINGS_SECTIONS } from './settings-panel.config';
 import { useSettingsDraft } from './useSettingsDraft';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
-  general: <ClipboardIcon size="sm" aria-hidden />,
-  timer: <HourglassIcon size="sm" aria-hidden />,
-  appearance: <SunIcon size="sm" aria-hidden />,
-};
 
 export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [activeSection, setActiveSection] = React.useState<SettingsSectionId>('general');
@@ -43,7 +37,6 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   if (!isOpen) return null;
   const activeSectionLabel = SECTION_LABELS[activeSection];
-  const sectionEntries = Object.entries(SECTION_LABELS) as Array<[SettingsSectionId, string]>;
 
   return (
     <div
@@ -105,41 +98,42 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               </button>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2" role="tablist" aria-label="Settings sections mobile navigation">
-              {sectionEntries.map(([sectionId, sectionLabel]) => {
-                const isActive = sectionId === activeSection;
+            <nav className="mt-5" aria-label="Settings sections mobile navigation">
+              <div className="flex flex-wrap gap-2">
+                {SETTINGS_SECTIONS.map((section) => {
+                  const isActive = section.id === activeSection;
 
-                return (
-                  <button
-                    key={sectionId}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    onClick={() => setActiveSection(sectionId)}
-                    className={[
-                      'rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
-                      isActive ? 'font-semibold shadow-sm' : '',
-                    ].join(' ')}
-                    style={isActive
-                      ? {
-                          background: 'color-mix(in srgb, var(--tt-accent-soft) 80%, var(--tt-surface-elevated))',
-                          color: 'color-mix(in srgb, var(--tt-accent) 92%, white)',
-                          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
-                        }
-                      : {
-                          color: 'var(--tt-text-muted)',
-                        }}
-                  >
-                    <span className="inline-flex items-center gap-2.5">
-                      <span style={{ color: isActive ? 'var(--tt-accent)' : 'var(--tt-text-soft)' }}>
-                        {SECTION_ICONS[sectionId]}
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setActiveSection(section.id)}
+                      className={[
+                        'rounded-xl px-3 py-2.5 text-left text-sm transition-colors',
+                        isActive ? 'font-semibold shadow-sm' : '',
+                      ].join(' ')}
+                      style={isActive
+                        ? {
+                            background: 'color-mix(in srgb, var(--tt-accent-soft) 80%, var(--tt-surface-elevated))',
+                            color: 'color-mix(in srgb, var(--tt-accent) 92%, white)',
+                            boxShadow: '0 2px 10px rgba(15, 23, 42, 0.06)',
+                          }
+                        : {
+                            color: 'var(--tt-text-muted)',
+                          }}
+                    >
+                      <span className="inline-flex items-center gap-2.5">
+                        <span style={{ color: isActive ? 'var(--tt-accent)' : 'var(--tt-text-soft)' }}>
+                          {section.icon}
+                        </span>
+                        <span>{section.label}</span>
                       </span>
-                      <span>{sectionLabel}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </nav>
           </div>
 
           <div className="flex items-start justify-between border-b px-8 py-6 max-[700px]:hidden" style={{ borderColor: 'var(--tt-border)' }}>

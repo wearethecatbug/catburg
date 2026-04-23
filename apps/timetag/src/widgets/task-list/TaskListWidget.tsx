@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useState } from 'react';
 import { Header } from '@/widgets/header';
 import { SettingsPanel } from '@/widgets/settings-panel';
 import {
@@ -62,14 +62,6 @@ export function TaskListWidget() {
     deleteSelected();
     showToast('Tasks deleted', { label: 'Undo', onClick: undoDelete });
   }, [deleteSelected, hasSelection, settings.general.confirmBeforeDelete, showToast, undoDelete]);
-
-
-  useEffect(() => {
-    if (settings.general.showCompletedTasks) return;
-    if (state.filter.status === 'done' || state.filter.status === 'archived') {
-      setFilter({ status: 'active' });
-    }
-  }, [setFilter, settings.general.showCompletedTasks, state.filter.status]);
 
   const disableApproachingRed = () => {
     setFilter({

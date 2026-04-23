@@ -1,19 +1,13 @@
 'use client';
 
-import React from 'react';
 import type { SettingsSectionId } from '@/domain/settings.types';
-import { ClipboardIcon, HourglassIcon, SettingsIcon, SunIcon } from '@/shared';
+import { SettingsIcon } from '@/shared';
+import { SETTINGS_SECTIONS } from '@/widgets/settings-panel/settings-panel.config';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSectionId;
   onChange: (section: SettingsSectionId) => void;
 }
-
-const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ReactNode }> = [
-  { id: 'general', label: 'General', icon: <ClipboardIcon size="sm" aria-hidden /> },
-  { id: 'timer', label: 'Timer', icon: <HourglassIcon size="sm" aria-hidden /> },
-  { id: 'appearance', label: 'Appearance', icon: <SunIcon size="sm" aria-hidden /> },
-];
 
 export function SettingsSidebar({ activeSection, onChange }: SettingsSidebarProps) {
   return (
@@ -40,7 +34,7 @@ export function SettingsSidebar({ activeSection, onChange }: SettingsSidebarProp
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Settings sections">
-        {SECTIONS.map((section) => (
+        {SETTINGS_SECTIONS.map((section) => (
           <button
             key={section.id}
             type="button"

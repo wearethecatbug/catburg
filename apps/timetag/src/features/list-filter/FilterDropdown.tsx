@@ -104,10 +104,8 @@ export function FilterDropdown() {
             <Checkbox
               checked={state.filter.urgency[option.id]}
               onChange={() => toggleUrgency(option.id)}
+              label={option.label}
             />
-            <span className="text-sm" style={{ color: 'var(--tt-text)' }}>
-              {option.label}
-            </span>
           </div>
         ))}
       </div>
@@ -174,6 +172,7 @@ export function FilterDropdown() {
                   e.stopPropagation();
                   setARWindow(w.value);
                 }}
+                aria-pressed={state.filter.approachingRed.windowMinutes === w.value}
                 className="rounded px-2 py-1 text-xs"
                 style={getFilterChipButtonStyle(state.filter.approachingRed.windowMinutes === w.value)}
               >
@@ -195,6 +194,7 @@ export function FilterDropdown() {
               e.stopPropagation();
               setHasReminders('any');
             }}
+            aria-pressed={state.filter.hasReminders === 'any'}
             className="rounded px-2 py-1 text-xs"
             style={getFilterChipButtonStyle(state.filter.hasReminders === 'any')}
           >
@@ -206,6 +206,7 @@ export function FilterDropdown() {
               e.stopPropagation();
               setHasReminders('yes');
             }}
+            aria-pressed={state.filter.hasReminders === 'yes'}
             className="rounded px-2 py-1 text-xs"
             style={getFilterChipButtonStyle(state.filter.hasReminders === 'yes')}
           >
@@ -217,6 +218,7 @@ export function FilterDropdown() {
               e.stopPropagation();
               setHasReminders('no');
             }}
+            aria-pressed={state.filter.hasReminders === 'no'}
             className="rounded px-2 py-1 text-xs"
             style={getFilterChipButtonStyle(state.filter.hasReminders === 'no')}
           >

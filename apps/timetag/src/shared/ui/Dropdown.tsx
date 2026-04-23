@@ -246,6 +246,8 @@ interface DropdownDividerProps {
   onClick?: () => void;
 }
 
+// Intentionally accepts an injected onClick because parent dropdowns may clone children
+// and pass click handlers to all items, while dividers remain non-interactive.
 export function DropdownDivider({ onClick: _onClick }: DropdownDividerProps) {
   return <div className="my-1 border-t" style={{ borderColor: 'var(--tt-border)' }} />;
 }

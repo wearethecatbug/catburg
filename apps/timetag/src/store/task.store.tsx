@@ -421,6 +421,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const shouldPauseOtherTimers = settings.general.autoPauseOtherTimers || !settings.timer.allowMultipleTimers;
 
+  useEffect(() => {
+    if (settings.general.showCompletedTasks) {
+      return;
+    }
+
+    if (state.filter.status === 'done' || state.filter.status === 'archived') {
+      dispatch({ type: 'SET_FILTER', payload: { status: 'active' } });
+    }
+  }, [settings.general.showCompletedTasks, state.filter.status]);
+
   // Convenience dispatchers
   const addTask = useCallback(
     (input: CreateTaskInput) => dispatch({

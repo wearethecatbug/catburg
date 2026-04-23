@@ -60,7 +60,7 @@ test.describe('Task composer workspace override', () => {
     await expect(createdRow.getByTestId('task-note-preview')).toContainText('Workspace override note');
   });
 
-  test('uses the last selected concrete workspace in details after switching to All', async ({ page }) => {
+  test('uses the last selected concrete workspace in panel after switching to All', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, DEFAULT_WORKSPACES);
 
     await page.getByRole('tab', { name: 'Home' }).click();
@@ -117,7 +117,7 @@ test.describe('Task composer workspace override', () => {
     await expect(morePanel(page).getByTitle('Workspace')).not.toContainText('Use current (Work)');
   });
 
-  test('updates details to the new current workspace when a workspace is created while details are open', async ({ page }) => {
+  test('updates panel to the new current workspace when a workspace is created while panel is open', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, SINGLE_WORKSPACE);
 
     await page.getByRole('tab', { name: 'Work' }).click();
