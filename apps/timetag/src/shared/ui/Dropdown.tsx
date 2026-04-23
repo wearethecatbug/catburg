@@ -3,6 +3,9 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
+const VIEWPORT_PADDING_PX = 8;
+const MENU_OFFSET_PX = 4;
+
 // ============================================================================
 // Dropdown
 // ============================================================================
@@ -34,8 +37,6 @@ export function Dropdown({
   onClose,
   onOpen,
 }: DropdownProps) {
-  const VIEWPORT_PADDING_PX = 8;
-  const MENU_OFFSET_PX = 4;
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
@@ -101,11 +102,11 @@ export function Dropdown({
       ? Math.max(VIEWPORT_PADDING_PX, wrapperRect.top - MENU_OFFSET_PX - clampedMenuHeight)
       : Math.max(VIEWPORT_PADDING_PX, wrapperRect.bottom + MENU_OFFSET_PX);
 
-    setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
-    setMenuMaxHeight((current) => current === nextMaxHeight ? current : nextMaxHeight);
-    setMenuLeft((current) => current === nextLeft ? current : nextLeft);
-    setMenuTop((current) => current === nextTop ? current : nextTop);
-    setMenuWidthPx((current) => current === nextMenuWidthPx ? current : nextMenuWidthPx);
+    setMenuMaxWidth(nextMaxWidth);
+    setMenuMaxHeight(nextMaxHeight);
+    setMenuLeft(nextLeft);
+    setMenuTop(nextTop);
+    setMenuWidthPx(nextMenuWidthPx);
   }, [align, isOpen, menuWidth]);
 
   // Close on outside click (only while dropdown is open)
