@@ -244,7 +244,7 @@ export function FilterDropdown() {
         >
           Clear
         </button>
-        {/* Apply button closes the filter dropdown */}
+        {/* Done button closes the filter dropdown after immediate filter changes */}
         <button
           type="button"
           onClick={(e) => {
@@ -253,8 +253,9 @@ export function FilterDropdown() {
           }}
           className="rounded px-3 py-1 text-sm"
           style={{ background: 'var(--tt-accent)', color: 'var(--tt-accent-contrast)' }}
+          aria-label="Done"
         >
-          Apply
+          Done
         </button>
       </div>
     </Dropdown>

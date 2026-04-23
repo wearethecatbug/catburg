@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
 import './globals.css';
+import { AppShell } from './AppShell';
 import { ThemeController } from './ThemeController';
 import { getThemeInitScript } from '@/domain/theme';
 import { SETTINGS_STORAGE_KEY } from '@/domain/settings.types';
@@ -24,7 +25,9 @@ export default function RootLayout({
         </Script>
         <SettingsProvider>
           <ThemeController />
-          <TaskProvider>{children}</TaskProvider>
+          <AppShell>
+            <TaskProvider>{children}</TaskProvider>
+          </AppShell>
         </SettingsProvider>
       </body>
     </html>

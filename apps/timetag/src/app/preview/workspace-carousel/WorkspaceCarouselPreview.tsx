@@ -617,8 +617,6 @@ function WorkspaceRailPreview({ variant }: { variant: VariantConfig }) {
               <div
                 ref={viewportRef}
                 className={`flex items-stretch overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${isFlow ? 'gap-2 px-2 py-2' : ''}`}
-                role="tablist"
-                aria-label={`${variant.title} preview`}
                 tabIndex={0}
                 onWheel={handleWheel}
                 onFocus={() => setIsActive(true)}
@@ -635,9 +633,8 @@ function WorkspaceRailPreview({ variant }: { variant: VariantConfig }) {
                     <button
                       key={workspace.id}
                       type="button"
-                      role="tab"
                       data-workspace-id={workspace.id}
-                      aria-selected={selected}
+                      aria-pressed={selected}
                       onClick={() => setActiveId(workspace.id)}
                       className={isFlow
                         ? 'shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors'

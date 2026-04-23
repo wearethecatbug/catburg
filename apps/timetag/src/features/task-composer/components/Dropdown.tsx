@@ -49,6 +49,7 @@ export function Dropdown({
     const wrapperRef = useRef<HTMLDivElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
     const menuRef = useRef<HTMLDivElement | null>(null);
+    const placementRafRef = useRef<number | null>(null);
     const [menuOffsetX, setMenuOffsetX] = useState(0);
     const [menuMaxWidth, setMenuMaxWidth] = useState<number | undefined>(undefined);
 
@@ -81,6 +82,17 @@ export function Dropdown({
         setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
         setMenuOffsetX((current) => current === nextOffset ? current : nextOffset);
     }, [isOpen, menuAlign]);
+
+    const schedulePlacementUpdate = useCallback(() => {
+        if (placementRafRef.current !== null) {
+            window.cancelAnimationFrame(placementRafRef.current);
+        }
+
+        placementRafRef.current = window.requestAnimationFrame(() => {
+            placementRafRef.current = null;
+            updateMenuPlacement();
+        });
+    }, [updateMenuPlacement]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -117,21 +129,28 @@ export function Dropdown({
 
     useLayoutEffect(() => {
         if (!isOpen) {
+            if (placementRafRef.current !== null) {
+                window.cancelAnimationFrame(placementRafRef.current);
+                placementRafRef.current = null;
+            }
             setMenuOffsetX(0);
             setMenuMaxWidth(undefined);
             return;
         }
 
-        const frame = window.requestAnimationFrame(updateMenuPlacement);
-        window.addEventListener('resize', updateMenuPlacement);
-        window.addEventListener('scroll', updateMenuPlacement, true);
+        schedulePlacementUpdate();
+        window.addEventListener('resize', schedulePlacementUpdate);
+        window.addEventListener('scroll', schedulePlacementUpdate, true);
 
         return () => {
-            window.cancelAnimationFrame(frame);
-            window.removeEventListener('resize', updateMenuPlacement);
-            window.removeEventListener('scroll', updateMenuPlacement, true);
+            if (placementRafRef.current !== null) {
+                window.cancelAnimationFrame(placementRafRef.current);
+                placementRafRef.current = null;
+            }
+            window.removeEventListener('resize', schedulePlacementUpdate);
+            window.removeEventListener('scroll', schedulePlacementUpdate, true);
         };
-    }, [isOpen, updateMenuPlacement]);
+    }, [isOpen, schedulePlacementUpdate]);
 
     return (
         <div ref={wrapperRef} className={`relative ${fullWidth ? 'w-full' : 'flex-shrink-0'}`}>

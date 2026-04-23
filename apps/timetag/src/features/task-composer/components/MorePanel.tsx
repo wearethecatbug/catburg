@@ -5,32 +5,13 @@ import { type TaskPriority, type TimerMode } from '@/domain/task.types';
 import { supportsTimer } from '@/domain/task.mode';
 import type { DurationUnit } from '@/domain/duration';
 import { ChevronDownIcon, ClipboardIcon } from '@/shared';
+import { TASK_COMPOSER_TIMER_MODE_OPTIONS, getTaskComposerTimerModeLabel } from '../task-composer.timer-mode';
 import type { DropdownOption } from './Dropdown';
 import { Dropdown } from './Dropdown';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
 import { DurationField } from './DurationField';
-
-const TIMER_MODE_OPTIONS: Array<{
-    id: TimerMode;
-    label: string;
-}> = [
-    { id: 'duration', label: 'Duration' },
-    { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'note', label: 'Note' },
-    { id: 'deadline', label: 'Deadline' },
-];
-
-function getTimerModeLabel(timerMode: TimerMode) {
-    return timerMode === 'duration'
-        ? 'Duration'
-        : timerMode === 'pomodoro'
-            ? 'Pomodoro'
-            : timerMode === 'deadline'
-                ? 'Deadline'
-                : 'Note';
-}
 
 interface MorePanelProps {
     timerMode: TimerMode;
@@ -194,11 +175,11 @@ export function MorePanel({
                         buttonClassName="w-full justify-between"
                         buttonContent={
                             <span className="inline-flex min-w-0 flex-1 items-center justify-between gap-2">
-                                <span className="whitespace-nowrap">{getTimerModeLabel(timerMode)}</span>
+                                <span className="whitespace-nowrap">{getTaskComposerTimerModeLabel(timerMode)}</span>
                                 <ChevronDownIcon size="sm" />
                             </span>
                         }
-                        options={TIMER_MODE_OPTIONS}
+                        options={TASK_COMPOSER_TIMER_MODE_OPTIONS}
                         selectedId={timerMode}
                         isOpen={timerModeOpen}
                         onToggle={() => onTimerModeOpenChange((current) => !current)}

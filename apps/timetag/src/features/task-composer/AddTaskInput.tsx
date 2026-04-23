@@ -13,6 +13,7 @@ import {
   MoreVerticalIcon,
   PomodoroIcon,
 } from '@/shared';
+import { TASK_COMPOSER_TIMER_MODE_OPTIONS, getTaskComposerTimerModeLabel } from './task-composer.timer-mode';
 import { Dropdown, MorePanel, type DropdownOption } from './components';
 import { useTaskComposerState } from './useTaskComposerState';
 
@@ -20,25 +21,19 @@ interface AddTaskInputProps {
   defaultWorkspace?: AssignableWorkspaceType;
 }
 
-const MODE_OPTIONS: DropdownOption[] = [
-  { id: 'duration', label: 'Duration', icon: <HourglassIcon size="sm" /> },
-  { id: 'pomodoro', label: 'Pomodoro', icon: <PomodoroIcon size="sm" /> },
-  { id: 'deadline', label: 'Deadline', icon: <CalendarIcon size="sm" /> },
-  { id: 'note', label: 'Note', icon: <NoteIcon size="sm" /> },
-];
+const MODE_OPTIONS: DropdownOption[] = TASK_COMPOSER_TIMER_MODE_OPTIONS.map((option) => ({
+  ...option,
+  icon: option.id === 'duration'
+    ? <HourglassIcon size="sm" />
+    : option.id === 'pomodoro'
+      ? <PomodoroIcon size="sm" />
+      : option.id === 'deadline'
+        ? <CalendarIcon size="sm" />
+        : <NoteIcon size="sm" />,
+}));
 
 
 const PRIMARY_CONTROL_SLOT_WIDTH = 'calc(8ch + 4.5rem)';
-
-function getModeLabel(timerMode: TimerMode): string {
-  return timerMode === 'duration'
-    ? 'Duration'
-    : timerMode === 'deadline'
-      ? 'Deadline'
-      : timerMode === 'pomodoro'
-        ? 'Pomodoro'
-        : 'Note';
-}
 
 function renderModeIcon(timerMode: TimerMode) {
   if (timerMode === 'duration') return <HourglassIcon size="sm" />;
@@ -117,7 +112,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     setAutoEnabled,
     setPlayEnabled,
   } = useTaskComposerState({ defaultWorkspace, forwardedRef: ref });
-  const modeLabel = getModeLabel(timerMode);
+  const modeLabel = getTaskComposerTimerModeLabel(timerMode);
   const isNoteActive = isNoteExpanded || note.trim().length > 0;
   const modeButtonClassName = 'justify-between';
 
@@ -285,6 +280,7 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
               }}
               aria-expanded={isNoteExpanded}
               aria-controls="task-note-inline"
+              aria-label="Toggle note"
               title="Toggle note"
             >
               <NoteIcon size="sm" />
