@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { AppearanceSettings, AppearanceTabId, AppSettings } from '@/domain/settings.types';
+import { CONTENT_WIDTH_PRESETS, type AppearanceSettings, type AppearanceTabId, type AppSettings } from '@/domain/settings.types';
 import {
   CUSTOM_THEME_PRESETS,
   DEFAULT_CUSTOM_THEME_SETTINGS,
@@ -225,6 +225,43 @@ export function AppearanceSettingsSection({ activeTab, settings, updateAppearanc
   if (activeTab === 'layout') {
     return (
       <div className="space-y-3">
+        <div className="rounded-lg border border-gray-200 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-medium text-gray-900">Workspace content width</h3>
+            <p className="mt-1 text-xs text-gray-500">
+              Width presets change only the centered workspace container. Background surfaces remain full width.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            {Object.entries(CONTENT_WIDTH_PRESETS).map(([mode, preset]) => {
+              const isSelected = settings.appearance.contentWidthMode === mode;
+
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => updateAppearance({ contentWidthMode: mode as AppearanceSettings['contentWidthMode'] })}
+                  className="rounded-lg border px-3 py-3 text-left transition-colors"
+                  style={isSelected
+                    ? {
+                      borderColor: '#93c5fd',
+                      background: '#eff6ff',
+                    }
+                    : {
+                      borderColor: '#d1d5db',
+                      background: '#ffffff',
+                    }}
+                  aria-pressed={isSelected}
+                >
+                  <div className="text-sm font-medium text-gray-900">{preset.label}</div>
+                  <div className="mt-1 text-xs text-gray-500">Max width {preset.maxWidthPx}px</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <Field label="Compact list" description="Reduce spacing in task rows for denser scanning.">
           <input
             type="checkbox"

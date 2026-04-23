@@ -27,13 +27,12 @@ export type StoredTask = {
 };
 
 export const testSettings: AppSettings = {
-  version: 3,
+  version: 4,
   general: {
     autoStartTimerWhenTaskCreated: false,
     autoPauseOtherTimers: false,
     confirmBeforeDelete: false,
     defaultWorkspace: 'work',
-    defaultTaskView: 'all',
     showCompletedTasks: true,
     showUrgencyIndicator: true,
     showNotePreviewsInTaskList: true,
@@ -68,6 +67,7 @@ export const testSettings: AppSettings = {
       presetId: 'airy-glass',
       overrides: {},
     },
+    contentWidthMode: 'comfortable',
     compactList: false,
     animationsEnabled: true,
     roundedCorners: 12,

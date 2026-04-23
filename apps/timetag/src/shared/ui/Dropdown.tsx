@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 // ============================================================================
 // Dropdown
@@ -10,6 +11,8 @@ export interface DropdownProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
   align?: 'left' | 'right';
+  menuWidth?: 'auto' | 'trigger';
+  menuMinWidth?: number | string;
   disabled?: boolean;
   className?: string;
   closeOnSelect?: boolean; // Whether to close dropdown when item is clicked
@@ -22,6 +25,8 @@ export function Dropdown({
   trigger,
   children,
   align = 'left',
+  menuWidth = 'auto',
+  menuMinWidth,
   disabled = false,
   className = '',
   closeOnSelect = true,
@@ -29,11 +34,19 @@ export function Dropdown({
   onClose,
   onOpen,
 }: DropdownProps) {
+  const VIEWPORT_PADDING_PX = 8;
+  const MENU_OFFSET_PX = 4;
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuLeft, setMenuLeft] = useState<number | undefined>(undefined);
+  const [menuTop, setMenuTop] = useState<number | undefined>(undefined);
+  const [menuWidthPx, setMenuWidthPx] = useState<number | undefined>(undefined);
+  const [menuMaxWidth, setMenuMaxWidth] = useState<number | undefined>(undefined);
+  const [menuMaxHeight, setMenuMaxHeight] = useState<number | undefined>(undefined);
 
   const handleClose = useCallback(() => {
     if (onClose) {
@@ -51,6 +64,41 @@ export function Dropdown({
     }
   }, [onOpen]);
 
+  const updateMenuPlacement = useCallback(() => {
+    if (!isOpen || !dropdownRef.current || !menuRef.current) {
+      return;
+    }
+
+    const wrapperRect = dropdownRef.current.getBoundingClientRect();
+    const menuRect = menuRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const nextMaxWidth = Math.max(180, viewportWidth - VIEWPORT_PADDING_PX * 2);
+    const nextMaxHeight = Math.max(
+      0,
+      viewportHeight - wrapperRect.bottom - VIEWPORT_PADDING_PX - MENU_OFFSET_PX,
+    );
+    const nextMenuWidthPx = menuWidth === 'trigger'
+      ? Math.min(wrapperRect.width, nextMaxWidth)
+      : undefined;
+    const effectiveWidth = Math.min(nextMenuWidthPx ?? menuRect.width, nextMaxWidth);
+
+    const projectedLeft = align === 'right'
+      ? wrapperRect.right - effectiveWidth
+      : wrapperRect.left;
+    const nextLeft = Math.min(
+      Math.max(VIEWPORT_PADDING_PX, projectedLeft),
+      Math.max(VIEWPORT_PADDING_PX, viewportWidth - VIEWPORT_PADDING_PX - effectiveWidth),
+    );
+    const nextTop = Math.max(VIEWPORT_PADDING_PX, wrapperRect.bottom + MENU_OFFSET_PX);
+
+    setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
+    setMenuMaxHeight((current) => current === nextMaxHeight ? current : nextMaxHeight);
+    setMenuLeft((current) => current === nextLeft ? current : nextLeft);
+    setMenuTop((current) => current === nextTop ? current : nextTop);
+    setMenuWidthPx((current) => current === nextMenuWidthPx ? current : nextMenuWidthPx);
+  }, [align, isOpen, menuWidth]);
+
   // Close on outside click (only while dropdown is open)
   useEffect(() => {
     if (!isOpen) return;
@@ -58,7 +106,8 @@ export function Dropdown({
     function handleClickOutside(event: MouseEvent) {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node) &&
+        !(menuRef.current && menuRef.current.contains(event.target as Node))
       ) {
         handleClose();
       }
@@ -78,6 +127,27 @@ export function Dropdown({
     }
   }, [isOpen, handleClose]);
 
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setMenuLeft(undefined);
+      setMenuTop(undefined);
+      setMenuWidthPx(undefined);
+      setMenuMaxWidth(undefined);
+      setMenuMaxHeight(undefined);
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(updateMenuPlacement);
+    window.addEventListener('resize', updateMenuPlacement);
+    window.addEventListener('scroll', updateMenuPlacement, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', updateMenuPlacement);
+      window.removeEventListener('scroll', updateMenuPlacement, true);
+    };
+  }, [isOpen, updateMenuPlacement]);
+
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
@@ -91,16 +161,22 @@ export function Dropdown({
         {trigger}
       </button>
 
-      {isOpen && (
+      {isOpen && typeof document !== 'undefined' && createPortal(
         <div
-          className={`absolute top-full mt-1 z-50 min-w-[180px] rounded-lg border py-1 ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          ref={menuRef}
+          className={`fixed z-[120] overflow-y-auto rounded-lg border py-1 ${menuWidth === 'trigger' ? '' : 'min-w-[180px]'}`}
           style={{
+            top: menuTop,
+            left: menuLeft,
+            width: menuWidthPx,
+            minWidth: menuWidth === 'trigger' ? undefined : menuMinWidth,
             background: 'var(--tt-surface-elevated)',
             borderColor: 'var(--tt-border)',
             boxShadow: 'var(--tt-shadow)',
             backdropFilter: 'blur(16px) saturate(1.06)',
+            maxWidth: menuMaxWidth,
+            maxHeight: menuMaxHeight,
+            visibility: menuLeft === undefined || menuTop === undefined ? 'hidden' : undefined,
           }}
           role="menu"
         >
@@ -121,7 +197,8 @@ export function Dropdown({
                 )
               : child,
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

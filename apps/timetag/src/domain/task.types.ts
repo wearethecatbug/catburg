@@ -109,7 +109,7 @@ export interface CreateTaskInput {
 // ============================================================================
 // Filter State
 // ============================================================================
-export type TaskStatusFilter = TaskStatus | 'all';
+export type TaskStatusFilter = TaskStatus;
 
 export interface FilterState {
   status: TaskStatusFilter;

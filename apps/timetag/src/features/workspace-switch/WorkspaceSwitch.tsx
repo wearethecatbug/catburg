@@ -8,7 +8,23 @@ import {
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { useSettings, useTasks } from '@/store';
-import { usePersistedWorkspaces } from '@/shared';
+import { AppContentContainer, Dropdown, DropdownItem, usePersistedWorkspaces } from '@/shared';
+
+const WORKSPACE_SELECTOR_WIDTH = 'calc(8ch + 4.5rem)';
+
+type WorkspaceAddButtonVariant = 'air-ghost' | 'soft-chip' | 'minimal-inline';
+
+function getWorkspaceAddButtonVariant(contentWidthMode: 'compact' | 'comfortable' | 'wide'): WorkspaceAddButtonVariant {
+  if (contentWidthMode === 'compact') {
+    return 'minimal-inline';
+  }
+
+  if (contentWidthMode === 'wide') {
+    return 'soft-chip';
+  }
+
+  return 'air-ghost';
+}
 
 /**
  * WorkspaceSwitch — renders user-manageable workspace tabs + All + add-button.
@@ -18,22 +34,186 @@ export function WorkspaceSwitch() {
   const { state, setWorkspace } = useTasks();
   const { settings, updateGeneral } = useSettings();
   const { workspaces: userWorkspaces, setWorkspaces: setUserWorkspaces } = usePersistedWorkspaces();
+  const tabsViewportRef = React.useRef<HTMLDivElement | null>(null);
 
   // Keep the initial client render aligned with SSR output to avoid a tab flash.
   const [isMounted, setIsMounted] = useState(false);
+  const [hasHorizontalOverflow, setHasHorizontalOverflow] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  const updateScrollState = useCallback(() => {
+    const viewport = tabsViewportRef.current;
+    if (!viewport) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
+
+    const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    setHasHorizontalOverflow(maxScrollLeft > 4);
+    setCanScrollLeft(viewport.scrollLeft > 4);
+    setCanScrollRight(viewport.scrollLeft < maxScrollLeft - 4);
+  }, []);
+
+  const handleViewportWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    const viewport = tabsViewportRef.current;
+    if (!viewport || !hasHorizontalOverflow) {
+      return;
+    }
+
+    if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) {
+      return;
+    }
+
+    event.preventDefault();
+    viewport.scrollTo({
+      left: viewport.scrollLeft + event.deltaY,
+      behavior: 'auto',
+    });
+  }, [hasHorizontalOverflow]);
+
+  useEffect(() => {
+    if (!isMounted || !tabsViewportRef.current) {
+      return;
+    }
+
+    const activeTab = tabsViewportRef.current.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    activeTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    window.requestAnimationFrame(updateScrollState);
+  }, [isMounted, state.workspace, updateScrollState, userWorkspaces.length]);
+
+  useEffect(() => {
+    if (!isMounted || !tabsViewportRef.current) {
+      return;
+    }
+
+    const viewport = tabsViewportRef.current;
+    const handleResize = () => updateScrollState();
+
+    updateScrollState();
+    viewport.addEventListener('scroll', updateScrollState, { passive: true });
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      viewport.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isMounted, updateScrollState, userWorkspaces.length]);
+
   // State for inline add input
   const [isAdding, setIsAdding] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [isCarouselActive, setIsCarouselActive] = useState(false);
+
+  useEffect(() => {
+    if (!isMounted) {
+      return;
+    }
+
+    window.requestAnimationFrame(updateScrollState);
+  }, [isAdding, isMounted, updateScrollState]);
 
 
   // Combined tabs for rendering: All tab first, then user tabs (order preserved)
-  const tabs = [ALL_WORKSPACE_TAB, ...userWorkspaces];
+  const tabs = React.useMemo(() => [ALL_WORKSPACE_TAB, ...userWorkspaces], [userWorkspaces]);
   const canRemoveWorkspace = userWorkspaces.length > 1;
+  const activeWorkspaceLabel = tabs.find((workspace) => workspace.id === state.workspace)?.label ?? ALL_WORKSPACE_TAB.label;
+  const addWorkspaceVariant = getWorkspaceAddButtonVariant(settings.appearance.contentWidthMode);
+  const addWorkspaceSlotClassName = addWorkspaceVariant === 'soft-chip' ? 'w-12' : addWorkspaceVariant === 'minimal-inline' ? 'w-9' : 'w-10';
+  const addWorkspaceButtonClassName = addWorkspaceVariant === 'soft-chip'
+    ? 'inline-flex h-8 min-w-[2.5rem] items-center justify-center rounded-full border px-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]'
+    : addWorkspaceVariant === 'minimal-inline'
+      ? 'inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]'
+      : 'inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]';
+  const addWorkspaceButtonStyle = addWorkspaceVariant === 'soft-chip'
+    ? {
+        color: 'var(--tt-text-muted)',
+        borderColor: 'color-mix(in srgb, var(--tt-border) 82%, transparent)',
+        background: 'color-mix(in srgb, var(--tt-surface) 86%, transparent)',
+      }
+    : addWorkspaceVariant === 'minimal-inline'
+      ? {
+          color: 'var(--tt-text-soft)',
+          background: 'transparent',
+        }
+      : {
+          color: 'var(--tt-text-muted)',
+          background: 'transparent',
+        };
+
+  const focusWorkspaceTab = useCallback((workspaceId: AssignableWorkspaceType | 'all') => {
+    const viewport = tabsViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const targetTab = viewport.querySelector<HTMLElement>(`[role="tab"][data-workspace-id="${workspaceId}"]`);
+    targetTab?.focus();
+    targetTab?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, []);
+
+  const handleWorkspaceSelectFromDropdown = useCallback((workspaceId: AssignableWorkspaceType | 'all') => {
+    setWorkspace(workspaceId);
+    setSelectorOpen(false);
+    window.requestAnimationFrame(() => focusWorkspaceTab(workspaceId));
+  }, [focusWorkspaceTab, setWorkspace]);
+
+  const handleViewportKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = tabs.findIndex((workspace) => workspace.id === state.workspace);
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const previousWorkspace = tabs[Math.max(0, safeIndex - 1)];
+      if (previousWorkspace) {
+        setWorkspace(previousWorkspace.id);
+        window.requestAnimationFrame(() => focusWorkspaceTab(previousWorkspace.id));
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      const nextWorkspace = tabs[Math.min(tabs.length - 1, safeIndex + 1)];
+      if (nextWorkspace) {
+        setWorkspace(nextWorkspace.id);
+        window.requestAnimationFrame(() => focusWorkspaceTab(nextWorkspace.id));
+      }
+      return;
+    }
+
+    if (event.key === 'Home') {
+      event.preventDefault();
+      setWorkspace(tabs[0].id);
+      window.requestAnimationFrame(() => focusWorkspaceTab(tabs[0].id));
+      return;
+    }
+
+    if (event.key === 'End') {
+      event.preventDefault();
+      const lastWorkspace = tabs[tabs.length - 1];
+      setWorkspace(lastWorkspace.id);
+      window.requestAnimationFrame(() => focusWorkspaceTab(lastWorkspace.id));
+      return;
+    }
+
+    if (event.key === 'PageUp') {
+      event.preventDefault();
+      tabsViewportRef.current?.scrollBy({ left: -180, behavior: 'smooth' });
+      return;
+    }
+
+    if (event.key === 'PageDown') {
+      event.preventDefault();
+      tabsViewportRef.current?.scrollBy({ left: 180, behavior: 'smooth' });
+    }
+  }, [focusWorkspaceTab, setWorkspace, state.workspace, tabs]);
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {
@@ -101,138 +281,242 @@ export function WorkspaceSwitch() {
 
   return (
       <div
-        className="flex items-stretch border-b px-2"
-        role="tablist"
-        aria-label="Workspaces"
+        className="relative z-30 border-b"
         style={{
           borderColor: 'var(--tt-border)',
           background: 'var(--tt-surface-muted)',
           backdropFilter: 'blur(16px) saturate(1.06)',
         }}
       >
-        {!isMounted ? (
+        <AppContentContainer>
+          <div className="flex items-stretch gap-2 px-2">
+            {!isMounted ? (
             // Skeleton loader during SSR/initial mount to prevent flash
             <>
-              <div className="h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
-              <div className="ml-2 h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-stretch overflow-hidden">
+                  <div className="h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
+                  <div className="ml-2 h-10 w-16 animate-pulse rounded px-4 py-2" style={{ background: 'var(--tt-surface-subtle)' }} />
+                </div>
+              </div>
+              <div className="h-10 w-10 animate-pulse rounded-lg" style={{ background: 'var(--tt-surface-subtle)' }} />
             </>
-        ) : (
+            ) : (
             <>
-              {tabs.map((ws) => {
-                const selected = state.workspace === ws.id;
-                const showRemoveControl = ws.id !== ALL_WORKSPACE_TAB.id;
-                return (
-                    <div key={ws.id} className="relative flex items-stretch">
-                      <button
-                          type="button"
-                          role="tab"
-                          aria-selected={selected}
-                          onClick={() => setWorkspace(ws.id)}
-                          className={`flex h-10 items-center border-b-2 px-4 text-sm font-medium transition-colors ${
-                              selected
-                                   ? ''
-                                   : 'border-transparent'
-                          }`}
-                           style={selected
-                             ? { borderColor: 'var(--tt-accent)', color: 'var(--tt-accent)' }
-                             : { color: 'var(--tt-text-muted)' }}
-                      >
-                        <span className="whitespace-nowrap">{ws.label}</span>
-                      </button>
+              <div className="min-w-0 flex-1">
+                <div
+                  className="relative overflow-hidden rounded-2xl transition-[box-shadow,background-color] duration-200 focus-within:ring-2 focus-within:ring-[var(--tt-ring)]"
+                  style={{
+                    background: isCarouselActive ? 'color-mix(in srgb, var(--tt-surface-muted) 78%, var(--tt-surface) 22%)' : 'var(--tt-surface-muted)',
+                    boxShadow: hasHorizontalOverflow || isCarouselActive
+                      ? 'inset 0 0 0 1px color-mix(in srgb, var(--tt-border) 68%, transparent)'
+                      : undefined,
+                  }}
+                  onMouseEnter={() => setIsCarouselActive(true)}
+                  onMouseLeave={() => setIsCarouselActive(false)}
+                >
+                  {canScrollLeft ? (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8"
+                      style={{ background: 'linear-gradient(90deg, var(--tt-surface-muted) 16%, transparent 100%)' }}
+                    />
+                  ) : null}
+                  {canScrollRight ? (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8"
+                      style={{ background: 'linear-gradient(270deg, var(--tt-surface-muted) 16%, transparent 100%)' }}
+                    />
+                  ) : null}
 
-                      <span
-                        className="mr-1 flex h-10 w-6 shrink-0 items-center justify-center border-b-2 border-transparent"
-                        aria-hidden={showRemoveControl ? undefined : 'true'}
-                      >
-                      {/* render remove control for user-owned tabs (not All) */}
-                      {showRemoveControl ? (
-                          <button
-                              type="button"
-                              aria-label={`Remove workspace ${ws.label}`}
-                              title={canRemoveWorkspace ? `Remove ${ws.label}` : 'At least one workspace must remain'}
-                              onClick={() => handleRemove(ws.id)}
-                              className="inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-[var(--tt-surface-hover)] focus:outline-none disabled:hover:bg-transparent"
-                              disabled={!canRemoveWorkspace}
-                              aria-disabled={!canRemoveWorkspace}
-                              style={{
-                                lineHeight: 0,
-                                color: 'var(--tt-text-soft)',
-                                background: canRemoveWorkspace ? 'transparent' : 'color-mix(in srgb, var(--tt-surface-subtle) 72%, transparent)',
-                                opacity: canRemoveWorkspace ? 1 : 0.45,
-                                cursor: canRemoveWorkspace ? 'pointer' : 'not-allowed',
-                              }}
-                          >
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                              <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <div
+                    ref={tabsViewportRef}
+                    className="flex items-stretch overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    role="tablist"
+                    aria-label="Workspaces"
+                    tabIndex={0}
+                    onWheel={handleViewportWheel}
+                    onFocus={() => setIsCarouselActive(true)}
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                        setIsCarouselActive(false);
+                      }
+                    }}
+                    onKeyDown={handleViewportKeyDown}
+                  >
+                    {tabs.map((ws) => {
+                      const selected = state.workspace === ws.id;
+                      const showRemoveControl = ws.id !== ALL_WORKSPACE_TAB.id;
+                      return (
+                          <div key={ws.id} className="relative flex items-stretch">
+                            <button
+                                type="button"
+                                role="tab"
+                                data-workspace-id={ws.id}
+                                aria-selected={selected}
+                                onClick={() => setWorkspace(ws.id)}
+                                className={`flex h-10 items-center border-b-2 px-4 text-sm font-medium transition-colors ${
+                                    selected
+                                         ? ''
+                                         : 'border-transparent'
+                                }`}
+                                 style={selected
+                                   ? { borderColor: 'var(--tt-accent)', color: 'var(--tt-accent)' }
+                                   : { color: 'var(--tt-text-muted)' }}
+                            >
+                              <span className="whitespace-nowrap">{ws.label}</span>
+                            </button>
+
+                            <span
+                              className="mr-1 flex h-10 w-6 shrink-0 items-center justify-center border-b-2 border-transparent"
+                              aria-hidden={showRemoveControl ? undefined : 'true'}
+                            >
+                            {showRemoveControl ? (
+                                <button
+                                    type="button"
+                                    aria-label={`Remove workspace ${ws.label}`}
+                                    title={canRemoveWorkspace ? `Remove ${ws.label}` : 'At least one workspace must remain'}
+                                    onClick={() => handleRemove(ws.id)}
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded-full transition-colors hover:bg-[var(--tt-surface-hover)] focus:outline-none disabled:hover:bg-transparent"
+                                    disabled={!canRemoveWorkspace}
+                                    aria-disabled={!canRemoveWorkspace}
+                                    style={{
+                                      lineHeight: 0,
+                                      color: 'var(--tt-text-soft)',
+                                      background: canRemoveWorkspace ? 'transparent' : 'color-mix(in srgb, var(--tt-surface-subtle) 72%, transparent)',
+                                      opacity: canRemoveWorkspace ? 1 : 0.45,
+                                      cursor: canRemoveWorkspace ? 'pointer' : 'not-allowed',
+                                    }}
+                                >
+                                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                                    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                            ) : null}
+                            </span>
+                          </div>
+                      );
+                    })}
+
+                    {userWorkspaces.length === 0 && !isAdding && (
+                        <div className="ml-3 flex h-10 items-center text-xs italic" style={{ color: 'var(--tt-text-soft)' }}>
+                          Click + to add workspace
+                        </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative z-[70] flex shrink-0 items-stretch gap-2">
+                <Dropdown
+                  align="right"
+                  menuWidth="trigger"
+                  className="shrink-0"
+                  isOpen={selectorOpen}
+                  onOpen={() => setSelectorOpen(true)}
+                  onClose={() => setSelectorOpen(false)}
+                  trigger={
+                    <span
+                      className="inline-flex h-10 items-center justify-between gap-2 rounded-xl border px-3 text-sm font-medium transition-colors"
+                      style={{
+                        width: WORKSPACE_SELECTOR_WIDTH,
+                        borderColor: 'var(--tt-border)',
+                        background: selectorOpen ? 'var(--tt-surface-elevated)' : 'var(--tt-surface)',
+                        color: 'var(--tt-text)',
+                        boxShadow: selectorOpen ? 'var(--tt-shadow-soft)' : undefined,
+                      }}
+                    >
+                      <span className="truncate text-left">{activeWorkspaceLabel}</span>
+                      <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+                      </svg>
+                    </span>
+                  }
+                >
+                  {tabs.map((workspace) => {
+                    const selected = workspace.id === state.workspace;
+                    return (
+                      <DropdownItem key={workspace.id} onClick={() => handleWorkspaceSelectFromDropdown(workspace.id)}>
+                        <span className="flex items-center justify-between gap-3">
+                          <span>{workspace.label}</span>
+                          {selected ? (
+                            <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true" style={{ color: 'var(--tt-accent)' }}>
+                              <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
-                          </button>
-                      ) : null}
-                      </span>
-                    </div>
-                );
-              })}
+                          ) : null}
+                        </span>
+                      </DropdownItem>
+                    );
+                  })}
+                </Dropdown>
 
-              {/* Add button or inline input */}
-              {!isAdding ? (
-                  <div className="ml-2">
+                {!isAdding ? (
+                  <div className={`flex h-10 shrink-0 items-center justify-center rounded-xl border border-transparent ${addWorkspaceSlotClassName}`}>
                     <button
                         type="button"
                         aria-label="Add workspace"
-                        title="Add workspace"
+                        title="New workspace"
                         onClick={handleToggleAdd}
-                        className="rounded px-2 py-1 text-sm"
-                        style={{ color: 'var(--tt-text-muted)' }}
+                        className={`${addWorkspaceButtonClassName} hover:bg-[var(--tt-surface-hover)]`}
+                        style={addWorkspaceButtonStyle}
                     >
                       <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                         <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
                       </svg>
                     </button>
                   </div>
-              ) : (
-                  <div className="ml-2 flex items-center gap-2 border-b-2 pb-2" style={{ borderColor: 'var(--tt-accent)' }}>
-                    <input
-                        type="text"
-                        value={newWorkspaceName}
-                        onChange={(e) => setNewWorkspaceName(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Workspace name"
-                        autoFocus
-                        className="border-none bg-transparent px-2 py-1 text-sm outline-none"
-                        style={{ minWidth: '120px', color: 'var(--tt-text)' }}
-                    />
-                    <button
-                        type="button"
-                        aria-label="Confirm add workspace"
-                        title="Add"
-                        onClick={handleConfirmAdd}
-                        style={{ color: 'var(--tt-accent)' }}
+                ) : (
+                  <div className="flex h-10 w-[15rem] shrink-0 items-center border-b-2 px-1 sm:w-[16rem]" style={{ borderColor: 'var(--tt-accent)' }}>
+                    <div
+                      className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-xl border px-1.5 focus-within:ring-2 focus-within:ring-[var(--tt-ring)]"
+                      style={{
+                        borderColor: 'color-mix(in srgb, var(--tt-accent) 18%, var(--tt-border))',
+                        background: 'var(--tt-surface)',
+                      }}
                     >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                    <button
-                        type="button"
-                        aria-label="Cancel add workspace"
-                        title="Cancel"
-                        onClick={handleCancelAdd}
-                        style={{ color: 'var(--tt-text-soft)' }}
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
-                        <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                      <input
+                          type="text"
+                          value={newWorkspaceName}
+                          onChange={(e) => setNewWorkspaceName(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          placeholder="Workspace name"
+                          autoFocus
+                          className="h-full min-w-0 flex-1 border-none bg-transparent px-2 text-sm leading-5 focus-visible:outline-none"
+                          style={{ color: 'var(--tt-text)' }}
+                      />
+                      <button
+                          type="button"
+                          aria-label="Confirm add workspace"
+                          title="Add"
+                          onClick={handleConfirmAdd}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-[var(--tt-accent-soft)] focus-visible:outline-none"
+                          style={{ color: 'var(--tt-accent)' }}
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                          type="button"
+                          aria-label="Cancel add workspace"
+                          title="Cancel"
+                          onClick={handleCancelAdd}
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:bg-[var(--tt-surface-hover)] focus-visible:outline-none"
+                          style={{ color: 'var(--tt-text-soft)' }}
+                      >
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+                          <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-              )}
-
-              {/* Placeholder hint when no user workspaces and not adding */}
-              {userWorkspaces.length === 0 && !isAdding && (
-                  <div className="ml-3 text-xs italic" style={{ color: 'var(--tt-text-soft)' }}>
-                    Click + to add workspace
-                  </div>
-              )}
+                )}
+              </div>
             </>
-        )}
+            )}
+          </div>
+        </AppContentContainer>
       </div>
   );
 }

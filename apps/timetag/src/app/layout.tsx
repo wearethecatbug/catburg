@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { ThemeController } from './ThemeController';
 import { getThemeInitScript } from '@/domain/theme';
@@ -17,10 +18,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: getThemeInitScript(SETTINGS_STORAGE_KEY) }} />
-      </head>
       <body suppressHydrationWarning>
+        <Script id="tt-theme-init" strategy="beforeInteractive">
+          {getThemeInitScript(SETTINGS_STORAGE_KEY)}
+        </Script>
         <SettingsProvider>
           <ThemeController />
           <TaskProvider>{children}</TaskProvider>

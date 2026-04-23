@@ -1,7 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Dropdown, DropdownItem, DropdownDivider, MenuIcon } from '@/shared';
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownDivider,
+  MenuIcon,
+  QUERY_CONTROL_MENU_MIN_WIDTH,
+  QueryControlTrigger,
+} from '@/shared';
 import { useTasks } from '@/store';
 
 interface BulkDropdownProps {
@@ -23,21 +30,14 @@ export function BulkDropdown({ onDeleteSelected }: BulkDropdownProps) {
   return (
     <Dropdown
       trigger={
-        <span
-          className={`flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm ${
-            hasSelection ? 'font-medium' : ''
-          }`}
-          style={{
-            color: 'var(--tt-text)',
-            background: 'var(--tt-surface-subtle)',
-            borderColor: 'var(--tt-border)',
-          }}
-        >
-          <MenuIcon size="sm" />
-          Bulk
-        </span>
+        <QueryControlTrigger
+          icon={<MenuIcon size="sm" />}
+          label="Bulk"
+          className={hasSelection ? 'font-medium' : ''}
+        />
       }
       align="right"
+      menuMinWidth={QUERY_CONTROL_MENU_MIN_WIDTH}
     >
       <DropdownItem onClick={selectAll}>Select all</DropdownItem>
       <DropdownItem onClick={clearSelection} disabled={!hasSelection}>

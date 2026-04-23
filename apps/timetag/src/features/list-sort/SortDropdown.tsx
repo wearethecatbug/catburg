@@ -1,7 +1,14 @@
 'use client';
 
 import React from 'react';
-import { Dropdown, DropdownItem, SortIcon, ChevronDownIcon } from '@/shared';
+import {
+  Dropdown,
+  DropdownItem,
+  SortIcon,
+  ChevronDownIcon,
+  QUERY_CONTROL_MENU_MIN_WIDTH,
+  QueryControlTrigger,
+} from '@/shared';
 import { useTasks } from '@/store';
 import type { SortField, SortDirection } from '@/domain/task.types';
 
@@ -22,28 +29,22 @@ export function SortDropdown() {
     setSort({ field, direction });
   };
 
-  const currentLabel = SORT_OPTIONS.find((o) => o.field === state.sort.field)?.label;
-
   return (
     <Dropdown
       trigger={
-        <span
-          className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-sm"
-          style={{
-            color: 'var(--tt-text)',
-            background: 'var(--tt-surface-subtle)',
-            borderColor: 'var(--tt-border)',
-          }}
-        >
-          <SortIcon size="sm" />
-          {currentLabel}
-          <ChevronDownIcon
-            size="xs"
-            className={`transition-transform ${state.sort.direction === 'asc' ? 'rotate-180' : ''}`}
-          />
-        </span>
+        <QueryControlTrigger
+          icon={<SortIcon size="sm" />}
+          label="Sort"
+          trailing={
+            <ChevronDownIcon
+              size="xs"
+              className={`hidden transition-transform sm:block ${state.sort.direction === 'asc' ? 'rotate-180' : ''}`}
+            />
+          }
+        />
       }
       align="right"
+      menuMinWidth={QUERY_CONTROL_MENU_MIN_WIDTH}
     >
       {SORT_OPTIONS.map((option) => (
         <DropdownItem key={option.field} onClick={() => handleSort(option.field)}>

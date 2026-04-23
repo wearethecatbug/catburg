@@ -21,7 +21,7 @@ export function TaskRowActionsMenu({
   onDelete,
 }: TaskRowActionsMenuProps) {
   return (
-    <div className="ml-3 shrink-0">
+    <div className="flex h-[40px] w-8 shrink-0 items-center justify-center">
       <Dropdown
         trigger={
           <span

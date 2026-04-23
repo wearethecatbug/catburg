@@ -3,7 +3,7 @@ import {
   DEFAULT_SETTINGS,
   type AppSettings,
 } from './settings.types';
-import { clampNumber, isDefaultTaskView, isOvertimeBehavior, isRecord, isTimerMode } from './settings.guards';
+import { clampNumber, isContentWidthMode, isOvertimeBehavior, isRecord, isTimerMode } from './settings.guards';
 import { normalizeCustomThemeSettings, isThemeMode } from './theme';
 import {
   clampDeadlineOffsetSec,
@@ -44,7 +44,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
   );
 
   return {
-    version: 3,
+    version: 4,
     general: {
       autoStartTimerWhenTaskCreated:
         typeof general.autoStartTimerWhenTaskCreated === 'boolean'
@@ -61,11 +61,6 @@ export function normalizeSettings(raw: unknown): AppSettings {
       defaultWorkspace: isAssignableWorkspaceType(general.defaultWorkspace)
         ? general.defaultWorkspace
         : DEFAULT_SETTINGS.general.defaultWorkspace,
-      defaultTaskView: isDefaultTaskView(general.defaultTaskView)
-        ? general.defaultTaskView
-        : isDefaultTaskView(general.defaultTaskViewOnStartup)
-          ? general.defaultTaskViewOnStartup
-          : DEFAULT_SETTINGS.general.defaultTaskView,
       showCompletedTasks:
         typeof general.showCompletedTasks === 'boolean'
           ? general.showCompletedTasks
@@ -143,6 +138,9 @@ export function normalizeSettings(raw: unknown): AppSettings {
         ? appearance.themeMode
         : DEFAULT_SETTINGS.appearance.themeMode,
       customTheme,
+      contentWidthMode: isContentWidthMode(appearance.contentWidthMode)
+        ? appearance.contentWidthMode
+        : DEFAULT_SETTINGS.appearance.contentWidthMode,
       compactList:
         typeof appearance.compactList === 'boolean'
           ? appearance.compactList

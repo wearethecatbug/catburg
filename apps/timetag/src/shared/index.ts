@@ -1,14 +1,21 @@
 // Shared layer barrel export
 
 // UI components
-export { Badge, Checkbox, Chip, Dropdown, DropdownItem, DropdownDivider, GhostTimer, Toast, useToast, TimerRingButton } from './ui';
+export {
+  AppContentContainer,
+  Checkbox,
+  Dropdown,
+  DropdownItem,
+  DropdownDivider,
+  GhostTimer,
+  QUERY_CONTROL_MENU_MIN_WIDTH,
+  QueryControlTrigger,
+  TimerRingButton,
+} from './ui';
 
 // Icons
 export * from './icons';
 
 // Hooks
-export { useLocalStorage, useKeyboardShortcuts, useFocusRef, usePersistedWorkspaces } from './hooks';
-
-// Utils
-export * from './utils/index';
+export { usePersistedWorkspaces } from './hooks';
 

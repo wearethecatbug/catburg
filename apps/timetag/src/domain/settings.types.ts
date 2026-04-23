@@ -9,8 +9,14 @@ import {
 
 export type { CustomThemeOverrides, CustomThemePresetId, CustomThemeSettings, ThemeMode } from './theme';
 
-export type DefaultTaskView = 'active' | 'all';
 export type OvertimeBehavior = 'continue' | 'stop';
+export type ContentWidthMode = 'compact' | 'comfortable' | 'wide';
+
+export const CONTENT_WIDTH_PRESETS: Record<ContentWidthMode, { label: string; maxWidthPx: number }> = {
+  compact: { label: 'Compact', maxWidthPx: 1040 },
+  comfortable: { label: 'Comfortable', maxWidthPx: 1160 },
+  wide: { label: 'Wide', maxWidthPx: 1280 },
+};
 
 export type SettingsSectionId = 'general' | 'timer' | 'appearance';
 export type GeneralTabId = 'behavior' | 'defaults' | 'interface';
@@ -22,7 +28,6 @@ export interface GeneralSettings {
   autoPauseOtherTimers: boolean;
   confirmBeforeDelete: boolean;
   defaultWorkspace: AssignableWorkspaceType;
-  defaultTaskView: DefaultTaskView;
   showCompletedTasks: boolean;
   showUrgencyIndicator: boolean;
   showNotePreviewsInTaskList: boolean;
@@ -62,6 +67,7 @@ export interface TimerSettings {
 export interface AppearanceSettings {
   themeMode: ThemeMode;
   customTheme: CustomThemeSettings;
+  contentWidthMode: ContentWidthMode;
   compactList: boolean;
   animationsEnabled: boolean;
   roundedCorners: number;
@@ -69,7 +75,7 @@ export interface AppearanceSettings {
 }
 
 export interface AppSettings {
-  version: 3;
+  version: 4;
   general: GeneralSettings;
   timer: TimerSettings;
   appearance: AppearanceSettings;
@@ -78,13 +84,12 @@ export interface AppSettings {
 export const SETTINGS_STORAGE_KEY = 'timetag-settings';
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  version: 3,
+  version: 4,
   general: {
     autoStartTimerWhenTaskCreated: false,
     autoPauseOtherTimers: false,
     confirmBeforeDelete: true,
     defaultWorkspace: 'work',
-    defaultTaskView: 'active',
     showCompletedTasks: true,
     showUrgencyIndicator: true,
     showNotePreviewsInTaskList: true,
@@ -116,6 +121,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   appearance: {
     themeMode: 'light',
     customTheme: DEFAULT_CUSTOM_THEME_SETTINGS,
+    contentWidthMode: 'comfortable',
     compactList: false,
     animationsEnabled: true,
     roundedCorners: 12,

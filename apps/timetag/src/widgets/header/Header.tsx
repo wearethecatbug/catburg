@@ -10,6 +10,7 @@ import {
   BellIcon,
   UserIcon,
 } from '@/shared';
+import { AppContentContainer } from '@/shared/ui';
 import { getNextThemeMode, getThemeModeLabel } from '@/domain/theme';
 import { useSettings } from '@/store';
 
@@ -36,7 +37,7 @@ export function Header({ onOpenSettings }: HeaderProps) {
 
   return (
     <header
-      className="flex items-center justify-between border-b px-4 py-3"
+      className="border-b py-3"
       style={{
         background: 'var(--tt-surface)',
         borderColor: 'var(--tt-border)',
@@ -44,70 +45,68 @@ export function Header({ onOpenSettings }: HeaderProps) {
         backdropFilter: 'blur(18px) saturate(1.08)',
       }}
     >
-      {/* Left — Settings */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          className="rounded-lg p-2"
-          style={{ color: 'var(--tt-text-muted)' }}
-          aria-label="Settings"
-        >
-          <SettingsIcon size="md" />
-        </button>
-        <span className="text-sm font-medium" style={{ color: 'var(--tt-text)' }}>Settings</span>
-      </div>
+      <AppContentContainer>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="rounded-lg p-2"
+              style={{ color: 'var(--tt-text-muted)' }}
+              aria-label="Settings"
+            >
+              <SettingsIcon size="md" />
+            </button>
+            <span className="text-sm font-medium" style={{ color: 'var(--tt-text)' }}>Settings</span>
+          </div>
 
-      {/* Right — compact global controls */}
-      <div className="flex items-center gap-1">
-        {/* Theme toggle */}
-        <button
-          type="button"
-          onClick={handleThemeCycle}
-          className="inline-flex min-w-[7.5rem] items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
-          style={{
-            borderColor: 'var(--tt-border)',
-            background: 'var(--tt-surface-subtle)',
-            color: 'var(--tt-text)',
-          }}
-          aria-label={`Theme: ${themeLabel}. Switch to ${nextThemeLabel}`}
-          title={`Theme: ${themeLabel} · Click to switch to ${nextThemeLabel}`}
-        >
-          <ThemeIcon size="sm" />
-          <span>{themeLabel}</span>
-        </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleThemeCycle}
+              className="inline-flex min-w-[7.5rem] items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium"
+              style={{
+                borderColor: 'var(--tt-border)',
+                background: 'var(--tt-surface-subtle)',
+                color: 'var(--tt-text)',
+              }}
+              aria-label={`Theme: ${themeLabel}. Switch to ${nextThemeLabel}`}
+              title={`Theme: ${themeLabel} · Click to switch to ${nextThemeLabel}`}
+            >
+              <ThemeIcon size="sm" />
+              <span>{themeLabel}</span>
+            </button>
 
-        {/* Mute toggle */}
-        <button
-          type="button"
-          className="rounded-lg p-2"
-          style={{ color: 'var(--tt-text-muted)' }}
-          aria-label="Toggle mute"
-        >
-          <MuteIcon size="md" />
-        </button>
+            <button
+              type="button"
+              className="rounded-lg p-2"
+              style={{ color: 'var(--tt-text-muted)' }}
+              aria-label="Toggle mute"
+            >
+              <MuteIcon size="md" />
+            </button>
 
-        {/* Notifications */}
-        <button
-          type="button"
-          className="relative rounded-lg p-2"
-          style={{ color: 'var(--tt-text-muted)' }}
-          aria-label="Notifications"
-        >
-          <BellIcon size="md" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+            <button
+              type="button"
+              className="relative rounded-lg p-2"
+              style={{ color: 'var(--tt-text-muted)' }}
+              aria-label="Notifications"
+            >
+              <BellIcon size="md" />
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+            </button>
 
-        {/* Profile */}
-        <button
-          type="button"
-          className="rounded-lg p-2"
-          style={{ color: 'var(--tt-text-muted)' }}
-          aria-label="Profile"
-        >
-          <UserIcon size="md" />
-        </button>
-      </div>
+            <button
+              type="button"
+              className="rounded-lg p-2"
+              style={{ color: 'var(--tt-text-muted)' }}
+              aria-label="Profile"
+            >
+              <UserIcon size="md" />
+            </button>
+          </div>
+        </div>
+      </AppContentContainer>
     </header>
   );
 }

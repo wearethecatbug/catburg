@@ -114,17 +114,6 @@ export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: G
           )}
         </Field>
 
-        <Field label="Default task view" description="Used as the initial status view when the app opens.">
-          <select
-            value={settings.general.defaultTaskView}
-            onChange={(e) => updateGeneral({ defaultTaskView: e.target.value as typeof settings.general.defaultTaskView })}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700"
-            aria-label="Default task view"
-          >
-            <option value="active">Active</option>
-            <option value="all">All</option>
-          </select>
-        </Field>
       </div>
     );
   }
@@ -133,7 +122,7 @@ export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: G
     <div className="space-y-3">
       <Field
         label="Show completed tasks"
-        description="Keep done and archived items visible in the All view and in status tabs."
+        description="Keep done items visible in the Active view and keep the Done and Archived status tabs available."
       >
         <input
           type="checkbox"
