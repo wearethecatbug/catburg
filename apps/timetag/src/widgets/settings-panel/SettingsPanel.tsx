@@ -63,7 +63,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         }}
       >
         <div className="max-[700px]:hidden">
-          <SettingsSidebar activeSection={activeSection} onChange={setActiveSection} onClose={handleCancel} />
+          <SettingsSidebar activeSection={activeSection} onChange={setActiveSection} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col" style={{ background: 'var(--tt-surface-elevated)' }}>
           <div

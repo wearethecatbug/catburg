@@ -7,7 +7,6 @@ import { ClipboardIcon, HourglassIcon, SettingsIcon, SunIcon } from '@/shared';
 interface SettingsSidebarProps {
   activeSection: SettingsSectionId;
   onChange: (section: SettingsSectionId) => void;
-  onClose: () => void;
 }
 
 const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ReactNode }> = [
@@ -16,9 +15,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ReactN
   { id: 'appearance', label: 'Appearance', icon: <SunIcon size="sm" aria-hidden /> },
 ];
 
-export function SettingsSidebar({ activeSection, onChange, onClose }: SettingsSidebarProps) {
-  const [isCloseHovered, setIsCloseHovered] = React.useState(false);
-
+export function SettingsSidebar({ activeSection, onChange }: SettingsSidebarProps) {
   return (
     <aside
       className="flex w-56 shrink-0 flex-col border-r px-0"
@@ -71,25 +68,6 @@ export function SettingsSidebar({ activeSection, onChange, onClose }: SettingsSi
         ))}
       </nav>
 
-      <div className="border-t p-3" style={{ borderColor: 'var(--tt-border)' }}>
-        <button
-          type="button"
-          onClick={onClose}
-          onMouseEnter={() => setIsCloseHovered(true)}
-          onMouseLeave={() => setIsCloseHovered(false)}
-          className="w-full rounded-xl px-3 py-2 text-left text-sm transition-colors"
-          style={isCloseHovered
-            ? {
-                background: 'var(--tt-surface)',
-                color: 'var(--tt-text)',
-              }
-            : {
-                color: 'var(--tt-text-muted)',
-              }}
-        >
-          Close
-        </button>
-      </div>
     </aside>
   );
 }
