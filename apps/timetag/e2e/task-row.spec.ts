@@ -162,8 +162,9 @@ test.describe('Task row states', () => {
     await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await page.locator('#task-note-inline-input').fill('Created from Playwright test');
     await page.getByRole('button', { name: /more options/i }).click();
-    await morePanel(page).getByText('Urgent', { exact: true }).click();
-    await page.getByRole('button', { name: 'Add task' }).click();
+    const panel = morePanel(page);
+    await panel.getByText('Urgent', { exact: true }).click();
+    await panel.getByRole('button', { name: /apply/i }).click();
 
     const createdRow = taskRow(page, 'Playwright urgent task');
     await expect(createdRow).toBeVisible();

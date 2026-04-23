@@ -26,7 +26,9 @@ function morePanel(page: Page) {
 
 async function openMorePanel(page: Page) {
   await page.getByRole('button', { name: /more options/i }).click();
-  return morePanel(page);
+  const panel = morePanel(page);
+  await panel.waitFor({ state: 'visible' });
+  return panel;
 }
 
 async function openSettingsDefaultsTab(page: Page) {

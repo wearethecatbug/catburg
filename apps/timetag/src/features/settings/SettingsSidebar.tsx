@@ -2,7 +2,7 @@
 
 import type { SettingsSectionId } from '@/domain/settings.types';
 import { SettingsIcon } from '@/shared';
-import { SETTINGS_SECTIONS } from '@/widgets/settings-panel/settings-panel.config';
+import { SETTINGS_SECTIONS } from './settings-sections.config';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSectionId;

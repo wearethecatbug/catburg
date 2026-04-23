@@ -541,8 +541,9 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setPresetOpen(false);
     setModeOpen(false);
     setAdvancedModeOpen(false);
+    setWorkspaceOpen(false);
     focusInput();
-  }, [focusInput]);
+  }, [focusInput, setWorkspaceOpen]);
 
   const handleResetDetails = React.useCallback(() => {
     resetComposerToSettingsDefaults();

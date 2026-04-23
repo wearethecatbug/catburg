@@ -8,10 +8,10 @@ import type {
   TimerTabId,
 } from '@/domain/settings.types';
 import { SettingsSidebar } from '@/features/settings';
+import { SECTION_LABELS, SETTINGS_SECTIONS } from '@/features/settings/settings-sections.config';
 import { CloseIcon, SettingsIcon } from '@/shared';
 import { SettingsPanelFooter } from './SettingsPanelFooter';
 import { SettingsPanelSection } from './SettingsPanelSection';
-import { SECTION_LABELS, SETTINGS_SECTIONS } from './settings-panel.config';
 import { useSettingsDraft } from './useSettingsDraft';
 
 interface SettingsPanelProps {

@@ -96,8 +96,9 @@ export function Dropdown({
     );
     const shouldOpenUpward = spaceAbove > spaceBelow;
     const nextMaxHeight = shouldOpenUpward ? spaceAbove : spaceBelow;
+    const clampedMenuHeight = Math.min(menuRect.height, nextMaxHeight);
     const nextTop = shouldOpenUpward
-      ? Math.max(VIEWPORT_PADDING_PX, wrapperRect.top - MENU_OFFSET_PX - nextMaxHeight)
+      ? Math.max(VIEWPORT_PADDING_PX, wrapperRect.top - MENU_OFFSET_PX - clampedMenuHeight)
       : Math.max(VIEWPORT_PADDING_PX, wrapperRect.bottom + MENU_OFFSET_PX);
 
     setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
