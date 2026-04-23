@@ -10,7 +10,6 @@ import {
   HourglassIcon,
   CalendarIcon,
   NoteIcon,
-  MoreVerticalIcon,
   PomodoroIcon,
 } from '@/shared';
 import { TASK_COMPOSER_TIMER_MODE_OPTIONS, getTaskComposerTimerModeLabel } from './task-composer.timer-mode';
@@ -298,10 +297,10 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
               }}
               aria-expanded={showMore}
               aria-controls="task-composer-more"
-              aria-label="More options"
-              title="More options"
+              aria-label={showMore ? 'Hide details' : 'Details'}
+              title={showMore ? 'Hide details' : 'Details'}
             >
-              <MoreVerticalIcon size="sm" />
+              <span>{showMore ? 'Hide details' : 'Details'}</span>
             </button>
           </div>
         </div>

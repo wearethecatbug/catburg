@@ -25,7 +25,7 @@ function morePanel(page: Page) {
 }
 
 async function openMorePanel(page: Page) {
-  await page.getByRole('button', { name: /more options/i }).click();
+  await page.getByRole('button', { name: /^Details$/i }).click();
   const panel = morePanel(page);
   await panel.waitFor({ state: 'visible' });
   return panel;
@@ -53,7 +53,7 @@ test.describe('Task composer workspace override', () => {
     await panel.getByText('Urgent', { exact: true }).click();
     await panel.getByTitle('Workspace').click();
     await page.getByRole('menuitem', { name: 'Work' }).click();
-    await page.getByRole('button', { name: 'Apply' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect(page.getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'true');
     await expect(taskRow(page, 'Override to Work task')).toHaveCount(0);
@@ -80,7 +80,7 @@ test.describe('Task composer workspace override', () => {
     await expect(panel.getByTitle('Workspace')).toContainText('Use last selected (Home)');
     await expect(panel.getByTitle('Workspace')).not.toContainText('Use current (Work)');
 
-    await page.getByRole('button', { name: 'Apply' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await page.getByRole('tab', { name: 'Work' }).click();
     await expect(taskRow(page, 'All keeps last selected workspace')).toHaveCount(0);
@@ -199,7 +199,7 @@ test.describe('Task composer workspace override', () => {
     await expect(panel.getByTestId('task-workspace-state')).toContainText('No workspace tabs available');
     await expect(panel).toContainText('Create a workspace tab');
 
-    await page.getByRole('button', { name: 'Apply' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect(taskRow(page, 'All-only fallback task')).toBeVisible();
     await expect.poll(async () => page.evaluate(() => {
@@ -229,12 +229,12 @@ test.describe('Task composer workspace override', () => {
     await page.getByLabel('Add a new task').fill('Use current workspace task');
     await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await page.locator('#task-note-inline-input').fill('Preserves details fields');
-    await page.getByRole('button', { name: /more options/i }).click();
+    await page.getByRole('button', { name: /^Details$/i }).click();
 
     const panel = morePanel(page);
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
     await panel.getByText('Urgent', { exact: true }).click();
-    await page.getByRole('button', { name: 'Apply' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect.poll(async () => page.evaluate(() => {
       const raw = window.localStorage.getItem('timetag-tasks');

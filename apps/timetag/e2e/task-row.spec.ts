@@ -161,10 +161,10 @@ test.describe('Task row states', () => {
     await page.getByLabel('Add a new task').fill('Playwright urgent task');
     await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await page.locator('#task-note-inline-input').fill('Created from Playwright test');
-    await page.getByRole('button', { name: /more options/i }).click();
+    await page.getByRole('button', { name: /^Details$/i }).click();
     const panel = morePanel(page);
     await panel.getByText('Urgent', { exact: true }).click();
-    await panel.getByRole('button', { name: /apply/i }).click();
+    await panel.getByRole('button', { name: /create task/i }).click();
 
     const createdRow = taskRow(page, 'Playwright urgent task');
     await expect(createdRow).toBeVisible();
@@ -229,7 +229,7 @@ test.describe('Task row states', () => {
     await gotoSeededPage(page, []);
 
     await page.getByLabel('Add a new task').fill('Playwright advanced apply task');
-    await page.getByRole('button', { name: /more options/i }).click();
+    await page.getByRole('button', { name: /^Details$/i }).click();
 
     const panel = morePanel(page);
     await expect(panel).toBeVisible();
@@ -245,9 +245,9 @@ test.describe('Task row states', () => {
     await expect(panel).toBeHidden();
     await expect(taskRow(page, 'Playwright advanced apply task')).toHaveCount(0);
 
-    await page.getByRole('button', { name: /more options/i }).click();
+    await page.getByRole('button', { name: /^Details$/i }).click();
     await expect(panel.locator('#task-more-mode-btn')).toContainText('Pomodoro');
-    await panel.getByRole('button', { name: 'Apply' }).click();
+    await panel.getByRole('button', { name: 'Create task' }).click();
 
     const createdRow = taskRow(page, 'Playwright advanced apply task');
     await expect(createdRow).toBeVisible();

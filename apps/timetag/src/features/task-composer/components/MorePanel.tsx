@@ -357,7 +357,7 @@ export function MorePanel({
                     className="rounded-xl border px-3 py-2 text-sm font-medium transition-[border-color,background-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60"
                     style={applyButtonStyle}
                 >
-                    Apply
+                    Create task
                 </button>
             </div>
         </div>
