@@ -1,4 +1,5 @@
 import { formatDurationValue, type DurationUnit } from './duration';
+import type { PomodoroConfig } from './task.types';
 
 export type PomodoroPresetId = 'classic' | 'focus' | 'extended' | 'quick';
 export type DeadlinePresetId = '1d' | '2d' | '5d' | '10d';
@@ -128,6 +129,20 @@ export function formatDeadlineOffsetLabel(offsetSec: number): string {
   const unit = getDeadlineUnitFromSec(offsetSec);
   const unitLabel = unit === 'min' ? 'm' : unit;
   return `${formatDurationValue(offsetSec, unit)}${unitLabel}`;
+}
+
+function getPomodoroDurationMin(durationSec: number, fallbackMin?: number): number {
+  if (typeof fallbackMin === 'number' && Number.isFinite(fallbackMin) && fallbackMin > 0) {
+    return Math.max(1, Math.floor(fallbackMin));
+  }
+
+  return Math.max(1, Math.ceil(durationSec / 60));
+}
+
+export function formatPomodoroCycleSummary(
+  config: Pick<PomodoroConfig, 'cycles' | 'workDurationSec' | 'workDurationMin'>,
+): string {
+  return `${config.cycles}×${getPomodoroDurationMin(config.workDurationSec, config.workDurationMin)}m`;
 }
 
 export function formatPomodoroPresetLabel(config: Pick<PomodoroPresetOption, 'cycles' | 'workDurationMin' | 'shortBreakMin' | 'longBreakMin'>): string {

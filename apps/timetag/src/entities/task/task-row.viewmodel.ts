@@ -3,8 +3,10 @@ import { formatTimeBadge } from '@/domain/helpers';
 import { supportsTimer } from '@/domain/task.mode';
 import { getTaskMetadataState } from '@/domain/task.meta';
 import { resolveTaskTimerBehavior } from '@/domain/timer.behavior';
+import { getPomodoroDisplayMeta, isPomodoroSessionFinished } from '@/domain/timer.logic';
+import { formatPomodoroCycleSummary } from '@/domain/timer.presets';
 import { getUrgencyLevel } from '@/domain/task.urgency';
-import type { Task, UrgencyLevel } from '@/domain/task.types';
+import type { Task, TimerDisplayMeta, UrgencyLevel } from '@/domain/task.types';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
 
 export interface TaskRowViewModel {
@@ -19,7 +21,7 @@ export interface TaskRowViewModel {
   isDoubleClickRestartEnabled: boolean;
   isPaused: boolean;
   isRunning: boolean;
-  displayTime: string;
+  timerDisplay: TimerDisplayMeta;
   fullTimeText: string;
 }
 
@@ -36,6 +38,7 @@ export function getTaskRowViewModel(
   const urgency = getUrgencyLevel(task);
   const canRunTimer = isTimedMode && task.status === 'active';
   const resolvedTimerBehavior = resolveTaskTimerBehavior(task, options.timerBehaviorSettings);
+  const timerDisplay = getTaskTimerDisplay(task, urgency);
 
   return {
     noteText: metadata.noteText,
@@ -49,34 +52,70 @@ export function getTaskRowViewModel(
     isDoubleClickRestartEnabled: canRunTimer && resolvedTimerBehavior.doubleClickRestartEnabled,
     isPaused: isTimedMode && task.timerStatus === 'paused',
     isRunning: isTimedMode && task.timerStatus === 'running',
-    displayTime: getTaskDisplayTime(task),
-    fullTimeText: getTaskFullTimeText(task),
+    timerDisplay,
+    fullTimeText: getTaskFullTimeText(task, timerDisplay),
   };
 }
 
-function getTaskDisplayTime(task: Task): string {
+function getTaskTimerDisplay(task: Task, urgency: UrgencyLevel): TimerDisplayMeta {
   if (!supportsTimer(task.timerMode)) {
-    return 'no timer';
+    return {
+      displayTime: 'no timer',
+      tone: 'neutral',
+      isPomodoro: false,
+    };
   }
 
   if (task.timerMode === 'pomodoro' && task.pomodoro) {
-    return `${task.pomodoro.cycles}×${task.pomodoro.workDurationMin}m`;
+    if (task.timerStatus === 'idle' || !task.pomodoroSession) {
+      return {
+        displayTime: formatPomodoroCycleSummary(task.pomodoro),
+        tone: 'neutral',
+        isPomodoro: true,
+      };
+    }
+
+    return getPomodoroDisplayMeta(task.pomodoroSession, task.pomodoro);
   }
 
   if (task.timerMode === 'deadline' && task.remainingSec > 86400) {
-    return getTimeDisplay(task.remainingSec).short;
+    return {
+      displayTime: getTimeDisplay(task.remainingSec).short,
+      tone: urgency === 'overdue' || task.remainingSec < 0 ? 'overdue' : 'neutral',
+      isPomodoro: false,
+    };
   }
 
-  return formatTimeBadge(task.remainingSec);
+  return {
+    displayTime: formatTimeBadge(task.remainingSec),
+    tone: urgency === 'overdue' || task.remainingSec < 0 ? 'overdue' : 'neutral',
+    isPomodoro: false,
+  };
 }
 
-function getTaskFullTimeText(task: Task): string {
+function getTaskFullTimeText(task: Task, timerDisplay: TimerDisplayMeta): string {
   if (!supportsTimer(task.timerMode)) {
     return 'Task without timer';
   }
 
   if (task.timerMode === 'pomodoro' && task.pomodoro) {
-    return `${task.pomodoro.cycles} cycles: ${task.pomodoro.workDurationMin}m work, ${task.pomodoro.shortBreakMin}m break, ${task.pomodoro.longBreakMin}m long break`;
+    if (task.timerStatus === 'idle' || !task.pomodoroSession) {
+      return `${task.pomodoro.cycles} cycles: ${task.pomodoro.workDurationMin}m work, ${task.pomodoro.shortBreakMin}m short break, ${task.pomodoro.longBreakMin}m long break`;
+    }
+
+    if (isPomodoroSessionFinished(task.pomodoroSession, task.pomodoro)) {
+      return `Pomodoro finished after ${task.pomodoro.cycles} work cycles and the long break.`;
+    }
+
+    switch (timerDisplay.phase) {
+      case 'shortBreak':
+        return `Short break after cycle ${task.pomodoroSession.cycleIndex} of ${task.pomodoro.cycles}. ${getTimeDisplay(task.pomodoroSession.remainingSec).full} remaining.`;
+      case 'longBreak':
+        return `Long break after ${task.pomodoro.cycles} work cycles. ${getTimeDisplay(task.pomodoroSession.remainingSec).full} remaining.`;
+      case 'work':
+      default:
+        return `Work cycle ${task.pomodoroSession.cycleIndex} of ${task.pomodoro.cycles}. ${getTimeDisplay(task.pomodoroSession.remainingSec).full} remaining.`;
+    }
   }
 
   return getTimeDisplay(task.remainingSec).full;

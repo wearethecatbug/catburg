@@ -13,6 +13,18 @@ export type TimerStatus = 'running' | 'paused' | 'idle' | 'expired';
 // ============================================================================
 export type TimerMode = 'duration' | 'pomodoro' | 'deadline' | 'note';
 
+export type PomodoroPhase = 'work' | 'shortBreak' | 'longBreak';
+
+export type TimerAudioEvent =
+  | 'workFinished'
+  | 'shortBreakStarted'
+  | 'shortBreakFinished'
+  | 'longBreakStarted'
+  | 'longBreakFinished'
+  | 'pomodoroSessionFinished';
+
+export type TimerDisplayTone = 'neutral' | 'focus' | 'break' | 'longBreak' | 'overdue' | 'finished';
+
 // ============================================================================
 // Urgency Level (derived from remaining time)
 // ============================================================================
@@ -53,13 +65,32 @@ export interface TimerBehaviorOverride {
 // ============================================================================
 export interface PomodoroConfig {
   cycles: number;
-  workDurationMin: number;
-  shortBreakMin: number;
-  longBreakMin: number;
-  currentCycle?: number;
-  isBreak?: boolean;
-  autoStart?: boolean;
-  autoPlay?: boolean;
+  workDurationSec: number;
+  shortBreakDurationSec: number;
+  longBreakDurationSec: number;
+  autoStartBreak?: boolean;
+  autoStartNextWork?: boolean;
+  workDurationMin?: number;
+  shortBreakMin?: number;
+  longBreakMin?: number;
+}
+
+export interface PomodoroSessionState {
+  phase: PomodoroPhase;
+  cycleIndex: number;
+  totalCycles: number;
+  completedWorkCycles: number;
+  completedShortBreaks: number;
+  currentPhaseDurationSec: number;
+  remainingSec: number;
+}
+
+export interface TimerDisplayMeta {
+  displayTime: string;
+  displayMeta?: string;
+  phase?: PomodoroPhase;
+  tone: TimerDisplayTone;
+  isPomodoro: boolean;
 }
 
 // ============================================================================
@@ -91,6 +122,7 @@ export interface Task {
   timerControls?: TimerControls;
   timerBehaviorOverride?: TimerBehaviorOverride;
   pomodoro?: PomodoroConfig;
+  pomodoroSession?: PomodoroSessionState;
   reminders: Reminder[];
   createdAt: string;
   updatedAt: string;
@@ -110,6 +142,7 @@ export interface CreateTaskInput {
   timerControls?: TimerControls;
   timerBehaviorOverride?: TimerBehaviorOverride;
   pomodoro?: PomodoroConfig;
+  pomodoroSession?: PomodoroSessionState;
   reminders?: Reminder[];
 }
 

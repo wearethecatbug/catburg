@@ -45,6 +45,7 @@ export function getTaskTimerClusterStyles(args: {
         valueStyle: { color: 'var(--tt-chip-paused-text)' },
       };
     case 'running':
+    case 'focus':
       return {
         clusterStyle: {
           background: 'var(--tt-chip-active-bg)',
@@ -52,6 +53,33 @@ export function getTaskTimerClusterStyles(args: {
           boxShadow: 'inset 0 0 0 1px var(--tt-chip-active-border)',
         },
         valueStyle: { color: 'var(--tt-chip-active-text)' },
+      };
+    case 'break':
+      return {
+        clusterStyle: {
+          background: 'var(--tt-chip-paused-bg)',
+          color: 'var(--tt-chip-paused-text)',
+          boxShadow: 'inset 0 0 0 1px var(--tt-chip-paused-border)',
+        },
+        valueStyle: { color: 'var(--tt-chip-paused-text)' },
+      };
+    case 'longBreak':
+      return {
+        clusterStyle: {
+          background: 'var(--tt-chip-idle-bg)',
+          color: 'var(--tt-chip-idle-text)',
+          boxShadow: 'inset 0 0 0 1px var(--tt-border-strong)',
+        },
+        valueStyle: { color: 'var(--tt-chip-idle-text)' },
+      };
+    case 'finished':
+      return {
+        clusterStyle: {
+          background: 'var(--tt-surface-hover)',
+          color: 'var(--tt-text-soft)',
+          boxShadow: 'inset 0 0 0 1px var(--tt-border)',
+        },
+        valueStyle: { color: 'var(--tt-text-soft)' },
       };
     case 'warn':
       return {

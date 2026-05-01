@@ -140,7 +140,7 @@ export function TaskRow({
         </div>
       </div>
 
-      <div className={`flex min-w-[148px] shrink-0 items-center justify-end gap-3 whitespace-nowrap ${contentActionsGapClassName}`}>
+      <div className={`flex min-w-[168px] shrink-0 items-center justify-end gap-3 whitespace-nowrap ${contentActionsGapClassName}`}>
         <TaskTimerCluster
           status={task.status}
           remainingSec={task.remainingSec}
@@ -152,7 +152,7 @@ export function TaskRow({
           isTimerDisabled={viewModel.isTimerDisabled}
           shouldInterceptDoubleClickGesture={viewModel.shouldInterceptDoubleClickGesture}
           isDoubleClickRestartEnabled={viewModel.isDoubleClickRestartEnabled}
-          displayTime={viewModel.displayTime}
+          timerDisplay={viewModel.timerDisplay}
           fullTimeText={viewModel.fullTimeText}
           onToggleTimer={() => onToggleTimer(task.id)}
           onRestartTimer={() => onRestartTimer(task.id)}

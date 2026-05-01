@@ -80,7 +80,7 @@ type TaskAction =
   | { type: 'CLEAR_SELECTION' }
   | { type: 'PAUSE_SELECTED' }
   | { type: 'PLAY_SELECTED' }
-  | { type: 'RESET_SELECTED' }
+  | { type: 'RESET_SELECTED'; payload: { nowIso: string } }
   | { type: 'MARK_DONE_SELECTED'; payload: { nowIso: string } }
   | { type: 'ARCHIVE_SELECTED'; payload: { nowIso: string } }
   | { type: 'UNDO_DELETE' };
@@ -268,8 +268,8 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) => {
-          const patch = tickTimer(t);
-          return patch ? { ...t, ...patch } : t;
+          const result = tickTimer(t);
+          return result ? { ...t, ...result.patch } : t;
         }),
       };
 
@@ -341,7 +341,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id) && supportsTimer(t.timerMode)
-            ? { ...t, remainingSec: t.originalDurationSec, timerStatus: 'idle' as TimerStatus }
+            ? { ...t, ...resetTimerState(t, action.payload.nowIso) }
             : t,
         ),
       };
@@ -562,7 +562,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const deleteSelected = useCallback(() => dispatch({ type: 'DELETE_SELECTED' }), []);
   const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED' }), []);
   const playSelected = useCallback(() => dispatch({ type: 'PLAY_SELECTED' }), []);
-  const resetSelected = useCallback(() => dispatch({ type: 'RESET_SELECTED' }), []);
+  const resetSelected = useCallback(
+    () => dispatch({ type: 'RESET_SELECTED', payload: { nowIso: new Date().toISOString() } }),
+    [],
+  );
   const markDoneSelected = useCallback(
     () => dispatch({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }),
     [],

@@ -1,9 +1,20 @@
-import { UrgencyLevel } from '@/domain/task.types';
-import type { TimerStatus } from '@/domain/task.types';
+import type { TimerDisplayTone, TimerStatus, UrgencyLevel } from '@/domain/task.types';
 
 export type TimerRingTone = 'normal' | 'warn' | 'danger' | 'overdue';
 export type TimerRingVisualTone = TimerRingTone | 'paused' | 'disabled';
-export type TimerClusterVisualState = 'disabled' | 'idle' | 'running' | 'paused' | 'warn' | 'danger' | 'zero' | 'overdue';
+export type TimerClusterVisualState =
+  | 'disabled'
+  | 'idle'
+  | 'running'
+  | 'paused'
+  | 'warn'
+  | 'danger'
+  | 'zero'
+  | 'overdue'
+  | 'focus'
+  | 'break'
+  | 'longBreak'
+  | 'finished';
 
 export function clamp01(v: number): number {
     if (Number.isNaN(v) || !Number.isFinite(v)) return 0;
@@ -97,10 +108,16 @@ export function getTimerClusterVisualState(args: {
     timerStatus: TimerStatus;
     urgency?: UrgencyLevel;
     disabled?: boolean;
+    tone?: TimerDisplayTone;
 }): TimerClusterVisualState {
-    const { remainingSec, timerStatus, urgency, disabled } = args;
+    const { remainingSec, timerStatus, urgency, disabled, tone } = args;
 
     if (disabled) return 'disabled';
+    if (tone === 'finished') return 'finished';
+    if (tone === 'overdue') return 'overdue';
+    if (tone === 'focus') return 'focus';
+    if (tone === 'break') return 'break';
+    if (tone === 'longBreak') return 'longBreak';
     if (timerStatus === 'paused') return 'paused';
     if (remainingSec < 0) return 'overdue';
     if (remainingSec === 0) return 'zero';

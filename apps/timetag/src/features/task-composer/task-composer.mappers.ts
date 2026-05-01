@@ -170,11 +170,14 @@ export function buildCreateTaskInput({
   if (timerMode === 'pomodoro') {
     taskData.pomodoro = {
       cycles: Math.max(1, Math.floor(Number(pomoCycles))),
+      workDurationSec: Math.max(1, Math.floor(Number(pomoWorkMin))) * 60,
+      shortBreakDurationSec: Math.max(1, Math.floor(Number(pomoShortBreakMin))) * 60,
+      longBreakDurationSec: Math.max(1, Math.floor(Number(pomoLongBreakMin))) * 60,
       workDurationMin: Math.max(1, Math.floor(Number(pomoWorkMin))),
       shortBreakMin: Math.max(1, Math.floor(Number(pomoShortBreakMin))),
       longBreakMin: Math.max(1, Math.floor(Number(pomoLongBreakMin))),
-      autoStart: autoEnabled,
-      autoPlay: playEnabled,
+      autoStartBreak: autoEnabled,
+      autoStartNextWork: playEnabled,
     };
   }
 

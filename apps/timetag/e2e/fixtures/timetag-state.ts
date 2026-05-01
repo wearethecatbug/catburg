@@ -25,6 +25,26 @@ export type StoredTask = {
     doubleClickRestartEnabled?: boolean;
     autoStartAfterDoubleClickRestart?: boolean;
   };
+  pomodoro?: {
+    cycles: number;
+    workDurationSec: number;
+    shortBreakDurationSec: number;
+    longBreakDurationSec: number;
+    autoStartBreak?: boolean;
+    autoStartNextWork?: boolean;
+    workDurationMin?: number;
+    shortBreakMin?: number;
+    longBreakMin?: number;
+  };
+  pomodoroSession?: {
+    phase: 'work' | 'shortBreak' | 'longBreak';
+    cycleIndex: number;
+    totalCycles: number;
+    completedWorkCycles: number;
+    completedShortBreaks: number;
+    currentPhaseDurationSec: number;
+    remainingSec: number;
+  };
   reminders: Array<{ id: string; enabled: boolean }>;
   createdAt: string;
   updatedAt: string;

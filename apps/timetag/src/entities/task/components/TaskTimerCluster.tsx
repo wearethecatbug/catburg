@@ -1,6 +1,6 @@
 import React from 'react';
 import { getTimerClusterVisualState } from '@/domain/timer.ring';
-import type { TaskStatus, UrgencyLevel } from '@/domain/task.types';
+import type { TaskStatus, TimerDisplayMeta, UrgencyLevel } from '@/domain/task.types';
 import { GhostTimer, TimerRingButton } from '@/shared';
 import { getTaskTimerClusterStyles } from '../task-timer-cluster.styles';
 
@@ -15,7 +15,7 @@ interface TaskTimerClusterProps {
   isTimerDisabled: boolean;
   shouldInterceptDoubleClickGesture: boolean;
   isDoubleClickRestartEnabled: boolean;
-  displayTime: string;
+  timerDisplay: TimerDisplayMeta;
   fullTimeText: string;
   onToggleTimer: () => void;
   onRestartTimer: () => void;
@@ -32,17 +32,17 @@ export function TaskTimerCluster({
   isTimerDisabled,
   shouldInterceptDoubleClickGesture,
   isDoubleClickRestartEnabled,
-  displayTime,
+  timerDisplay,
   fullTimeText,
   onToggleTimer,
   onRestartTimer,
 }: TaskTimerClusterProps) {
-  const TIMER_SLOT_CLASS_NAME = 'flex h-[40px] w-[104px] shrink-0 items-center justify-center';
+  const TIMER_SLOT_CLASS_NAME = 'flex h-[40px] w-[124px] shrink-0 items-center justify-center';
 
   if (!showTimerButton) {
     return (
       <div className={TIMER_SLOT_CLASS_NAME}>
-        <GhostTimer label={displayTime} sizePx={30} />
+        <GhostTimer label={timerDisplay.displayTime} sizePx={30} />
       </div>
     );
   }
@@ -51,6 +51,7 @@ export function TaskTimerCluster({
     remainingSec,
     timerStatus: isPaused ? 'paused' : isRunning ? 'running' : 'idle',
     urgency,
+    tone: timerDisplay.tone,
     disabled: isTimerDisabled,
   });
   const { clusterStyle, valueStyle } = getTaskTimerClusterStyles({
@@ -64,7 +65,7 @@ export function TaskTimerCluster({
       <div
         data-testid="task-timer-cluster"
         title={fullTimeText}
-        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-1.5 py-1"
+        className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-1.5 py-0.5"
         style={clusterStyle}
       >
         <TimerRingButton
@@ -73,6 +74,7 @@ export function TaskTimerCluster({
           remainingSec={remainingSec}
           totalSec={totalSec}
           urgency={urgency}
+          tone={timerDisplay.tone}
           disabled={isTimerDisabled}
           onToggleAction={onToggleTimer}
           enableDoubleClickGesture={shouldInterceptDoubleClickGesture}
@@ -82,12 +84,24 @@ export function TaskTimerCluster({
           embedded
         />
 
-        <span
-          className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
-          style={valueStyle}
-        >
-          {displayTime}
-        </span>
+        <div className="flex min-w-0 items-center justify-end gap-1 pr-1 text-right leading-none">
+          <span
+            className="min-w-[44px] text-[13px] font-medium tabular-nums"
+            style={valueStyle}
+          >
+            {timerDisplay.displayTime}
+          </span>
+
+          {timerDisplay.displayMeta && (
+            <span
+              data-testid="task-timer-meta"
+              className="min-w-[22px] text-[11px] font-semibold tabular-nums uppercase tracking-[0.01em]"
+              style={{ ...valueStyle, opacity: 0.76 }}
+            >
+              {timerDisplay.displayMeta}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { UrgencyLevel } from '@/domain/task.types';
+import type { TimerDisplayTone, UrgencyLevel } from '@/domain/task.types';
 import { PlayIcon, PauseIcon } from '@/shared/icons';
 import { getRemainingRatio, getTimerClusterVisualState } from '@/domain/timer.ring';
 
@@ -13,6 +13,7 @@ type Props = {
     totalSec: number;
 
     urgency?: UrgencyLevel; // IMPORTANT: already computed outside (TaskRow/store selector)
+    tone?: TimerDisplayTone;
     disabled?: boolean;
     onToggleAction?: () => void;
     onRestartAction?: () => void;
@@ -31,6 +32,7 @@ export function TimerRingButton({
                                     remainingSec,
                                     totalSec,
                                     urgency,
+                                    tone,
                                     disabled,
                                     onToggleAction,
                                     onRestartAction,
@@ -95,6 +97,7 @@ export function TimerRingButton({
         remainingSec,
         timerStatus: isRunning ? 'running' : isPaused ? 'paused' : remainingSec <= 0 ? 'expired' : 'idle',
         urgency,
+        tone,
         disabled,
     });
 
@@ -112,6 +115,14 @@ export function TimerRingButton({
                 ? 'var(--tt-chip-warning-text)'
                 : visualState === 'danger'
                     ? 'var(--tt-chip-zero-text)'
+                    : visualState === 'focus'
+                        ? 'var(--tt-chip-active-icon)'
+                        : visualState === 'break'
+                            ? 'var(--tt-chip-paused-icon)'
+                            : visualState === 'longBreak'
+                                ? 'var(--tt-chip-idle-icon)'
+                                : visualState === 'finished'
+                                    ? 'var(--tt-text-soft)'
                     : visualState === 'zero'
                         ? 'var(--tt-chip-zero-text)'
                         : visualState === 'overdue'
@@ -128,6 +139,14 @@ export function TimerRingButton({
                 ? `url(#${gradientId}-warn)`
                 : visualState === 'danger'
                     ? `url(#${gradientId}-danger)`
+                    : visualState === 'focus'
+                        ? `url(#${gradientId}-running)`
+                        : visualState === 'break'
+                            ? `url(#${gradientId}-paused)`
+                            : visualState === 'longBreak'
+                                ? `url(#${gradientId}-normal)`
+                                : visualState === 'finished'
+                                    ? `url(#${gradientId}-paused)`
                     : visualState === 'zero'
                         ? `url(#${gradientId}-zero)`
                         : visualState === 'overdue'
@@ -173,6 +192,38 @@ export function TimerRingButton({
                     width: sizePx,
                     height: sizePx,
                     boxShadow: 'inset 0 0 0 1px var(--tt-chip-zero-border)',
+                  }
+            : visualState === 'focus'
+                ? {
+                    background: 'var(--tt-chip-active-bg)',
+                    color: iconColor,
+                    width: sizePx,
+                    height: sizePx,
+                    boxShadow: 'inset 0 0 0 1px var(--tt-chip-active-border)',
+                  }
+            : visualState === 'break'
+                ? {
+                    background: 'var(--tt-chip-paused-bg)',
+                    color: iconColor,
+                    width: sizePx,
+                    height: sizePx,
+                    boxShadow: 'inset 0 0 0 1px var(--tt-chip-paused-border)',
+                  }
+            : visualState === 'longBreak'
+                ? {
+                    background: 'var(--tt-chip-idle-bg)',
+                    color: iconColor,
+                    width: sizePx,
+                    height: sizePx,
+                    boxShadow: 'inset 0 0 0 1px var(--tt-border-strong)',
+                  }
+            : visualState === 'finished'
+                ? {
+                    background: 'var(--tt-surface-hover)',
+                    color: iconColor,
+                    width: sizePx,
+                    height: sizePx,
+                    boxShadow: 'inset 0 0 0 1px var(--tt-border)',
                   }
             : visualState === 'zero'
                 ? {
