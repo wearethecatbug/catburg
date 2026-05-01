@@ -39,6 +39,35 @@ async function visibleTitles(page: Page) {
 }
 
 test.describe('Task query pipeline', () => {
+  test('keeps archived tasks out of Active while Done and Archived tabs stay explicit', async ({ page }) => {
+    const tasks = [
+      createTask({ id: 'status-active', title: 'Status active task', status: 'active' }),
+      createTask({ id: 'status-done', title: 'Status done task', status: 'done', timerStatus: 'paused' }),
+      createTask({ id: 'status-archived', title: 'Status archived task', status: 'archived', timerStatus: 'paused' }),
+    ];
+
+    await gotoSeededPage(page, tasks);
+
+    await expect(taskRow(page, 'Status active task')).toBeVisible();
+    await expect(taskRow(page, 'Status done task')).toBeVisible();
+    await expect(taskRow(page, 'Status archived task')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(taskRow(page, 'Status done task')).toBeVisible();
+    await expect(taskRow(page, 'Status active task')).toHaveCount(0);
+    await expect(taskRow(page, 'Status archived task')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Archived', exact: true }).click();
+    await expect(taskRow(page, 'Status archived task')).toBeVisible();
+    await expect(taskRow(page, 'Status active task')).toHaveCount(0);
+    await expect(taskRow(page, 'Status done task')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Active', exact: true }).click();
+    await expect(taskRow(page, 'Status active task')).toBeVisible();
+    await expect(taskRow(page, 'Status done task')).toBeVisible();
+    await expect(taskRow(page, 'Status archived task')).toHaveCount(0);
+  });
+
   test('keeps workspace context separate from status filtering', async ({ page }) => {
     const tasks = [
       createTask({ id: 'work-active', title: 'Work active task', workspace: 'work', status: 'active' }),
@@ -85,11 +114,11 @@ test.describe('Task query pipeline', () => {
     await expect(taskRow(page, 'Beta plain')).toBeVisible();
     await expect(taskRow(page, 'Gamma plain')).toBeVisible();
 
-    await page.getByRole('button', { name: /Date Created/i }).click();
+    await page.getByRole('button', { name: /sort/i }).click();
     await page.getByRole('menuitem', { name: /Title/i }).click();
     await expect.poll(async () => visibleTitles(page)).toEqual(['Beta plain', 'Gamma plain']);
 
-    await page.getByRole('button', { name: /Title/i }).click();
+    await page.getByRole('button', { name: /sort/i }).click();
     await page.getByRole('menuitem', { name: /Title/i }).click();
     await expect.poll(async () => visibleTitles(page)).toEqual(['Gamma plain', 'Beta plain']);
   });

@@ -20,8 +20,15 @@ function taskRow(page: Page, title: string) {
   return page.getByTestId('task-row').filter({ hasText: title }).first();
 }
 
-function detailsPanel(page: Page) {
-  return page.locator('#task-composer-details');
+function morePanel(page: Page) {
+  return page.locator('#task-composer-more');
+}
+
+async function openMorePanel(page: Page) {
+  await page.getByRole('button', { name: /^Details$/i }).click();
+  const panel = morePanel(page);
+  await panel.waitFor({ state: 'visible' });
+  return panel;
 }
 
 async function openSettingsDefaultsTab(page: Page) {
@@ -37,17 +44,16 @@ test.describe('Task composer workspace override', () => {
     await expect(page.getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'true');
 
     await page.getByLabel('Add a new task').fill('Override to Work task');
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
+    await page.locator('#task-note-inline-input').fill('Workspace override note');
+    const panel = await openMorePanel(page);
     await expect(panel).toBeVisible();
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Home)');
 
     await panel.getByText('Urgent', { exact: true }).click();
-    await panel.getByRole('textbox', { name: 'Details' }).fill('Workspace override note');
     await panel.getByTitle('Workspace').click();
     await page.getByRole('menuitem', { name: 'Work' }).click();
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect(page.getByRole('tab', { name: 'Home' })).toHaveAttribute('aria-selected', 'true');
     await expect(taskRow(page, 'Override to Work task')).toHaveCount(0);
@@ -59,7 +65,7 @@ test.describe('Task composer workspace override', () => {
     await expect(createdRow.getByTestId('task-note-preview')).toContainText('Workspace override note');
   });
 
-  test('uses the last selected concrete workspace in details after switching to All', async ({ page }) => {
+  test('uses the last selected concrete workspace in panel after switching to All', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, DEFAULT_WORKSPACES);
 
     await page.getByRole('tab', { name: 'Home' }).click();
@@ -69,14 +75,12 @@ test.describe('Task composer workspace override', () => {
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
 
     await page.getByLabel('Add a new task').fill('All keeps last selected workspace');
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    const panel = await openMorePanel(page);
     await expect(panel.getByTitle('Workspace')).toBeVisible();
     await expect(panel.getByTitle('Workspace')).toContainText('Use last selected (Home)');
     await expect(panel.getByTitle('Workspace')).not.toContainText('Use current (Work)');
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await page.getByRole('tab', { name: 'Work' }).click();
     await expect(taskRow(page, 'All keeps last selected workspace')).toHaveCount(0);
@@ -89,40 +93,38 @@ test.describe('Task composer workspace override', () => {
     await gotoSeededPage(page, [], testSettings, SINGLE_WORKSPACE);
 
     await page.getByRole('tab', { name: 'Work' }).click();
-    await page.getByRole('button', { name: /details/i }).click();
+    const panel = await openMorePanel(page);
 
-    await expect(detailsPanel(page).getByTitle('Workspace')).toHaveCount(0);
-    await expect(detailsPanel(page).getByTestId('task-workspace-state')).toContainText('Work');
+    await expect(panel.getByTitle('Workspace')).toHaveCount(0);
+    await expect(panel.getByTestId('task-workspace-state')).toContainText('Work');
   });
 
   test('keeps the workspace selector visible in All context even when only one workspace is available', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, SINGLE_WORKSPACE);
 
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('button', { name: /details/i }).click();
+    const panel = await openMorePanel(page);
 
-    await expect(detailsPanel(page).getByTitle('Workspace')).toBeVisible();
-    await expect(detailsPanel(page).getByTitle('Workspace')).toContainText('Use current (Work)');
+    await expect(panel.getByTitle('Workspace')).toBeVisible();
+    await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
   });
 
   test('uses an existing Home tab as current workspace in All context when Work does not exist', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, HOME_ONLY_WORKSPACE);
 
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('button', { name: /details/i }).click();
+    const panel = await openMorePanel(page);
 
-    await expect(detailsPanel(page).getByTitle('Workspace')).toBeVisible();
-    await expect(detailsPanel(page).getByTitle('Workspace')).toContainText('Use current (Home)');
-    await expect(detailsPanel(page).getByTitle('Workspace')).not.toContainText('Use current (Work)');
+    await expect(panel.getByTitle('Workspace')).toBeVisible();
+    await expect(panel.getByTitle('Workspace')).toContainText('Use current (Home)');
+    await expect(panel.getByTitle('Workspace')).not.toContainText('Use current (Work)');
   });
 
-  test('updates details to the new current workspace when a workspace is created while details are open', async ({ page }) => {
+  test('updates panel to the new current workspace when a workspace is created while panel is open', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, SINGLE_WORKSPACE);
 
     await page.getByRole('tab', { name: 'Work' }).click();
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    const panel = await openMorePanel(page);
     await expect(panel.getByTestId('task-workspace-state')).toContainText('Work');
 
     await page.getByRole('button', { name: 'Add workspace' }).click();
@@ -138,9 +140,7 @@ test.describe('Task composer workspace override', () => {
   test('updates the workspace selector immediately after a workspace is removed', async ({ page }) => {
     await gotoSeededPage(page, [], testSettings, DEFAULT_WORKSPACES);
 
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    const panel = await openMorePanel(page);
     const workspaceButton = panel.getByTitle('Workspace');
 
     await expect(workspaceButton).toContainText('Use current (Work)');
@@ -163,8 +163,7 @@ test.describe('Task composer workspace override', () => {
     await expect(removeWorkButton).toBeDisabled();
     await expect(removeWorkButton).toHaveAttribute('aria-disabled', 'true');
 
-    await page.getByRole('button', { name: /details/i }).click();
-    const panel = detailsPanel(page);
+    const panel = await openMorePanel(page);
 
     await expect(panel.getByTitle('Workspace')).toBeVisible();
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
@@ -195,14 +194,12 @@ test.describe('Task composer workspace override', () => {
 
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
     await page.getByLabel('Add a new task').fill('All-only fallback task');
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    const panel = await openMorePanel(page);
     await expect(panel.getByTitle('Workspace')).toHaveCount(0);
     await expect(panel.getByTestId('task-workspace-state')).toContainText('No workspace tabs available');
-    await expect(panel).toContainText('Only “All” remains. Create a workspace tab to choose a destination.');
+    await expect(panel).toContainText('Create a workspace tab');
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect(taskRow(page, 'All-only fallback task')).toBeVisible();
     await expect.poll(async () => page.evaluate(() => {
@@ -230,13 +227,12 @@ test.describe('Task composer workspace override', () => {
 
     await expect(page.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
     await page.getByLabel('Add a new task').fill('Use current workspace task');
-    await page.getByRole('button', { name: /details/i }).click();
-
-    const panel = detailsPanel(page);
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
+    await page.locator('#task-note-inline-input').fill('Preserves details fields');
+    const panel = await openMorePanel(page);
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
     await panel.getByText('Urgent', { exact: true }).click();
-    await panel.getByRole('textbox', { name: 'Details' }).fill('Preserves details fields');
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: 'Create task' }).click();
 
     await expect.poll(async () => page.evaluate(() => {
       const raw = window.localStorage.getItem('timetag-tasks');

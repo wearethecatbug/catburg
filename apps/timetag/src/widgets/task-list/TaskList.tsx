@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TaskRow } from '@/entities';
 import { useTasks } from '@/store';
 import { ClipboardIcon } from '@/shared/icons';
@@ -24,8 +24,12 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
   } = useTasks();
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
 
+  useEffect(() => {
+    setVisibleCount((prev) => Math.max(ITEMS_PER_PAGE, Math.min(prev, visibleTasks.length || ITEMS_PER_PAGE)));
+  }, [visibleTasks.length]);
+
   const hasMore = visibleCount < visibleTasks.length;
-  const pagedTasks = visibleTasks.slice(0, visibleCount);
+  const visibleRows = visibleTasks.slice(0, visibleCount);
 
   if (visibleTasks.length === 0) {
     return (
@@ -49,7 +53,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
         className="divide-y divide-[var(--tt-border)]"
         style={{ background: 'var(--tt-surface)' }}
       >
-        {pagedTasks.map((task) => (
+        {visibleRows.map((task) => (
           <TaskRow
             key={task.id}
             task={task}

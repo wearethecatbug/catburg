@@ -41,6 +41,10 @@ import {
 
 export const USE_CURRENT_WORKSPACE_OPTION_ID = '__use-current-workspace__';
 
+function getPomodoroPresetTriggerLabel(label: string): string {
+  return label.split(' (')[0] || label;
+}
+
 interface UseTaskComposerStateOptions {
   defaultWorkspace?: AssignableWorkspaceType;
   forwardedRef?: React.ForwardedRef<HTMLInputElement>;
@@ -81,7 +85,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const [presetId, setPresetId] = React.useState<DurationPresetId>(() => defaultDurationPreset.id);
   const [pomodoroPresetId, setPomodoroPresetId] = React.useState<PomodoroPresetId>(() => defaultPomodoroPreset.id);
   const [deadlinePresetId, setDeadlinePresetId] = React.useState<DeadlinePresetId>(() => defaultDeadlinePreset.id);
-  const [showDetails, setShowDetails] = React.useState(false);
+  const [isNoteExpanded, setIsNoteExpanded] = React.useState(false);
+  const [showMore, setShowMore] = React.useState(false);
   const [timerMode, setTimerMode] = React.useState<TimerMode>(settings.timer.defaultMode);
   const [priority, setPriority] = React.useState<TaskPriority>('normal');
   const [note, setNote] = React.useState('');
@@ -99,6 +104,7 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const [overdueEnabled, setOverdueEnabled] = React.useState(false);
   const [presetOpen, setPresetOpen] = React.useState(false);
   const [modeOpen, setModeOpen] = React.useState(false);
+  const [advancedModeOpen, setAdvancedModeOpen] = React.useState(false);
   const [workspaceOpen, setWorkspaceOpen] = React.useState(false);
   const [workspaceOverride, setWorkspaceOverride] = React.useState<AssignableWorkspaceType | undefined>(undefined);
 
@@ -259,6 +265,11 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
 
     setTitle('');
     resetComposerToSettingsDefaults();
+    setIsNoteExpanded(false);
+    setShowMore(false);
+    setModeOpen(false);
+    setAdvancedModeOpen(false);
+    setPresetOpen(false);
 
     try {
       localInputRef.current?.focus();
@@ -291,6 +302,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const handleModeSelect = React.useCallback((mode: TimerMode) => {
     setTimerMode(mode);
     setModeOpen(false);
+    setAdvancedModeOpen(false);
+    setPresetOpen(false);
 
     if (mode === 'pomodoro') {
       setPomodoroPresetId(defaultPomodoroPreset.id);
@@ -391,6 +404,12 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
           ? `Custom · ${formatPomodoroPresetLabel(currentPomodoroConfig)}`
           : formatNamedPomodoroPresetLabel(matchedPomodoroPreset ?? defaultPomodoroPreset))
       : presetLabel ?? customDurationLabel;
+  const currentPresetTriggerLabel =
+    timerMode === 'pomodoro'
+      ? (hasCustomPomodoroSelection
+          ? 'Custom'
+          : getPomodoroPresetTriggerLabel((matchedPomodoroPreset ?? defaultPomodoroPreset).label))
+      : currentPresetLabel;
   const currentPresetOptions = timerMode === 'pomodoro' ? pomodoroPresetOptions : presetOptions;
   const currentPresetId = timerMode === 'pomodoro'
     ? (isUsingCustomPomodoroDefault ? CUSTOM_POMODORO_PRESET_ID : safePomodoroPresetId)
@@ -518,9 +537,13 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   }, [durationSec, presetId, visibleDurationPresets]);
 
   const handleCancelDetails = React.useCallback(() => {
-    setShowDetails(false);
+    setShowMore(false);
+    setPresetOpen(false);
+    setModeOpen(false);
+    setAdvancedModeOpen(false);
+    setWorkspaceOpen(false);
     focusInput();
-  }, [focusInput]);
+  }, [focusInput, setWorkspaceOpen]);
 
   const handleResetDetails = React.useCallback(() => {
     resetComposerToSettingsDefaults();
@@ -531,8 +554,12 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     title,
     setTitle,
     setInputRef,
-    showDetails,
-    toggleDetails: () => setShowDetails((current) => !current),
+    isNoteExpanded,
+    setIsNoteExpanded,
+    toggleNote: () => setIsNoteExpanded((current) => !current),
+    showMore,
+    setShowMore,
+    toggleMore: () => setShowMore((current) => !current),
     timerMode,
     priority,
     note,
@@ -558,9 +585,12 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     selectedWorkspaceLabel,
     modeOpen,
     setModeOpen,
+    advancedModeOpen,
+    setAdvancedModeOpen,
     presetOpen,
     setPresetOpen,
     currentPresetLabel,
+    currentPresetTriggerLabel,
     currentPresetOptions,
     currentPresetId,
     deadlinePresetLabel,

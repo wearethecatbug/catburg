@@ -2,10 +2,10 @@
 
 import React from 'react';
 import type { TaskStatusFilter } from '@/domain/task.types';
+import { AppContentContainer } from '@/shared';
 import { useSettings, useTasks } from '@/store';
 
 const STATUS_OPTIONS: { id: TaskStatusFilter; label: string; requiresCompleted?: boolean }[] = [
-  { id: 'all', label: 'All' },
   { id: 'active', label: 'Active' },
   { id: 'done', label: 'Done', requiresCompleted: true },
   { id: 'archived', label: 'Archived', requiresCompleted: true },
@@ -18,35 +18,39 @@ export function StatusFilters() {
 
   return (
     <div
-      className="flex gap-1 border-b px-4 py-2"
+      className="border-b py-2"
       style={{
         background: 'var(--tt-surface-muted)',
         borderColor: 'var(--tt-border)',
         backdropFilter: 'blur(12px) saturate(1.05)',
       }}
     >
-      {visibleOptions.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          onClick={() => setFilter({ status: opt.id })}
-          className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
-            state.filter.status === opt.id
-              ? ''
-              : 'border'
-          }`}
-          style={state.filter.status === opt.id
-            ? { background: 'var(--tt-accent)', color: 'var(--tt-accent-contrast)' }
-            : {
-              background: 'var(--tt-surface)',
-              borderColor: 'var(--tt-border)',
-              color: 'var(--tt-text-muted)',
-            }}
-          aria-pressed={state.filter.status === opt.id}
-        >
-          {opt.label}
-        </button>
-      ))}
+      <AppContentContainer>
+        <div className="flex gap-1 overflow-x-auto">
+          {visibleOptions.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setFilter({ status: opt.id })}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                state.filter.status === opt.id
+                  ? ''
+                  : 'border'
+              }`}
+              style={state.filter.status === opt.id
+                ? { background: 'var(--tt-accent)', color: 'var(--tt-accent-contrast)' }
+                : {
+                  background: 'var(--tt-surface)',
+                  borderColor: 'var(--tt-border)',
+                  color: 'var(--tt-text-muted)',
+                }}
+              aria-pressed={state.filter.status === opt.id}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </AppContentContainer>
     </div>
   );
 }

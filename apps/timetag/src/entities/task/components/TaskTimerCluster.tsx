@@ -31,8 +31,14 @@ export function TaskTimerCluster({
   fullTimeText,
   onToggleTimer,
 }: TaskTimerClusterProps) {
+  const TIMER_SLOT_CLASS_NAME = 'flex h-[40px] w-[104px] shrink-0 items-center justify-center';
+
   if (!showTimerButton) {
-    return <GhostTimer className="ml-1" label={displayTime} sizePx={30} />;
+    return (
+      <div className={TIMER_SLOT_CLASS_NAME}>
+        <GhostTimer label={displayTime} sizePx={30} />
+      </div>
+    );
   }
 
   const visualState = getTimerClusterVisualState({
@@ -48,31 +54,33 @@ export function TaskTimerCluster({
 
 
   return (
-    <div
-      data-testid="task-timer-cluster"
-      title={fullTimeText}
-      className="ml-1 inline-flex shrink-0 items-center gap-2 rounded-full px-1.5 py-1"
-      style={clusterStyle}
-    >
-      <TimerRingButton
-        isRunning={isRunning}
-        isPaused={isPaused}
-        remainingSec={remainingSec}
-        totalSec={totalSec}
-        urgency={urgency}
-        disabled={isTimerDisabled}
-        onToggleAction={onToggleTimer}
-        sizePx={30}
-        strokeWidth={2.75}
-        embedded
-      />
-
-      <span
-        className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
-        style={valueStyle}
+    <div className={TIMER_SLOT_CLASS_NAME}>
+      <div
+        data-testid="task-timer-cluster"
+        title={fullTimeText}
+        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full px-1.5 py-1"
+        style={clusterStyle}
       >
-        {displayTime}
-      </span>
+        <TimerRingButton
+          isRunning={isRunning}
+          isPaused={isPaused}
+          remainingSec={remainingSec}
+          totalSec={totalSec}
+          urgency={urgency}
+          disabled={isTimerDisabled}
+          onToggleAction={onToggleTimer}
+          sizePx={30}
+          strokeWidth={2.75}
+          embedded
+        />
+
+        <span
+          className="min-w-[56px] pr-1 text-right text-[13px] font-medium tabular-nums leading-none"
+          style={valueStyle}
+        >
+          {displayTime}
+        </span>
+      </div>
     </div>
   );
 }

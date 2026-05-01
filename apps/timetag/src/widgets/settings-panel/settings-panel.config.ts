@@ -1,7 +1,6 @@
 import type {
   AppearanceTabId,
   GeneralTabId,
-  SettingsSectionId,
   TimerTabId,
 } from '@/domain/settings.types';
 
@@ -23,9 +22,4 @@ export const APPEARANCE_TABS: Array<{ id: AppearanceTabId; label: string }> = [
   { id: 'visualTweaks', label: 'Visual Tweaks' },
 ];
 
-export const SECTION_LABELS: Record<SettingsSectionId, string> = {
-  general: 'General',
-  timer: 'Timer',
-  appearance: 'Appearance',
-};
 

@@ -8,7 +8,7 @@ A task list application with per-task timers, deadlines, and urgency levels.
 - **Per-Task Timers**: Each task has its own timer that can be started, paused, and reset
 - **Urgency Levels**: Visual indicators (Green/Yellow/Red/Overdue) based on remaining time
 - **Workspace Tabs**: Organize tasks by Work, Home, or view All
-- **Status Filters**: Filter by All, Active, Done, or Archived
+- **Status Filters**: Filter by Active (active + done), Done, or Archived
 - **Bulk Actions**: Select multiple tasks for batch operations
 - **Search**: Search within current workspace
 - **Sort**: Sort by date created, last updated, time remaining, or title

@@ -1,22 +1,23 @@
 'use client';
 
 import React from 'react';
-import { TASK_NOTE_MAX_LENGTH, type TaskPriority, type TimerMode } from '@/domain/task.types';
+import { type TaskPriority, type TimerMode } from '@/domain/task.types';
 import { supportsTimer } from '@/domain/task.mode';
 import type { DurationUnit } from '@/domain/duration';
-import { CheckIcon, ChevronDownIcon, ClipboardIcon } from '@/shared';
+import { ChevronDownIcon, ClipboardIcon } from '@/shared';
+import { TASK_COMPOSER_TIMER_MODE_OPTIONS, getTaskComposerTimerModeLabel } from '../task-composer.timer-mode';
 import type { DropdownOption } from './Dropdown';
 import { Dropdown } from './Dropdown';
-import { ModeSelector } from './ModeSelector';
 import { PrioritySelect } from './PrioritySelect';
 import { PomodoroSettings } from './PomodoroSettings';
 import { TimerControlsSection } from './TimerControlsSection';
 import { DurationField } from './DurationField';
 
-interface DetailsPanelProps {
+interface MorePanelProps {
     timerMode: TimerMode;
     priority: TaskPriority;
-    note: string;
+    canApply: boolean;
+    timerModeOpen: boolean;
 
     durationSec: number;
     durationUnit: DurationUnit;
@@ -39,11 +40,11 @@ interface DetailsPanelProps {
     selectedWorkspaceOptionId: string;
     selectedWorkspaceLabel: string;
 
-    onTimerModeChange: (mode: TimerMode) => void;
     onWorkspaceOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
+    onTimerModeOpenChange: React.Dispatch<React.SetStateAction<boolean>>;
     onWorkspaceSelect: (id: string) => void;
+    onTimerModeChange: (mode: TimerMode) => void;
     onPriorityChange: (priority: TaskPriority) => void;
-    onNoteChange: (value: string) => void;
 
     onDurationSecChange: (value: number) => void;
     onDurationUnitChange: (unit: DurationUnit) => void;
@@ -57,15 +58,15 @@ interface DetailsPanelProps {
     onPlayEnabledChange: (value: boolean) => void;
     onAutoResetEnabledChange: (value: boolean) => void;
     onOverdueEnabledChange: (value: boolean) => void;
-    onCancel: () => void;
+    onClose: () => void;
     onReset: () => void;
-    canSubmit: boolean;
 }
 
-export function DetailsPanel({
+export function MorePanel({
     timerMode,
     priority,
-    note,
+    canApply,
+    timerModeOpen,
     durationSec,
     durationUnit,
     deadlineDate,
@@ -85,11 +86,11 @@ export function DetailsPanel({
     workspaceOptions,
     selectedWorkspaceOptionId,
     selectedWorkspaceLabel,
-    onTimerModeChange,
     onWorkspaceOpenChange,
+    onTimerModeOpenChange,
     onWorkspaceSelect,
+    onTimerModeChange,
     onPriorityChange,
-    onNoteChange,
     onDurationSecChange,
     onDurationUnitChange,
     onDeadlineDateChange,
@@ -101,10 +102,10 @@ export function DetailsPanel({
     onPlayEnabledChange,
     onAutoResetEnabledChange,
     onOverdueEnabledChange,
-    onCancel,
+    onClose,
     onReset,
-    canSubmit,
-}: DetailsPanelProps) {
+}: MorePanelProps) {
+    const [hoveredAction, setHoveredAction] = React.useState<'cancel' | 'reset' | 'apply' | null>(null);
     const fieldStyle: React.CSSProperties = {
         borderColor: 'var(--tt-border)',
         background: 'var(--tt-input-bg)',
@@ -113,10 +114,42 @@ export function DetailsPanel({
     const workspaceFadeStyle: React.CSSProperties = {
         background: 'linear-gradient(90deg, transparent 0%, var(--tt-input-bg) 72%)',
     };
+    const actionHoverBorderColor = 'rgba(79, 125, 243, 0.28)';
+
+    const cancelButtonStyle: React.CSSProperties = {
+        borderColor: hoveredAction === 'cancel' ? actionHoverBorderColor : 'rgba(215, 222, 231, 0.78)',
+        background: hoveredAction === 'cancel' ? 'rgba(79, 125, 243, 0.02)' : 'var(--tt-surface)',
+        borderWidth: 1,
+        color: hoveredAction === 'cancel' ? 'color-mix(in srgb, var(--tt-accent) 68%, var(--tt-text-muted))' : 'var(--tt-text-muted)',
+        boxShadow: 'none',
+        transform: 'none',
+    };
+
+    const resetButtonStyle: React.CSSProperties = {
+        borderColor: hoveredAction === 'reset' ? actionHoverBorderColor : 'rgba(215, 222, 231, 0.78)',
+        background: hoveredAction === 'reset' ? 'rgba(79, 125, 243, 0.025)' : 'var(--tt-surface-muted)',
+        borderWidth: 1,
+        color: hoveredAction === 'reset' ? 'color-mix(in srgb, var(--tt-accent) 64%, var(--tt-text))' : 'var(--tt-text)',
+        boxShadow: 'none',
+        transform: 'none',
+    };
+
+    const applyButtonStyle: React.CSSProperties = {
+        background: hoveredAction === 'apply'
+            ? 'color-mix(in srgb, var(--tt-accent) 86%, white)'
+            : 'color-mix(in srgb, var(--tt-accent) 80%, white)',
+        borderColor: hoveredAction === 'apply'
+            ? 'color-mix(in srgb, var(--tt-accent) 78%, white)'
+            : 'color-mix(in srgb, var(--tt-accent) 72%, white)',
+        borderWidth: 1,
+        color: 'color-mix(in srgb, var(--tt-accent-contrast) 92%, white)',
+        boxShadow: 'none',
+        transform: 'none',
+    };
 
     return (
         <div
-            id="task-composer-details"
+            id="task-composer-more"
             className="space-y-4 border-t px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4"
             style={{
                 borderColor: 'var(--tt-border)',
@@ -124,7 +157,42 @@ export function DetailsPanel({
                 boxShadow: 'inset 0 1px 0 rgba(15, 23, 42, 0.03)',
             }}
         >
-            <ModeSelector timerMode={timerMode} onChange={onTimerModeChange} />
+            <div>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--tt-text)' }}>
+                    More options
+                </h3>
+            </div>
+
+            <div className="space-y-2">
+                <div className="text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
+                    Timer mode
+                </div>
+                <div className="w-full max-w-[14rem]">
+                    <Dropdown
+                        id="task-more-mode-btn"
+                        label="Timer mode"
+                        icon={null}
+                        buttonClassName="w-full justify-between"
+                        buttonContent={
+                            <span className="inline-flex min-w-0 flex-1 items-center justify-between gap-2">
+                                <span className="whitespace-nowrap">{getTaskComposerTimerModeLabel(timerMode)}</span>
+                                <ChevronDownIcon size="sm" />
+                            </span>
+                        }
+                        options={TASK_COMPOSER_TIMER_MODE_OPTIONS}
+                        selectedId={timerMode}
+                        isOpen={timerModeOpen}
+                        onToggle={() => onTimerModeOpenChange((current) => !current)}
+                        onSelect={(id) => onTimerModeChange(id as TimerMode)}
+                        onClose={() => onTimerModeOpenChange(false)}
+                        title="Timer mode"
+                        ariaLabel="Advanced timer mode options"
+                        fullWidth
+                        menuAlign="left"
+                        menuWidth="trigger"
+                    />
+                </div>
+            </div>
 
             {timerMode === 'pomodoro' ? (
                 <PomodoroSettings
@@ -139,8 +207,12 @@ export function DetailsPanel({
                 />
             ) : timerMode === 'deadline' ? (
                 <div className="flex flex-col">
-                    <label htmlFor="deadline-picker" className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
-                        Deadline
+                    <label
+                        htmlFor="deadline-picker"
+                        className="mb-1 text-xs font-medium"
+                        style={{ color: 'var(--tt-text-muted)' }}
+                    >
+                        Exact deadline
                     </label>
                     <input
                         id="deadline-picker"
@@ -152,7 +224,7 @@ export function DetailsPanel({
                         aria-label="Deadline date and time"
                     />
                     <div className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
-                        Set specific date and time for this task
+                        Use the preset for quick offsets, then fine-tune the exact timestamp here when needed.
                     </div>
                 </div>
             ) : timerMode === 'duration' ? (
@@ -182,7 +254,7 @@ export function DetailsPanel({
 
             <div className="flex flex-col">
                 <div className="mb-1 text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
-                    Workspace
+                    Workspace override
                 </div>
 
                 <div className="w-full max-w-[18rem]">
@@ -239,31 +311,6 @@ export function DetailsPanel({
                 </div>
             </div>
 
-            <div className="flex flex-col">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                    <label htmlFor="task-note" className="text-xs font-medium" style={{ color: 'var(--tt-text-muted)' }}>
-                        Details
-                    </label>
-                    <span className="text-[11px]" style={{ color: 'var(--tt-text-soft)' }} aria-live="polite">
-                        {note.length}/{TASK_NOTE_MAX_LENGTH}
-                    </span>
-                </div>
-                <textarea
-                    id="task-note"
-                    value={note}
-                    onChange={(e) => onNoteChange(e.target.value.slice(0, TASK_NOTE_MAX_LENGTH))}
-                    rows={3}
-                    maxLength={TASK_NOTE_MAX_LENGTH}
-                    placeholder="Add details, context, or next steps…"
-                    className="resize-none rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tt-ring)]"
-                    style={fieldStyle}
-                    aria-describedby="task-note-help"
-                />
-                <div id="task-note-help" className="mt-1 text-xs" style={{ color: 'var(--tt-text-soft)' }}>
-                    Optional details for context, reminders, or next steps.
-                </div>
-            </div>
-
             {supportsTimer(timerMode) && (
                 <TimerControlsSection
                     timerMode={timerMode}
@@ -284,42 +331,36 @@ export function DetailsPanel({
             >
                 <button
                     type="button"
-                    onClick={onCancel}
-                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
-                    style={{
-                        borderColor: 'var(--tt-border)',
-                        background: 'var(--tt-surface)',
-                        color: 'var(--tt-text-muted)',
-                    }}
+                    onClick={onClose}
+                    onMouseEnter={() => setHoveredAction('cancel')}
+                    onMouseLeave={() => setHoveredAction((current) => current === 'cancel' ? null : current)}
+                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-[border-color,background-color,color] duration-150 ease-out"
+                    style={cancelButtonStyle}
                 >
                     Cancel
                 </button>
                 <button
                     type="button"
                     onClick={onReset}
-                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-colors hover:bg-[var(--tt-surface-hover)]"
-                    style={{
-                        borderColor: 'var(--tt-border)',
-                        background: 'var(--tt-surface-muted)',
-                        color: 'var(--tt-text)',
-                    }}
+                    onMouseEnter={() => setHoveredAction('reset')}
+                    onMouseLeave={() => setHoveredAction((current) => current === 'reset' ? null : current)}
+                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-[border-color,background-color,color] duration-150 ease-out"
+                    style={resetButtonStyle}
                 >
                     Reset
                 </button>
                 <button
                     type="submit"
-                    disabled={!canSubmit}
-                    className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-transform duration-150 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-                    style={{
-                        background: 'linear-gradient(180deg, #5b8cff 0%, var(--tt-accent) 100%)',
-                        color: 'var(--tt-accent-contrast)',
-                        boxShadow: '0 6px 16px rgba(79, 125, 243, 0.25)',
-                    }}
+                    disabled={!canApply}
+                    onMouseEnter={() => setHoveredAction('apply')}
+                    onMouseLeave={() => setHoveredAction((current) => current === 'apply' ? null : current)}
+                    className="rounded-xl border px-3 py-2 text-sm font-medium transition-[border-color,background-color] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60"
+                    style={applyButtonStyle}
                 >
-                    <CheckIcon size="sm" />
-                    Save
+                    Create task
                 </button>
             </div>
         </div>
     );
 }
+

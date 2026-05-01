@@ -36,8 +36,8 @@ function taskRow(page: Page, title: string) {
   return page.getByTestId('task-row').filter({ hasText: title }).first();
 }
 
-function detailsPanel(page: Page) {
-  return page.locator('#task-composer-details');
+function morePanel(page: Page) {
+  return page.locator('#task-composer-more');
 }
 
 test.describe('Task row states', () => {
@@ -159,10 +159,12 @@ test.describe('Task row states', () => {
     );
 
     await page.getByLabel('Add a new task').fill('Playwright urgent task');
-    await page.getByRole('button', { name: /details/i }).click();
-    await page.getByText('Urgent', { exact: true }).click();
-    await page.getByRole('textbox', { name: 'Details' }).fill('Created from Playwright test');
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
+    await page.locator('#task-note-inline-input').fill('Created from Playwright test');
+    await page.getByRole('button', { name: /^Details$/i }).click();
+    const panel = morePanel(page);
+    await panel.getByText('Urgent', { exact: true }).click();
+    await panel.getByRole('button', { name: /create task/i }).click();
 
     const createdRow = taskRow(page, 'Playwright urgent task');
     await expect(createdRow).toBeVisible();
@@ -184,10 +186,11 @@ test.describe('Task row states', () => {
     await page.getByLabel('Add a new task').fill('Playwright note entry');
     await page.getByTitle('Timer mode').click();
     await page.getByRole('menuitem', { name: 'Note' }).click();
-    await page.getByRole('button', { name: /details/i }).click();
-    await detailsPanel(page).getByRole('textbox', { name: 'Details' }).fill('Created as an untimed note entry');
-    await page.getByRole('button', { name: 'Save' }).click();
-    await page.getByRole('button', { name: /hide details/i }).click();
+    await expect(page.locator('#task-note-inline-input')).toHaveCount(0);
+    await page.getByRole('button', { name: /^Toggle note$/i }).click();
+    await expect(page.locator('#task-note-inline-input')).toBeVisible();
+    await page.locator('#task-note-inline-input').fill('Created as an untimed note entry');
+    await page.getByRole('button', { name: 'Add task' }).click();
 
     const createdRow = taskRow(page, 'Playwright note entry');
     await expect(createdRow).toBeVisible();
@@ -220,6 +223,35 @@ test.describe('Task row states', () => {
       originalDurationSec: 0,
       timerControls: null,
     });
+  });
+
+  test('applies advanced composer settings and keeps timer mode in sync with quick controls', async ({ page }) => {
+    await gotoSeededPage(page, []);
+
+    await page.getByLabel('Add a new task').fill('Playwright advanced apply task');
+    await page.getByRole('button', { name: /^Details$/i }).click();
+
+    const panel = morePanel(page);
+    await expect(panel).toBeVisible();
+    const moreModeButton = panel.locator('#task-more-mode-btn');
+    await expect(moreModeButton).toContainText('Duration');
+
+    await moreModeButton.click();
+    await panel.getByRole('menuitem', { name: 'Pomodoro' }).click();
+    await expect(moreModeButton).toContainText('Pomodoro');
+    await expect(page.getByTitle('Timer mode')).toContainText('Pomodoro');
+
+    await panel.getByRole('button', { name: 'Cancel' }).click();
+    await expect(panel).toBeHidden();
+    await expect(taskRow(page, 'Playwright advanced apply task')).toHaveCount(0);
+
+    await page.getByRole('button', { name: /^Details$/i }).click();
+    await expect(panel.locator('#task-more-mode-btn')).toContainText('Pomodoro');
+    await panel.getByRole('button', { name: 'Create task' }).click();
+
+    const createdRow = taskRow(page, 'Playwright advanced apply task');
+    await expect(createdRow).toBeVisible();
+    await expect(createdRow.getByLabel('Start timer')).toBeVisible();
   });
 
   test('keeps note discoverability when note previews are disabled', async ({ page }) => {

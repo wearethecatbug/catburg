@@ -1,22 +1,15 @@
 'use client';
 
-import React from 'react';
 import type { SettingsSectionId } from '@/domain/settings.types';
-import { ClipboardIcon, HourglassIcon, SettingsIcon, SunIcon } from '@/shared';
+import { SettingsIcon } from '@/shared';
+import { SETTINGS_SECTIONS } from './settings-sections.config';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSectionId;
   onChange: (section: SettingsSectionId) => void;
-  onClose: () => void;
 }
 
-const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ReactNode }> = [
-  { id: 'general', label: 'General', icon: <ClipboardIcon size="sm" aria-hidden /> },
-  { id: 'timer', label: 'Timer', icon: <HourglassIcon size="sm" aria-hidden /> },
-  { id: 'appearance', label: 'Appearance', icon: <SunIcon size="sm" aria-hidden /> },
-];
-
-export function SettingsSidebar({ activeSection, onChange, onClose }: SettingsSidebarProps) {
+export function SettingsSidebar({ activeSection, onChange }: SettingsSidebarProps) {
   return (
     <aside
       className="flex w-56 shrink-0 flex-col border-r px-0"
@@ -41,7 +34,7 @@ export function SettingsSidebar({ activeSection, onChange, onClose }: SettingsSi
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Settings sections">
-        {SECTIONS.map((section) => (
+        {SETTINGS_SECTIONS.map((section) => (
           <button
             key={section.id}
             type="button"
@@ -69,16 +62,6 @@ export function SettingsSidebar({ activeSection, onChange, onClose }: SettingsSi
         ))}
       </nav>
 
-      <div className="border-t p-3" style={{ borderColor: 'var(--tt-border)' }}>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl px-3 py-2 text-left text-sm transition-colors hover:bg-white hover:text-gray-900"
-          style={{ color: 'var(--tt-text-muted)' }}
-        >
-          Close
-        </button>
-      </div>
     </aside>
   );
 }

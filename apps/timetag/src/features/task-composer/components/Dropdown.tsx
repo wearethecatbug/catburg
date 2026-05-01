@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useCallback, useState } from 'react';
 
 export interface DropdownOption {
     id: string;
@@ -11,6 +11,8 @@ interface DropdownProps {
     label: string;
     icon: React.ReactNode;
     buttonContent: React.ReactNode;
+    buttonClassName?: string;
+    buttonStyle?: React.CSSProperties;
     options: DropdownOption[];
     selectedId: string;
     isOpen: boolean;
@@ -29,6 +31,8 @@ export function Dropdown({
     label,
     icon,
     buttonContent,
+    buttonClassName,
+    buttonStyle,
     options,
     selectedId,
     isOpen,
@@ -41,8 +45,54 @@ export function Dropdown({
     menuAlign = 'right',
     menuWidth = 'fixed',
 }: DropdownProps) {
+    const VIEWPORT_PADDING_PX = 8;
     const wrapperRef = useRef<HTMLDivElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
+    const placementRafRef = useRef<number | null>(null);
+    const [menuOffsetX, setMenuOffsetX] = useState(0);
+    const [menuMaxWidth, setMenuMaxWidth] = useState<number | undefined>(undefined);
+
+    const updateMenuPlacement = useCallback(() => {
+        if (!isOpen || !wrapperRef.current || !menuRef.current) {
+            return;
+        }
+
+        const wrapperRect = wrapperRef.current.getBoundingClientRect();
+        const menuRect = menuRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const nextMaxWidth = Math.max(160, viewportWidth - VIEWPORT_PADDING_PX * 2);
+        const effectiveWidth = Math.min(menuRect.width, nextMaxWidth);
+
+        const projectedLeft = menuAlign === 'left'
+            ? wrapperRect.left
+            : wrapperRect.right - effectiveWidth;
+        let projectedRight = projectedLeft + effectiveWidth;
+        let nextOffset = 0;
+
+        if (projectedLeft < VIEWPORT_PADDING_PX) {
+            nextOffset += VIEWPORT_PADDING_PX - projectedLeft;
+            projectedRight += VIEWPORT_PADDING_PX - projectedLeft;
+        }
+
+        if (projectedRight > viewportWidth - VIEWPORT_PADDING_PX) {
+            nextOffset -= projectedRight - (viewportWidth - VIEWPORT_PADDING_PX);
+        }
+
+        setMenuMaxWidth((current) => current === nextMaxWidth ? current : nextMaxWidth);
+        setMenuOffsetX((current) => current === nextOffset ? current : nextOffset);
+    }, [isOpen, menuAlign]);
+
+    const schedulePlacementUpdate = useCallback(() => {
+        if (placementRafRef.current !== null) {
+            window.cancelAnimationFrame(placementRafRef.current);
+        }
+
+        placementRafRef.current = window.requestAnimationFrame(() => {
+            placementRafRef.current = null;
+            updateMenuPlacement();
+        });
+    }, [updateMenuPlacement]);
 
     // Close dropdown on click outside
     useEffect(() => {
@@ -77,6 +127,31 @@ export function Dropdown({
         return () => document.removeEventListener('keydown', onKey);
     }, [isOpen, onToggle, onClose]);
 
+    useLayoutEffect(() => {
+        if (!isOpen) {
+            if (placementRafRef.current !== null) {
+                window.cancelAnimationFrame(placementRafRef.current);
+                placementRafRef.current = null;
+            }
+            setMenuOffsetX(0);
+            setMenuMaxWidth(undefined);
+            return;
+        }
+
+        schedulePlacementUpdate();
+        window.addEventListener('resize', schedulePlacementUpdate);
+        window.addEventListener('scroll', schedulePlacementUpdate, true);
+
+        return () => {
+            if (placementRafRef.current !== null) {
+                window.cancelAnimationFrame(placementRafRef.current);
+                placementRafRef.current = null;
+            }
+            window.removeEventListener('resize', schedulePlacementUpdate);
+            window.removeEventListener('scroll', schedulePlacementUpdate, true);
+        };
+    }, [isOpen, schedulePlacementUpdate]);
+
     return (
         <div ref={wrapperRef} className={`relative ${fullWidth ? 'w-full' : 'flex-shrink-0'}`}>
             <label className="sr-only" htmlFor={id}>
@@ -89,11 +164,12 @@ export function Dropdown({
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
                 onClick={onToggle}
-                className={`${fullWidth ? 'flex w-full justify-between' : 'inline-flex'} items-center gap-2 rounded-md border px-3 py-2 text-sm focus:outline-none`}
+                className={`${fullWidth ? 'flex w-full justify-between' : 'inline-flex'} min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-sm focus:outline-none ${buttonClassName ?? ''}`}
                 style={{
                     borderColor: 'var(--tt-border)',
                     background: 'var(--tt-input-bg)',
                     color: 'var(--tt-text)',
+                    ...buttonStyle,
                 }}
                 title={title}
             >
@@ -103,14 +179,17 @@ export function Dropdown({
 
             {isOpen && (
                 <div
+                    ref={menuRef}
                     role="menu"
                     aria-label={ariaLabel || label}
-                    className={`absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} ${menuWidth === 'trigger' ? 'w-full min-w-full' : 'w-44'} z-40 mt-2 rounded-md border`}
+                    className={`absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} ${menuWidth === 'trigger' ? 'w-full' : 'w-44'} z-40 mt-2 rounded-md border`}
                     style={{
                         background: 'var(--tt-surface-elevated)',
                         borderColor: 'var(--tt-border)',
                         boxShadow: 'var(--tt-shadow)',
                         backdropFilter: 'blur(16px) saturate(1.06)',
+                        maxWidth: menuMaxWidth,
+                        transform: menuOffsetX === 0 ? undefined : `translateX(${menuOffsetX}px)`,
                     }}
                 >
                     <ul className="py-1" role="none">

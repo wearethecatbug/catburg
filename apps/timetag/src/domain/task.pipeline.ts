@@ -65,9 +65,13 @@ export function applyPipeline(tasks: Task[], query: PipelineQuery): Task[] {
   }
 
   // 2. Status filter
-  if (query.filter.status !== 'all') {
-    result = result.filter((t) => t.status === query.filter.status);
-  }
+  result = result.filter((task) => {
+    if (query.filter.status === 'active') {
+      return task.status !== 'archived';
+    }
+
+    return task.status === query.filter.status;
+  });
 
   // 3. Urgency filter
   result = result.filter((t) => {
