@@ -227,7 +227,6 @@ export function WorkspaceSwitch() {
                     className="flex items-stretch overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     role="tablist"
                     aria-label="Workspaces"
-                    tabIndex={0}
                     onWheel={handleViewportWheel}
                     onFocus={() => setIsCarouselActive(true)}
                     onBlur={(event) => {
