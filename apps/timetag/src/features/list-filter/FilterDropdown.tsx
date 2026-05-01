@@ -100,13 +100,15 @@ export function FilterDropdown() {
       <div className="px-4 py-2">
         <FilterSectionHeading>Urgency</FilterSectionHeading>
         {URGENCY_FILTER_OPTIONS.map((option) => (
-          <div key={option.id} className="flex items-center gap-2 py-1">
+          <label key={option.id} className="inline-flex items-center gap-2 py-1">
             <Checkbox
               checked={state.filter.urgency[option.id]}
               onChange={() => toggleUrgency(option.id)}
-              label={option.label}
             />
-          </div>
+            <span className="text-sm" style={{ color: 'var(--tt-text)' }}>
+              {option.label}
+            </span>
+          </label>
         ))}
       </div>
 

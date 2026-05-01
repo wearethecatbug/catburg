@@ -37,6 +37,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
 
   if (!isOpen) return null;
   const activeSectionLabel = SECTION_LABELS[activeSection];
+  const mobileSectionSubtitle = SETTINGS_SECTIONS.map((section) => section.label).join(', ');
 
   return (
     <div
@@ -82,7 +83,7 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     Settings
                   </p>
                   <p className="mt-1 text-[11px]" style={{ color: 'color-mix(in srgb, var(--tt-text-muted) 88%, white)' }}>
-                    General, Timer, Appearance
+                    {mobileSectionSubtitle}
                   </p>
                 </div>
               </div>

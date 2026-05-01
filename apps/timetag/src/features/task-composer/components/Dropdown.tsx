@@ -182,7 +182,7 @@ export function Dropdown({
                     ref={menuRef}
                     role="menu"
                     aria-label={ariaLabel || label}
-                    className={`absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} ${menuWidth === 'trigger' ? 'w-full min-w-full' : 'w-44'} z-40 mt-2 rounded-md border`}
+                    className={`absolute ${menuAlign === 'left' ? 'left-0' : 'right-0'} ${menuWidth === 'trigger' ? 'w-full' : 'w-44'} z-40 mt-2 rounded-md border`}
                     style={{
                         background: 'var(--tt-surface-elevated)',
                         borderColor: 'var(--tt-border)',

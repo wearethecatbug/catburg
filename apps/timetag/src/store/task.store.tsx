@@ -427,6 +427,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (state.filter.status === 'done' || state.filter.status === 'archived') {
+      dispatch({ type: 'CLEAR_SELECTION' });
       dispatch({ type: 'SET_FILTER', payload: { status: 'active' } });
     }
   }, [settings.general.showCompletedTasks, state.filter.status]);

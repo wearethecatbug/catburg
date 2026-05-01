@@ -229,9 +229,7 @@ test.describe('Task composer workspace override', () => {
     await page.getByLabel('Add a new task').fill('Use current workspace task');
     await page.getByRole('button', { name: /^Toggle note$/i }).click();
     await page.locator('#task-note-inline-input').fill('Preserves details fields');
-    await page.getByRole('button', { name: /^Details$/i }).click();
-
-    const panel = morePanel(page);
+    const panel = await openMorePanel(page);
     await expect(panel.getByTitle('Workspace')).toContainText('Use current (Work)');
     await panel.getByText('Urgent', { exact: true }).click();
     await page.getByRole('button', { name: 'Create task' }).click();
