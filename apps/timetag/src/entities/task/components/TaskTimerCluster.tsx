@@ -13,6 +13,8 @@ interface TaskTimerClusterProps {
   isRunning: boolean;
   isPaused: boolean;
   isTimerDisabled: boolean;
+  shouldInterceptDoubleClickGesture: boolean;
+  isDoubleClickRestartEnabled: boolean;
   displayTime: string;
   fullTimeText: string;
   onToggleTimer: () => void;
@@ -28,6 +30,8 @@ export function TaskTimerCluster({
   isRunning,
   isPaused,
   isTimerDisabled,
+  shouldInterceptDoubleClickGesture,
+  isDoubleClickRestartEnabled,
   displayTime,
   fullTimeText,
   onToggleTimer,
@@ -71,7 +75,8 @@ export function TaskTimerCluster({
           urgency={urgency}
           disabled={isTimerDisabled}
           onToggleAction={onToggleTimer}
-          onRestartAction={onRestartTimer}
+          enableDoubleClickGesture={shouldInterceptDoubleClickGesture}
+          onRestartAction={isDoubleClickRestartEnabled ? onRestartTimer : undefined}
           sizePx={30}
           strokeWidth={2.75}
           embedded

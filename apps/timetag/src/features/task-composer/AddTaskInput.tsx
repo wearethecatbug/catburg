@@ -67,6 +67,8 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     playEnabled,
     autoResetEnabled,
     overdueEnabled,
+    doubleClickRestartEnabled,
+    autoStartAfterDoubleClickRestart,
     presetLabel,
     workspaceOpen,
     setWorkspaceOpen,
@@ -99,6 +101,8 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
     handleDurationUnitChange,
     handleAutoResetChange,
     handleOverdueChange,
+    handleDoubleClickRestartEnabledChange,
+    handleAutoStartAfterDoubleClickRestartChange,
     handleCancelDetails,
     handleResetDetails,
     setPriority,
@@ -321,6 +325,8 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             playEnabled={playEnabled}
             autoResetEnabled={autoResetEnabled}
             overdueEnabled={overdueEnabled}
+            doubleClickRestartEnabled={doubleClickRestartEnabled}
+            autoStartAfterDoubleClickRestart={autoStartAfterDoubleClickRestart}
             presetLabel={presetLabel}
             workspaceOpen={workspaceOpen}
             showWorkspaceDropdown={showWorkspaceDropdown}
@@ -346,6 +352,8 @@ export const AddTaskInput = forwardRef<HTMLInputElement, AddTaskInputProps>(func
             onPlayEnabledChange={setPlayEnabled}
             onAutoResetEnabledChange={handleAutoResetChange}
             onOverdueEnabledChange={handleOverdueChange}
+            onDoubleClickRestartEnabledChange={handleDoubleClickRestartEnabledChange}
+            onAutoStartAfterDoubleClickRestartChange={handleAutoStartAfterDoubleClickRestartChange}
             onClose={handleCancelDetails}
             onReset={handleResetDetails}
           />

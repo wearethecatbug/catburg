@@ -16,6 +16,7 @@ type Props = {
     disabled?: boolean;
     onToggleAction?: () => void;
     onRestartAction?: () => void;
+    enableDoubleClickGesture?: boolean;
     embedded?: boolean;
 
     sizePx?: number; // default 28 (more compact like screenshot)
@@ -33,6 +34,7 @@ export function TimerRingButton({
                                     disabled,
                                     onToggleAction,
                                     onRestartAction,
+                                    enableDoubleClickGesture = false,
                                     embedded = false,
                                     sizePx = 28,
                                     strokeWidth = 3,
@@ -59,12 +61,7 @@ export function TimerRingButton({
             return;
         }
 
-        if (!onRestartAction) {
-            onToggleAction();
-            return;
-        }
-
-        if (event.detail === 0) {
+        if (!enableDoubleClickGesture) {
             onToggleAction();
             return;
         }
@@ -78,15 +75,15 @@ export function TimerRingButton({
             toggleTimeoutRef.current = null;
             onToggleAction();
         }, DOUBLE_CLICK_DELAY_MS);
-    }, [clearPendingToggle, disabled, onRestartAction, onToggleAction]);
+    }, [clearPendingToggle, disabled, enableDoubleClickGesture, onToggleAction]);
 
     const handleDoubleClick = React.useCallback(() => {
-        if (disabled || !onRestartAction) {
+        if (disabled) {
             return;
         }
 
         clearPendingToggle();
-        onRestartAction();
+        onRestartAction?.();
     }, [clearPendingToggle, disabled, onRestartAction]);
 
     const isOverdue = remainingSec <= 0 || urgency === 'overdue';
@@ -211,7 +208,7 @@ export function TimerRingButton({
         <button
             type="button"
             onClick={handleClick}
-            onDoubleClick={onRestartAction ? handleDoubleClick : undefined}
+            onDoubleClick={enableDoubleClickGesture ? handleDoubleClick : undefined}
             disabled={disabled}
             aria-label={isRunning ? 'Pause timer' : 'Start timer'}
             className={[

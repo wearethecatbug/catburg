@@ -77,6 +77,31 @@ export function GeneralSettingsSection({ activeTab, settings, updateGeneral }: G
             aria-label="Confirm before delete"
           />
         </Field>
+
+        <Field
+          label="Double-click to restart timer"
+          description="Allow task timers to be restarted by double-clicking the timer button."
+        >
+          <input
+            type="checkbox"
+            checked={settings.general.doubleClickRestartEnabled}
+            onChange={(e) => updateGeneral({ doubleClickRestartEnabled: e.target.checked })}
+            aria-label="Double-click to restart timer"
+          />
+        </Field>
+
+        <Field
+          label="Auto-start after double-click restart"
+          description="Start the timer immediately after it is restarted by double-click."
+        >
+          <input
+            type="checkbox"
+            checked={settings.general.autoStartAfterDoubleClickRestart}
+            onChange={(e) => updateGeneral({ autoStartAfterDoubleClickRestart: e.target.checked })}
+            disabled={!settings.general.doubleClickRestartEnabled}
+            aria-label="Auto-start after double-click restart"
+          />
+        </Field>
       </div>
     );
   }

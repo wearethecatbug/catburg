@@ -27,6 +27,8 @@ export interface GeneralSettings {
   autoStartTimerWhenTaskCreated: boolean;
   autoPauseOtherTimers: boolean;
   confirmBeforeDelete: boolean;
+  doubleClickRestartEnabled: boolean;
+  autoStartAfterDoubleClickRestart: boolean;
   defaultWorkspace: AssignableWorkspaceType;
   showCompletedTasks: boolean;
   showUrgencyIndicator: boolean;
@@ -75,7 +77,7 @@ export interface AppearanceSettings {
 }
 
 export interface AppSettings {
-  version: 4;
+  version: 5;
   general: GeneralSettings;
   timer: TimerSettings;
   appearance: AppearanceSettings;
@@ -84,11 +86,13 @@ export interface AppSettings {
 export const SETTINGS_STORAGE_KEY = 'timetag-settings';
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  version: 4,
+  version: 5,
   general: {
     autoStartTimerWhenTaskCreated: false,
     autoPauseOtherTimers: false,
     confirmBeforeDelete: true,
+    doubleClickRestartEnabled: true,
+    autoStartAfterDoubleClickRestart: false,
     defaultWorkspace: 'work',
     showCompletedTasks: true,
     showUrgencyIndicator: true,

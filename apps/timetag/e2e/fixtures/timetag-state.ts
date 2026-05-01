@@ -21,17 +21,23 @@ export type StoredTask = {
     autoReset: boolean;
     allowOverdue: boolean;
   };
+  timerBehaviorOverride?: {
+    doubleClickRestartEnabled?: boolean;
+    autoStartAfterDoubleClickRestart?: boolean;
+  };
   reminders: Array<{ id: string; enabled: boolean }>;
   createdAt: string;
   updatedAt: string;
 };
 
 export const testSettings: AppSettings = {
-  version: 4,
+  version: 5,
   general: {
     autoStartTimerWhenTaskCreated: false,
     autoPauseOtherTimers: false,
     confirmBeforeDelete: false,
+    doubleClickRestartEnabled: true,
+    autoStartAfterDoubleClickRestart: false,
     defaultWorkspace: 'work',
     showCompletedTasks: true,
     showUrgencyIndicator: true,

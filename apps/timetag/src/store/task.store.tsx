@@ -29,6 +29,7 @@ import {
 } from '@/domain/task.operations';
 import { supportsTimer } from '@/domain/task.mode';
 import { transitionStatus, toggleDoneStatus } from '@/domain/task.status';
+import { resolveTaskTimerBehavior } from '@/domain/timer.behavior';
 import { toggleTimerState, resetTimerState, restartTimerState, tickTimer } from '@/domain/timer.logic';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 import { useSettings } from './settings.store';
@@ -62,7 +63,7 @@ type TaskAction =
   | { type: 'DELETE_SELECTED' }
   | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
   | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
-  | { type: 'RESTART_TIMER'; payload: { id: string; nowIso: string } }
+  | { type: 'RESTART_TIMER'; payload: { id: string; nowIso: string; autoStart: boolean; pauseOthers: boolean } }
   | { type: 'TICK_TIMERS' }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
@@ -214,16 +215,24 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         return state;
       }
 
-      const patch = restartTimerState(targetTask, action.payload.nowIso);
+      const patch = restartTimerState(targetTask, action.payload.nowIso, {
+        autoStart: action.payload.autoStart,
+      });
       if (Object.keys(patch).length === 0) {
         return state;
       }
 
+      let nextTasks = state.tasks.map((task) => (
+        task.id === action.payload.id ? { ...task, ...patch } : task
+      ));
+
+      if (action.payload.autoStart && action.payload.pauseOthers) {
+        nextTasks = pauseOtherRunningTasks(nextTasks, action.payload.id, action.payload.nowIso);
+      }
+
       return {
         ...state,
-        tasks: state.tasks.map((task) => (
-          task.id === action.payload.id ? { ...task, ...patch } : task
-        )),
+        tasks: nextTasks,
       };
     }
 
@@ -481,7 +490,27 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     [shouldPauseOtherTimers],
   );
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
-  const restartTimer = useCallback((id: string) => dispatch({ type: 'RESTART_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const restartTimer = useCallback((id: string) => {
+    const task = state.tasks.find((candidate) => candidate.id === id);
+    if (!task) {
+      return;
+    }
+
+    const behavior = resolveTaskTimerBehavior(task, settings.general);
+    if (!behavior.doubleClickRestartEnabled) {
+      return;
+    }
+
+    dispatch({
+      type: 'RESTART_TIMER',
+      payload: {
+        id,
+        nowIso: new Date().toISOString(),
+        autoStart: behavior.autoStartAfterDoubleClickRestart,
+        pauseOthers: shouldPauseOtherTimers,
+      },
+    });
+  }, [settings.general, shouldPauseOtherTimers, state.tasks]);
   const archiveTask = useCallback(
     (id: string) => dispatch({ type: 'SET_STATUS', payload: { id, status: 'archived', nowIso: new Date().toISOString() } }),
     [],

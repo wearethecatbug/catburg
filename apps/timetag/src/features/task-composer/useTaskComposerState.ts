@@ -102,6 +102,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   const [playEnabled, setPlayEnabled] = React.useState(true);
   const [autoResetEnabled, setAutoResetEnabled] = React.useState(false);
   const [overdueEnabled, setOverdueEnabled] = React.useState(false);
+  const [doubleClickRestartEnabled, setDoubleClickRestartEnabled] = React.useState(settings.general.doubleClickRestartEnabled);
+  const [autoStartAfterDoubleClickRestart, setAutoStartAfterDoubleClickRestart] = React.useState(settings.general.autoStartAfterDoubleClickRestart);
   const [presetOpen, setPresetOpen] = React.useState(false);
   const [modeOpen, setModeOpen] = React.useState(false);
   const [advancedModeOpen, setAdvancedModeOpen] = React.useState(false);
@@ -188,6 +190,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setPlayEnabled(true);
     setAutoResetEnabled(false);
     setOverdueEnabled(false);
+    setDoubleClickRestartEnabled(settings.general.doubleClickRestartEnabled);
+    setAutoStartAfterDoubleClickRestart(settings.general.autoStartAfterDoubleClickRestart);
     setWorkspaceOverride(undefined);
     setWorkspaceOpen(false);
     setPomoCycles(settings.timer.pomodoroDefaults.cycles);
@@ -201,6 +205,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     defaultDurationPreset.id,
     defaultPomodoroPreset.id,
     settings.general.autoStartTimerWhenTaskCreated,
+    settings.general.autoStartAfterDoubleClickRestart,
+    settings.general.doubleClickRestartEnabled,
     settings.timer.deadlineDefaults.offsetSec,
     settings.timer.defaultMode,
     settings.timer.pomodoroDefaults.cycles,
@@ -257,6 +263,12 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
       playEnabled,
       autoResetEnabled,
       overdueEnabled,
+      doubleClickRestartEnabled,
+      autoStartAfterDoubleClickRestart,
+      globalTimerBehaviorSettings: {
+        doubleClickRestartEnabled: settings.general.doubleClickRestartEnabled,
+        autoStartAfterDoubleClickRestart: settings.general.autoStartAfterDoubleClickRestart,
+      },
       pomoCycles,
       pomoWorkMin,
       pomoShortBreakMin,
@@ -277,9 +289,11 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
   }, [
     addTask,
     autoEnabled,
+    autoStartAfterDoubleClickRestart,
     autoResetEnabled,
     deadlineDate,
     defaultWorkspace,
+    doubleClickRestartEnabled,
     durationSec,
     note,
     overdueEnabled,
@@ -291,6 +305,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     priority,
     resetComposerToSettingsDefaults,
     settings.general.defaultWorkspace,
+    settings.general.autoStartAfterDoubleClickRestart,
+    settings.general.doubleClickRestartEnabled,
     state.lastConcreteWorkspace,
     state.workspace,
     timerMode,
@@ -516,6 +532,14 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     }
   }, [autoResetEnabled]);
 
+  const handleDoubleClickRestartEnabledChange = React.useCallback((enabled: boolean) => {
+    setDoubleClickRestartEnabled(enabled);
+  }, []);
+
+  const handleAutoStartAfterDoubleClickRestartChange = React.useCallback((enabled: boolean) => {
+    setAutoStartAfterDoubleClickRestart(enabled);
+  }, []);
+
   const handleDurationSecChange = React.useCallback((nextDurationSec: number) => {
     setDurationSec(nextDurationSec);
     setPresetLabel(undefined);
@@ -574,6 +598,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     playEnabled,
     autoResetEnabled,
     overdueEnabled,
+    doubleClickRestartEnabled,
+    autoStartAfterDoubleClickRestart,
     presetLabel,
     workspaceOpen,
     setWorkspaceOpen,
@@ -606,6 +632,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     handleDurationUnitChange,
     handleAutoResetChange,
     handleOverdueChange,
+    handleDoubleClickRestartEnabledChange,
+    handleAutoStartAfterDoubleClickRestartChange,
     handleCancelDetails,
     handleResetDetails,
     setPriority,
@@ -617,6 +645,8 @@ export function useTaskComposerState({ defaultWorkspace, forwardedRef }: UseTask
     setPomoLongBreakMin,
     setAutoEnabled,
     setPlayEnabled,
+    setDoubleClickRestartEnabled,
+    setAutoStartAfterDoubleClickRestart,
   };
 }
 

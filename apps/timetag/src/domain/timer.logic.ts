@@ -57,12 +57,22 @@ export function canRestartTimer(task: Task): boolean {
  * - always return to idle (do not auto-resume)
  * - keep unsupported and restricted tasks as no-ops
  */
-export function restartTimerState(task: Task, nowIso: string): Partial<Task> {
+export function restartTimerState(
+  task: Task,
+  nowIso: string,
+  options: { autoStart?: boolean } = {},
+): Partial<Task> {
   if (!canRestartTimer(task)) {
     return {};
   }
 
-  return resetTimerState(task, nowIso);
+  const baseReset = resetTimerState(task, nowIso);
+  return options.autoStart
+    ? {
+        ...baseReset,
+        timerStatus: 'running',
+      }
+    : baseReset;
 }
 
 /**

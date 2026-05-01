@@ -13,6 +13,7 @@ import type {
 import { TASK_NOTE_MAX_LENGTH } from './task.types';
 import { generateId } from './helpers';
 import { supportsTimer } from './task.mode';
+import { normalizeTimerBehaviorOverride } from './timer.behavior';
 import { normalizeTaskWorkspace } from './workspace';
 
 const DEFAULT_TIMER_CONTROLS: TimerControls = {
@@ -154,6 +155,9 @@ export function createTask(input: CreateTaskInput, nowIso: string): Task {
     status: 'active',
     priority: input.priority ?? 'normal',
     ...timing,
+    timerBehaviorOverride: supportsTimer(timerMode)
+      ? normalizeTimerBehaviorOverride(input.timerBehaviorOverride)
+      : undefined,
     reminders: input.reminders ?? [],
     createdAt: nowIso,
     updatedAt: nowIso,
@@ -246,6 +250,9 @@ export function normalizeHydratedTasks(tasks: unknown[], nowIso: string = new Da
       status: isTaskStatus(raw.status) ? raw.status : 'active',
       priority: isTaskPriority(raw.priority) ? raw.priority : 'normal',
       ...timing,
+      timerBehaviorOverride: supportsTimer(timerMode)
+        ? normalizeTimerBehaviorOverride(raw.timerBehaviorOverride)
+        : undefined,
       reminders: Array.isArray(raw.reminders) ? raw.reminders.filter(isReminder) : [],
       createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : nowIso,
       updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowIso,
@@ -272,6 +279,9 @@ export function mergeTaskUpdates(task: Task, updates: Partial<Task>, nowIso: str
 
   return {
     ...merged,
+    timerBehaviorOverride: supportsTimer(merged.timerMode)
+      ? normalizeTimerBehaviorOverride(merged.timerBehaviorOverride)
+      : undefined,
     ...normalizeTaskTiming({
       timerMode: merged.timerMode,
       nowIso,

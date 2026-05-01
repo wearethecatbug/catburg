@@ -53,6 +53,10 @@ export function TaskRow({
   const showUrgencyIndicator = settings.general.showUrgencyIndicator;
   const viewModel = getTaskRowViewModel(task, {
     showUrgencyIndicator,
+    timerBehaviorSettings: {
+      doubleClickRestartEnabled: settings.general.doubleClickRestartEnabled,
+      autoStartAfterDoubleClickRestart: settings.general.autoStartAfterDoubleClickRestart,
+    },
   });
   const showNotePreview = settings.general.showNotePreviewsInTaskList;
   const hasInlineNotePreview = viewModel.hasNoteText && showNotePreview;
@@ -146,6 +150,8 @@ export function TaskRow({
           isRunning={viewModel.isRunning}
           isPaused={viewModel.isPaused}
           isTimerDisabled={viewModel.isTimerDisabled}
+          shouldInterceptDoubleClickGesture={viewModel.shouldInterceptDoubleClickGesture}
+          isDoubleClickRestartEnabled={viewModel.isDoubleClickRestartEnabled}
           displayTime={viewModel.displayTime}
           fullTimeText={viewModel.fullTimeText}
           onToggleTimer={() => onToggleTimer(task.id)}
