@@ -5,7 +5,7 @@ import { supportsTimer } from './task.mode';
 // Timer State Machine (pure, deterministic)
 // ============================================================================
 
-export type TimerEvent = 'toggle' | 'reset' | 'tick';
+export type TimerEvent = 'toggle' | 'reset' | 'restart' | 'tick';
 
 /**
  * Compute next timer state after toggle.
@@ -40,6 +40,39 @@ export function resetTimerState(task: Task, nowIso: string): Partial<Task> {
     timerStatus: 'idle',
     updatedAt: nowIso,
   };
+}
+
+/**
+ * Row-level timer restart is only available for active timed tasks.
+ * Done/archived rows keep their existing restrictions and cannot gain
+ * restart behavior implicitly through the timer control.
+ */
+export function canRestartTimer(task: Task): boolean {
+  return supportsTimer(task.timerMode) && task.status === 'active';
+}
+
+/**
+ * Restart semantics for the row timer control:
+ * - restore the initial configured duration
+ * - always return to idle (do not auto-resume)
+ * - keep unsupported and restricted tasks as no-ops
+ */
+export function restartTimerState(
+  task: Task,
+  nowIso: string,
+  options: { autoStart?: boolean } = {},
+): Partial<Task> {
+  if (!canRestartTimer(task)) {
+    return {};
+  }
+
+  const baseReset = resetTimerState(task, nowIso);
+  return options.autoStart
+    ? {
+        ...baseReset,
+        timerStatus: 'running',
+      }
+    : baseReset;
 }
 
 /**

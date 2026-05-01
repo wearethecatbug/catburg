@@ -16,6 +16,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
     visibleTasks,
     toggleTimer,
     resetTimer,
+    restartTimer,
     toggleTaskStatus,
     archiveTask,
     restoreTask,
@@ -62,6 +63,7 @@ export function TaskList({ onDeleteTask }: TaskListProps) {
             onToggleStatus={toggleTaskStatus}
             onToggleTimer={toggleTimer}
             onResetTimer={resetTimer}
+            onRestartTimer={restartTimer}
             onArchive={archiveTask}
             onRestore={restoreTask}
             onDelete={onDeleteTask}

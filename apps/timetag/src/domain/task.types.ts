@@ -43,6 +43,11 @@ export interface TimerControls {
   allowOverdue: boolean;
 }
 
+export interface TimerBehaviorOverride {
+  doubleClickRestartEnabled?: boolean;
+  autoStartAfterDoubleClickRestart?: boolean;
+}
+
 // ============================================================================
 // Pomodoro Config
 // ============================================================================
@@ -84,6 +89,7 @@ export interface Task {
   originalDurationSec: number;
   timerStatus: TimerStatus;
   timerControls?: TimerControls;
+  timerBehaviorOverride?: TimerBehaviorOverride;
   pomodoro?: PomodoroConfig;
   reminders: Reminder[];
   createdAt: string;
@@ -102,6 +108,7 @@ export interface CreateTaskInput {
   targetAt?: string;
   durationSec?: number;
   timerControls?: TimerControls;
+  timerBehaviorOverride?: TimerBehaviorOverride;
   pomodoro?: PomodoroConfig;
   reminders?: Reminder[];
 }

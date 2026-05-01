@@ -19,6 +19,7 @@ import {
   SortState,
   TimerStatus,
 } from '@/domain/task.types';
+import { DEFAULT_SETTINGS, type GeneralSettings } from '@/domain/settings.types';
 import { applyPipeline, createPipelineQuery } from '@/domain/task.pipeline';
 import { createDefaultTaskFilter } from '@/domain/task.filter';
 import {
@@ -29,7 +30,8 @@ import {
 } from '@/domain/task.operations';
 import { supportsTimer } from '@/domain/task.mode';
 import { transitionStatus, toggleDoneStatus } from '@/domain/task.status';
-import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
+import { resolveTaskTimerBehavior } from '@/domain/timer.behavior';
+import { toggleTimerState, resetTimerState, restartTimerState, tickTimer } from '@/domain/timer.logic';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 import { useSettings } from './settings.store';
 
@@ -41,6 +43,7 @@ interface TaskState {
   tasks: Task[];
   workspace: WorkspaceType;
   lastConcreteWorkspace?: AssignableWorkspaceType;
+  timerBehaviorSettings: Pick<GeneralSettings, 'doubleClickRestartEnabled' | 'autoStartAfterDoubleClickRestart'>;
   filter: FilterState;
   sort: SortState;
   searchQuery: string;
@@ -62,7 +65,12 @@ type TaskAction =
   | { type: 'DELETE_SELECTED' }
   | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
   | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
+  | { type: 'RESTART_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
   | { type: 'TICK_TIMERS' }
+  | {
+      type: 'SET_TIMER_BEHAVIOR_SETTINGS';
+      payload: Pick<GeneralSettings, 'doubleClickRestartEnabled' | 'autoStartAfterDoubleClickRestart'>;
+    }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
   | { type: 'SET_SORT'; payload: SortState }
@@ -89,6 +97,10 @@ const initialState: TaskState = {
   tasks: [],
   workspace: 'all',
   lastConcreteWorkspace: undefined,
+  timerBehaviorSettings: {
+    doubleClickRestartEnabled: DEFAULT_SETTINGS.general.doubleClickRestartEnabled,
+    autoStartAfterDoubleClickRestart: DEFAULT_SETTINGS.general.autoStartAfterDoubleClickRestart,
+  },
   filter: initialFilter,
   sort: initialSort,
   searchQuery: '',
@@ -205,6 +217,51 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         tasks: state.tasks.map((t) =>
             t.id === action.payload.id ? { ...t, ...resetTimerState(t, action.payload.nowIso) } : t,
         ),
+      };
+
+    case 'RESTART_TIMER': {
+      const targetTask = state.tasks.find((task) => task.id === action.payload.id);
+      if (!targetTask) {
+        return state;
+      }
+
+      const behavior = resolveTaskTimerBehavior(targetTask, state.timerBehaviorSettings);
+      if (!behavior.doubleClickRestartEnabled) {
+        return state;
+      }
+
+      const patch = restartTimerState(targetTask, action.payload.nowIso, {
+        autoStart: behavior.autoStartAfterDoubleClickRestart,
+      });
+      if (Object.keys(patch).length === 0) {
+        return state;
+      }
+
+      let nextTasks = state.tasks.map((task) => (
+        task.id === action.payload.id ? { ...task, ...patch } : task
+      ));
+
+      if (behavior.autoStartAfterDoubleClickRestart && action.payload.pauseOthers) {
+        nextTasks = pauseOtherRunningTasks(nextTasks, action.payload.id, action.payload.nowIso);
+      }
+
+      return {
+        ...state,
+        tasks: nextTasks,
+      };
+    }
+
+    case 'SET_TIMER_BEHAVIOR_SETTINGS':
+      if (
+        state.timerBehaviorSettings.doubleClickRestartEnabled === action.payload.doubleClickRestartEnabled &&
+        state.timerBehaviorSettings.autoStartAfterDoubleClickRestart === action.payload.autoStartAfterDoubleClickRestart
+      ) {
+        return state;
+      }
+
+      return {
+        ...state,
+        timerBehaviorSettings: action.payload,
       };
 
     case 'TICK_TIMERS':
@@ -334,6 +391,7 @@ interface TaskContextValue {
   toggleTaskStatus: (id: string) => void;
   toggleTimer: (id: string) => void;
   resetTimer: (id: string) => void;
+  restartTimer: (id: string) => void;
   archiveTask: (id: string) => void;
   restoreTask: (id: string) => void;
   setWorkspace: (workspace: WorkspaceType) => void;
@@ -432,6 +490,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   }, [settings.general.showCompletedTasks, state.filter.status]);
 
+  useEffect(() => {
+    dispatch({
+      type: 'SET_TIMER_BEHAVIOR_SETTINGS',
+      payload: {
+        doubleClickRestartEnabled: settings.general.doubleClickRestartEnabled,
+        autoStartAfterDoubleClickRestart: settings.general.autoStartAfterDoubleClickRestart,
+      },
+    });
+  }, [
+    settings.general.autoStartAfterDoubleClickRestart,
+    settings.general.doubleClickRestartEnabled,
+  ]);
+
   // Convenience dispatchers
   const addTask = useCallback(
     (input: CreateTaskInput) => dispatch({
@@ -460,6 +531,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     [shouldPauseOtherTimers],
   );
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const restartTimer = useCallback((id: string) => {
+    dispatch({
+      type: 'RESTART_TIMER',
+      payload: {
+        id,
+        nowIso: new Date().toISOString(),
+        pauseOthers: shouldPauseOtherTimers,
+      },
+    });
+  }, [shouldPauseOtherTimers]);
   const archiveTask = useCallback(
     (id: string) => dispatch({ type: 'SET_STATUS', payload: { id, status: 'archived', nowIso: new Date().toISOString() } }),
     [],
@@ -502,6 +583,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     toggleTaskStatus,
     toggleTimer,
     resetTimer,
+    restartTimer,
     archiveTask,
     restoreTask,
     setWorkspace,

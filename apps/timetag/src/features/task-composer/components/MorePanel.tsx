@@ -31,6 +31,8 @@ interface MorePanelProps {
     playEnabled: boolean;
     autoResetEnabled: boolean;
     overdueEnabled: boolean;
+    doubleClickRestartEnabled: boolean;
+    autoStartAfterDoubleClickRestart: boolean;
     presetLabel?: string;
     workspaceOpen: boolean;
     showWorkspaceDropdown: boolean;
@@ -58,6 +60,8 @@ interface MorePanelProps {
     onPlayEnabledChange: (value: boolean) => void;
     onAutoResetEnabledChange: (value: boolean) => void;
     onOverdueEnabledChange: (value: boolean) => void;
+    onDoubleClickRestartEnabledChange: (value: boolean) => void;
+    onAutoStartAfterDoubleClickRestartChange: (value: boolean) => void;
     onClose: () => void;
     onReset: () => void;
 }
@@ -78,6 +82,8 @@ export function MorePanel({
     playEnabled,
     autoResetEnabled,
     overdueEnabled,
+    doubleClickRestartEnabled,
+    autoStartAfterDoubleClickRestart,
     presetLabel,
     workspaceOpen,
     showWorkspaceDropdown,
@@ -102,6 +108,8 @@ export function MorePanel({
     onPlayEnabledChange,
     onAutoResetEnabledChange,
     onOverdueEnabledChange,
+    onDoubleClickRestartEnabledChange,
+    onAutoStartAfterDoubleClickRestartChange,
     onClose,
     onReset,
 }: MorePanelProps) {
@@ -318,10 +326,14 @@ export function MorePanel({
                     playEnabled={playEnabled}
                     autoResetEnabled={autoResetEnabled}
                     overdueEnabled={overdueEnabled}
+                    doubleClickRestartEnabled={doubleClickRestartEnabled}
+                    autoStartAfterDoubleClickRestart={autoStartAfterDoubleClickRestart}
                     onAutoEnabledChange={onAutoEnabledChange}
                     onPlayEnabledChange={onPlayEnabledChange}
                     onAutoResetEnabledChange={onAutoResetEnabledChange}
                     onOverdueEnabledChange={onOverdueEnabledChange}
+                    onDoubleClickRestartEnabledChange={onDoubleClickRestartEnabledChange}
+                    onAutoStartAfterDoubleClickRestartChange={onAutoStartAfterDoubleClickRestartChange}
                 />
             )}
 

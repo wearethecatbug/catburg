@@ -9,10 +9,14 @@ interface TimerControlsSectionProps {
     playEnabled: boolean;
     autoResetEnabled: boolean;
     overdueEnabled: boolean;
+    doubleClickRestartEnabled: boolean;
+    autoStartAfterDoubleClickRestart: boolean;
     onAutoEnabledChange: (value: boolean) => void;
     onPlayEnabledChange: (value: boolean) => void;
     onAutoResetEnabledChange: (value: boolean) => void;
     onOverdueEnabledChange: (value: boolean) => void;
+    onDoubleClickRestartEnabledChange: (value: boolean) => void;
+    onAutoStartAfterDoubleClickRestartChange: (value: boolean) => void;
 }
 
 export function TimerControlsSection({
@@ -21,10 +25,14 @@ export function TimerControlsSection({
     playEnabled,
     autoResetEnabled,
     overdueEnabled,
+    doubleClickRestartEnabled,
+    autoStartAfterDoubleClickRestart,
     onAutoEnabledChange,
     onPlayEnabledChange,
     onAutoResetEnabledChange,
     onOverdueEnabledChange,
+    onDoubleClickRestartEnabledChange,
+    onAutoStartAfterDoubleClickRestartChange,
 }: TimerControlsSectionProps) {
     if (!supportsTimer(timerMode)) {
         return null;
@@ -51,6 +59,23 @@ export function TimerControlsSection({
                     label="Notifications"
                     description="Sound alerts for events"
                     ariaLabel="Sound alerts when timer events occur"
+                />
+
+                <TimerControlToggle
+                    checked={doubleClickRestartEnabled}
+                    onChange={onDoubleClickRestartEnabledChange}
+                    label="Double-click to restart timer"
+                    description="Allow task timers to be restarted by double-clicking the timer button."
+                    ariaLabel="Double-click to restart timer"
+                />
+
+                <TimerControlToggle
+                    checked={autoStartAfterDoubleClickRestart}
+                    onChange={onAutoStartAfterDoubleClickRestartChange}
+                    disabled={!doubleClickRestartEnabled}
+                    label="Auto-start after double-click restart"
+                    description="Start the timer immediately after it is restarted by double-click."
+                    ariaLabel="Auto-start after double-click restart"
                 />
 
                 {/* Auto Reset toggle - ONLY FOR DURATION MODE */}

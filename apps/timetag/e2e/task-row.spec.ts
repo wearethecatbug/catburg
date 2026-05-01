@@ -1,6 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import { gotoSeededPage } from './helpers/seed-app';
-import { seededTasks, testSettings } from './fixtures/timetag-state';
+import { seededTasks, testSettings, type StoredTask } from './fixtures/timetag-state';
+
+const SEEDED_TIMER_NOW_ISO = '2026-04-02T09:00:00.000Z';
+const TIMER_DOUBLE_CLICK_SETTLE_MS = 350;
 
 async function resolveCssValue(
   page: Page,
@@ -38,6 +41,55 @@ function taskRow(page: Page, title: string) {
 
 function morePanel(page: Page) {
   return page.locator('#task-composer-more');
+}
+
+function createStoredTask(overrides: Partial<StoredTask> & Pick<StoredTask, 'id' | 'title'>): StoredTask {
+  const { id, title, timerControls, ...rest } = overrides;
+
+  return {
+    id,
+    title,
+    workspace: 'work',
+    status: 'active',
+    priority: 'normal',
+    timerMode: 'duration',
+    remainingSec: 1500,
+    originalDurationSec: 1500,
+    timerStatus: 'idle',
+    timerControls: {
+      autoStart: false,
+      autoPlay: false,
+      autoReset: false,
+      allowOverdue: false,
+      ...timerControls,
+    },
+    reminders: [],
+    createdAt: SEEDED_TIMER_NOW_ISO,
+    updatedAt: SEEDED_TIMER_NOW_ISO,
+    ...rest,
+  };
+}
+
+async function readStoredTimerState(page: Page, title: string) {
+  return page.evaluate((taskTitle) => {
+    const raw = window.localStorage.getItem('timetag-tasks');
+    if (!raw) {
+      return null;
+    }
+
+    const storedTask = JSON.parse(raw).find((task: { title?: string }) => task.title === taskTitle);
+    if (!storedTask) {
+      return null;
+    }
+
+    return {
+      status: storedTask.status,
+      timerMode: storedTask.timerMode,
+      remainingSec: storedTask.remainingSec,
+      originalDurationSec: storedTask.originalDurationSec,
+      timerStatus: storedTask.timerStatus,
+    };
+  }, title);
 }
 
 test.describe('Task row states', () => {
@@ -239,7 +291,7 @@ test.describe('Task row states', () => {
     await moreModeButton.click();
     await panel.getByRole('menuitem', { name: 'Pomodoro' }).click();
     await expect(moreModeButton).toContainText('Pomodoro');
-    await expect(page.getByTitle('Timer mode')).toContainText('Pomodoro');
+    await expect(page.locator('#task-mode-btn')).toContainText('Pomodoro');
 
     await panel.getByRole('button', { name: 'Cancel' }).click();
     await expect(panel).toBeHidden();
@@ -252,6 +304,392 @@ test.describe('Task row states', () => {
     const createdRow = taskRow(page, 'Playwright advanced apply task');
     await expect(createdRow).toBeVisible();
     await expect(createdRow.getByLabel('Start timer')).toBeVisible();
+  });
+
+  test('settings and task details disable auto-start after double-click restart when restart is off', async ({ page }) => {
+    await gotoSeededPage(page, []);
+
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const globalRestartToggle = page.getByLabel('Double-click to restart timer').first();
+    const globalAutoStartToggle = page.getByLabel('Auto-start after double-click restart').first();
+    await expect(globalRestartToggle).toBeChecked();
+    await expect(globalAutoStartToggle).toBeEnabled();
+
+    await globalRestartToggle.uncheck();
+    await expect(globalAutoStartToggle).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+
+    await page.getByLabel('Add a new task').fill('Restart settings UI task');
+    await page.getByRole('button', { name: /^Details$/i }).click();
+
+    const panel = morePanel(page);
+    const taskRestartToggle = panel.getByLabel('Double-click to restart timer');
+    const taskAutoStartToggle = panel.getByLabel('Auto-start after double-click restart');
+
+    await expect(taskRestartToggle).not.toBeChecked();
+    await expect(taskAutoStartToggle).toBeDisabled();
+
+    await taskRestartToggle.check();
+    await expect(taskAutoStartToggle).toBeEnabled();
+
+    await taskRestartToggle.uncheck();
+    await expect(taskAutoStartToggle).toBeDisabled();
+  });
+
+  test('task details overrides can enable and auto-start double-click restart for a single task', async ({ page }) => {
+    await gotoSeededPage(page, [], {
+      ...testSettings,
+      general: {
+        ...testSettings.general,
+        doubleClickRestartEnabled: false,
+        autoStartAfterDoubleClickRestart: false,
+      },
+    });
+
+    await page.getByLabel('Add a new task').fill('Per-task restart override task');
+    await page.getByRole('button', { name: /^Details$/i }).click();
+
+    const panel = morePanel(page);
+    await panel.getByLabel('Double-click to restart timer').check();
+    await panel.getByLabel('Auto-start after double-click restart').check();
+    await panel.getByRole('button', { name: 'Create task' }).click();
+
+    const createdRow = taskRow(page, 'Per-task restart override task');
+    await expect(createdRow).toBeVisible();
+    await createdRow.getByLabel('Start timer').dblclick();
+    await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+
+    await expect.poll(async () => readStoredTimerState(page, 'Per-task restart override task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 1500,
+      originalDurationSec: 1500,
+      timerStatus: 'running',
+    });
+    await expect(createdRow.getByLabel('Pause timer')).toBeVisible();
+
+    await expect.poll(async () => page.evaluate(() => {
+      const raw = window.localStorage.getItem('timetag-tasks');
+      if (!raw) {
+        return null;
+      }
+
+      const storedTask = JSON.parse(raw).find((task: { title?: string }) => task.title === 'Per-task restart override task');
+      return storedTask?.timerBehaviorOverride ?? null;
+    })).toEqual({
+      doubleClickRestartEnabled: true,
+      autoStartAfterDoubleClickRestart: true,
+    });
+  });
+
+  test('double-clicking the timer control restarts active timers across supported states', async ({ page }) => {
+    const restartableTasks: StoredTask[] = [
+      createStoredTask({
+        id: 'restart-idle',
+        title: 'Restart idle task',
+        remainingSec: 600,
+        originalDurationSec: 1500,
+        timerStatus: 'idle',
+      }),
+      createStoredTask({
+        id: 'restart-running',
+        title: 'Restart running task',
+        remainingSec: 480,
+        originalDurationSec: 900,
+        timerStatus: 'running',
+      }),
+      createStoredTask({
+        id: 'restart-paused',
+        title: 'Restart paused task',
+        remainingSec: 300,
+        originalDurationSec: 1200,
+        timerStatus: 'paused',
+      }),
+      createStoredTask({
+        id: 'restart-finished',
+        title: 'Restart finished task',
+        remainingSec: 0,
+        originalDurationSec: 600,
+        timerStatus: 'expired',
+      }),
+      createStoredTask({
+        id: 'restart-overdue',
+        title: 'Restart overdue task',
+        remainingSec: -120,
+        originalDurationSec: 600,
+        timerStatus: 'running',
+        timerControls: {
+          autoStart: false,
+          autoPlay: false,
+          autoReset: false,
+          allowOverdue: true,
+        },
+      }),
+      {
+        id: 'restart-note',
+        title: 'Restart note task',
+        workspace: 'work',
+        status: 'active',
+        priority: 'normal',
+        timerMode: 'note',
+        remainingSec: 0,
+        originalDurationSec: 0,
+        timerStatus: 'idle',
+        reminders: [],
+        createdAt: SEEDED_TIMER_NOW_ISO,
+        updatedAt: SEEDED_TIMER_NOW_ISO,
+      },
+    ];
+
+    await gotoSeededPage(page, restartableTasks);
+
+    const noteRow = taskRow(page, 'Restart note task');
+    await expect(noteRow.getByTestId('ghost-timer')).toBeVisible();
+    await expect(noteRow.getByTestId('task-timer-cluster')).toHaveCount(0);
+    await expect(noteRow.getByLabel('Start timer')).toHaveCount(0);
+    await expect(noteRow.getByLabel('Pause timer')).toHaveCount(0);
+
+    const restartCases = [
+      {
+        title: 'Restart idle task',
+        accessibleName: 'Start timer',
+        expected: {
+          status: 'active',
+          timerMode: 'duration',
+          remainingSec: 1500,
+          originalDurationSec: 1500,
+          timerStatus: 'idle',
+        },
+      },
+      {
+        title: 'Restart running task',
+        accessibleName: 'Pause timer',
+        expected: {
+          status: 'active',
+          timerMode: 'duration',
+          remainingSec: 900,
+          originalDurationSec: 900,
+          timerStatus: 'idle',
+        },
+      },
+      {
+        title: 'Restart paused task',
+        accessibleName: 'Start timer',
+        expected: {
+          status: 'active',
+          timerMode: 'duration',
+          remainingSec: 1200,
+          originalDurationSec: 1200,
+          timerStatus: 'idle',
+        },
+      },
+      {
+        title: 'Restart finished task',
+        accessibleName: 'Start timer',
+        expected: {
+          status: 'active',
+          timerMode: 'duration',
+          remainingSec: 600,
+          originalDurationSec: 600,
+          timerStatus: 'idle',
+        },
+      },
+      {
+        title: 'Restart overdue task',
+        accessibleName: 'Pause timer',
+        expected: {
+          status: 'active',
+          timerMode: 'duration',
+          remainingSec: 600,
+          originalDurationSec: 600,
+          timerStatus: 'idle',
+        },
+      },
+    ] as const;
+
+    for (const restartCase of restartCases) {
+      const row = taskRow(page, restartCase.title);
+      await expect(row).toBeVisible();
+      await row.getByLabel(restartCase.accessibleName).dblclick();
+      await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+
+      await expect.poll(async () => readStoredTimerState(page, restartCase.title)).toEqual(restartCase.expected);
+      await expect(row.getByLabel('Start timer')).toBeVisible();
+    }
+  });
+
+  test('double-click restart respects global disable, per-task override, and auto-start override', async ({ page }) => {
+    const tasks: StoredTask[] = [
+      createStoredTask({
+        id: 'global-disabled-restart',
+        title: 'Global disabled restart task',
+        remainingSec: 300,
+        originalDurationSec: 900,
+        timerStatus: 'paused',
+      }),
+      createStoredTask({
+        id: 'override-enabled-restart',
+        title: 'Override enabled restart task',
+        remainingSec: 420,
+        originalDurationSec: 1200,
+        timerStatus: 'paused',
+        timerBehaviorOverride: {
+          doubleClickRestartEnabled: true,
+          autoStartAfterDoubleClickRestart: false,
+        },
+      }),
+      createStoredTask({
+        id: 'override-autostart-restart',
+        title: 'Override auto-start restart task',
+        remainingSec: 180,
+        originalDurationSec: 600,
+        timerStatus: 'paused',
+        timerBehaviorOverride: {
+          doubleClickRestartEnabled: true,
+          autoStartAfterDoubleClickRestart: true,
+        },
+      }),
+    ];
+
+    await gotoSeededPage(page, tasks, {
+      ...testSettings,
+      general: {
+        ...testSettings.general,
+        doubleClickRestartEnabled: false,
+        autoStartAfterDoubleClickRestart: false,
+      },
+    });
+
+    const globallyDisabledRow = taskRow(page, 'Global disabled restart task');
+    await globallyDisabledRow.getByLabel('Start timer').dblclick();
+    await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+    await expect.poll(async () => readStoredTimerState(page, 'Global disabled restart task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 300,
+      originalDurationSec: 900,
+      timerStatus: 'paused',
+    });
+    await expect(globallyDisabledRow.getByLabel('Start timer')).toBeVisible();
+
+    const overrideEnabledRow = taskRow(page, 'Override enabled restart task');
+    await overrideEnabledRow.getByLabel('Start timer').dblclick();
+    await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+    await expect.poll(async () => readStoredTimerState(page, 'Override enabled restart task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 1200,
+      originalDurationSec: 1200,
+      timerStatus: 'idle',
+    });
+    await expect(overrideEnabledRow.getByLabel('Start timer')).toBeVisible();
+
+    const overrideAutoStartRow = taskRow(page, 'Override auto-start restart task');
+    await overrideAutoStartRow.getByLabel('Start timer').dblclick();
+    await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+    await expect.poll(async () => readStoredTimerState(page, 'Override auto-start restart task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 600,
+      originalDurationSec: 600,
+      timerStatus: 'running',
+    });
+    await expect(overrideAutoStartRow.getByLabel('Pause timer')).toBeVisible();
+  });
+
+  test('single click still toggles timer while done and archived rows keep restart disabled', async ({ page }) => {
+    const tasks: StoredTask[] = [
+      createStoredTask({
+        id: 'single-click-timer',
+        title: 'Single click timer task',
+        remainingSec: 600,
+        originalDurationSec: 1200,
+        timerStatus: 'idle',
+      }),
+      createStoredTask({
+        id: 'done-restart-guard',
+        title: 'Done restart guard task',
+        status: 'done',
+        remainingSec: 240,
+        originalDurationSec: 600,
+        timerStatus: 'paused',
+      }),
+      createStoredTask({
+        id: 'archived-restart-guard',
+        title: 'Archived restart guard task',
+        status: 'archived',
+        remainingSec: 180,
+        originalDurationSec: 600,
+        timerStatus: 'paused',
+      }),
+    ];
+
+    await gotoSeededPage(page, tasks);
+
+    const singleClickRow = taskRow(page, 'Single click timer task');
+    await singleClickRow.getByLabel('Start timer').click();
+    await page.waitForTimeout(TIMER_DOUBLE_CLICK_SETTLE_MS);
+
+    await expect.poll(async () => readStoredTimerState(page, 'Single click timer task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 600,
+      originalDurationSec: 1200,
+      timerStatus: 'running',
+    });
+    await expect(singleClickRow.getByLabel('Pause timer')).toBeVisible();
+
+    const doneRow = taskRow(page, 'Done restart guard task');
+    const archivedRow = taskRow(page, 'Archived restart guard task');
+
+    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    await expect(doneRow.getByLabel('Start timer')).toBeDisabled();
+
+    await page.getByRole('button', { name: 'Archived', exact: true }).click();
+    await expect(archivedRow.getByLabel('Start timer')).toBeDisabled();
+
+    await expect.poll(async () => readStoredTimerState(page, 'Done restart guard task')).toEqual({
+      status: 'done',
+      timerMode: 'duration',
+      remainingSec: 240,
+      originalDurationSec: 600,
+      timerStatus: 'paused',
+    });
+    await expect.poll(async () => readStoredTimerState(page, 'Archived restart guard task')).toEqual({
+      status: 'archived',
+      timerMode: 'duration',
+      remainingSec: 180,
+      originalDurationSec: 600,
+      timerStatus: 'paused',
+    });
+  });
+
+  test('task row reset menu keeps working with timer restart support', async ({ page }) => {
+    const tasks: StoredTask[] = [
+      createStoredTask({
+        id: 'menu-reset-task',
+        title: 'Menu reset task',
+        remainingSec: 420,
+        originalDurationSec: 900,
+        timerStatus: 'paused',
+      }),
+    ];
+
+    await gotoSeededPage(page, tasks);
+
+    const row = taskRow(page, 'Menu reset task');
+    await row.locator('button[aria-haspopup="true"]').click();
+    await page.getByRole('menuitem', { name: 'Reset timer' }).click();
+
+    await expect.poll(async () => readStoredTimerState(page, 'Menu reset task')).toEqual({
+      status: 'active',
+      timerMode: 'duration',
+      remainingSec: 900,
+      originalDurationSec: 900,
+      timerStatus: 'idle',
+    });
+    await expect(row.getByLabel('Start timer')).toBeVisible();
   });
 
   test('keeps note discoverability when note previews are disabled', async ({ page }) => {

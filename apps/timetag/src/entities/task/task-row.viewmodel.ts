@@ -1,6 +1,8 @@
+import type { GeneralSettings } from '@/domain/settings.types';
 import { formatTimeBadge } from '@/domain/helpers';
 import { supportsTimer } from '@/domain/task.mode';
 import { getTaskMetadataState } from '@/domain/task.meta';
+import { resolveTaskTimerBehavior } from '@/domain/timer.behavior';
 import { getUrgencyLevel } from '@/domain/task.urgency';
 import type { Task, UrgencyLevel } from '@/domain/task.types';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
@@ -13,6 +15,8 @@ export interface TaskRowViewModel {
   urgency: UrgencyLevel;
   showTimerButton: boolean;
   isTimerDisabled: boolean;
+  shouldInterceptDoubleClickGesture: boolean;
+  isDoubleClickRestartEnabled: boolean;
   isPaused: boolean;
   isRunning: boolean;
   displayTime: string;
@@ -21,13 +25,17 @@ export interface TaskRowViewModel {
 
 export function getTaskRowViewModel(
   task: Task,
-  options: { showUrgencyIndicator: boolean },
+  options: {
+    showUrgencyIndicator: boolean;
+    timerBehaviorSettings: Pick<GeneralSettings, 'doubleClickRestartEnabled' | 'autoStartAfterDoubleClickRestart'>;
+  },
 ): TaskRowViewModel {
   const metadata = getTaskMetadataState(task);
   const showUrgentIndicator = options.showUrgencyIndicator && metadata.isUrgentPriority;
   const isTimedMode = supportsTimer(task.timerMode);
   const urgency = getUrgencyLevel(task);
   const canRunTimer = isTimedMode && task.status === 'active';
+  const resolvedTimerBehavior = resolveTaskTimerBehavior(task, options.timerBehaviorSettings);
 
   return {
     noteText: metadata.noteText,
@@ -37,6 +45,8 @@ export function getTaskRowViewModel(
     urgency,
     showTimerButton: isTimedMode,
     isTimerDisabled: !canRunTimer,
+    shouldInterceptDoubleClickGesture: canRunTimer,
+    isDoubleClickRestartEnabled: canRunTimer && resolvedTimerBehavior.doubleClickRestartEnabled,
     isPaused: isTimedMode && task.timerStatus === 'paused',
     isRunning: isTimedMode && task.timerStatus === 'running',
     displayTime: getTaskDisplayTime(task),

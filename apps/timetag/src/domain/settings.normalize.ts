@@ -44,7 +44,7 @@ export function normalizeSettings(raw: unknown): AppSettings {
   );
 
   return {
-    version: 4,
+    version: 5,
     general: {
       autoStartTimerWhenTaskCreated:
         typeof general.autoStartTimerWhenTaskCreated === 'boolean'
@@ -58,6 +58,14 @@ export function normalizeSettings(raw: unknown): AppSettings {
         typeof general.confirmBeforeDelete === 'boolean'
           ? general.confirmBeforeDelete
           : DEFAULT_SETTINGS.general.confirmBeforeDelete,
+      doubleClickRestartEnabled:
+        typeof general.doubleClickRestartEnabled === 'boolean'
+          ? general.doubleClickRestartEnabled
+          : DEFAULT_SETTINGS.general.doubleClickRestartEnabled,
+      autoStartAfterDoubleClickRestart:
+        typeof general.autoStartAfterDoubleClickRestart === 'boolean'
+          ? general.autoStartAfterDoubleClickRestart
+          : DEFAULT_SETTINGS.general.autoStartAfterDoubleClickRestart,
       defaultWorkspace: isAssignableWorkspaceType(general.defaultWorkspace)
         ? general.defaultWorkspace
         : DEFAULT_SETTINGS.general.defaultWorkspace,

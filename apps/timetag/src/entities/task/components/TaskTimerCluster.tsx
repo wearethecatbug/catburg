@@ -13,9 +13,12 @@ interface TaskTimerClusterProps {
   isRunning: boolean;
   isPaused: boolean;
   isTimerDisabled: boolean;
+  shouldInterceptDoubleClickGesture: boolean;
+  isDoubleClickRestartEnabled: boolean;
   displayTime: string;
   fullTimeText: string;
   onToggleTimer: () => void;
+  onRestartTimer: () => void;
 }
 
 export function TaskTimerCluster({
@@ -27,9 +30,12 @@ export function TaskTimerCluster({
   isRunning,
   isPaused,
   isTimerDisabled,
+  shouldInterceptDoubleClickGesture,
+  isDoubleClickRestartEnabled,
   displayTime,
   fullTimeText,
   onToggleTimer,
+  onRestartTimer,
 }: TaskTimerClusterProps) {
   const TIMER_SLOT_CLASS_NAME = 'flex h-[40px] w-[104px] shrink-0 items-center justify-center';
 
@@ -69,6 +75,8 @@ export function TaskTimerCluster({
           urgency={urgency}
           disabled={isTimerDisabled}
           onToggleAction={onToggleTimer}
+          enableDoubleClickGesture={shouldInterceptDoubleClickGesture}
+          onRestartAction={isDoubleClickRestartEnabled ? onRestartTimer : undefined}
           sizePx={30}
           strokeWidth={2.75}
           embedded

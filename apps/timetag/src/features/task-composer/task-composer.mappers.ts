@@ -1,3 +1,4 @@
+import type { GeneralSettings } from '@/domain/settings.types';
 import {
   formatDurationValue,
   getDurationPresetById,
@@ -17,6 +18,7 @@ import {
   type WorkspaceTab,
 } from '@/domain/workspace';
 import { supportsTimer } from '@/domain/task.mode';
+import { createTimerBehaviorOverride } from '@/domain/timer.behavior';
 
 export const CUSTOM_DURATION_PRESET_ID = '__custom-duration-default__';
 export const CUSTOM_POMODORO_PRESET_ID = '__custom-pomodoro-default__';
@@ -79,6 +81,9 @@ interface BuildCreateTaskInputArgs {
   playEnabled: boolean;
   autoResetEnabled: boolean;
   overdueEnabled: boolean;
+  doubleClickRestartEnabled: boolean;
+  autoStartAfterDoubleClickRestart: boolean;
+  globalTimerBehaviorSettings: Pick<GeneralSettings, 'doubleClickRestartEnabled' | 'autoStartAfterDoubleClickRestart'>;
   pomoCycles: number;
   pomoWorkMin: number;
   pomoShortBreakMin: number;
@@ -102,6 +107,9 @@ export function buildCreateTaskInput({
   playEnabled,
   autoResetEnabled,
   overdueEnabled,
+  doubleClickRestartEnabled,
+  autoStartAfterDoubleClickRestart,
+  globalTimerBehaviorSettings,
   pomoCycles,
   pomoWorkMin,
   pomoShortBreakMin,
@@ -147,6 +155,15 @@ export function buildCreateTaskInput({
           autoReset: autoResetEnabled,
           allowOverdue: overdueEnabled,
         }
+      : undefined,
+    timerBehaviorOverride: supportsTimer(timerMode)
+      ? createTimerBehaviorOverride(
+          {
+            doubleClickRestartEnabled,
+            autoStartAfterDoubleClickRestart,
+          },
+          globalTimerBehaviorSettings,
+        )
       : undefined,
   };
 
