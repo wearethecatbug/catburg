@@ -23,7 +23,7 @@ type Props = {
     strokeWidth?: number; // default 3
 };
 
-const DOUBLE_CLICK_DELAY_MS = 220;
+const DOUBLE_CLICK_DELAY_MS = 400;
 
 export function TimerRingButton({
                                     isRunning,
