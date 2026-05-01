@@ -15,11 +15,14 @@ type Props = {
     urgency?: UrgencyLevel; // IMPORTANT: already computed outside (TaskRow/store selector)
     disabled?: boolean;
     onToggleAction?: () => void;
+    onRestartAction?: () => void;
     embedded?: boolean;
 
     sizePx?: number; // default 28 (more compact like screenshot)
     strokeWidth?: number; // default 3
 };
+
+const DOUBLE_CLICK_DELAY_MS = 220;
 
 export function TimerRingButton({
                                     isRunning,
@@ -29,12 +32,62 @@ export function TimerRingButton({
                                     urgency,
                                     disabled,
                                     onToggleAction,
+                                    onRestartAction,
                                     embedded = false,
                                     sizePx = 28,
                                     strokeWidth = 3,
                                 }: Props) {
     const gradientId = React.useId();
+    const toggleTimeoutRef = React.useRef<number | null>(null);
     let ratio = getRemainingRatio(remainingSec, totalSec);
+
+    const clearPendingToggle = React.useCallback(() => {
+        if (toggleTimeoutRef.current !== null) {
+            window.clearTimeout(toggleTimeoutRef.current);
+            toggleTimeoutRef.current = null;
+        }
+    }, []);
+
+    React.useEffect(() => {
+        return () => {
+            clearPendingToggle();
+        };
+    }, [clearPendingToggle]);
+
+    const handleClick = React.useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+        if (disabled || !onToggleAction) {
+            return;
+        }
+
+        if (!onRestartAction) {
+            onToggleAction();
+            return;
+        }
+
+        if (event.detail === 0) {
+            onToggleAction();
+            return;
+        }
+
+        if (event.detail > 1) {
+            return;
+        }
+
+        clearPendingToggle();
+        toggleTimeoutRef.current = window.setTimeout(() => {
+            toggleTimeoutRef.current = null;
+            onToggleAction();
+        }, DOUBLE_CLICK_DELAY_MS);
+    }, [clearPendingToggle, disabled, onRestartAction, onToggleAction]);
+
+    const handleDoubleClick = React.useCallback(() => {
+        if (disabled || !onRestartAction) {
+            return;
+        }
+
+        clearPendingToggle();
+        onRestartAction();
+    }, [clearPendingToggle, disabled, onRestartAction]);
 
     const isOverdue = remainingSec <= 0 || urgency === 'overdue';
     if (isOverdue) {
@@ -157,7 +210,8 @@ export function TimerRingButton({
     return (
         <button
             type="button"
-            onClick={onToggleAction}
+            onClick={handleClick}
+            onDoubleClick={onRestartAction ? handleDoubleClick : undefined}
             disabled={disabled}
             aria-label={isRunning ? 'Pause timer' : 'Start timer'}
             className={[

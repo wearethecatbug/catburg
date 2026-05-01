@@ -19,6 +19,7 @@ interface TaskRowProps {
   onToggleStatus: (id: string) => void;
   onToggleTimer: (id: string) => void;
   onResetTimer: (id: string) => void;
+  onRestartTimer: (id: string) => void;
   onArchive: (id: string) => void;
   onRestore: (id: string) => void;
   onDelete: (id: string) => void;
@@ -43,6 +44,7 @@ export function TaskRow({
   onToggleStatus,
   onToggleTimer,
   onResetTimer,
+  onRestartTimer,
   onArchive,
   onRestore,
   onDelete,
@@ -147,6 +149,7 @@ export function TaskRow({
           displayTime={viewModel.displayTime}
           fullTimeText={viewModel.fullTimeText}
           onToggleTimer={() => onToggleTimer(task.id)}
+          onRestartTimer={() => onRestartTimer(task.id)}
         />
 
         <TaskRowActionsMenu

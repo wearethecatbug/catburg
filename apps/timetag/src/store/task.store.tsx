@@ -29,7 +29,7 @@ import {
 } from '@/domain/task.operations';
 import { supportsTimer } from '@/domain/task.mode';
 import { transitionStatus, toggleDoneStatus } from '@/domain/task.status';
-import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
+import { toggleTimerState, resetTimerState, restartTimerState, tickTimer } from '@/domain/timer.logic';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 import { useSettings } from './settings.store';
 
@@ -62,6 +62,7 @@ type TaskAction =
   | { type: 'DELETE_SELECTED' }
   | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string; pauseOthers: boolean } }
   | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
+  | { type: 'RESTART_TIMER'; payload: { id: string; nowIso: string } }
   | { type: 'TICK_TIMERS' }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
@@ -207,6 +208,25 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ),
       };
 
+    case 'RESTART_TIMER': {
+      const targetTask = state.tasks.find((task) => task.id === action.payload.id);
+      if (!targetTask) {
+        return state;
+      }
+
+      const patch = restartTimerState(targetTask, action.payload.nowIso);
+      if (Object.keys(patch).length === 0) {
+        return state;
+      }
+
+      return {
+        ...state,
+        tasks: state.tasks.map((task) => (
+          task.id === action.payload.id ? { ...task, ...patch } : task
+        )),
+      };
+    }
+
     case 'TICK_TIMERS':
       return {
         ...state,
@@ -334,6 +354,7 @@ interface TaskContextValue {
   toggleTaskStatus: (id: string) => void;
   toggleTimer: (id: string) => void;
   resetTimer: (id: string) => void;
+  restartTimer: (id: string) => void;
   archiveTask: (id: string) => void;
   restoreTask: (id: string) => void;
   setWorkspace: (workspace: WorkspaceType) => void;
@@ -460,6 +481,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     [shouldPauseOtherTimers],
   );
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
+  const restartTimer = useCallback((id: string) => dispatch({ type: 'RESTART_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
   const archiveTask = useCallback(
     (id: string) => dispatch({ type: 'SET_STATUS', payload: { id, status: 'archived', nowIso: new Date().toISOString() } }),
     [],
@@ -502,6 +524,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     toggleTaskStatus,
     toggleTimer,
     resetTimer,
+    restartTimer,
     archiveTask,
     restoreTask,
     setWorkspace,
