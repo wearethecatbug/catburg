@@ -1,0 +1,36 @@
+.menu { display: grid; gap: 10px; }
+
+.menuButton {
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    color: #202020;
+    font-family: "Audiowide", sans-serif;
+    font-size: 20px;
+    min-height: 44px;
+    padding: 10px 16px;
+    width: 200px;
+}
+
+.menuButton:disabled { cursor: not-allowed; filter: grayscale(100%); }
+.menuButton:not(:disabled):hover { filter: brightness(90%); }
+.menuButton:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+.giveUp { background-color: #8cd3d5; }
+.newGame { background-color: #a0e083; }
+.log { background-color: #fdab7f; }
+.hint { background-color: #c27ffd; }
+
+@keyframes blink {
+    0% {
+        background-color: #a0e083;
+    }
+
+    50% {
+        background-color: #ffcc00;
+    }
+
+    100% {
+        background-color: #a0e083;
+    }
+
+}

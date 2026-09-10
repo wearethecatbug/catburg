@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Safe Cat
 
-## Getting Started
+A browser game built with Next.js, React and TypeScript. Guess a whole safe code from 1 to 1000. Wrong guesses receive neutral feedback. Solve an addition, subtraction, multiplication or division challenge to earn the code's parity hint. Giving up a challenge reveals only its arithmetic answer. History records guesses and earned hints; surrender reveals the safe code and New Game starts a fresh round. Session state stays in memory and is lost on reload.
 
-First, run the development server:
+## Development
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Use the monorepo's installed dependencies, a supported Node.js runtime and Corepack pnpm 9.15.9. Run commands from `apps/safe_app`:
+
+```sh
+corepack pnpm dev
+corepack pnpm build
+corepack pnpm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The `/` route includes the illustrated background; `/safe` renders the same game without that wrapper. `/example` and `/example2` retain standalone exercise examples. The layout loads Geist font variables; existing game styles keep their current system-font fallback. A production build may fetch the configured Google fonts.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`src/features/safe-game/domain` owns pure game rules with injected randomness. `model` owns the React session controller, challenge identities and display selectors. `presentation` owns the scene and accessible controls. Routes import the feature entry point. Unreachable historical prototypes live in `src/legacy/safe-cat`; live feature code must not import them.
 
-## Learn More
+## Verification
 
-To learn more about Next.js, take a look at the following resources:
+```sh
+corepack pnpm test:unit
+node node_modules/typescript/bin/tsc --noEmit --incremental false
+node node_modules/typescript/bin/tsc -p tsconfig.tests.json --noEmit
+node scripts/check-boundaries.mjs
+node scripts/check-boundaries.mjs --self-test
+node node_modules/next/dist/bin/next lint --no-cache
+corepack pnpm build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The unit runner selects compiled acceptance tests and cleans its own unique operating-system temporary directory. `node scripts/test-unit.mjs failure-probe` intentionally fails an assertion; `node scripts/test-unit.mjs empty-selection-probe` intentionally selects no tests. Both must exit nonzero.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Browser checks require an already installed Playwright module and Google Chrome, plus a running build. Set `SAFE_CAT_BASE_URL` to its URL, `PLAYWRIGHT_MODULE` to the supplied Playwright module path. The scripts launch the installed `chrome` browser channel. Then run:
 
-## Deploy on Vercel
+```sh
+node tests/runtime-regression.cjs
+node tests/safe-game-interactions.cjs
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+These checks create fresh browser contexts and do not require saved accounts or game data. Static boundary checks complement runtime tests; they do not establish visual or interaction correctness.

@@ -1,75 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import * as safeGameModule from "@/domain/safe-game";
+import {
+  createHintChallenge,
+  createSafeGameState,
+  reduceSafeGame,
+} from "@/features/safe-game/domain";
+import type {
+  HintChallenge,
+  HintOperator,
+  SafeGameAction,
+  SafeGameState,
+} from "@/features/safe-game/domain";
 
-type HintText = "The code is even." | "The code is odd.";
-type HintOperator = "+" | "-" | "×" | "÷";
-
-interface HintChallenge {
-  roundId: number;
-  challengeId?: string;
-  operator: HintOperator;
-  leftOperand: number;
-  rightOperand: number;
-  expectedAnswer: number;
-}
-
-interface TokenizedHintChallenge extends HintChallenge {
-  challengeId: string;
-}
-
-interface FutureHintState {
-  code: number;
-  roundId: number;
-  phase: "playing" | "won" | "surrendered";
-  input: string;
-  feedback: string;
-  attempts: number[];
-  historyVisible: boolean;
-  hintChallenge: HintChallenge | null;
-  hintFeedback: "none" | "try-again";
-  revealedMathAnswer: number | null;
-  earnedHint: HintText | null;
-  shownHint: HintText | null;
-}
-
-type HintAction =
-  | { type: "show-hint"; challenge: HintChallenge }
-  | { type: "replace-hint-challenge"; roundId: number; challengeId: string; challenge: HintChallenge }
-  | { type: "give-up-hint-challenge"; roundId: number; challengeId: string }
-  | { type: "submit-hint-answer"; roundId: number; challengeId: string; answer: number | null }
-  | { type: "close-hint-challenge"; roundId: number; challengeId: string };
-
-type FutureHintApi = {
-  createHintChallenge?: (random: () => number, roundId: number, operator: HintOperator, challengeId: string) => HintChallenge;
-};
-
-const futureHintApi = safeGameModule as unknown as FutureHintApi;
-const reduce = safeGameModule.reduceSafeGame as unknown as (
-  state: FutureHintState,
-  action: HintAction | { type: "new-round"; code: number },
-) => FutureHintState;
-
-function initialState(code: number): FutureHintState {
-  return safeGameModule.createSafeGameState(code) as unknown as FutureHintState;
+function initialState(code: number): SafeGameState {
+  return createSafeGameState(code);
 }
 
 function createChallenge(random: () => number, roundId: number, operator: HintOperator, challengeId: string): HintChallenge {
-  const factory = futureHintApi.createHintChallenge;
-  assert.equal(
-    typeof factory,
-    "function",
-    "SAFE-CAT-02 requires an exported deterministic createHintChallenge(random, roundId) domain boundary",
-  );
-  if (!factory) {
-    throw new Error("unreachable after assertion");
-  }
-  return factory(random, roundId, operator, challengeId);
+  return createHintChallenge(random, roundId, operator, challengeId);
 }
 
-function apply(state: FutureHintState, ...actions: Array<HintAction | { type: "new-round"; code: number }>) {
-  return actions.reduce(reduce, state);
+function apply(state: SafeGameState, ...actions: SafeGameAction[]) {
+  return actions.reduce(reduceSafeGame, state);
 }
 
 test("F01: New game atomically clears a pending or earned hint and History while advancing the round", () => {
@@ -79,7 +32,7 @@ test("F01: New game atomically clears a pending or earned hint and History while
   const earned = apply(opened, {
     type: "submit-hint-answer",
     roundId: initial.roundId,
-    challengeId: challenge.challengeId!,
+    challengeId: challenge.challengeId,
     answer: challenge.expectedAnswer,
   });
   const reset = apply({ ...earned, historyVisible: true }, { type: "new-round", code: 1 });
@@ -123,16 +76,16 @@ test("F02/F04: Show hint opens one challenge before reward, then re-displays exa
   const earned = apply(opened, {
     type: "submit-hint-answer",
     roundId: initial.roundId,
-    challengeId: challenge.challengeId!,
+    challengeId: challenge.challengeId,
     answer: challenge.expectedAnswer,
   });
   assert.equal(earned.hintChallenge, null);
-  assert.equal(earned.earnedHint, "The code is even.");
+  assert.equal(earned.earnedHint, "even");
 
   const repeated = apply(earned, { type: "show-hint", challenge: createChallenge(() => 0.9, initial.roundId, "+", "f02-repeat") });
   assert.equal(repeated.hintChallenge, null, "an earned hint must not open a second challenge");
-  assert.equal(repeated.earnedHint, "The code is even.");
-  assert.equal(repeated.shownHint, "The code is even.");
+  assert.equal(repeated.earnedHint, "even");
+  assert.equal(repeated.shownHint, "even");
   assert.notEqual(repeated.shownHint, String(repeated.code), "the hint path must never disclose the exact code");
 });
 
@@ -147,7 +100,7 @@ test("F03: controlled randomness preserves exact inclusive addition defaults and
   const wrong = apply(
     playing,
     { type: "show-hint", challenge: playingChallenge },
-    { type: "submit-hint-answer", roundId: playing.roundId, challengeId: playingChallenge.challengeId!, answer: 1 },
+    { type: "submit-hint-answer", roundId: playing.roundId, challengeId: playingChallenge.challengeId, answer: 1 },
   );
   assert.deepEqual(wrong.hintChallenge, playingChallenge);
   assert.equal(wrong.hintFeedback, "try-again");
@@ -197,8 +150,8 @@ test("C14/F03: a fixed random sequence makes every operator challenge determinis
 });
 
 test("C15/F06: the public factory preserves a caller-supplied unique challenge instance token", () => {
-  const first = createChallenge(() => 0.2, 31, "+", "challenge-31-a") as Partial<TokenizedHintChallenge>;
-  const second = createChallenge(() => 0.2, 31, "+", "challenge-31-b") as Partial<TokenizedHintChallenge>;
+  const first = createChallenge(() => 0.2, 31, "+", "challenge-31-a");
+  const second = createChallenge(() => 0.2, 31, "+", "challenge-31-b");
 
   assert.equal(first.challengeId, "challenge-31-a");
   assert.equal(second.challengeId, "challenge-31-b");
@@ -207,9 +160,9 @@ test("C15/F06: the public factory preserves a caller-supplied unique challenge i
 
 function openReplacementWithCollidingAnswer() {
   const initial = initialState(64);
-  const original = createChallenge(() => 0, initial.roundId, "+", "challenge-64-a") as TokenizedHintChallenge;
+  const original = createChallenge(() => 0, initial.roundId, "+", "challenge-64-a");
   // Deliberately retain the exact answer: round identity and arithmetic equality cannot identify a dialog instance.
-  const replacement: TokenizedHintChallenge = { ...original, challengeId: "challenge-64-b" };
+  const replacement: HintChallenge = { ...original, challengeId: "challenge-64-b" };
   const opened = apply(initial, { type: "show-hint", challenge: original });
   const replaced = apply(opened, {
     type: "replace-hint-challenge",
@@ -256,7 +209,7 @@ test("C15/F06: a stale Give Up callback cannot disclose the replacement math ans
 
 test("C15/F06: a stale New Hint callback cannot replace the already replaced challenge", () => {
   const { initial, original, replacement, replaced } = openReplacementWithCollidingAnswer();
-  const third: TokenizedHintChallenge = { ...replacement, challengeId: "challenge-64-c" };
+  const third: HintChallenge = { ...replacement, challengeId: "challenge-64-c" };
   const afterStaleReplacement = apply(replaced, {
     type: "replace-hint-challenge",
     roundId: initial.roundId,
@@ -268,36 +221,34 @@ test("C15/F06: a stale New Hint callback cannot replace the already replaced cha
 });
 
 test("C16/F06: the challenge factory rejects absent and empty instance identifiers", () => {
-  const factory = futureHintApi.createHintChallenge;
-  assert.equal(typeof factory, "function");
-  if (!factory) throw new Error("unreachable after assertion");
-
-  assert.throws(() => (factory as unknown as (random: () => number, roundId: number, operator: HintOperator, challengeId?: string) => HintChallenge)(() => 0.2, 52, "+"), RangeError);
-  assert.throws(() => factory(() => 0.2, 52, "+", ""), RangeError);
+  // This narrow cast reaches the runtime-invalid input path that the public TypeScript type rejects.
+  const malformedFactory = createHintChallenge as unknown as (random: () => number, roundId: number, operator: HintOperator, challengeId?: string) => HintChallenge;
+  assert.throws(() => malformedFactory(() => 0.2, 52, "+"), RangeError);
+  assert.throws(() => createHintChallenge(() => 0.2, 52, "+", ""), RangeError);
 });
 
 test("C16/F06: Show hint and New Hint refuse an unidentifiable challenge", () => {
   const initial = initialState(52);
-  const missingId: HintChallenge = { roundId: initial.roundId, operator: "+", leftOperand: 2, rightOperand: 3, expectedAnswer: 5 };
+  const missingId = { roundId: initial.roundId, operator: "+" as const, leftOperand: 2, rightOperand: 3, expectedAnswer: 5 } as unknown as HintChallenge;
   const emptyId: HintChallenge = { ...missingId, challengeId: "" };
-  const valid: TokenizedHintChallenge = { ...missingId, challengeId: "challenge-52-a" };
-  const opened = reduce(initial, { type: "show-hint", challenge: valid });
+  const valid: HintChallenge = { ...missingId, challengeId: "challenge-52-a" };
+  const opened = reduceSafeGame(initial, { type: "show-hint", challenge: valid });
 
-  assert.deepEqual(reduce(initial, { type: "show-hint", challenge: missingId }), initial);
-  assert.deepEqual(reduce(initial, { type: "show-hint", challenge: emptyId }), initial);
+  assert.deepEqual(reduceSafeGame(initial, { type: "show-hint", challenge: missingId }), initial);
+  assert.deepEqual(reduceSafeGame(initial, { type: "show-hint", challenge: emptyId }), initial);
   assert.deepEqual(
-    reduce(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: valid.challengeId, challenge: missingId }),
+    reduceSafeGame(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: valid.challengeId, challenge: missingId }),
     opened,
   );
   assert.deepEqual(
-    reduce(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: valid.challengeId, challenge: emptyId }),
+    reduceSafeGame(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: valid.challengeId, challenge: emptyId }),
     opened,
   );
 });
 
 test("C16/F06: absent or empty callback IDs cannot mutate a valid active challenge", () => {
   const initial = initialState(52);
-  const valid: TokenizedHintChallenge = {
+  const valid: HintChallenge = {
     roundId: initial.roundId,
     challengeId: "challenge-52-a",
     operator: "+",
@@ -305,15 +256,15 @@ test("C16/F06: absent or empty callback IDs cannot mutate a valid active challen
     rightOperand: 3,
     expectedAnswer: 5,
   };
-  const opened = reduce(initial, { type: "show-hint", challenge: valid });
+  const opened = reduceSafeGame(initial, { type: "show-hint", challenge: valid });
 
   for (const challengeId of [undefined, ""]) {
     const unsafeActionId = challengeId as unknown as string;
-    assert.deepEqual(reduce(opened, { type: "submit-hint-answer", roundId: initial.roundId, challengeId: unsafeActionId, answer: 5 }), opened);
-    assert.deepEqual(reduce(opened, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId }), opened);
-    assert.deepEqual(reduce(opened, { type: "give-up-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId }), opened);
+    assert.deepEqual(reduceSafeGame(opened, { type: "submit-hint-answer", roundId: initial.roundId, challengeId: unsafeActionId, answer: 5 }), opened);
+    assert.deepEqual(reduceSafeGame(opened, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId }), opened);
+    assert.deepEqual(reduceSafeGame(opened, { type: "give-up-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId }), opened);
     assert.deepEqual(
-      reduce(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId, challenge: { ...valid, challengeId: "challenge-52-b" } }),
+      reduceSafeGame(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: unsafeActionId, challenge: { ...valid, challengeId: "challenge-52-b" } }),
       opened,
     );
   }
@@ -367,7 +318,7 @@ test("C14/F03/F04: Give Up reveals only this math answer, then a newly solved qu
   assert.deepEqual(replaced.hintChallenge, next);
   assert.equal(replaced.revealedMathAnswer, null, "New Hint clears the prior math answer disclosure");
   const earned = apply(replaced, { type: "submit-hint-answer", roundId: initial.roundId, challengeId: next.challengeId!, answer: next.expectedAnswer });
-  assert.equal(earned.earnedHint, "The code is even.");
+  assert.equal(earned.earnedHint, "even");
   assert.equal(earned.revealedMathAnswer, null);
 });
 
@@ -421,6 +372,127 @@ test("F03/F05: invalid or wrong answers keep the challenge open; closing earns n
   assert.equal(closed.shownHint, null);
 });
 
+// Keep the expected shape static so optional-property regressions cannot mirror the state under test.
+const canonicalGameStateKeys = [
+  "attempts", "catReaction", "code", "earnedHint", "feedback", "hintChallenge",
+  "hintFeedback", "historyVisible", "input", "phase", "revealedCode",
+  "revealedMathAnswer", "roundId", "safeOpen", "shownHint",
+];
+
+function assertCanonicalStateKeys(state: SafeGameState, description: string) {
+  assert.deepEqual(Object.keys(state).sort(), canonicalGameStateKeys, description);
+}
+
+function openChallengeAndAnswerWrong(code: number, challengeId: string) {
+  const initial = initialState(code);
+  const challenge = createChallenge(() => 0, initial.roundId, "+", challengeId);
+  const opened = apply(initial, { type: "show-hint", challenge });
+  const wrong = apply(opened, {
+    type: "submit-hint-answer",
+    roundId: initial.roundId,
+    challengeId: challenge.challengeId,
+    answer: null,
+  });
+  assert.deepEqual(wrong.hintChallenge, challenge, "a rejected answer keeps the current challenge open");
+  assert.equal(wrong.hintFeedback, "try-again", "a rejected answer has explicit challenge feedback");
+  return { initial, challenge, wrong };
+}
+
+test("a new round initializes the canonical math-answer field", () => {
+  const initial = initialState(42);
+  assertCanonicalStateKeys(initial, "a new round has every canonical state key");
+  assert.equal(initial.revealedMathAnswer, null);
+});
+
+test("closing a disclosed challenge clears all challenge-scoped state", () => {
+  const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-close");
+  const disclosed = apply(wrong, {
+    type: "give-up-hint-challenge",
+    roundId: initial.roundId,
+    challengeId: challenge.challengeId,
+  });
+  assert.equal(disclosed.revealedMathAnswer, challenge.expectedAnswer);
+  const closed = apply(disclosed, {
+    type: "close-hint-challenge",
+    roundId: initial.roundId,
+    challengeId: challenge.challengeId,
+  });
+  assertCanonicalStateKeys(closed, "closing keeps the canonical state shape");
+  assert.deepEqual(
+    {
+      hintChallenge: closed.hintChallenge,
+      hintFeedback: closed.hintFeedback,
+      revealedMathAnswer: closed.revealedMathAnswer,
+    },
+    { hintChallenge: null, hintFeedback: "none", revealedMathAnswer: null },
+  );
+});
+
+test("winning after an open rejected challenge clears its challenge state", () => {
+  const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-win");
+  const won = apply(wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  assert.equal(won.phase, "won");
+  assert.deepEqual(
+    { hintChallenge: won.hintChallenge, hintFeedback: won.hintFeedback, revealedMathAnswer: won.revealedMathAnswer },
+    { hintChallenge: null, hintFeedback: "none", revealedMathAnswer: null },
+  );
+  assert.deepEqual(
+    apply(won, { type: "submit-hint-answer", roundId: initial.roundId, challengeId: challenge.challengeId, answer: challenge.expectedAnswer }),
+    won,
+    "a terminal callback from the open challenge cannot mutate a won round",
+  );
+});
+
+test("surrendering after an open rejected challenge clears its challenge state", () => {
+  const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-surrender");
+  const surrendered = apply(wrong, { type: "surrender" });
+  assert.equal(surrendered.phase, "surrendered");
+  assert.deepEqual(
+    { hintChallenge: surrendered.hintChallenge, hintFeedback: surrendered.hintFeedback, revealedMathAnswer: surrendered.revealedMathAnswer },
+    { hintChallenge: null, hintFeedback: "none", revealedMathAnswer: null },
+  );
+  assert.deepEqual(
+    apply(surrendered, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: challenge.challengeId }),
+    surrendered,
+    "a terminal close callback cannot mutate a surrendered round",
+  );
+});
+
+test("terminal win retains the canonical state keys", () => {
+  const winScenario = openChallengeAndAnswerWrong(42, "a02-terminal-keys-win");
+  const won = apply(winScenario.wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  assertCanonicalStateKeys(won, "winning keeps the canonical state shape");
+});
+
+test("terminal surrender retains the canonical state keys", () => {
+  const surrenderScenario = openChallengeAndAnswerWrong(42, "a02-terminal-keys-surrender");
+  const surrendered = apply(surrenderScenario.wrong, { type: "surrender" });
+  assertCanonicalStateKeys(surrendered, "surrendering keeps the canonical state shape");
+});
+
+test("a same-code restart after a terminal round rebuilds canonical state", () => {
+  const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-restart");
+  const won = apply(wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  const restarted = apply(won, { type: "new-round", code: 42 });
+  assert.equal(restarted.roundId, initial.roundId + 1);
+  assert.equal(restarted.code, initial.code);
+  assertCanonicalStateKeys(restarted, "a same-code restart rebuilds every canonical state key");
+  assert.equal(restarted.hintChallenge, null);
+  assert.equal(restarted.hintFeedback, "none");
+  assert.equal(restarted.revealedMathAnswer, null);
+});
+
+test("a same-code restart rejects stale actions from the terminal round", () => {
+  const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-restart-stale");
+  const won = apply(wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  const restarted = apply(won, { type: "new-round", code: 42 });
+  assert.deepEqual(
+    apply(restarted, { type: "give-up-hint-challenge", roundId: initial.roundId, challengeId: challenge.challengeId }),
+    restarted,
+    "a callback from the prior terminal round cannot disclose into a same-code restart",
+  );
+});
+
 test("F04/F06: parity is truthful at odd/even boundaries and stale or terminal answers cannot mutate a round", () => {
   const odd = initialState(1);
   const oddChallenge = createChallenge(() => 0, odd.roundId, "+", "f04-odd");
@@ -430,7 +502,7 @@ test("F04/F06: parity is truthful at odd/even boundaries and stale or terminal a
     challengeId: oddChallenge.challengeId!,
     answer: oddChallenge.expectedAnswer,
   });
-  assert.equal(oddEarned.earnedHint, "The code is odd.");
+  assert.equal(oddEarned.earnedHint, "odd");
 
   const even = initialState(1000);
   const staleChallenge = createChallenge(() => 0.4, even.roundId, "+", "f04-stale");

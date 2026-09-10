@@ -1,0 +1,72 @@
+.safeContainer {
+    display: flex;
+    justify-content: start;
+    align-items: center;
+}
+
+.safeOpen {
+    width: 500px;
+    height: 460px;
+    background: url('/safe.png') -100px -80px;
+    background-repeat: no-repeat;
+    animation: fadeIn 0.5s ease-in-out 0s;
+}
+
+.safeClose {
+    width: 500px;
+    height: 460px;
+    background: url('/safe.png') -610px -80px;
+    background-repeat: no-repeat;
+    animation: fadeIn 0.5s ease-in-out 0s;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+
+
+.hidden {
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+}
+
+.safePlaceholder {
+    width: 500px; /* Match the open and closed safe dimensions to preserve scene space. */
+    height: 460px;
+    visibility: hidden; /* Keep layout space while the safe artwork is positioned above it. */
+}
+
+@media (max-width: 600px) {
+    .safeContainer {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .safeOpen,
+    .safeClose,
+    .safePlaceholder {
+        width: min(500px, calc(100vw - 24px));
+        height: min(460px, calc((100vw - 24px) * .92));
+        max-width: 100%;
+    }
+
+    .safeOpen,
+    .safeClose {
+        background-size: min(1252px, 250.4vw) auto;
+    }
+
+    .safeOpen {
+        background-position: max(-100px, -20vw) max(-80px, -16vw);
+    }
+
+    .safeClose {
+        background-position: max(-610px, -122vw) max(-80px, -16vw);
+    }
+}

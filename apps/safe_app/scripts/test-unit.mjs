@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import operatingSystem from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -9,14 +9,14 @@ const appDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const selectedMode = process.argv[2];
 
 if (!isKnownMode(selectedMode) || process.argv.length !== 3) {
-  console.error("Usage: node ./scripts/test-unit.mjs <positive|failure-probe>");
+  console.error("Usage: node ./scripts/test-unit.mjs <positive|failure-probe|empty-selection-probe>");
   process.exitCode = 1;
 } else {
   process.exitCode = await runSelectedTest(selectedMode);
 }
 
 async function runSelectedTest(mode) {
-  const temporaryOutputDirectoryPrefix = path.join(os.tmpdir(), "safe-cat-unit-");
+  const temporaryOutputDirectoryPrefix = path.join(operatingSystem.tmpdir(), "safe-cat-unit-");
   let temporaryOutputDirectory;
   let exitCode = 1;
 
@@ -66,17 +66,13 @@ async function runSelectedTest(mode) {
 
 async function createAliasResolver(outputDirectory) {
   const resolverPath = path.join(outputDirectory, "alias-resolver.cjs");
-  const aliases = [
-    ["@/components/", path.join(outputDirectory, "src", "app", "_components")],
-    ["@/", path.join(outputDirectory, "src")],
-  ];
-  // Resolve the most specific configured alias first, exactly as the source import contract requires.
+  const aliases = [["@/", path.join(outputDirectory, "src")]];
   const resolverSource = [
-    'const Module = require("node:module");',
+    'const moduleLoader = require("node:module");',
     'const path = require("node:path");',
     `const aliases = ${JSON.stringify(aliases)};`,
-    "const originalResolveFilename = Module._resolveFilename;",
-    "Module._resolveFilename = function resolveConfiguredAlias(request, parent, isMain, options) {",
+    "const originalResolveFilename = moduleLoader._resolveFilename;",
+    "moduleLoader._resolveFilename = function resolveConfiguredAlias(request, parent, isMain, options) {",
     "  for (const [prefix, targetDirectory] of aliases) {",
     "    if (request.startsWith(prefix)) {",
     "      return originalResolveFilename.call(this, path.join(targetDirectory, request.slice(prefix.length)), parent, isMain, options);",
@@ -100,13 +96,14 @@ function createTestEnvironment() {
 }
 
 function isKnownMode(mode) {
-  return mode === "positive" || mode === "failure-probe";
+  return mode === "positive" || mode === "failure-probe" || mode === "empty-selection-probe";
 }
 
 async function selectCompiledTestFiles(outputDirectory, mode) {
   const compiledFiles = await listFilesRecursively(outputDirectory);
   const selectedFiles = compiledFiles.filter((filePath) => {
     const filename = path.basename(filePath);
+    if (mode === "empty-selection-probe") return false;
     if (mode === "positive") {
       return filename.endsWith(".test.js") && !filename.endsWith(".probe.test.js");
     }

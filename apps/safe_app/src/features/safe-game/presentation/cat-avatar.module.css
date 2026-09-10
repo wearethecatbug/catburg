@@ -1,0 +1,39 @@
+.catContainer{
+    background-image: var(--cat-image);
+    float: left;
+    width: 128px;
+    height: 128px;
+    background: var(--cat-image) no-repeat;
+    background-size: contain;
+    animation: fadeIn 1.6s ease-in-out 0s;
+    min-width: 100px;
+    min-height: 100px;
+    max-width: 300px;
+    max-height: 300px;
+    z-index: 1000;
+    display: flex;
+    position: static;
+}
+
+.catContainerPlaceholder {
+    width: 128px;
+    height: 128px;
+    visibility: hidden;
+}
+
+@media (max-width: 600px) {
+    .catContainer {
+        float: none;
+        position: static;
+        margin: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
