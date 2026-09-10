@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "incremental": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "rootDir": "."
+  },
+  "include": ["tests/acceptance/harness/**/*.test.ts"],
+  "exclude": ["node_modules"]
+}

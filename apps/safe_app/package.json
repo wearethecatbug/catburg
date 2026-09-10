@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:unit": "node ./scripts/test-unit.mjs positive",
+    "test:unit:failure-probe": "node ./scripts/test-unit.mjs failure-probe"
   },
   "dependencies": {
     "next": "15.5.25",
