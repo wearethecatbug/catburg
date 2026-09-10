@@ -10,10 +10,9 @@
     min-height: 100px;
     max-width: 300px;
     max-height: 300px;
-    transform: translate(200%, -410%); /* Подгоняем к центру */
     z-index: 1000;
     display: flex;
-    position: relative;
+    position: static;
 }
 
 .catContainerPlaceholder {
@@ -25,10 +24,7 @@
 @media (max-width: 600px) {
     .catContainer {
         float: none;
-        position: absolute;
-        top: min(76px, 15.2vw);
-        left: 50%;
-        transform: translateX(-50%);
+        position: static;
         margin: 0;
     }
 }
