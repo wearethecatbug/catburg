@@ -1,6 +1,6 @@
 import {GameEvent} from './Event';
 
-type EventListener<T = any> = (event: GameEvent<T>) => void;
+type EventListener<T = unknown> = (event: GameEvent<T>) => void;
 
 interface ListenerEntry {
     callback: EventListener;
@@ -10,7 +10,7 @@ interface ListenerEntry {
 export class EventDispatcher {
     private listeners: Map<string, ListenerEntry[]> = new Map();
 
-    addEventListener<T = any>(
+    addEventListener<T = unknown>(
         type: string,
         callback: EventListener<T>,
         options?: { once?: boolean }
@@ -27,7 +27,7 @@ export class EventDispatcher {
         this.listeners.get(type)!.push(entry);
     }
 
-    removeEventListener<T = any>(type: string, callback: EventListener<T>): void {
+    removeEventListener<T = unknown>(type: string, callback: EventListener<T>): void {
         const entries = this.listeners.get(type);
         if (!entries) return;
 
@@ -41,7 +41,7 @@ export class EventDispatcher {
         }
     }
 
-    dispatchEvent<T = any>(event: GameEvent<T>): void {
+    dispatchEvent<T = unknown>(event: GameEvent<T>): void {
         const entries = this.listeners.get(event.type);
         if (!entries || entries.length === 0) return;
 

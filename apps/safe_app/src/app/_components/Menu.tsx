@@ -1,6 +1,6 @@
 "use client";
 
-import { SafeState } from "@/components/SafeContainer";
+import type { SafeState } from "@/components/safe/SafeContainerReducer";
 import { memo } from "react";
 
 const ButtonsList = memo(function ButtonsList({
@@ -13,7 +13,7 @@ const ButtonsList = memo(function ButtonsList({
   getButtonClass: (id: string) => string;
 }) {
   //Обработчик нажатия на кнопку
-  function onButtonClick(event) {
+  function onButtonClick(event: React.MouseEvent<HTMLButtonElement>) {
     const { id } = event.currentTarget;
     onHintMenuClick(id);
   }
@@ -62,7 +62,7 @@ export default function Menu({
 }: {
   menuConfiguration: MenuConfiguration;
   onMenuButtonClickAction: (id: string) => void;
-  state: SafeState;
+  state?: SafeState;
   getButtonClass: (id: string) => string;
 }) {
   return (

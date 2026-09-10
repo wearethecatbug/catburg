@@ -1,8 +1,8 @@
 import React, {createContext} from 'react';
-import {SafeState} from "@/components/safe/SafeContainerReducer";
+import type {SafeAction, SafeState} from "@/components/safe/SafeContainerReducer";
 
 export type SafeContainerContextType = {
-    state: SafeState, dispatch: React.Dispatch<any>;
+    state: SafeState, dispatch: React.Dispatch<SafeAction>;
 }
 
 const SafeContainerContext = createContext({} as SafeContainerContextType);

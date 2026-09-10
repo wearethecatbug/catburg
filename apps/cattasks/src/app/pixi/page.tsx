@@ -23,7 +23,7 @@ export default function Page() {
         console.log('Initializing Pixi application...');
         console.log('pixi container ref', pixiContainerRef.current);
 
-        let pixiContainer = pixiContainerRef.current
+        const pixiContainer = pixiContainerRef.current
         if (!pixiContainer) {
             return;
         }

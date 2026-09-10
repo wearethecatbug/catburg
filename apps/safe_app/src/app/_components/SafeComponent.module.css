@@ -47,3 +47,31 @@
     height: 460px;
     visibility: hidden; /* Делаем невидимым, но он занимает место */
 }
+
+@media (max-width: 600px) {
+    .safeContainer {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .safeOpen,
+    .safeClose,
+    .safePlaceholder {
+        width: min(500px, 100vw);
+        height: min(460px, 92vw);
+        max-width: 100%;
+    }
+
+    .safeOpen,
+    .safeClose {
+        background-size: min(1252px, 250.4vw) auto;
+    }
+
+    .safeOpen {
+        background-position: max(-100px, -20vw) max(-80px, -16vw);
+    }
+
+    .safeClose {
+        background-position: max(-610px, -122vw) max(-80px, -16vw);
+    }
+}

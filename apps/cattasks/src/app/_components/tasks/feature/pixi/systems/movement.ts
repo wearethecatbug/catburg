@@ -33,7 +33,7 @@ export function initHorizontalKeyboardMovement<TAnimation extends string = strin
     let currentlyPressedKey: 'left' | 'right' | null = null;
     let numberOfFramesSinceKeyDown = 0;
 
-    let acceleration = 0.22;
+    const acceleration = 0.22;
     let velocity = 0;
     let movementDirectionSign = 1;
 

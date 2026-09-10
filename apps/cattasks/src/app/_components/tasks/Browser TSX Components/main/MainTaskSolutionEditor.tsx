@@ -1,21 +1,24 @@
 'use client';
 import React from 'react';
 import dynamic from 'next/dynamic';
+import type {BeforeMount, OnMount} from '@monaco-editor/react';
 import styles from './MainTaskSolutionEditor.module.css';
 
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
+type MainTaskSolutionEditorProps = {
+    readonly value: string;
+    readonly onChangeAction: (next: string) => void;
+    readonly onMountAction?: OnMount;
+};
+
 export default function MainTaskSolutionEditor({
                                                    value,
                                                    onChangeAction,
                                                    onMountAction,
-                                               }: {
-    readonly value: string;
-    readonly onChangeAction: (next: string) => void;
-    readonly onMountAction?: (editor: any, monaco: any) => void;
-}) {
-    const handleBeforeMount = React.useCallback((monaco: any) => {
+                                               }: MainTaskSolutionEditorProps) {
+    const handleBeforeMount = React.useCallback<BeforeMount>((monaco) => {
         monaco.editor.defineTheme('catTasksTheme', {
             base: 'vs',
             inherit: true,
@@ -29,8 +32,8 @@ export default function MainTaskSolutionEditor({
         });
     }, []);
 
-    const handleMount = React.useCallback(
-        (editorInstance: any, monaco: any) => {
+    const handleMount = React.useCallback<OnMount>(
+        (editorInstance, monaco) => {
             monaco.editor.setTheme('catTasksTheme');
 
             if (onMountAction) {

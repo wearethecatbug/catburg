@@ -10,6 +10,10 @@ export type ParsedTask = {
     description: string; // исходное описание (до решения)
     solution?: string;    // HTML между маркерами
     tests?: ParsedTest[];
+    exportName?: string;
+    functionName?: string;
+    expectedExport?: string;
+    expectedFunctionName?: string;
 };
 
 // парсер: делает массив задач с title и test
@@ -78,7 +82,7 @@ function makeTitle(description: string): string {
 }
 
 function makeUniqueSlug(title: string, usedSlugCounts: Map<string, number>): string {
-    let normalizedSlug =
+    const normalizedSlug =
         title
             .toLowerCase()
             .replace(/[^\p{L}\p{N}]+/gu, '-')
@@ -91,7 +95,7 @@ function makeUniqueSlug(title: string, usedSlugCounts: Map<string, number>): str
 }
 
 // извлекает alert(fn(args)); // expected  →  { parameters, expected }
-function extractTestsFromSolution(solution: string): ParsedTest[] {
+function extractTestsFromSolution(solution: string): ParsedTest[] | undefined {
     const javascriptBody = solution.replace(/<!--\s*|\s*-->/g, "");
     const alertPattern =
         /alert\s*\(\s*([\s\S]*?)\s*\)\s*;?\s*(?:\/\/\s*([^\n\r]*))?(?=$|\r?\n)/g;
@@ -116,18 +120,19 @@ function extractTestsFromSolution(solution: string): ParsedTest[] {
         }
     }
 
-    return tests.length ? tests : undefined as any;
+    return tests.length ? tests : undefined;
 }
 
 // безопасно парсим параметры как массив, но только из чисел и массивов чисел
 function tryParseParameters(parametersSource: string): unknown[] | string {
     // Разрешаем только числа, запятые, пробелы, табы, квадратные скобки, минус и точку.
-    const safeArgs = /^[\s,\[\]\-0-9.]+$/;
+    const safeArgs = /^[\s,[\]\-0-9.]+$/;
     if (safeArgs.test(parametersSource)) {
         try {
             // "80, 91, 37" → [80,91,37]
             return JSON.parse(`[${parametersSource}]`);
         } catch {
+            // Keep the original source when it is not valid JSON input.
         }
     }
     return parametersSource;
@@ -140,10 +145,11 @@ function tryParseExpected(expectedRaw: string): unknown | string {
     if (/^-?\d+(\.\d+)?$/.test(s)) {
         return Number(s);
     }
-    if (/^\[\s*[\d\.\-\s,]*\]$/.test(s)) {
+    if (/^\[\s*[\d.\-\s,]*\]$/.test(s)) {
         try {
             return JSON.parse(s);
         } catch {
+            // Keep the original expected text when it is not valid JSON input.
         }
     }
     return s;

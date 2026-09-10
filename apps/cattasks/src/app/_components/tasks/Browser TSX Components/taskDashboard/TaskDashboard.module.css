@@ -27,3 +27,17 @@
     height: 15%;
 
 }
+
+@media (max-width: 600px) {
+    .taskDashboardRoot {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .taskDashboardRoot > .headerContainer,
+    .taskDashboardRoot > .mainContainer,
+    .taskDashboardRoot > .footerContainer {
+        height: auto;
+        flex: 0 0 auto;
+    }
+}

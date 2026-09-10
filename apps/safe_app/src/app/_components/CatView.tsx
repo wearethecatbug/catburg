@@ -1,5 +1,5 @@
 import styles from "@/components/CatView.module.css";
-import React, {useEffect, useState} from "react";
+import React, {useEffect} from "react";
 
 interface CatViewState {
     defaultState: string;
@@ -36,6 +36,13 @@ interface CatViewProps {
 export default function CatView({ isSafeComponentInitialized,currentSkinCatViewState,updateCatViewState, onMouseEnter,
                                     onMouseLeave }: CatViewProps) {
     console.log("currentSkinCatViewState передается в CatView:", currentSkinCatViewState);
+    useEffect(() => {
+        if (!currentSkinCatViewState) {
+            console.warn("Некорректное состояние для currentSkinCatViewState, устанавливаем defaultState");
+            updateCatViewState("defaultState");
+        }
+    }, [currentSkinCatViewState, updateCatViewState]);
+
     // const validState = currentSkinCatViewState || 'defaultState';
     if (!isSafeComponentInitialized || !currentSkinCatViewState) {
         return <div className={styles.catContainerPlaceholder}></div>;
@@ -46,14 +53,6 @@ export default function CatView({ isSafeComponentInitialized,currentSkinCatViewS
     function getCatSkin(currentSkinCatViewState: keyof CatViewState) {
         return {"--bgSrc": `url(/${initialCatViewState[currentSkinCatViewState]}.png)`} as React.CSSProperties;
     }
-
-    useEffect(() => {
-        if (!currentSkinCatViewState) {
-            console.warn("Некорректное состояние для currentSkinCatViewState, устанавливаем defaultState");
-            updateCatViewState("defaultState"); // Автоматически устанавливаем корректное состояние
-        }
-    }, [currentSkinCatViewState, updateCatViewState]);
-
 
     return (
         <div className={styles.catContainer} style={getCatSkin(currentSkinCatViewState)} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}></div>

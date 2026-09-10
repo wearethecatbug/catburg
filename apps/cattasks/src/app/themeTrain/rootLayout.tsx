@@ -1,4 +1,5 @@
 import './theme.css';
+import Link from 'next/link';
 import {ThemeProvider} from './themeProvider';
 import ThemeToggle from './ThemeToggle';
 
@@ -27,7 +28,7 @@ document.documentElement.setAttribute('data-theme',m==='system'?sys:m);}catch(e)
                 <div style={{display: 'flex', gap: 8, alignItems: 'baseline'}}>
                     <span style={{fontWeight: 700}}>ThemeTrain</span>
                     <nav style={{display: 'flex', gap: 12, fontSize: 14, opacity: .9}}>
-                        <a href="/">Home</a>
+                        <Link href="/">Home</Link>
                         <a href="https://nextjs.org">Docs</a>
                     </nav>
                 </div>

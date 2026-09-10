@@ -18,3 +18,29 @@
     height: 70%;
     min-height: 80px;
 }
+
+@media (max-width: 600px) {
+    .headerTaskListContainer {
+        display: grid;
+        grid-template-columns: minmax(48px, 60px) minmax(0, 1fr) minmax(48px, 60px);
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        padding-inline: 8px;
+        box-sizing: border-box;
+    }
+
+    .taskListArrowButton {
+        width: 100%;
+        min-width: 48px;
+        height: 70px;
+        min-height: 70px;
+    }
+
+    .taskSelectorButtonContainer {
+        width: 100%;
+        min-width: 0;
+        height: 70px;
+        min-height: 70px;
+    }
+}

@@ -11,7 +11,7 @@ import {EntityAnimationState} from "@/app/_components/tasks/feature/pixi/systems
 export const application = new Application();
 const stage = application.stage;
 
-let scene: Scene = new Scene(stage);
+const scene: Scene = new Scene(stage);
 
 export async function initPixiApp(canvasReference?: HTMLDivElement) {
     if (!canvasReference) {

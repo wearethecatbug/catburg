@@ -22,6 +22,17 @@
     visibility: hidden;
 }
 
+@media (max-width: 600px) {
+    .catContainer {
+        float: none;
+        position: absolute;
+        top: min(76px, 15.2vw);
+        left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;

@@ -9,14 +9,27 @@ const audiowide = Audiowide({
     subsets: ['latin'],
 })
 
+type ExampleQuestion = {
+    questionParts: string;
+    answer: number;
+};
+
+type ExampleQuestionContextValue = {
+    question: ExampleQuestion;
+    updateQuestion: () => void;
+};
+
+type ExampleQuestionProviderProps = { children: React.ReactNode };
+type ExampleHintPopupViewProps = { onClose: () => void };
+
 export default function Home() {
     return (
         <App />
     );
 }
 
-const QuestionContext = createContext(null);
-function QuestionProvider({ children }) {
+const QuestionContext = createContext<ExampleQuestionContextValue | null>(null);
+function QuestionProvider({ children }: ExampleQuestionProviderProps) {
     const [question, setQuestion] = useState(generateQuestion());
 
     function updateQuestion() {
@@ -30,10 +43,12 @@ function QuestionProvider({ children }) {
     );
 }
 
-function HintPopupView({ onClose }) {
-    const { question, updateQuestion } = useContext(QuestionContext);
+function HintPopupView({ onClose }: ExampleHintPopupViewProps) {
+    const context = useContext(QuestionContext);
+    if (!context) throw new Error("HintPopupView must be used within QuestionProvider");
+    const { question, updateQuestion } = context;
     const [isValid, setIsValid] = useState<boolean | null>(null);
-    const inputRefAnswer = React.useRef(null);
+    const inputRefAnswer = React.useRef<HTMLInputElement | null>(null);
 
     function onNewHint() {
         updateQuestion(); // Обновляем вопрос в контексте
@@ -72,7 +87,7 @@ function App() {
 }
 
 // Функция генерации вопроса
-function generateQuestion() {
+function generateQuestion(): ExampleQuestion {
     const num1 = Math.floor(Math.random() * 10) + 1;
     const num2 = Math.floor(Math.random() * 10) + 1;
     return {

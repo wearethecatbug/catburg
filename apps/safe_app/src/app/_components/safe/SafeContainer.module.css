@@ -32,3 +32,20 @@
     touch-action: none;
 }
 
+@media (max-width: 600px) {
+    .safeContainer {
+        width: 100%;
+        max-width: 100%;
+        align-items: stretch;
+    }
+
+    .SafeCodeInputContainer {
+        position: static;
+        top: auto;
+        left: auto;
+        width: 100%;
+        min-height: 40px;
+        margin: 0 auto;
+    }
+}
+
