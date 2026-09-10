@@ -10,6 +10,6 @@
     "types": ["node"],
     "rootDir": "."
   },
-  "include": ["tests/acceptance/harness/**/*.test.ts"],
+  "include": ["tests/acceptance/**/*.test.ts"],
   "exclude": ["node_modules"]
 }
