@@ -70,6 +70,7 @@ async function createAliasResolver(outputDirectory) {
     ["@/components/", path.join(outputDirectory, "src", "app", "_components")],
     ["@/", path.join(outputDirectory, "src")],
   ];
+  // Resolve the most specific configured alias first, exactly as the source import contract requires.
   const resolverSource = [
     'const Module = require("node:module");',
     'const path = require("node:path");',

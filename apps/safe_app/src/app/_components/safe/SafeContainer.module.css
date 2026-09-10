@@ -7,6 +7,10 @@
     position: relative; /* Абсолютное позиционирование */
 }
 
+.instructions {
+    margin: 0 0 1rem;
+}
+
 .safeAndMenuContainer {
     display: flex;
     transform: translate(20%, -70%);
