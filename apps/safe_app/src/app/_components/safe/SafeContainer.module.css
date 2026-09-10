@@ -1,55 +1,25 @@
-.safeContainer {
-    align-items: center;
-    justify-content: center;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    position: relative; /* Абсолютное позиционирование */
-}
+.safeContainer { box-sizing: border-box; color: white; min-height: 100svh; overflow-x: clip; position: relative; }
+.instructions { left: 50%; margin: 0; position: absolute; text-align: center; top: max(16px, calc(50% - 360px)); transform: translateX(-50%); }
+.safeRegion { left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); }
+.catRegion { left: 50%; position: absolute; top: calc(50% - 330px); transform: translateX(-50%); z-index: 1; }
+.SafeCodeInputContainer { left: 50%; position: absolute; top: calc(50% + 140px); transform: translateX(-50%); width: 360px; }
+.menuRegion { left: calc(50% + 274px); position: absolute; top: calc(50% - 115px); }
+.earnedHint { margin: 8px 0 0; min-height: 1.25em; text-align: center; }
 
-.instructions {
-    margin: 0 0 1rem;
-}
-
-.safeAndMenuContainer {
-    display: flex;
-    transform: translate(20%, -70%);
-    justify-content: center;
-}
-
-.SafeCodeInputContainer {
-    top: -90px;
-    left: -10%;
-    position: relative;
-
-}
-
-
-.newGameAfterGiveUp {
-    animation: blink 1s infinite; /* Запускаем мигание */
-}
-
-.logWrapper {
-    width: 100vw; /* Растягиваем по ширине */
-    height: 100vh; /* Растягиваем по высоте */
-    display: flex; /* Располагаем логи в ряд */
-    touch-action: none;
+@media (max-width: 1023px) {
+  .safeContainer { min-height: 920px; }
+  .menuRegion { left: 50%; top: calc(50% + 315px); transform: translateX(-50%); }
+  .menuRegion nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .menuRegion button { width: min(200px, calc(50vw - 18px)); }
 }
 
 @media (max-width: 600px) {
-    .safeContainer {
-        width: 100%;
-        max-width: 100%;
-        align-items: stretch;
-    }
-
-    .SafeCodeInputContainer {
-        position: static;
-        top: auto;
-        left: auto;
-        width: 100%;
-        min-height: 40px;
-        margin: 0 auto;
-    }
+  .safeContainer { min-height: 860px; }
+  .instructions { top: 16px; width: calc(100% - 24px); }
+  .safeRegion { top: 365px; }
+  .catRegion { top: calc(365px - min(230px, (100vw - 24px) * .46) - 100px); }
+  .SafeCodeInputContainer { top: calc(365px + min(140px, (100vw - 24px) * .281)); width: min(360px, (100vw - 24px) * .72); }
+  .menuRegion { top: 650px; width: calc(100% - 24px); }
+  .menuRegion button { width: 100%; }
 }
 

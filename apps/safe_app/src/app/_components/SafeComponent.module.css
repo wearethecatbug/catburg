@@ -57,8 +57,8 @@
     .safeOpen,
     .safeClose,
     .safePlaceholder {
-        width: min(500px, 100vw);
-        height: min(460px, 92vw);
+        width: min(500px, calc(100vw - 24px));
+        height: min(460px, calc((100vw - 24px) * .92));
         max-width: 100%;
     }
 
