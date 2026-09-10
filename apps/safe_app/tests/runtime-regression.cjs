@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
+const fileSystem = require("node:fs");
+const pathUtilities = require("node:path");
 const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const baseUrl = process.env.SAFE_CAT_BASE_URL || "http://127.0.0.1:43813";
@@ -12,9 +12,9 @@ const documentBottomToleranceCssPixels = 1;
 function artifactPath(name, extension) {
   if (!artifactDirectory) return undefined;
   assert.ok(artifactLabel, "REGRESSION_RUN_LABEL is required when artifacts are enabled");
-  assert.ok(fs.statSync(artifactDirectory).isDirectory(), "REGRESSION_ARTIFACT_DIR must be an existing directory");
-  const output = path.join(artifactDirectory, `${artifactLabel}-safe-cat-${name}.${extension}`);
-  assert.equal(fs.existsSync(output), false, `refusing to overwrite existing regression artifact: ${output}`);
+  assert.ok(fileSystem.statSync(artifactDirectory).isDirectory(), "REGRESSION_ARTIFACT_DIR must be an existing directory");
+  const output = pathUtilities.join(artifactDirectory, `${artifactLabel}-safe-cat-${name}.${extension}`);
+  assert.equal(fileSystem.existsSync(output), false, `refusing to overwrite existing regression artifact: ${output}`);
   return output;
 }
 
@@ -32,7 +32,7 @@ async function observeReachability(page, selector, locator) {
   await locator.scrollIntoViewIfNeeded();
   const box = await locator.boundingBox();
   if (!box) return { selector, rendered: false, unclipped: false, receivesPointer: false };
-  const hit = await locator.evaluate((element) => { const r = element.getBoundingClientRect(); const target = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { receivesPointer: target === element || element.contains(target), target: target && { tag: target.tagName, id: target.id, className: String(target.className) }, text: (element.innerText || "").trim(), scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }; });
+  const hit = await locator.evaluate((element) => { const boundingRectangle = element.getBoundingClientRect(); const target = document.elementFromPoint(boundingRectangle.left + boundingRectangle.width / 2, boundingRectangle.top + boundingRectangle.height / 2); return { receivesPointer: target === element || element.contains(target), target: target && { tag: target.tagName, id: target.id, className: String(target.className) }, text: (element.innerText || "").trim(), scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }; });
   const documentMetrics = await page.evaluate(() => { const scrolling = document.scrollingElement; return { scrollHeight: scrolling.scrollHeight, clientHeight: scrolling.clientHeight, scrollTop: scrolling.scrollTop }; });
   const viewport = page.viewportSize(); const verticalOverflow = box.y + box.height - viewport.height;
   return { selector, box, documentMetrics, verticalOverflow, rendered: box.width > 0 && box.height > 0, strictlyWithinViewport: box.x >= 0 && box.y >= 0 && box.x + box.width <= viewport.width && box.y + box.height <= viewport.height, unclipped: isReachableInViewport(box, viewport, documentMetrics), ...hit };
@@ -50,16 +50,16 @@ async function observe(name, width, height) {
     page.on("requestfailed", request => { if (request.url().startsWith(baseUrl)) localRequestFailures.push({ url: request.url(), failure: request.failure() }); });
     page.on("response", response => { if (!response.url().startsWith(baseUrl) || response.status() < 400) return; const failure = { url: response.url(), status: response.status() }; if (new URL(response.url()).pathname === "/favicon.ico") faviconExceptions.push(failure); else localHttpFailures.push(failure); });
     const response = await page.goto(baseUrl, { waitUntil: "networkidle" });
-    const instruction = page.locator("p", { hasText: "The safe code is a number that ranges from 1 to 1000" });
-    const input = page.locator("input#fname"); const ok = page.getByRole("button", { name: "OK", exact: true });
-    const buttonSelectors = ["#onNewGame", "#onGiveUp", "#onShowHint", "#onShowLog"]; const buttons = buttonSelectors.map(selector => page.locator(selector));
-    const cat = page.locator("div[style*='--bgSrc']");
+    const instruction = page.getByText("Enter a whole code from 1 to 1000.", { exact: true });
+    const input = page.getByLabel("Safe code", { exact: true }); const ok = page.getByRole("button", { name: "OK", exact: true });
+    const buttonNames = ["New game", "Give up", "Show hint", "History"]; const buttons = buttonNames.map(name => page.getByRole("button", { name, exact: true }));
+    const cat = page.getByLabel("Cat idle", { exact: true });
     await instruction.waitFor(); await input.waitFor(); await ok.waitFor(); await cat.waitFor(); for (const button of buttons) await button.waitFor();
     await input.focus(); await input.fill("1000"); await cat.hover(); await page.mouse.move(0, 0);
-    const buttonReachability = []; for (let index = 0; index < buttons.length; index += 1) buttonReachability.push(await observeReachability(page, buttonSelectors[index], buttons[index]));
-    const observation = { app: "safe-cat", viewport: { name, width, height }, status: response && response.status(), scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), clientWidth: await page.evaluate(() => document.documentElement.clientWidth), requiredContent: { instructionVisible: await instruction.isVisible(), inputVisible: await input.isVisible(), inputEnabled: await input.isEnabled(), inputValue: await input.inputValue(), menuButtonCount: buttons.length, menuButtonSelectorCounts: await Promise.all(buttons.map(button => button.count())), okButtonCount: await ok.count() }, reachability: { instruction: await observeReachability(page, "safe-code instruction", instruction), input: await observeReachability(page, "input#fname", input), ok: await observeReachability(page, "button with accessible name OK", ok), buttons: buttonReachability }, consoleErrors, pageErrors, localRequestFailures, localHttpFailures, faviconExceptions };
+    const buttonReachability = []; for (let index = 0; index < buttons.length; index += 1) buttonReachability.push(await observeReachability(page, `button with accessible name ${buttonNames[index]}`, buttons[index]));
+    const observation = { app: "safe-cat", viewport: { name, width, height }, status: response && response.status(), scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), clientWidth: await page.evaluate(() => document.documentElement.clientWidth), requiredContent: { instructionVisible: await instruction.isVisible(), inputVisible: await input.isVisible(), inputEnabled: await input.isEnabled(), inputValue: await input.inputValue(), menuButtonCount: buttons.length, menuButtonSelectorCounts: await Promise.all(buttons.map(button => button.count())), okButtonCount: await ok.count() }, reachability: { instruction: await observeReachability(page, "instruction labelled Enter a whole code from 1 to 1000.", instruction), input: await observeReachability(page, "input labelled Safe code", input), ok: await observeReachability(page, "button with accessible name OK", ok), buttons: buttonReachability }, consoleErrors, pageErrors, localRequestFailures, localHttpFailures, faviconExceptions };
     const screenshot = artifactPath(name, "png"); const json = artifactPath(name, "json");
-    if (screenshot && json) { await page.screenshot({ path: screenshot, fullPage: true }); fs.writeFileSync(json, `${JSON.stringify(observation, null, 2)}\n`, { flag: "wx" }); }
+    if (screenshot && json) { await page.screenshot({ path: screenshot, fullPage: true }); fileSystem.writeFileSync(json, `${JSON.stringify(observation, null, 2)}\n`, { flag: "wx" }); }
     return observation;
   } finally { if (context) await context.close(); if (browser) await browser.close(); }
 }

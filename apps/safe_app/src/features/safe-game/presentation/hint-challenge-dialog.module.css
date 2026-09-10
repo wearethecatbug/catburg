@@ -1,0 +1,28 @@
+.backdrop { align-items: center; background: rgb(0 0 0 / 55%); display: flex; inset: 0; justify-content: center; padding: 12px; position: fixed; z-index: 2000; }
+.dialog { background: #fff3d7 url("/ragdoll-hint-background-3.png") center / contain no-repeat; border: 3px solid #5c3b26; border-radius: 18px; box-sizing: border-box; color: #2c1b12; display: grid; gap: 12px; max-height: calc(100vh - 24px); max-width: min(560px, calc(100vw - 24px)); overflow: auto; padding: clamp(18px, 4vw, 34px); width: 560px; }
+.heading { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
+.heading h2 { font-size: clamp(1.1rem, 3vw, 1.45rem); margin: 0; }
+.heading button, .answerForm button { min-height: 44px; }
+.operatorBoard { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(44px, 1fr)); }
+.operatorButton { align-items: center; background: transparent; border: 0; border-radius: 10px; display: flex; justify-content: center; min-height: 44px; padding: 4px; }
+.operatorButton img { height: auto; max-height: 66px; max-width: 100%; object-fit: contain; }
+.operatorButton[aria-pressed="true"] { box-shadow: 0 0 0 3px #2c1b12; }
+.operatorButton:disabled { cursor: not-allowed; opacity: .55; }
+.answerForm { align-items: center; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr) minmax(72px, 100px) auto; }
+.answerForm label { font-size: clamp(1.05rem, 3vw, 1.35rem); font-weight: 700; }
+.answerForm input { border: 2px solid #5c3b26; border-radius: 8px; box-sizing: border-box; min-height: 44px; min-width: 0; padding: 6px 8px; }
+.answerForm button { background: #d86f3f; border: 2px solid #5c3b26; border-radius: 8px; color: #fff; font-weight: 700; padding: 6px 10px; }
+.boardActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.imageButton { align-items: center; background: #fff7e8; border: 2px solid #5c3b26; border-radius: 10px; color: #2c1b12; display: flex; font-weight: 700; gap: 6px; justify-content: center; min-height: 44px; padding: 4px 8px; }
+.imageButton img { height: 32px; object-fit: contain; width: 32px; }
+.imageButton:disabled { cursor: not-allowed; opacity: .55; }
+.dialog button:focus-visible, .dialog input:focus-visible { outline: 3px solid #0c6b99; outline-offset: 2px; }
+.feedback { font-weight: 700; min-height: 1.25em; margin: 0; text-align: center; }
+
+@media (max-width: 420px) {
+  .dialog { gap: 10px; padding: 16px; }
+  .operatorButton img { max-height: 52px; }
+  .answerForm { grid-template-columns: minmax(0, 1fr) minmax(68px, 88px); }
+  .answerForm label { grid-column: 1 / -1; }
+  .imageButton { flex: 1 1 130px; }
+}

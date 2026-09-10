@@ -1,8 +1,6 @@
-"use client";
-
-import styles from "./Page.module.css";
-import SafeContainer from "@/components/safe/SafeContainer";
+import styles from "./page.module.css";
+import { SafeGameScreen } from "@/features/safe-game";
 
 export default function Home() {
-  return <div className={styles.background}><SafeContainer /></div>;
+  return <div className={styles.background}><SafeGameScreen /></div>;
 }

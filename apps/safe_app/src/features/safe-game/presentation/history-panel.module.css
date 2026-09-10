@@ -1,0 +1,68 @@
+
+.logViewContainer {
+    box-sizing: border-box;
+    position: absolute;
+    border: 1px solid black;
+    padding: 0 10px 10px;
+    width: 250px;
+    height: 180px;
+    max-height: calc(100vh - 24px);
+    max-width: calc(100vw - 24px);
+    background-color: #ededed;
+    color: #202020;
+    font-family: "Audiowide", sans-serif;
+
+    word-wrap: break-word;
+    white-space: normal;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    pointer-events: auto;
+}
+
+.textStyle {
+    color: #000000;
+    font-size: 12px;
+    font-family: "Audiowide", sans-serif;
+    min-width: 100%;
+    min-height: 100%;
+    overflow: auto;
+    border: 1px solid #ccc;
+    padding: 8px;
+    background: #f9f9f9;
+    flex-grow: 1;
+}
+
+.drag-handle {
+    cursor: grab;
+    background: #ccc;
+    padding: 5px;
+    text-align: center;
+    user-select: none;
+}
+
+
+.resizeHandle {
+    width: 15px;
+    height: 15px;
+    background: gray;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    cursor: nwse-resize;
+}
+
+.dragHandle {
+    cursor: grab;
+    background: #ddd;
+    color: #202020;
+    padding: 8px;
+    border: 0;
+    font: inherit;
+    margin: 0 -10px 8px;
+    touch-action: none;
+    width: calc(100% + 20px);
+}
+
+.entries { flex: 1; overflow: auto; }

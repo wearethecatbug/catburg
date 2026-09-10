@@ -6,7 +6,7 @@ import {
   generateSafeCode,
   normalizeSafeGuess,
   reduceSafeGame,
-} from "@/domain/safe-game";
+} from "@/features/safe-game/domain";
 
 type SafeGameAction = Parameters<typeof reduceSafeGame>[1];
 
@@ -93,6 +93,7 @@ test("a correct normalized guess atomically wins and every terminal interaction 
     historyVisible: false,
     hintChallenge: null,
     hintFeedback: "none",
+    revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
   });
@@ -136,6 +137,7 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     historyVisible: true,
     hintChallenge: null,
     hintFeedback: "none",
+    revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
   });
@@ -159,6 +161,7 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     historyVisible: false,
     hintChallenge: null,
     hintFeedback: "none",
+    revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
   });
