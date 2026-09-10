@@ -27,8 +27,9 @@ export default function MainBtnRunCode({className}: MainBtnRunCodeProps) {
                 console.log("[RunCode] Возвращаемое значение:", returnValue);
                 try {
                     alert(String(returnValue));
-                } catch {
-                }
+        } catch {
+            // User code failures are intentionally suppressed by this playground control.
+        }
             }
         } catch (error) {
             console.error("[RunCode] Ошибка выполнения:", error);

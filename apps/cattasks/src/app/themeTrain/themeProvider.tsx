@@ -44,6 +44,7 @@ export function ThemeProvider({children}: { children: React.ReactNode }) {
         try {
             localStorage.setItem(KEY, mode);
         } catch {
+            // Storage access may be unavailable in restrictive browser contexts.
         }
     }, [mode]);
 

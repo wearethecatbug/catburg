@@ -95,6 +95,7 @@ export default function WormMonster() {
                 try {
                     resizeObserver.disconnect();
                 } catch {
+                    // The observer can already be disconnected during teardown.
                 }
                 resizeObserver = null;
             }
@@ -103,6 +104,7 @@ export default function WormMonster() {
                 try {
                     unsubscribeDoggyCollision();
                 } catch {
+                    // Collision cleanup is best-effort after asynchronous initialization.
                 }
                 unsubscribeDoggyCollision = null;
             }
@@ -112,6 +114,7 @@ export default function WormMonster() {
                 try {
                     application.stage.removeChild(sprite);
                 } catch {
+                    // The sprite may already have been removed by Pixi teardown.
                 }
             }
             spriteRef.current = null;

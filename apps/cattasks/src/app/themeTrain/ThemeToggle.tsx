@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import {useTheme} from './themeProvider';
+import {type Mode, useTheme} from './themeProvider';
 
 export default function ThemeToggle() {
     const {mode, resolved, setMode, toggle, cycle} = useTheme();
@@ -18,7 +18,7 @@ export default function ThemeToggle() {
             <select
                 aria-label="Set theme"
                 value={mode}
-                onChange={e => setMode(e.target.value as any)}
+                onChange={e => setMode(e.currentTarget.value as Mode)}
                 style={{padding: '4px 8px'}}
             >
                 <option value="system">system</option>

@@ -1,5 +1,5 @@
 import styles from "./SignsMenuButtons.module.css";
-import React, {createContext, useContext, useCallback, useEffect, useState, ReactNode} from "react";
+import React, {createContext, useContext, useCallback, useEffect, useState, type ReactNode} from "react";
 import Menu, {MenuConfiguration} from "@/components/Menu";
 import SafeSettings from "./SettingButtonView";
 
@@ -22,8 +22,8 @@ export const signsButtons: MenuConfiguration = {
 };
 
 type SignsContextType = {
-    activeSign: string;
-    setActiveSign: (sign: (prev) => string) => void;
+    activeSign: string | null;
+    setActiveSign: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 // Создаем контекст для передачи состояния активного знака 
@@ -96,7 +96,7 @@ export default function SignsPopUpView({
         if (!button) return;
 
         setActiveSign(prev => (prev === button.name ? null : button.name)); // ⬅️ Сбрасываем при повторном клике
-        signHandlers[id]?.();
+        signHandlers[id as HintSignsButtons]?.();
     }, [signHandlers]);
 
 
@@ -109,7 +109,7 @@ export default function SignsPopUpView({
         <>
             <div className={`${styles.signsContainer} ${isSignsVisible ? "" : styles.hiddenSigns}`}>
                 <Menu menuConfiguration={signsButtons} onMenuButtonClickAction={onSignsMenuClick}
-                      getButtonClass={getSignsButtonClass} signHandlers={signHandlers}/>
+                      getButtonClass={getSignsButtonClass}/>
             </div>
 
         </>

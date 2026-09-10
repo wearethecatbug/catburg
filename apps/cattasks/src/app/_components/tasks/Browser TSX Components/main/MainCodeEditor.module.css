@@ -5,7 +5,7 @@
     align-items: center; /* по горизонтали: по центру */
     width: 100%;
     max-width: 600px; /* контейнер не шире 600px */
-    min-width: 400px;
+    min-width: 0;
     height: 100%; /* чтобы 80% было детерминировано */
     box-sizing: border-box;
     padding-bottom: 16px;
@@ -27,6 +27,7 @@
     display: flex; /* чтобы .editor растягивался */
     width: 100%;
     max-width: 600px;
+    box-sizing: border-box;
 
     height: 80%; /* 80% высоты контейнера */
     min-height: 0;
@@ -49,7 +50,7 @@
 .editor {
     flex: 1 1 auto; /* занять всё внутри рамки */
     min-height: 240px;
-    min-width: 300px;
+    min-width: 0;
     resize: none;
     border: 0;
     outline: none;
@@ -67,4 +68,40 @@
 
 .editor::selection {
     background: #b9f6c166;
+}
+
+@media (max-width: 600px) {
+    .codeEditorContainer,
+    .codeEditorFrame {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .codeEditorFrame {
+        padding: 8px;
+        --b: 10px;
+        --r: 16px;
+    }
+
+    .buttonsRow {
+        gap: 8px;
+        height: auto;
+        flex-wrap: wrap;
+    }
+
+    .codeEditorContainer {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        min-width: 0;
+        flex: 0 0 auto;
+    }
+
+    .codeEditorContainer .codeEditorFrame {
+        width: 100%;
+        max-width: none;
+        height: 288px;
+        min-height: 288px;
+        flex: 0 0 auto;
+    }
 }

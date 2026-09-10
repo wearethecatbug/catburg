@@ -8,7 +8,30 @@
     background-image: url("/bgMainCapibara3.png");
     background-size: contain;
     background-repeat: repeat;
-    min-width: 600px;
+    min-width: 0;
+}
+
+@media (max-width: 600px) {
+    .mainContainer,
+    .taskContentPanelContainer,
+    .codeEditor {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .mainContainer {
+        align-items: stretch;
+    }
+
+    .taskContentPanelContainer,
+    .codeEditor {
+        width: 100%;
+    }
+
+    .codeEditor {
+        height: auto;
+        flex: 0 0 auto;
+    }
 }
 
 .taskContentPanelContainer {

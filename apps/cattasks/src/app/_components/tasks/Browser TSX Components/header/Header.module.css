@@ -1,7 +1,7 @@
 .headerContainer {
     width: 100%;
     min-height: 90px;
-    min-width: 600px;
+    min-width: 0;
     background-image: url("/bgCapibara2.png");
     background-size: contain;
     background-repeat: repeat;
@@ -17,5 +17,14 @@
     min-width: 150px;
     height: 100%;
     min-height: 80px;
+}
+
+@media (max-width: 600px) {
+    .headerTaskContainer {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: 90px;
+    }
 }
 

@@ -3,6 +3,11 @@ import {useCallback, useEffect, useRef} from 'react';
 import type {AnimatedSprite, Application} from 'pixi.js';
 import styles from './HealthBarOverlay.module.css';
 
+type HealthBarStyle = React.CSSProperties & Record<
+    '--hp-bar-width' | '--hp-bar-height' | '--hp-bar-radius',
+    string
+>;
+
 type HealthBarOverlayProps = {
     isReady: boolean;
     isSpriteReady: boolean;
@@ -147,13 +152,11 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         <div
             ref={healthBarRootElementRef}
             className={styles.healthBarRoot}
-            style={
-                {
-                    ['--hp-bar-width' as any]: `${totalWidthPixels}px`,
-                    ['--hp-bar-height' as any]: `${totalHeightPixels}px`,
-                    ['--hp-bar-radius' as any]: `${Math.min(6, totalHeightPixels / 2)}px`,
-                } as React.CSSProperties
-            }
+            style={{
+                '--hp-bar-width': `${totalWidthPixels}px`,
+                '--hp-bar-height': `${totalHeightPixels}px`,
+                '--hp-bar-radius': `${Math.min(6, totalHeightPixels / 2)}px`,
+            } as HealthBarStyle}
         >
             <div ref={healthBarFillElementRef} className={styles.healthBarFill}/>
         </div>

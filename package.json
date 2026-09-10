@@ -13,12 +13,19 @@
     "turbo": "^2.4.2",
     "typescript": "5.7.3"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.9",
   "engines": {
-    "node": ">=18"
+    "node": ">=20.9.0",
+    "pnpm": "9.15.9"
   },
   "dependencies": {
     "@use-gesture/react": "^10.3.1",
     "react-draggable": "^4.4.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.9",
+      "react-dom": "19.1.9"
+    }
   }
 }

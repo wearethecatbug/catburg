@@ -8,18 +8,36 @@ import {useSigns} from "@/components/SignsMenuButtons";
 import {signsButtons} from "@/components/SignsMenuButtons";
 
 
-type questionData = {
+type QuestionData = {
     answer: number;
     questionParts: string;
-}
+};
 
-const QuestionContext = createContext<{
-    question: questionData;
+type QuestionContextValue = {
+    question: QuestionData;
     updateQuestion: () => void;
-} | null>(null);
+};
+
+type QuestionProviderProps = {
+    children: React.ReactNode;
+    firstNumberHintRange: number;
+    secondNumberHintRange: number;
+};
+
+type HintPopupViewProps = {
+    onCloseHintAction: () => void;
+    getButtonClass: (buttonId: string) => string;
+    onGiveUpHintChange: (isActive: boolean) => void;
+    firstNumberHintRange: number;
+    setFirstNumberHintRange: React.Dispatch<React.SetStateAction<number>>;
+    secondNumberHintRange: number;
+    setSecondNumberHintRange: React.Dispatch<React.SetStateAction<number>>;
+};
+
+const QuestionContext = createContext<QuestionContextValue | null>(null);
 
 // Создаем контекст
-export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}) {
+export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}: QuestionProviderProps) {
     const {activeSign} = useSigns();
     const [question, setQuestion] = useState(() => generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
 
@@ -47,7 +65,7 @@ export function useQuestion() {
     return context;
 }
 
-function generateQuestion(activeSign: string, firstNumberHintRange: number, secondNumberHintRange: number): questionData {
+function generateQuestion(activeSign: string | null, firstNumberHintRange: number, secondNumberHintRange: number): QuestionData {
 
 
     const operators: Record<string, (a: number, b: number) => number> = {
@@ -58,7 +76,7 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
     }
 
     // Генерируем случайные числа в заданном диапазоне
-    function generateRandomNumberInRange(firstNumberHintRange, secondNumberHintRange, operator: string): [number, number] {
+    function generateRandomNumberInRange(firstNumberHintRange: number, secondNumberHintRange: number, operator: string): [number, number] {
         if (operator == "÷") return getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange);
         const num1 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
         const num2 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
@@ -66,17 +84,17 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
     }
 
     // Функция для генерации делимого и делителя
-    function getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange): [number, number] {
-        let divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange; // Генерируем делитель
-        let quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
-        let dividend = divisor * quotient; // Получаем делимое
+    function getDivisibleNumbers(firstNumberHintRange: number, secondNumberHintRange: number): [number, number] {
+        const divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange; // Генерируем делитель
+        const quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
+        const dividend = divisor * quotient; // Получаем делимое
         return [dividend, divisor];
     }
 
     // Функция для генерации случайного знака операции
     function getOperator(): string {
         if (!activeSign) {
-            let operatorsKeys = Object.keys(operators);
+            const operatorsKeys = Object.keys(operators);
             return operatorsKeys[Math.floor(Math.random() * operatorsKeys.length)];
 
         }
@@ -114,17 +132,9 @@ const menuButtons: MenuConfiguration = {
 
 
 export default function HintPopupView({
-                                          onCloseHintAction, getButtonClass, onGiveUpHintChange, firstNumberHintRange,
+                                          onCloseHintAction, onGiveUpHintChange, firstNumberHintRange,
                                           setFirstNumberHintRange, secondNumberHintRange, setSecondNumberHintRange
-                                      }: {
-    onCloseHintAction: () => void,
-    getButtonClass: (buttonId: string) => string,
-    onGiveUpHintChange: (isActive: boolean) => void,
-    firstNumberHintRange: number,
-    setFirstNumberHintRange: React.Dispatch<React.SetStateAction<number>>,
-    secondNumberHintRange: number,
-    setSecondNumberHintRange: React.Dispatch<React.SetStateAction<number>>,
-}) {
+                                      }: HintPopupViewProps) {
     const {question, updateQuestion} = useQuestion();
     const inputRefAnswer = useRef<HTMLInputElement | null>(null); // Создаём ref для инпута
     const [isValid, setIsValid] = useState<boolean | null>(null);
@@ -236,7 +246,7 @@ export default function HintPopupView({
         if (!isValid) {
             setIsValid(null);
             getInputClass();
-            inputRefAnswer.current.value = ""
+            if (inputRefAnswer.current) inputRefAnswer.current.value = "";
         }
     }
 

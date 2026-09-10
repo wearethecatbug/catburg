@@ -39,8 +39,8 @@ export function TodoList() {
                                 onChange={() => toggleDone(t.id)}
                             />
                             <span style={{textDecoration: t.done ? "line-through" : "none"}}>
-                {t.text}
-              </span>
+                                {t.text}
+                            </span>
                         </label>
                         <button onClick={() => remove(t.id)}>Удалить</button>
                     </li>
@@ -81,13 +81,10 @@ export function Tabs() {
 //
 // Parent (создание/удаление/active)
 
-"use client";
-import * as React from "react";
-
-type Tab = { id: string; title: string; content: React.ReactNode };
+type ManagedTab = { id: string; title: string; content: React.ReactNode };
 
 export function TabsContainer() {
-    const [tabs, setTabs] = React.useState<Tab[]>([
+    const [tabs, setTabs] = React.useState<ManagedTab[]>([
         { id: "home", title: "Home", content: <div>Home content</div> },
         { id: "profile", title: "Profile", content: <div>Profile content</div> },
     ]);
@@ -138,9 +135,7 @@ export function TabsContainer() {
 }
 
 
-Child (только рендер и события)
-
-import * as React from "react";
+// Child (только рендер и события)
 
 type TabItem = { id: string; title: string };
 
@@ -184,8 +179,6 @@ export function TabsView({ tabs, activeId, onChange, onClose }: TabsViewProps) {
 
 
 // “Выбрать всё” (selectedIds)
-
-import * as React from "react";
 
 const ITEMS = [
     {id: "a", label: "A"},
@@ -238,11 +231,9 @@ export function SelectAll() {
     );
 }
 
-12) Сортировка списка (sortAsc)
-
-Лучший: хранить только флаг, сортировать копию
-
-import * as React from "react";
+// 12) Сортировка списка (sortAsc)
+//
+// Лучший: хранить только флаг, сортировать копию
 
 const NAMES = ["Zoe", "Ann", "Mike", "Bob"];
 
@@ -263,18 +254,17 @@ export function SortNames() {
     );
 }
 
-пагинация
-import * as React from "react";
+// пагинация
 
-const ITEMS = Array.from({length: 30}, (_, i) => `Item ${i + 1}`);
+const PAGINATION_ITEMS = Array.from({length: 30}, (_, i) => `Item ${i + 1}`);
 const PER_PAGE = 5;
-const MAX_PAGE = Math.ceil(ITEMS.length / PER_PAGE);
+const MAX_PAGE = Math.ceil(PAGINATION_ITEMS.length / PER_PAGE);
 
 export function Pagination() {
     const [page, setPage] = React.useState(1);
 
     const start = (page - 1) * PER_PAGE;
-    const visible = ITEMS.slice(start, start + PER_PAGE);
+    const visible = PAGINATION_ITEMS.slice(start, start + PER_PAGE);
 
     return (
         <div>
@@ -287,8 +277,7 @@ export function Pagination() {
     );
 }
 
-пауза
-import * as React from "react";
+// пауза
 
 export function IntervalCounter() {
     const [count, setCount] = React.useState(0);
@@ -316,13 +305,12 @@ export function IntervalCounter() {
 }
 
 
-добавить убрать
-import * as React from "react";
+// добавить убрать
 
-type Todo = { id: string; title: string; done: boolean };
+type TodoItem = { id: string; title: string; done: boolean };
 
 export function Todos() {
-    const [todos, setTodos] = React.useState<Todo[]>([]);
+    const [todos, setTodos] = React.useState<TodoItem[]>([]);
     const [title, setTitle] = React.useState("");
 
     function addTodo() {
@@ -375,7 +363,7 @@ export function Todos() {
 }
 
 type TodoRowProps = {
-    todo: Todo;
+    todo: TodoItem;
     onToggle: (id: string) => void;
     onRemove: (id: string) => void;
 };

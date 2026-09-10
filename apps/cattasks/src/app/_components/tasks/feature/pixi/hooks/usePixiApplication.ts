@@ -26,34 +26,43 @@ export function usePixiApplication() {
 
         return () => {
             isCancelled = true;
-            const app: any = applicationRef.current;
+            const app = applicationRef.current;
             try {
                 app?.stop?.();
             } catch {
+                // A partially initialized Pixi application may already be stopped.
             }
             try {
-                app && (app.resizeTo = undefined as any);
+                // Pixi's installed runtime setter accepts a falsey resize target to detach its listener,
+                // while its narrower declaration only admits Window or HTMLElement.
+                if (app) Reflect.set(app, 'resizeTo', undefined);
             } catch {
+                // Resize plugin cleanup is best-effort during unmount.
             }
             try {
                 app?.stage?.removeChildren?.();
             } catch {
+                // Stage cleanup is best-effort during unmount.
             }
             try {
                 app?.ticker?.stop?.();
             } catch {
+                // Ticker cleanup is best-effort during unmount.
             }
             try {
                 app?.renderer?.destroy?.();
             } catch {
+                // Renderer cleanup is best-effort during unmount.
             }
             try {
                 app?.canvas?.remove?.();
             } catch {
+                // Canvas cleanup is best-effort during unmount.
             }
             try {
                 app?.destroy?.(true, {children: true});
             } catch {
+                // Destroy may be called after an earlier cleanup step already released resources.
             }
             applicationRef.current = null;
             setIsReady(false);

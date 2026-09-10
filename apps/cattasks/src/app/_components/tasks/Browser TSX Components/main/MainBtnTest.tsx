@@ -26,10 +26,10 @@ export default function MainBtnTest({className, isDisabled}: HeaderBtnTestProps)
         const tests = Array.isArray(selectedTask?.tests) ? selectedTask.tests : [];
 
         const expectedFunctionName =
-            (selectedTask as any)?.exportName ??
-            (selectedTask as any)?.functionName ??
-            (selectedTask as any)?.expectedExport ??
-            (selectedTask as any)?.expectedFunctionName ??
+            selectedTask?.exportName ??
+            selectedTask?.functionName ??
+            selectedTask?.expectedExport ??
+            selectedTask?.expectedFunctionName ??
             undefined;
 
 
