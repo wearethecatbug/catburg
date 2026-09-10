@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
@@ -44,9 +44,10 @@ async function runSelectedTest(mode) {
       return 1;
     }
 
+    const aliasResolverPath = await createAliasResolver(temporaryOutputDirectory);
     const testResult = spawnSync(
       process.execPath,
-      ["--test", ...selectedTestFiles],
+      ["--require", aliasResolverPath, "--test", ...selectedTestFiles],
       { cwd: appDirectory, env: createTestEnvironment(), stdio: "inherit" },
     );
     exitCode = testResult.status ?? 1;
@@ -61,6 +62,31 @@ async function runSelectedTest(mode) {
   }
 
   return exitCode;
+}
+
+async function createAliasResolver(outputDirectory) {
+  const resolverPath = path.join(outputDirectory, "alias-resolver.cjs");
+  const aliases = [
+    ["@/components/", path.join(outputDirectory, "src", "app", "_components")],
+    ["@/", path.join(outputDirectory, "src")],
+  ];
+  const resolverSource = [
+    'const Module = require("node:module");',
+    'const path = require("node:path");',
+    `const aliases = ${JSON.stringify(aliases)};`,
+    "const originalResolveFilename = Module._resolveFilename;",
+    "Module._resolveFilename = function resolveConfiguredAlias(request, parent, isMain, options) {",
+    "  for (const [prefix, targetDirectory] of aliases) {",
+    "    if (request.startsWith(prefix)) {",
+    "      return originalResolveFilename.call(this, path.join(targetDirectory, request.slice(prefix.length)), parent, isMain, options);",
+    "    }",
+    "  }",
+    "  return originalResolveFilename.call(this, request, parent, isMain, options);",
+    "};",
+    "",
+  ].join("\n");
+  await writeFile(resolverPath, resolverSource, { encoding: "utf8", flag: "wx" });
+  return resolverPath;
 }
 
 function createTestEnvironment() {
