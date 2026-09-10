@@ -7,7 +7,7 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "types": ["node"],
-    "rootDir": "./tests/acceptance/harness"
+    "rootDir": "."
   },
   "include": ["tests/acceptance/harness/**/*.test.ts"],
   "exclude": ["node_modules"]

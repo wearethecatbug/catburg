@@ -47,7 +47,7 @@ async function runSelectedTest(mode) {
     const testResult = spawnSync(
       process.execPath,
       ["--test", ...selectedTestFiles],
-      { cwd: appDirectory, stdio: "inherit" },
+      { cwd: appDirectory, env: createTestEnvironment(), stdio: "inherit" },
     );
     exitCode = testResult.status ?? 1;
   } finally {
@@ -61,6 +61,15 @@ async function runSelectedTest(mode) {
   }
 
   return exitCode;
+}
+
+function createTestEnvironment() {
+  const appNodeModulesDirectory = path.join(appDirectory, "node_modules");
+  const existingNodePath = process.env.NODE_PATH;
+  return {
+    ...process.env,
+    NODE_PATH: [appNodeModulesDirectory, existingNodePath].filter(Boolean).join(path.delimiter),
+  };
 }
 
 function isKnownMode(mode) {
