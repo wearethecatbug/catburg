@@ -552,12 +552,28 @@ test("SC05 D02: public cat states use the approved contained WebP family and ret
     await controls.surrender.click();
     await inspect(...expected[4]);
   });
+  let interceptedIdleOptimizerRequests = 0;
+  const isIdleOptimizerRequest = (url) => {
+    let requestUrl;
+    try { requestUrl = new URL(url); } catch { return false; }
+    return requestUrl.origin === new URL(baseUrl).origin
+      && requestUrl.pathname === "/_next/image"
+      && requestUrl.searchParams.get("url") === "/safe-cat/cat-idle-768.webp";
+  };
   await withSession({ width: 390, height: 844 }, {
-    beforeGoto: async (page) => page.route("**/cat-idle-768.webp", (route) => route.abort()),
-    isExpectedLocalFailure: (url) => url.endsWith("/cat-idle-768.webp"),
+    beforeGoto: async (page) => page.route("**/_next/image?*", (route) => {
+      if (isIdleOptimizerRequest(route.request().url())) {
+        interceptedIdleOptimizerRequests += 1;
+        return route.abort();
+      }
+      return route.continue();
+    }),
+    isExpectedLocalFailure: isIdleOptimizerRequest,
+    isExpectedConsoleFailure: (message) => interceptedIdleOptimizerRequests > 0 && message === "Failed to load resource: net::ERR_FAILED",
   }, async ({ page }) => {
     const fallback = await exact(page.getByLabel("Cat idle", { exact: true }), "failed-asset fallback");
     const box = await logicalBox(fallback);
+    assert.ok(interceptedIdleOptimizerRequests >= 1, "the selected idle Next/Image optimizer request is actually intercepted");
     assert.deepEqual([Math.round(box.width), Math.round(box.height)], [208, 156], "failed idle asset preserves the approved mobile logical scene box");
     assert.equal(await fallback.isVisible(), true, "a failed primary asset retains the labelled cat scene instead of removing it");
   });

@@ -52,13 +52,13 @@
 @media (min-width:601px) and (max-width:1279px) { .safeGameScreen { min-height:max(810px, 100svh); } }
 @media (max-width:600px) { .safeGameScreen { min-height:863px; } }
 @media (max-width:600px) { .rewardRegion { top:145.5px; } .rewardRegion > div { align-items:flex-start; } }
-@media (max-width:600px) { .safeGameScreen .header { top:9px; } }
+@media (max-width:600px) { .safeGameScreen .header { top:4px; } .menuRegion { top:695px; } }
 @media (max-width:320px) { .rewardRegion { top:162.5px; } .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 11px); } }
-@media (min-width:321px) and (max-width:390px) { .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 4px); } }
+@media (min-width:321px) and (max-width:390px) { .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) + 1px); } }
 @media (min-width:601px) and (max-width:1279px) { .rewardRegion > div { align-items:flex-start; } .rewardRegion p { transform:translateX(calc(88px + 13vw)); } }
 @media (min-width:1280px) and (max-width:1919px) and (max-height:800px) { .safeGameScreen .header { top:max(15px, calc(50% - 416px)); } }
-/* The .90 stage begins at 601px: compensate the larger cat and controls so anchors do not jump. The won art needs its 24px offset for subtitle clearance; the compact tablet menu keeps its logical centre continuous at 685px. */
-@media (min-width:601px) and (max-width:1279px) { .safeGameScreen .header { top:9px; } .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 39px); } .catRegion [aria-label="Cat won"] { transform:translateY(24px); } .codeEntry { top:calc(420px + min(140px, (100vw - 24px) * .281) - 4px); } .menuRegion { top:685px; } }
+/* The .90 stage begins at 601px: compensate the larger cat and controls so anchors do not jump. The won art needs its 24px offset for subtitle clearance; compact controls have a fixed two-row geometry. */
+@media (min-width:601px) and (max-width:1279px) { .safeGameScreen .header { top:4px; } .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 39px); } .catRegion [aria-label="Cat won"] { transform:translateY(24px); } .codeEntry { top:calc(420px + min(140px, (100vw - 24px) * .281) - 4px); } .menuRegion { top:695px; } }
 @media (min-width:1280px) and (min-height:900px) {
   .safeRegion { top:calc(50% + 12px); } .catRegion { top:calc(50% - 258px); } .codeEntry { top:calc(50% + 202px); } .menuRegion { top:calc(50% - 103px); } .rewardRegion { top:calc(50% - 332px); }
 }
