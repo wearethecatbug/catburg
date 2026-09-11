@@ -49,6 +49,10 @@ test("F01: New game atomically clears a pending or earned hint and History while
       revealedMathAnswer: reset.revealedMathAnswer,
       earnedHint: reset.earnedHint,
       shownHint: reset.shownHint,
+      earnedHintFacts: reset.earnedHintFacts,
+      issuedHintPredicateIds: reset.issuedHintPredicateIds,
+      activeHintPredicateId: reset.activeHintPredicateId,
+      latestAwardedFactId: reset.latestAwardedFactId,
     },
     {
       roundId: initial.roundId + 1,
@@ -61,11 +65,15 @@ test("F01: New game atomically clears a pending or earned hint and History while
       revealedMathAnswer: null,
       earnedHint: null,
       shownHint: null,
+      earnedHintFacts: [],
+      issuedHintPredicateIds: [],
+      activeHintPredicateId: null,
+      latestAwardedFactId: null,
     },
   );
 });
 
-test("F02/F04: Show hint opens one challenge before reward, then re-displays exactly the earned parity fact", () => {
+test("F02/F04: Show hint opens a new eligible challenge after an award, and guesses require explicit close", () => {
   const initial = initialState(42);
   const challenge = createChallenge(() => 0, initial.roundId, "+", "f02");
   const opened = apply(initial, { type: "show-hint", challenge });
@@ -81,12 +89,18 @@ test("F02/F04: Show hint opens one challenge before reward, then re-displays exa
   });
   assert.equal(earned.hintChallenge, null);
   assert.equal(earned.earnedHint, "even");
+  assert.equal(earned.earnedHintFacts.length, 1);
 
-  const repeated = apply(earned, { type: "show-hint", challenge: createChallenge(() => 0.9, initial.roundId, "+", "f02-repeat") });
-  assert.equal(repeated.hintChallenge, null, "an earned hint must not open a second challenge");
+  const repeatedChallenge = createChallenge(() => 0.9, initial.roundId, "+", "f02-repeat");
+  const repeated = apply(earned, { type: "show-hint", challenge: repeatedChallenge });
+  assert.deepEqual(repeated.hintChallenge, repeatedChallenge, "an earned fact must not lock out the next eligible challenge");
   assert.equal(repeated.earnedHint, "even");
-  assert.equal(repeated.shownHint, "even");
-  assert.notEqual(repeated.shownHint, String(repeated.code), "the hint path must never disclose the exact code");
+  assert.equal(repeated.earnedHintFacts.length, 1);
+  const guardedGuess = apply(repeated, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  assert.deepEqual(guardedGuess.attempts, repeated.attempts, "a pending challenge guards guess submission");
+  const closed = apply(repeated, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: repeatedChallenge.challengeId });
+  const won = apply(closed, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  assert.equal(won.phase, "won", "guess submission resumes only after explicit challenge close");
 });
 
 test("F03: controlled randomness preserves exact inclusive addition defaults and round identity", () => {
@@ -164,12 +178,12 @@ function openReplacementWithCollidingAnswer() {
   // Deliberately retain the exact answer: round identity and arithmetic equality cannot identify a dialog instance.
   const replacement: HintChallenge = { ...original, challengeId: "challenge-64-b" };
   const opened = apply(initial, { type: "show-hint", challenge: original });
-  const replaced = apply(opened, {
-    type: "replace-hint-challenge",
+  const discarded = apply(opened, {
+    type: "close-hint-challenge",
     roundId: initial.roundId,
     challengeId: original.challengeId,
-    challenge: replacement,
   });
+  const replaced = apply(discarded, { type: "show-hint", challenge: replacement });
   return { initial, original, replacement, replaced };
 }
 
@@ -207,7 +221,7 @@ test("C15/F06: a stale Give Up callback cannot disclose the replacement math ans
   assert.deepEqual(afterStaleGiveUp, replaced);
 });
 
-test("C15/F06: a stale New Hint callback cannot replace the already replaced challenge", () => {
+test("C15/F06: a stale direct replacement callback cannot replace the explicitly renewed challenge", () => {
   const { initial, original, replacement, replaced } = openReplacementWithCollidingAnswer();
   const third: HintChallenge = { ...replacement, challengeId: "challenge-64-c" };
   const afterStaleReplacement = apply(replaced, {
@@ -275,7 +289,10 @@ test("C14/F03/F04: a same-round replacement changes only the unsolved challenge 
   const first = createChallenge(() => 0, initial.roundId, "+", "c14-replace-first");
   const replacement = createChallenge(() => 0.9, initial.roundId, "÷", "c14-replace-second");
   const opened = apply(initial, { type: "show-hint", challenge: first });
-  const replaced = apply(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: first.challengeId!, challenge: replacement });
+  const directReplacement = apply(opened, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: first.challengeId!, challenge: replacement });
+  assert.deepEqual(directReplacement, opened, "direct replacement is rejected until the original identity is explicitly discarded");
+  const discarded = apply(opened, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: first.challengeId! });
+  const replaced = apply(discarded, { type: "show-hint", challenge: replacement });
 
   assert.deepEqual(replaced.hintChallenge, replacement);
   assert.equal(replaced.earnedHint, null);
@@ -314,7 +331,8 @@ test("C14/F03/F04: Give Up reveals only this math answer, then a newly solved qu
   });
   assert.equal(abandonedAnswer.earnedHint, null, "the revealed question cannot be used to earn the safe hint");
 
-  const replaced = apply(gaveUp, { type: "replace-hint-challenge", roundId: initial.roundId, challengeId: abandoned.challengeId!, challenge: next });
+  const discarded = apply(gaveUp, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: abandoned.challengeId! });
+  const replaced = apply(discarded, { type: "show-hint", challenge: next });
   assert.deepEqual(replaced.hintChallenge, next);
   assert.equal(replaced.revealedMathAnswer, null, "New Hint clears the prior math answer disclosure");
   const earned = apply(replaced, { type: "submit-hint-answer", roundId: initial.roundId, challengeId: next.challengeId!, answer: next.expectedAnswer });
@@ -374,9 +392,9 @@ test("F03/F05: invalid or wrong answers keep the challenge open; closing earns n
 
 // Keep the expected shape static so optional-property regressions cannot mirror the state under test.
 const canonicalGameStateKeys = [
-  "attempts", "catReaction", "code", "earnedHint", "feedback", "hintChallenge",
-  "hintFeedback", "historyVisible", "input", "phase", "revealedCode",
-  "revealedMathAnswer", "roundId", "safeOpen", "shownHint",
+  "activeHintPredicateId", "attempts", "catReaction", "code", "earnedHint", "earnedHintFacts",
+  "feedback", "hintChallenge", "hintFeedback", "historyVisible", "input", "issuedHintPredicateIds",
+  "latestAwardedFactId", "phase", "revealedCode", "revealedMathAnswer", "roundId", "safeOpen", "shownHint",
 ];
 
 function assertCanonicalStateKeys(state: SafeGameState, description: string) {
@@ -428,9 +446,12 @@ test("closing a disclosed challenge clears all challenge-scoped state", () => {
   );
 });
 
-test("winning after an open rejected challenge clears its challenge state", () => {
+test("winning after an open rejected challenge requires explicit close and clears its challenge state", () => {
   const { initial, challenge, wrong } = openChallengeAndAnswerWrong(42, "a02-win");
-  const won = apply(wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  const guarded = apply(wrong, { type: "set-input", input: "42" }, { type: "submit-guess" });
+  assert.equal(guarded.phase, "playing", "an active challenge guards a correct guess too");
+  const closed = apply(wrong, { type: "close-hint-challenge", roundId: initial.roundId, challengeId: challenge.challengeId });
+  const won = apply(closed, { type: "set-input", input: "42" }, { type: "submit-guess" });
   assert.equal(won.phase, "won");
   assert.deepEqual(
     { hintChallenge: won.hintChallenge, hintFeedback: won.hintFeedback, revealedMathAnswer: won.revealedMathAnswer },

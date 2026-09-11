@@ -8,7 +8,7 @@ export type SafeHint = "even" | "odd";
 export type HintOperator = "+" | "-" | "×" | "÷";
 
 export interface HintChallenge {
-  // Both identities travel with answers so a replaced question cannot accept stale work.
+  // Both identities travel with answers so stale work cannot earn a fact.
   roundId: number;
   challengeId: string;
   operator: HintOperator;
@@ -34,6 +34,10 @@ export interface SafeGameState {
   revealedMathAnswer: number | null;
   earnedHint: SafeHint | null;
   shownHint: SafeHint | null;
+  earnedHintFacts: import("./earned-hint-facts").EarnedHintFact[];
+  issuedHintPredicateIds: string[];
+  activeHintPredicateId: string | null;
+  latestAwardedFactId: string | null;
 }
 
 export type SafeGameAction =
@@ -42,7 +46,8 @@ export type SafeGameAction =
   | { type: "submit-guess" }
   | { type: "surrender" }
   | { type: "toggle-history" }
-  | { type: "show-hint"; challenge: HintChallenge }
+  // New callers attach the public predicate identity; omission preserves existing callers during migration.
+  | { type: "show-hint"; challenge: HintChallenge; predicateId?: string }
   | { type: "replace-hint-challenge"; roundId: number; challengeId: string; challenge: HintChallenge }
   | { type: "give-up-hint-challenge"; roundId: number; challengeId: string }
   | { type: "submit-hint-answer"; roundId: number; challengeId: string; answer: number | null }
