@@ -46,14 +46,19 @@ export function selectEarnedHintStatusText(state: SafeGameState): string | null 
     ? null
     : readModel.facts.find((fact) => fact.id === readModel.latestAwardedFactId) ?? null;
   const legacyHint = latestFact ? null : selectHintText(state.shownHint);
-  const exhausted = state.phase === "playing"
-    && !state.hintChallenge
-    && chooseNextHintPredicate({
-      facts: readModel.facts,
-      wrongAttempts: state.attempts,
-      issuedPredicateIds: state.issuedHintPredicateIds,
-    }) === null;
+  const exhausted = selectHintsExhausted(state);
   const messages = [latestFact ? formatEarnedFact(latestFact) : legacyHint, exhausted ? "No further hints are available." : null]
     .filter((message): message is string => message !== null);
   return messages.length ? messages.join(" ") : null;
+}
+
+/** Availability uses only public round progress; the secret code never affects the menu message. */
+export function selectHintsExhausted(state: SafeGameState): boolean {
+  return state.phase === "playing"
+    && !state.hintChallenge
+    && chooseNextHintPredicate({
+      facts: state.earnedHintFacts,
+      wrongAttempts: state.attempts,
+      issuedPredicateIds: state.issuedHintPredicateIds,
+    }) === null;
 }

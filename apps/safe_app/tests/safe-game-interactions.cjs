@@ -121,6 +121,25 @@ async function waitForViewportResizeRender(page) {
   await page.evaluate(() => { delete window.__safeCatResizeRender; });
 }
 
+async function waitForStableVisualGeometry(page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all([...document.images].map((image) => image.complete ? image.decode().catch(() => {}) : new Promise((resolve) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    })));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
+async function settleViewportAtTop(page) {
+  await page.evaluate(async () => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    scrollTo(0, 0);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+
 function contrastRatio(foreground, background) {
   function relativeLuminance(color) {
     const channels = color.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number).map((channel) => {
@@ -786,16 +805,15 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
     await controls.hint.click();
     await visibleQuestionAnswer(page);
     assert.match(await lamp.getAttribute("src"), /hint-lamp-on-96\.webp$/, "an accepted current fact immediately derives lamp-on");
+    await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
     await controls.hint.hover();
     await page.clock.runFor(150);
     const card = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "stored-hint card");
     assert.equal(await card.getByRole("listitem").count(), 1, "the card exposes the earned fact once");
-    const cardBox = await card.boundingBox();
     await page.clock.pauseAt(await page.evaluate(() => Date.now()));
-    await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+    await card.hover();
     await page.clock.runFor(250);
     assert.equal(await card.isVisible(), true, "moving from trigger into the card cancels its pending leave close");
-    await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); });
     await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     await page.mouse.move(0, 0);
     await page.clock.runFor(199);
@@ -879,11 +897,13 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
     const reward = await exact(page.getByLabel("New hint reward", { exact: true }), "newly-earned reward presentation");
     const announcement = await exact(page.locator('[role="status"][aria-live="polite"][aria-atomic="true"]'), "single polite reward announcement");
     const firstText = await reward.innerText();
-    assert.equal(await announcement.innerText(), `New hint earned: ${firstText}`, "reward and one polite announcement contain the exact same public fact");
+    assert.equal(await announcement.innerText(), `Earned hint: ${firstText}`, "reward and one polite announcement contain the exact same public fact");
     await page.clock.runFor(4749);
     assert.equal(await reward.isVisible(), true, "reward remains through 4.75 seconds");
     await page.clock.runFor(501);
     assert.equal(await reward.count(), 0, "reward clears at 5000ms plus the approved tolerance");
+    assert.equal(await announcement.count(), 1, "the one polite atomic hint status persists after its transient reward closes");
+    assert.equal(await announcement.innerText(), `Earned hint: ${firstText}`, "transient reward expiry does not erase its announced earned fact");
     await controls.hint.focus();
     const stored = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "stored fact after transient expiry");
     assert.equal(await stored.getByRole("listitem").count(), 1, "expiry does not remove the persisted fact");
@@ -904,11 +924,126 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
   });
 });
 
+test("SC05 provider: one persistent atomic hint status and stored-card focus races stay current-round only", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await gameControls(page);
+    assert.equal(await controls.newRound.locator("xpath=..").getByRole("button").count(), 4, "the menu remains a four-button grid without an extra hint-status action");
+    const announcement = await exact(page.locator('[role="status"][aria-live="polite"][aria-atomic="true"]'), "persistent polite atomic hint status");
+    assert.deepEqual(await announcement.evaluate((element) => [element.getAttribute("role"), element.getAttribute("aria-live"), element.getAttribute("aria-atomic")]), ["status", "polite", "true"], "hint feedback exposes one persistent polite atomic live region");
+    await controls.hint.click();
+    await visibleQuestionAnswer(page);
+    const reward = await exact(page.getByLabel("New hint reward", { exact: true }), "single earned hint reward");
+    const earnedFact = await reward.innerText();
+    assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 1, "one earned fact creates one reward presentation rather than duplicate reward statuses");
+    assert.equal(await announcement.innerText(), `Earned hint: ${earnedFact}`, "the sole persistent status announces the current earned fact");
+
+    await controls.hint.focus();
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "focus-opened stored card");
+    await page.keyboard.press("Tab");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "Tab focus leave closes the stored card immediately through its public blur behavior");
+
+    await controls.hint.focus();
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "reopened stored card for Escape");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "Escape closes the stored card");
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Show hint", "Escape restores focus to the stored-card trigger");
+
+    await controls.hint.hover();
+    await page.clock.runFor(150);
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "hover-opened stored card");
+    await page.mouse.move(0, 0);
+    await page.clock.runFor(100);
+    await controls.hint.hover();
+    await page.clock.runFor(200);
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "re-entered stored card after obsolete leave deadline");
+
+    await page.mouse.move(0, 0);
+    await controls.newRound.click();
+    await page.clock.runFor(500);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "current-round reset cancels pending local card state instead of reopening stale hints");
+    assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 0, "current-round reset also clears the stale reward presentation");
+    assert.equal(await announcement.count(), 1, "reset retains one persistent hint-status owner without creating duplicates");
+  });
+});
+
+test("SC05 provider: exhausted hints retain their single public status instead of creating another reward channel", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    const controls = await gameControls(page);
+    const announcement = await exact(page.locator('[role="status"][aria-live="polite"][aria-atomic="true"]'), "exhaustion status owner");
+    let exhausted = false;
+    for (let attempt = 1; attempt <= 12; attempt += 1) {
+      const rewardsBeforeClick = await page.getByLabel("New hint reward", { exact: true }).count();
+      await controls.hint.click();
+      const dialog = page.getByRole("dialog", { name: "Solve a quick math question" });
+      if (await dialog.count()) {
+        await visibleQuestionAnswer(page);
+        continue;
+      }
+      if (/no further hints/i.test(await announcement.innerText())) {
+        exhausted = true;
+        assert.equal(await dialog.count(), 0, "the exhausted final Show hint activation does not open another challenge");
+        assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), rewardsBeforeClick, "the exhausted final Show hint activation adds no reward");
+        break;
+      }
+      assert.fail(`Show hint attempt ${attempt} neither opened a public challenge nor announced exhaustion`);
+    }
+    assert.equal(exhausted, true, "a bounded public Show hint flow eventually announces exhaustion");
+    assert.equal(await page.locator('[role="status"][aria-live="polite"][aria-atomic="true"]').count(), 1, "exhaustion does not add a second live status");
+  });
+});
+
+test("SC05 provider: current-round reset cancels a pending touch card before it can reopen", async () => {
+  await withSession({ width: 390, height: 844 }, { hasTouch: true, random: 0.041 }, async ({ page, context }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await earnFirstHint(page);
+    const hintBox = await controls.hint.boundingBox();
+    assert.ok(hintBox, "touch reset checks a rendered Show hint target");
+    const client = await context.newCDPSession(page);
+    const touch = { x: Math.round(hintBox.x + hintBox.width / 2), y: Math.round(hintBox.y + hintBox.height / 2), id: 17 };
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [touch] });
+    await page.clock.runFor(300);
+    await controls.newRound.click();
+    await page.clock.runFor(500);
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "reset prevents an old touch timer from reopening a former-round stored card");
+  });
+});
+
+test("SC05 provider: reward row retains 12px narrow gutters while copy can reflow", async () => {
+  for (const [width, height] of [[320, 600], [390, 844]]) await withSession({ width, height }, { random: 0.041 }, async ({ page }) => {
+    await earnFirstHint(page);
+    const reward = await exact(page.getByLabel("New hint reward", { exact: true }), `${width}px earned reward row`);
+    const copy = await exact(reward.locator("p"), `${width}px reward copy`);
+    const [rewardBox, copyBox] = await Promise.all([reward.boundingBox(), copy.boundingBox()]);
+    assert.ok(rewardBox && copyBox, `${width}px reward row and copy render`);
+    assert.ok(rewardBox.x >= 12 && rewardBox.x + rewardBox.width <= width - 12, `${width}px reward row itself remains inside the 12px viewport gutters`);
+    assert.ok(copyBox.width > 0 && copyBox.x >= rewardBox.x && copyBox.x + copyBox.width <= rewardBox.x + rewardBox.width, `${width}px reward copy may shrink or wrap within its row without escaping it`);
+  });
+});
+
+test("SC05 provider: reduced-motion safe open and close never animate", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const controls = await gameControls(page);
+    const closed = await exact(page.getByLabel("Safe closed", { exact: true }), "reduced-motion closed safe");
+    assert.equal(await closed.evaluate((element) => getComputedStyle(element).animationName), "none", "reduced-motion closed safe has no animation name");
+    await controls.code.fill("42");
+    await controls.submit.click();
+    const opened = await exact(page.getByLabel("Safe opened", { exact: true }), "reduced-motion opened safe");
+    assert.equal(await opened.evaluate((element) => getComputedStyle(element).animationName), "none", "reduced-motion opened safe has no animation name");
+    await controls.newRound.click();
+    const resetClosed = await exact(page.getByLabel("Safe closed", { exact: true }), "reduced-motion reset safe");
+    assert.equal(await resetClosed.evaluate((element) => getComputedStyle(element).animationName), "none", "reduced-motion reset safe has no animation name");
+  });
+});
+
 test("SC05 D09-D11: approved protected zones remain reachable and non-overlapping at every viewport", async () => {
   for (const [width, height] of [[320, 600], [390, 844], [768, 800], [1280, 600], [1440, 900]]) {
     await withSession({ width, height }, { random: 0.041 }, async ({ page }) => {
       const controls = await earnFirstHint(page);
-      await page.evaluate(() => scrollTo(0, 0));
+      await waitForStableVisualGeometry(page);
+      await settleViewportAtTop(page);
       const rewardBubble = await exact(page.getByLabel("New hint reward", { exact: true }).locator("p"), `${width}x${height} reward speech bubble`);
       const safeScene = page.getByLabel("Safe closed", { exact: true });
       const [heading, instruction, safeBox, catBox, form, bubble, safeAlpha, catAlpha] = await Promise.all([
@@ -1188,6 +1323,7 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
   for (const [width, height] of [[321, 838], [547, 838], [599, 838], [600, 838], [601, 838], [605, 838], [768, 800], [1024, 800]]) await withSession({ width, height }, {}, async ({ page }) => {
     const controls = await gameControls(page); const all = [controls.newRound, controls.surrender, controls.hint, controls.history];
     await page.evaluate(() => scrollTo(0, 0));
+    await waitForStableVisualGeometry(page);
     const boxes = [];
     for (const control of all) {
       await control.scrollIntoViewIfNeeded();

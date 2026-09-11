@@ -79,3 +79,4 @@
 @media (max-width:390px) { .dial { height:76px; width:76px; } }
 @media (max-width:320px) { .dial { height:68px; width:68px; } }
 .safeOpen,.safeClose { background:none; }
+@media (prefers-reduced-motion: reduce) { .safeOpen,.safeClose { animation:none; } }
