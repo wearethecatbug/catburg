@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SafeGameProvider } from "../model/safe-game-provider";
 import { useSafeGameContext } from "../model/safe-game-context";
 import { selectTerminalPresentation } from "../model/game.selectors";
@@ -23,7 +23,7 @@ function SafeGameScreenContent() {
   const previousAward = useRef<string | null>(null); const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // An older timeout may not clear a reward that has already been replaced by a newer fact.
   useEffect(() => { const id = state.latestAwardedFactId; if (id && id !== previousAward.current) { const fact = state.earnedHintFacts.find((item) => item.id === id) ?? null; if (fact) { if (timer.current) clearTimeout(timer.current); setReward(fact); timer.current = setTimeout(() => setReward((current) => current?.id === fact.id ? null : current), 5000); } } previousAward.current = id; }, [state.latestAwardedFactId, state.earnedHintFacts]);
-  useEffect(() => { if (timer.current) clearTimeout(timer.current); setReward(null); previousAward.current = null; }, [state.roundId]);
+  useLayoutEffect(() => { if (timer.current) clearTimeout(timer.current); setReward(null); previousAward.current = null; }, [state.roundId]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const latestFact = state.latestAwardedFactId ? state.earnedHintFacts.find((fact) => fact.id === state.latestAwardedFactId) ?? null : null;
 

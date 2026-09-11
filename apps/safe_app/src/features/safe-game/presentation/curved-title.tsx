@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import styles from "./curved-title.module.css";
 
 const canonical = 4;
@@ -9,7 +9,7 @@ const frames = [[0, 4], [130, 76], [288, -30], [439, 32], [569, 0], [720, 4]] as
 export function CurvedTitle({ run }: { run: number }) {
   const [controlY, setControlY] = useState(canonical);
   const timer = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     timer.current.forEach(clearTimeout);
     setControlY(canonical);
     if (!run || matchMedia("(max-width: 390px), (prefers-reduced-motion: reduce)").matches) return;

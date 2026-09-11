@@ -31,6 +31,14 @@ async function withSession(viewport, options, executeCase) {
       if (message.type() === "error" && !options.isExpectedConsoleFailure?.(message.text()) && !options.isExpectedLocalFailure?.(message.text())) monitorFailures.push(`console ${message.text()}`);
     });
     page.on("requestfailed", (request) => {
+      // A superseded responsive image request may be cancelled while the cat changes state.
+      const requestUrl = new URL(request.url());
+      const isSupersededSafeCatImage = request.failure()?.errorText === "net::ERR_ABORTED"
+        && request.resourceType() === "image"
+        && requestUrl.origin === new URL(baseUrl).origin
+        && requestUrl.pathname === "/_next/image"
+        && requestUrl.searchParams.get("url")?.startsWith("/safe-cat/");
+      if (isSupersededSafeCatImage) return;
       if (request.url().startsWith(baseUrl) && !options.isExpectedLocalFailure?.(request.url())) monitorFailures.push(`failed ${request.url()}`);
     });
     page.on("response", (response) => {
@@ -889,6 +897,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
     await page.clock.runFor(1000);
     assert.equal(await laterReward.isVisible(), true, "the earlier expiry cannot erase the newer reward");
     await controls.newRound.click();
+    await page.clock.runFor(0);
     assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 0, "New game invalidates current reward immediately");
     await page.clock.runFor(6000);
     assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 0, "stale timer callbacks cannot resurrect former-round reward state");
@@ -941,11 +950,13 @@ test("SC05 D10: New game alone runs the 720ms title curve, restarts cleanly, and
     const keyframes = [[130, 76], [288, -30], [439, 32], [569, 0]];
     for (const [elapsed, expectedY] of keyframes) {
       await controls.newRound.click();
+      await page.clock.runFor(0);
       assert.equal(await curve.getAttribute("d"), canonical, "each New game begins the replacement sequence at canonical");
       await page.clock.runFor(elapsed);
       approximatelyEqual(titleControlPointY(await curve.getAttribute("d")), expectedY, 4, `approved damped keyframe near ${elapsed}ms`);
     }
     await controls.newRound.click();
+    await page.clock.runFor(0);
     assert.equal(await curve.getAttribute("d"), canonical, "rapid New game cancels and restarts from canonical");
     await page.clock.runFor(721);
     assert.equal(await curve.getAttribute("d"), canonical, "one 720ms sequence settles exactly at canonical");
@@ -1177,12 +1188,13 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
   for (const [width, height] of [[321, 838], [547, 838], [599, 838], [600, 838], [601, 838], [605, 838], [768, 800], [1024, 800]]) await withSession({ width, height }, {}, async ({ page }) => {
     const controls = await gameControls(page); const all = [controls.newRound, controls.surrender, controls.hint, controls.history];
     await page.evaluate(() => scrollTo(0, 0));
-    const boxes = await Promise.all(all.map(async (control) => {
+    const boxes = [];
+    for (const control of all) {
       await control.scrollIntoViewIfNeeded();
       const box = await control.boundingBox(); const scroll = await page.evaluate(() => scrollY);
       assert.ok(box.x >= 0 && box.x + box.width <= width && box.y >= 0 && box.y + box.height <= height, `${width}px ${await control.innerText()} is reachable`);
-      return { ...box, y: box.y + scroll };
-    }));
+      boxes.push({ ...box, y: box.y + scroll });
+    }
     for (let index = 0; index < boxes.length; index += 1) for (let other = index + 1; other < boxes.length; other += 1) assert.equal(intersects(boxes[index], boxes[other]), false, `${width}px menu buttons ${index}/${other} do not intersect`);
     const menu = controls.newRound.locator("xpath=.."); assert.ok((await menu.boundingBox()).width <= width, `${width}px menu container has no lateral overflow`);
   });

@@ -52,7 +52,7 @@
 }
 @media (min-width:601px) and (max-width:1279px) { .safeGameScreen { min-height:max(810px, 100svh); } }
 @media (max-width:600px) { .safeGameScreen { min-height:863px; } }
-@media (max-width:600px) { .rewardRegion { top:137.5px; } .rewardRegion > div { align-items:flex-start; } }
+@media (max-width:600px) { .rewardRegion { top:145.5px; } .rewardRegion > div { align-items:flex-start; } }
 @media (max-width:600px) { .safeGameScreen .header { top:9px; } }
 @media (max-width:320px) { .rewardRegion { top:162.5px; } .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 11px); } }
 @media (min-width:321px) and (max-width:390px) { .catRegion { top:calc(365px - min(230px, (100vw - 24px) * .46) - 4px); } }
