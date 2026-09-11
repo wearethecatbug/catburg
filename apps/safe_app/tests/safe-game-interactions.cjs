@@ -139,19 +139,23 @@ test("deterministic code 42 opens without rendering the secret", async () => {
   });
 });
 
-test("abandonment earns no parity and a solved even question repeats one fact", async () => {
+test("abandonment earns no fact and a solved even question announces a fresh next hint", async () => {
   await withSession({ width: 1175, height: 1098 }, { random: 0.041 }, async ({ page }) => {
     const hint = await openHintDialog(page);
     await page.getByRole("button", { name: "Give Up Hint", exact: true }).click();
     assert.equal(await hint.answer.isDisabled(), true);
     assert.equal(await page.getByText(/even|odd/i).count(), 0, "abandonment yields no safe parity fact");
     await page.getByRole("button", { name: "New Hint", exact: true }).click();
-    await hint.answer.fill(String(solveVisibleQuestion(await hint.dialog.locator("label[for='hint-answer']").innerText())));
+    const solvedQuestion = await hint.dialog.locator("label[for='hint-answer']").innerText();
+    await hint.answer.fill(String(solveVisibleQuestion(solvedQuestion)));
     await page.getByRole("button", { name: "Send answer", exact: true }).click();
-    assert.equal(await page.getByText(/even|odd/i).count(), 0, "D01 keeps a solved fact hidden until repeat display");
+    await exact(page.getByRole("status").getByText("Earned hint: The code is even.", { exact: true }), "immediate earned even fact status");
+    await hint.dialog.waitFor({ state: "hidden" });
     await hint.hint.click();
-    await exact(page.getByText("The code is even.", { exact: true }), "repeat-only even fact");
-    assert.equal(await page.getByRole("dialog").count(), 0, "an earned fact opens no additional question");
+    const freshDialog = await exact(page.getByRole("dialog", { name: "Solve a quick math question" }), "fresh math challenge dialog");
+    const freshAnswer = freshDialog.locator("#hint-answer");
+    await exact(freshAnswer, "fresh math challenge answer input");
+    assert.equal(await freshAnswer.isEnabled(), true, "a later Show hint creates a usable fresh challenge instead of replaying the awarded fact");
   });
 });
 
