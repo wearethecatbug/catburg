@@ -1,0 +1,6 @@
+.title { color:#3e3b50; font:800 44px/1 "Chewy","Trebuchet MS",cursive; height:72px; margin:0; position:relative; text-align:center; }
+.title svg { display:block; height:72px; margin:0 auto; max-width:100%; overflow:visible; width:400px; }
+.title text { fill:#3e3b50; font-family:"Chewy","Trebuchet MS",cursive; font-size:44px; font-weight:800; letter-spacing:.3px; paint-order:stroke fill; stroke:#3e3b50; stroke-width:1px; }
+.marks { fill:none; stroke:#a285f0; stroke-linecap:round; stroke-width:3.5px; }
+.visuallyHidden { border:0; clip-path:inset(50%); height:1px; margin:-1px; overflow:hidden; padding:0; position:absolute; white-space:nowrap; width:1px; }
+@media (max-width:390px) { .title { font-size:38px; }.title text { font-size:38px; } }

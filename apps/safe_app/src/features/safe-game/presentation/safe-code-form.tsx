@@ -8,8 +8,8 @@ export function SafeCodeForm({ inputRef, revealedCode }: { inputRef: RefObject<H
   function submit() { if (!terminal) submitGuess(); }
   return <form className={styles.codeEntry} onSubmit={(event) => { event.preventDefault(); submit(); }}>
     <label className={styles.visuallyHidden} htmlFor="safe-code">Safe code</label>
-    <input className={styles.codeInput} id="safe-code" ref={inputRef} inputMode="numeric" autoComplete="off" value={state.input} disabled={terminal} aria-describedby="safe-feedback" onChange={(event) => changeGuessInput(event.target.value)} />
-    <button className={styles.codeInputButton} disabled={terminal} type="submit">OK</button>
+    <div className={styles.shell}><input className={styles.codeInput} id="safe-code" ref={inputRef} inputMode="numeric" autoComplete="off" placeholder="Enter a number..." value={state.input} disabled={terminal} aria-invalid={state.feedback === "invalid" || state.feedback === "wrong" || undefined} aria-describedby="safe-feedback" onChange={(event) => changeGuessInput(event.target.value)} />
+    <button className={styles.codeInputButton} disabled={terminal} type="submit">OK</button></div>
     <p id="safe-feedback" className={styles.feedback} role="status">
       {state.feedback === "invalid" && "Enter a whole number from 1 to 1000."}
       {state.feedback === "wrong" && "Incorrect code, try again."}

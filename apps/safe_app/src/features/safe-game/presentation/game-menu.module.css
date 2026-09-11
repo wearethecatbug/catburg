@@ -1,36 +1,7 @@
-.menu { display: grid; gap: 10px; }
-
-.menuButton {
-    border: 0;
-    border-radius: 10px;
-    cursor: pointer;
-    color: #202020;
-    font-family: "Audiowide", sans-serif;
-    font-size: 20px;
-    min-height: 44px;
-    padding: 10px 16px;
-    width: 200px;
-}
-
-.menuButton:disabled { cursor: not-allowed; filter: grayscale(100%); }
-.menuButton:not(:disabled):hover { filter: brightness(90%); }
-.menuButton:focus-visible { outline: 3px solid white; outline-offset: 3px; }
-.giveUp { background-color: #8cd3d5; }
-.newGame { background-color: #a0e083; }
-.log { background-color: #fdab7f; }
-.hint { background-color: #c27ffd; }
-
-@keyframes blink {
-    0% {
-        background-color: #a0e083;
-    }
-
-    50% {
-        background-color: #ffcc00;
-    }
-
-    100% {
-        background-color: #a0e083;
-    }
-
-}
+.menu { box-sizing:border-box; display:grid; gap:12px; max-width:100%; width:260px; }.hintWrap { min-width:0; position:relative; }.hintWrap > section { position:absolute; right:0; top:calc(100% + 16px); }
+.menuButton { align-items:center; background:linear-gradient(135deg,var(--btn-top),var(--btn-bottom)); border:3px solid #fff; border-radius:24px; box-shadow:0 5px 14px #59475f26,inset 0 1px 0 #ffffff66; box-sizing:border-box; color:#454158; cursor:pointer; display:flex; font:600 20px "Nunito","Segoe UI",system-ui,sans-serif; gap:18px; min-height:64px; min-width:0; padding:12px 22px; text-align:left; transition:transform 160ms ease,box-shadow 160ms ease,filter 160ms ease; width:100%; }.menuButton svg { flex:0 0 30px; height:30px; width:30px; }.menuButton img { flex:0 0 20px; height:20px; margin-left:auto; width:20px; }.newGame { --btn-top:#d9f8dc; --btn-bottom:#bfedc4; }.giveUp { --btn-top:#d6ebff; --btn-bottom:#b9daf5; }.hint { --btn-top:#e7dcff; --btn-bottom:#d8c7f8; }.log { --btn-top:#ffe7d2; --btn-bottom:#ffd4b2; }
+.menuButton:focus-visible { outline:3px solid #8063d2; outline-offset:4px; }.menuButton:active:not(:disabled) { box-shadow:0 2px 5px #59475f26,inset 0 2px 3px #59475f0d; transform:translateY(1px); }.menuButton:disabled { box-shadow:none; cursor:not-allowed; opacity:.5; }
+@media (hover:hover) and (pointer:fine) { .menuButton:hover:not(:disabled) { box-shadow:0 9px 20px #59475f33; filter:brightness(1.025); transform:translateY(-2px); }.menuButton:active:not(:disabled) { box-shadow:0 2px 5px #59475f26,inset 0 2px 3px #59475f0d; transform:translateY(1px); } }
+@media (max-width:600px) { .menu { max-width:420px; width:100%; }.menuButton { font-size:18px; }.hintWrap > section { left:0; right:auto; transform:none; } }
+@media (min-width:1280px) { .hintWrap > section { right:-20px; top:calc(200% + 36px); } }
+@media (prefers-reduced-motion:reduce) { .menuButton { transition:none; }.menuButton:hover:not(:disabled),.menuButton:active:not(:disabled) { transform:none; } }

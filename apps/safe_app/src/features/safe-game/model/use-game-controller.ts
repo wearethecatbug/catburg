@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { chooseNextHintPredicate, createHintChallenge, createSafeGameState, generateSafeCode, reduceSafeGame } from "../domain";
 import type { HintOperator, SafeGameAction, SafeGameState } from "../domain";
 import { createChallengeId } from "./challenge-id";
@@ -20,6 +20,8 @@ export function useGameController() {
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
   const newGameButtonRef = useRef<HTMLButtonElement | null>(null);
   const newHintButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [dialAngle, setDialAngle] = useState(0);
+  const [titleRun, setTitleRun] = useState(0);
 
   // Browser callbacks consult committed state, never a speculative render's snapshot.
   useLayoutEffect(() => { stateRef.current = state; }, [state]);
@@ -59,6 +61,8 @@ export function useGameController() {
   function startNewRound() {
     clearPendingHoverTimer();
     pendingFocusRef.current = "input";
+    setDialAngle(0);
+    setTitleRun((run) => run + 1);
     dispatch({ type: "new-round", code: generateSafeCode(Math.random) });
   }
 
@@ -68,6 +72,12 @@ export function useGameController() {
   }
 
   function changeGuessInput(input: string) {
+    const previous = currentState().input;
+    if (input !== previous) {
+      // Removing a digit reverses the dial; clearing the field returns it to its neutral angle.
+      if (input === "") setDialAngle(0);
+      else setDialAngle((angle) => input.length < previous.length ? (angle + 324) % 360 : (angle + 36) % 360);
+    }
     dispatch({ type: "set-input", input });
   }
 
@@ -170,6 +180,8 @@ export function useGameController() {
     historyButtonRef,
     newGameButtonRef,
     newHintButtonRef,
+    dialAngle,
+    titleRun,
     startNewRound,
     submitGuess,
     changeGuessInput,

@@ -58,7 +58,14 @@ export function reduceSafeGame(state: SafeGameState, action: SafeGameAction): Sa
       }
     }
     case "set-input":
-      return { ...state, input: action.input };
+      // A real edit clears transient validation feedback and restores the neutral cat reaction.
+      if (action.input === state.input) return state;
+      return {
+        ...state,
+        input: action.input,
+        feedback: state.feedback === "wrong" || state.feedback === "invalid" ? "none" : state.feedback,
+        catReaction: "idle",
+      };
     case "set-cat-hover":
       return { ...state, catReaction: action.active ? "hover" : "idle" };
     case "surrender":

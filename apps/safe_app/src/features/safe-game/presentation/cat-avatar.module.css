@@ -1,19 +1,10 @@
-.catContainer{
-    background-image: var(--cat-image);
-    float: left;
-    width: 128px;
-    height: 128px;
-    background: var(--cat-image) no-repeat;
-    background-size: contain;
-    animation: fadeIn 1.6s ease-in-out 0s;
-    min-width: 100px;
-    min-height: 100px;
-    max-width: 300px;
-    max-height: 300px;
-    z-index: 1000;
-    display: flex;
-    position: static;
-}
+.catContainer { background: transparent; border: 0; cursor: pointer; height: 204px; padding: 0; position: relative; width: 272px; }
+.art { display:block; height:100%; position:relative; width:100%; }.art img { object-fit:contain; object-position:center bottom; }
+.surrendered .art img { transform:scale(1.3) translateY(13.5%); transform-origin:center bottom; }
+.hearts { inset: 0; pointer-events: none; position: absolute; }
+.hearts i { animation:heart var(--duration) cubic-bezier(.22,.61,.36,1) forwards; color:#ff5d9c; font-size:22px; font-style:normal; left:calc(var(--origin-x) + var(--x)); position:absolute; text-shadow:0 1px 0 rgb(255 246 251 / .9), 0 0 5px rgb(255 93 156 / .4); top:calc(var(--origin-y) + var(--y)); }
+@keyframes heart { 0% { opacity:0; transform:translateY(0) scale(.86) } 30% { opacity:1 } 100% { opacity:0; transform:translateY(calc(var(--rise) * -1)) scale(.96) } }
+@media (prefers-reduced-motion: reduce) { .hearts i { animation:heartFade 700ms linear forwards; } @keyframes heartFade { 0% { opacity:.2; } 50% { opacity:.6; } 100% { opacity:0; } } }
 
 .catContainerPlaceholder {
     width: 128px;
@@ -22,11 +13,7 @@
 }
 
 @media (max-width: 600px) {
-    .catContainer {
-        float: none;
-        position: static;
-        margin: 0;
-    }
+    .catContainer { height:156px; width:208px; } .hearts i { font-size:18px; }
 }
 
 @keyframes fadeIn {
