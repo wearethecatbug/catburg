@@ -92,6 +92,20 @@ async function dragHistoryHandle(page, handle, destination) {
   await page.mouse.up();
 }
 
+async function armViewportResizeRender(page) {
+  await page.evaluate(() => {
+    window.__safeCatResizeRender = false;
+    window.addEventListener("resize", () => {
+      requestAnimationFrame(() => requestAnimationFrame(() => { window.__safeCatResizeRender = true; }));
+    }, { once: true });
+  });
+}
+
+async function waitForViewportResizeRender(page) {
+  await page.waitForFunction(() => window.__safeCatResizeRender === true, undefined, { timeout: 1000 });
+  await page.evaluate(() => { delete window.__safeCatResizeRender; });
+}
+
 function contrastRatio(foreground, background) {
   function relativeLuminance(color) {
     const channels = color.match(/\d+(?:\.\d+)?/g).slice(0, 3).map(Number).map((channel) => {
@@ -242,7 +256,9 @@ test("History mouse and touch dragging, bounds, internal scrolling, reopen, rese
     assert.ok(scrollMetrics.scrollHeight > scrollMetrics.clientHeight, "populated History has internal overflow before no-drag check");
     assert.ok(scrollMetrics.scrollTop > 0, "internal History scroll position changes");
     assert.deepEqual(await panel.boundingBox(), movedBox, "internal scrolling does not drag the panel");
+    await armViewportResizeRender(page);
     await page.setViewportSize({ width: 320, height: 844 });
+    await waitForViewportResizeRender(page);
     const resizedBox = await panel.boundingBox();
     assert.ok(resizedBox.x >= 0 && resizedBox.x + resizedBox.width <= 320);
     await controls.history.focus();
