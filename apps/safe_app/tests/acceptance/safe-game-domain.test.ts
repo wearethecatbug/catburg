@@ -96,6 +96,10 @@ test("a correct normalized guess atomically wins and every terminal interaction 
     revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
+    earnedHintFacts: [],
+    issuedHintPredicateIds: [],
+    activeHintPredicateId: null,
+    latestAwardedFactId: null,
   });
 
   const afterTerminalEvents = apply(
@@ -140,6 +144,10 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
+    earnedHintFacts: [],
+    issuedHintPredicateIds: [],
+    activeHintPredicateId: null,
+    latestAwardedFactId: null,
   });
   assert.deepEqual(
     apply(surrenderedHistoryClosed, { type: "set-input", input: "42" }, { type: "submit-guess" }, { type: "surrender" }, { type: "set-cat-hover", active: true }),
@@ -164,5 +172,9 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
+    earnedHintFacts: [],
+    issuedHintPredicateIds: [],
+    activeHintPredicateId: null,
+    latestAwardedFactId: null,
   });
 });

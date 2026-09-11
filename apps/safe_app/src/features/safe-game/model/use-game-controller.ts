@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
-import { createHintChallenge, createSafeGameState, generateSafeCode, reduceSafeGame } from "../domain";
+import { chooseNextHintPredicate, createHintChallenge, createSafeGameState, generateSafeCode, reduceSafeGame } from "../domain";
 import type { HintOperator, SafeGameAction, SafeGameState } from "../domain";
 import { createChallengeId } from "./challenge-id";
 
@@ -85,28 +85,43 @@ export function useGameController() {
   function showHint() {
     const latestState = currentState();
     if (latestState.phase !== "playing") return;
+    // Only disclosed round knowledge selects the predicate that the reducer binds to this challenge.
+    const predicate = chooseNextHintPredicate({
+      facts: latestState.earnedHintFacts,
+      wrongAttempts: latestState.attempts,
+      issuedPredicateIds: latestState.issuedHintPredicateIds,
+    });
+    if (!predicate) return;
     const challenge = createHintChallenge(
       Math.random,
       latestState.roundId,
       "+",
       createChallengeId(Math.random, Date.now, globalThis.crypto?.randomUUID?.bind(globalThis.crypto)),
     );
-    dispatch({ type: "show-hint", challenge });
+    dispatch({ type: "show-hint", challenge, predicateId: predicate.id });
   }
 
   function replaceHintChallenge(roundId: number, challengeId: string, operator: HintOperator) {
     // An event from an old dialog must not replace the currently mounted question.
     const latestState = currentState();
-    const challenge = latestState.hintChallenge;
-    if (!challenge || latestState.phase !== "playing" || challenge.roundId !== roundId || challenge.challengeId !== challengeId) return;
+    const activeChallenge = latestState.hintChallenge;
+    if (!activeChallenge || latestState.phase !== "playing" || activeChallenge.roundId !== roundId || activeChallenge.challengeId !== challengeId) return;
+    const predicate = chooseNextHintPredicate({
+      facts: latestState.earnedHintFacts,
+      wrongAttempts: latestState.attempts,
+      issuedPredicateIds: latestState.issuedHintPredicateIds,
+    });
+    if (!predicate) return;
     clearPendingHoverTimer();
-    const replacement = createHintChallenge(
+    const challenge = createHintChallenge(
       Math.random,
-      challenge.roundId,
+      activeChallenge.roundId,
       operator,
       createChallengeId(Math.random, Date.now, globalThis.crypto?.randomUUID?.bind(globalThis.crypto)),
     );
-    dispatch({ type: "replace-hint-challenge", roundId: challenge.roundId, challengeId: challenge.challengeId, challenge: replacement });
+    // The reducer rejects direct replacement. Queue an identity-checked discard before the new public predicate.
+    dispatch({ type: "close-hint-challenge", roundId: activeChallenge.roundId, challengeId: activeChallenge.challengeId });
+    dispatch({ type: "show-hint", challenge, predicateId: predicate.id });
   }
 
   function closeHintChallenge(roundId: number, challengeId: string) {

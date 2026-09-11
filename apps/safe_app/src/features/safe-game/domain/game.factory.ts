@@ -32,5 +32,9 @@ export function createSafeGameState(code: number): SafeGameState {
     revealedMathAnswer: null,
     earnedHint: null,
     shownHint: null,
+    earnedHintFacts: [],
+    issuedHintPredicateIds: [],
+    activeHintPredicateId: null,
+    latestAwardedFactId: null,
   };
 }
