@@ -16,8 +16,6 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/safe-cat-playwright-browsers
-      SAFE_CAT_DIAGNOSTICS: ${{ runner.temp }}/safe-cat-diagnostics
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -31,8 +29,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$SAFE_CAT_DIAGNOSTICS"
-          printf 'Safe Cat CI diagnostics for %s\n' "$GITHUB_SHA" > "$SAFE_CAT_DIAGNOSTICS/metadata.txt"
+          diagnostics_directory="$RUNNER_TEMP/safe-cat-diagnostics"
+          playwright_browsers_directory="$RUNNER_TEMP/safe-cat-playwright-browsers"
+          mkdir -p "$diagnostics_directory"
+          printf 'SAFE_CAT_DIAGNOSTICS=%s\n' "$diagnostics_directory" >> "$GITHUB_ENV"
+          printf 'PLAYWRIGHT_BROWSERS_PATH=%s\n' "$playwright_browsers_directory" >> "$GITHUB_ENV"
+          printf 'Safe Cat CI diagnostics for %s\n' "$GITHUB_SHA" > "$diagnostics_directory/metadata.txt"
 
       - name: Select pinned pnpm
         shell: bash
