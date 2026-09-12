@@ -500,6 +500,30 @@ test("empty and populated History contrast are collected separately in light and
   }
 });
 
+test("direct /safe keeps readable opaque route coverage in light and dark", async () => {
+  for (const colorScheme of ["light", "dark"]) await withSession({ width: 390, height: 844 }, { colorScheme, route: "/safe" }, async ({ page }) => {
+    const title = await exact(page.getByRole("heading", { name: "Guess the number", exact: true }), `${colorScheme} direct-safe title`);
+    const instruction = await exact(page.getByText("Enter a whole code from 1 to 1000.", { exact: true }), `${colorScheme} direct-safe instruction`);
+    for (const target of [title, instruction]) {
+      const ratio = contrastRatio(await target.evaluate((element) => getComputedStyle(element).color), await opaqueAncestorBackground(target));
+      assert.ok(ratio >= 4.5, `${colorScheme} direct /safe ${await target.innerText()} contrast meets 4.5:1 against its first opaque ancestor`);
+    }
+    const surface = await title.evaluate((element) => {
+      for (let owner = element; owner; owner = owner.parentElement) {
+        const style = getComputedStyle(owner);
+        if (!style.backgroundColor.startsWith("rgba") || !style.backgroundColor.endsWith(", 0)")) {
+          const rect = owner.getBoundingClientRect();
+          return { top: rect.y + scrollY, bottom: rect.y + scrollY + rect.height, color: style.backgroundColor, scrollHeight: document.documentElement.scrollHeight };
+        }
+      }
+      throw new Error("direct /safe title has no opaque route ancestor");
+    });
+    assert.match(surface.color, /^rgb\(/, `${colorScheme} direct /safe uses an opaque non-transparent route surface`);
+    assert.notEqual(surface.color, "rgb(0, 0, 0)", `${colorScheme} direct /safe route surface is not a black tail`);
+    assert.ok(surface.top <= 0 && surface.bottom >= surface.scrollHeight, `${colorScheme} direct /safe opaque surface covers the complete legitimate document height`);
+  });
+});
+
 test("code input has visible keyboard focus in light and dark", async () => {
   for (const colorScheme of ["light", "dark"]) {
     await withSession({ width: 1175, height: 1098 }, { colorScheme }, async ({ page }) => {
