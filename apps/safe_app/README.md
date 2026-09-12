@@ -12,7 +12,7 @@ corepack pnpm build
 corepack pnpm start
 ```
 
-The `/` route includes the illustrated background; `/safe` renders the same game without that wrapper. `/example` and `/example2` retain standalone exercise examples. The layout loads Geist font variables; existing game styles keep their current system-font fallback. A production build may fetch the configured Google fonts.
+The `/` route uses the illustrated scene background; `/safe` renders the same game inside a solid opaque contrast-safe surface. `/example` and `/example2` retain standalone exercise examples. The layout loads Geist font variables; existing game styles keep their current system-font fallback. A production build may fetch the configured Google fonts.
 
 ## Structure
 

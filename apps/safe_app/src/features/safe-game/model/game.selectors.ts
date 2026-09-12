@@ -41,19 +41,31 @@ function formatEarnedFact(fact: EarnedHintFact): string {
 
 /** The status surface derives availability from public state fields and never reads the private code. */
 export function selectEarnedHintStatusText(state: SafeGameState): string | null {
+  return selectEarnedHintPresentation(state).statusText;
+}
+
+export function selectEarnedHintPresentation(state: SafeGameState): {
+  statusText: string | null;
+  hintsExhausted: boolean;
+} {
   const readModel = selectEarnedHintReadModel(state);
   const latestFact = readModel.latestAwardedFactId === null
     ? null
     : readModel.facts.find((fact) => fact.id === readModel.latestAwardedFactId) ?? null;
   const legacyHint = latestFact ? null : selectHintText(state.shownHint);
-  const exhausted = state.phase === "playing"
+  const exhausted = selectHintsExhausted(state);
+  const messages = [latestFact ? formatEarnedFact(latestFact) : legacyHint, exhausted ? "No further hints are available." : null]
+    .filter((message): message is string => message !== null);
+  return { statusText: messages.length ? messages.join(" ") : null, hintsExhausted: exhausted };
+}
+
+/** Availability uses only public round progress; the secret code never affects the menu message. */
+export function selectHintsExhausted(state: SafeGameState): boolean {
+  return state.phase === "playing"
     && !state.hintChallenge
     && chooseNextHintPredicate({
-      facts: readModel.facts,
+      facts: state.earnedHintFacts,
       wrongAttempts: state.attempts,
       issuedPredicateIds: state.issuedHintPredicateIds,
     }) === null;
-  const messages = [latestFact ? formatEarnedFact(latestFact) : legacyHint, exhausted ? "No further hints are available." : null]
-    .filter((message): message is string => message !== null);
-  return messages.length ? messages.join(" ") : null;
 }

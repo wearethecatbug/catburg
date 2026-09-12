@@ -2,7 +2,12 @@
     display: flex;
     justify-content: start;
     align-items: center;
+    position: relative;
 }
+.art { background:center / contain no-repeat; inset:0; position:absolute; }
+.safeContainer { --dial-door-x:48.05%; --dial-door-y:53.35%; }
+.dial { background:center / contain no-repeat; height:104px; left:var(--dial-door-x); pointer-events:none; position:absolute; top:var(--dial-door-y); transition:transform 180ms cubic-bezier(.22,.61,.36,1); translate:-50% -50%; width:104px; }
+@media (prefers-reduced-motion: reduce) { .dial { transition-property: none; } }
 
 .safeOpen {
     width: 500px;
@@ -70,3 +75,8 @@
         background-position: max(-610px, -122vw) max(-80px, -16vw);
     }
 }
+@media (max-width:768px) { .dial { height:88px; width:88px; } }
+@media (max-width:390px) { .dial { height:76px; width:76px; } }
+@media (max-width:320px) { .dial { height:68px; width:68px; } }
+.safeOpen,.safeClose { background:none; }
+@media (prefers-reduced-motion: reduce) { .safeOpen,.safeClose { animation:none; } }

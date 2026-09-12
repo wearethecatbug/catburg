@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useReducer, useRef } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { chooseNextHintPredicate, createHintChallenge, createSafeGameState, generateSafeCode, reduceSafeGame } from "../domain";
 import type { HintOperator, SafeGameAction, SafeGameState } from "../domain";
 import { createChallengeId } from "./challenge-id";
 
 type FocusTarget = "hint" | "input" | "new-game" | null;
+type GuessInputEditIntent = "delete" | "insert";
 
 function createInitialGameState() {
   return createSafeGameState(generateSafeCode(Math.random));
@@ -20,6 +21,8 @@ export function useGameController() {
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
   const newGameButtonRef = useRef<HTMLButtonElement | null>(null);
   const newHintButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [dialAngle, setDialAngle] = useState(0);
+  const [titleRun, setTitleRun] = useState(0);
 
   // Browser callbacks consult committed state, never a speculative render's snapshot.
   useLayoutEffect(() => { stateRef.current = state; }, [state]);
@@ -59,6 +62,8 @@ export function useGameController() {
   function startNewRound() {
     clearPendingHoverTimer();
     pendingFocusRef.current = "input";
+    setDialAngle(0);
+    setTitleRun((run) => run + 1);
     dispatch({ type: "new-round", code: generateSafeCode(Math.random) });
   }
 
@@ -67,7 +72,14 @@ export function useGameController() {
     dispatch({ type: "submit-guess" });
   }
 
-  function changeGuessInput(input: string) {
+  function changeGuessInput(input: string, editIntent: GuessInputEditIntent = "insert") {
+    const previous = currentState().input;
+    if (input !== previous) {
+      // Keep the rotation cumulative so a wrap never makes the transition spin the long way around.
+      // Clearing the field still returns the dial to its neutral angle.
+      if (input === "") setDialAngle(0);
+      else setDialAngle((angle) => editIntent === "delete" ? angle - 36 : angle + 36);
+    }
     dispatch({ type: "set-input", input });
   }
 
@@ -170,6 +182,8 @@ export function useGameController() {
     historyButtonRef,
     newGameButtonRef,
     newHintButtonRef,
+    dialAngle,
+    titleRun,
     startNewRound,
     submitGuess,
     changeGuessInput,

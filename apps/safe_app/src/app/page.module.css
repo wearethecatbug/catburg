@@ -12,9 +12,10 @@
 }
 
 .background {
-    background-image: url('/background2.jpg');
+    background-image: url('/safe-cat/scene-background-wide.webp');
     background-size: cover;
     background-position: center;
-    height: 100vh;
+    min-height: 100svh;
     width: 100%;
 }
+@media (max-width:600px) { .background { background-image:url('/safe-cat/scene-background-tall.webp'); } }

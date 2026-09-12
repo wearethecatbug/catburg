@@ -68,6 +68,8 @@ test("invalid attempts are excluded and a valid wrong code remains playable with
     "wrong",
     "the domain exposes only a neutral wrong-result category, never secret-comparison guidance",
   );
+  assert.equal(apply(wrong, { type: "set-cat-hover", active: true }).catReaction, "wrong", "hover cannot erase a wrong reaction");
+  assert.equal(apply(wrong, { type: "set-cat-hover", active: false }).catReaction, "wrong", "pointer leave cannot erase a wrong reaction");
 });
 
 test("a correct normalized guess atomically wins and every terminal interaction is a no-op", () => {

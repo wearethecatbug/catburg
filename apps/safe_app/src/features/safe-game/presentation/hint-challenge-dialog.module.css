@@ -1,7 +1,8 @@
 .backdrop { align-items: center; background: rgb(0 0 0 / 55%); display: flex; inset: 0; justify-content: center; padding: 12px; position: fixed; z-index: 2000; }
-.dialog { background: #fff3d7 url("/ragdoll-hint-background-3.png") center / contain no-repeat; border: 3px solid #5c3b26; border-radius: 18px; box-sizing: border-box; color: #2c1b12; display: grid; gap: 12px; max-height: calc(100vh - 24px); max-width: min(560px, calc(100vw - 24px)); overflow: auto; padding: clamp(18px, 4vw, 34px); width: 560px; }
+.dialog { background: #fff3d7 url("/safe-cat/hint-board-900.webp") center / contain no-repeat; border: 3px solid #5c3b26; border-radius: 18px; box-sizing: border-box; color: #2c1b12; display: grid; gap: 12px; max-height: calc(100vh - 24px); max-width: min(560px, calc(100vw - 24px)); overflow: auto; padding: clamp(18px, 4vw, 34px); width: 560px; }
 .heading { align-items: start; display: flex; gap: 12px; justify-content: space-between; }
 .heading h2 { font-size: clamp(1.1rem, 3vw, 1.45rem); margin: 0; }
+.thinkingCat { height:96px; justify-self:center; object-fit:contain; width:96px; }
 .heading button, .answerForm button { min-height: 44px; }
 .operatorBoard { display: grid; gap: 8px; grid-template-columns: repeat(4, minmax(44px, 1fr)); }
 .operatorButton { align-items: center; background: transparent; border: 0; border-radius: 10px; display: flex; justify-content: center; min-height: 44px; padding: 4px; }

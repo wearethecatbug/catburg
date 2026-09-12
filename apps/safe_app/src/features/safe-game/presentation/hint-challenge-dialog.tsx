@@ -12,10 +12,10 @@ type HintChallengeDialogProps = {
 };
 
 const operatorButtons: Array<{ asset: string; label: string; operator: HintOperator }> = [
-  { operator: "+", label: "Addition", asset: "/pink-plus.png" },
-  { operator: "-", label: "Subtraction", asset: "/blue-minus.png" },
-  { operator: "×", label: "Multiplication", asset: "/red-multiplication.png" },
-  { operator: "÷", label: "Division", asset: "/yellow-division.png" },
+  { operator: "+", label: "Addition", asset: "/safe-cat/operator-add-256.webp" },
+  { operator: "-", label: "Subtraction", asset: "/safe-cat/operator-subtract-256.webp" },
+  { operator: "×", label: "Multiplication", asset: "/safe-cat/operator-multiply-256.webp" },
+  { operator: "÷", label: "Division", asset: "/safe-cat/operator-divide-256.webp" },
 ];
 
 export function HintChallengeDialog({ challenge }: HintChallengeDialogProps) {
@@ -75,6 +75,7 @@ export function HintChallengeDialog({ challenge }: HintChallengeDialogProps) {
           <h2 id="hint-challenge-title">Solve a quick math question</h2>
           <button type="button" onClick={close} aria-label="Close hint challenge">Close</button>
         </div>
+        <Image className={styles.thinkingCat} src="/safe-cat/cat-thinking-512.webp" alt="" width={96} height={96} />
         <div className={styles.operatorBoard} aria-label="Choose a math operation">
           {operatorButtons.map(({ asset, label, operator }) => (
             <button
@@ -101,7 +102,7 @@ export function HintChallengeDialog({ challenge }: HintChallengeDialogProps) {
             <span>Give Up Hint</span>
           </button>
           <button ref={controller.newHintButtonRef} type="button" className={styles.imageButton} onClick={() => replaceChallenge(challenge.operator)}>
-            <Image src="/new-hint.png" alt="" width={32} height={32} />
+            <Image src="/safe-cat/new-hint-256.webp" alt="" width={32} height={32} />
             <span>New Hint</span>
           </button>
         </div>
