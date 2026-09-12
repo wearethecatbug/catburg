@@ -1462,7 +1462,7 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
 });
 
 test("SC05 D20/D21: menu never intersects or overflows and every control remains reachable at breakpoint edges", async () => {
-  for (const [width, height] of [[321, 838], [547, 838], [599, 838], [600, 838], [601, 838], [605, 838], [768, 800], [1024, 800]]) await withSession({ width, height }, {}, async ({ page }) => {
+  for (const [width, height] of [[320, 838], [321, 838], [547, 838], [599, 838], [600, 838], [601, 838], [605, 838], [768, 800], [1024, 800]]) await withSession({ width, height }, {}, async ({ page }) => {
     const controls = await gameControls(page); const all = [controls.newRound, controls.surrender, controls.hint, controls.history];
     await page.evaluate(() => scrollTo(0, 0));
     await waitForStableVisualGeometry(page);
@@ -1475,6 +1475,33 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
     }
     for (let index = 0; index < boxes.length; index += 1) for (let other = index + 1; other < boxes.length; other += 1) assert.equal(intersects(boxes[index], boxes[other]), false, `${width}px menu buttons ${index}/${other} do not intersect`);
     const menu = controls.newRound.locator("xpath=.."); assert.ok((await menu.boundingBox()).width <= width, `${width}px menu container has no lateral overflow`);
+    if (width <= 321) {
+      await page.evaluate(() => scrollTo(0, 0));
+      await waitForStableVisualGeometry(page);
+      const content = await Promise.all(all.map((control) => control.evaluate((button) => {
+        const scroll = scrollY; const buttonRect = button.getBoundingClientRect();
+        const buttonBox = { x: buttonRect.x, y: buttonRect.y + scroll, width: buttonRect.width, height: buttonRect.height };
+        const children = [...button.children].filter((child) => child.matches("svg, span, img")).map((child) => {
+          const rect = child.getBoundingClientRect(); const style = getComputedStyle(child);
+          return {
+            tag: child.tagName.toLowerCase(), text: child.textContent.trim(), x: rect.x, y: rect.y + scroll, width: rect.width, height: rect.height,
+            clientWidth: child.clientWidth, scrollWidth: child.scrollWidth, lineHeight: Number.parseFloat(style.lineHeight),
+          };
+        }).filter((child) => child.width > 0 && child.height > 0);
+        return { buttonBox, children };
+      })));
+      for (let index = 0; index < content.length; index += 1) {
+        for (const child of content[index].children) {
+          const parent = content[index].buttonBox;
+          assert.ok(child.x >= parent.x - 1 && child.y >= parent.y - 1 && child.x + child.width <= parent.x + parent.width + 1 && child.y + child.height <= parent.y + parent.height + 1, `${width}px ${child.tag} stays inside its own menu button border box`);
+          if (child.tag === "span" && child.text) {
+            assert.ok(child.scrollWidth <= child.clientWidth + 1, `${width}px ${child.text} label does not clip horizontally`);
+            assert.ok(!Number.isFinite(child.lineHeight) || child.height <= child.lineHeight + 1, `${width}px ${child.text} label remains on one line`);
+          }
+          for (let other = 0; other < content.length; other += 1) if (other !== index) assert.equal(intersects(child, content[other].buttonBox), false, `${width}px ${child.tag} content does not intrude into adjacent menu button ${other}`);
+        }
+      }
+    }
   });
   const continuity = [];
   for (const width of [599, 600, 601, 605]) await withSession({ width, height: 838 }, {}, async ({ page }) => {
