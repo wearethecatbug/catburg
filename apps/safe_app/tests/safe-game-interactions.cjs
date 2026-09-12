@@ -956,6 +956,10 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
       const card = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), `${width}x${height} stored-hint card`);
       await card.scrollIntoViewIfNeeded();
       const list = await exact(card.getByRole("list"), "stored-hint semantic list");
+      assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Show hint", "keyboard discovery of stored facts starts from Show hint");
+      await page.keyboard.press("Tab");
+      assert.equal(await list.evaluate((element) => element === document.activeElement), true, "Tab from Show hint moves focus to the scrollable stored-fact list");
+      assert.equal(await card.evaluate((element) => element.contains(document.activeElement)), true, "stored-list keyboard focus remains inside the open stored-card wrapper");
       assert.equal(await list.getByRole("listitem").count(), 4, "four current-round facts remain readable rather than being discarded at the three-row cap");
       const [metrics, cardBox, heading, instruction, safe, cat, form, newRound, surrender, history] = await Promise.all([
         list.evaluate((element) => {
@@ -982,6 +986,32 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
       assert.equal(metrics.visibleRows, 3, "stored fact viewport exposes exactly three complete rows");
       assert.equal(metrics.maxHeight, 72, "stored fact list uses the approved 72px three-row cap");
       assert.ok(["auto", "scroll"].includes(metrics.overflowY), "stored facts expose a visible scrollable overflow path");
+      const documentScrollTop = await page.evaluate(() => scrollY);
+      const pressListKey = async (key) => {
+        await page.keyboard.press(key);
+        assert.equal(await page.evaluate(() => scrollY), documentScrollTop, `${key} scrolls only the stored-fact list, never the document`);
+        assert.equal(await list.evaluate((element) => element === document.activeElement), true, `${key} keeps keyboard focus on the stored-fact list`);
+        assert.equal(await card.evaluate((element) => element.contains(document.activeElement)), true, `${key} keeps focus inside the open stored-card wrapper`);
+        return list.evaluate((element) => element.scrollTop);
+      };
+      await page.keyboard.press("End");
+      const endTop = await list.evaluate((element) => element.scrollTop);
+      assert.ok(endTop > 0, "keyboard End scrolls the internal stored-fact list to reveal its fourth row");
+      assert.equal(await page.evaluate(() => scrollY), documentScrollTop, "End never scrolls the document");
+      assert.equal(await list.evaluate((element) => element === document.activeElement), true, "End keeps keyboard focus on the stored-fact list");
+      assert.equal(await card.evaluate((element) => element.contains(document.activeElement)), true, "End keeps focus inside the open stored-card wrapper");
+      const homeTop = await pressListKey("Home");
+      assert.equal(homeTop, 0, "keyboard Home returns the stored-fact list to its first row");
+      const downTop = await pressListKey("ArrowDown");
+      assert.ok(downTop > homeTop, "keyboard ArrowDown advances the internal stored-fact scroll position");
+      const upTop = await pressListKey("ArrowUp");
+      assert.ok(upTop < downTop, "keyboard ArrowUp decreases the internal stored-fact scroll position");
+      await pressListKey("Home");
+      const pageDownTop = await pressListKey("PageDown");
+      assert.ok(pageDownTop >= Math.min(metrics.clientHeight / 2, metrics.scrollHeight - metrics.clientHeight), "keyboard PageDown advances by a meaningful available stored-list viewport step");
+      const pageUpTop = await pressListKey("PageUp");
+      assert.ok(pageUpTop < pageDownTop, "keyboard PageUp decreases the internal stored-fact scroll position");
+      assert.equal(await card.isVisible(), true, "keyboard scrolling the overflow list keeps its stored card open");
       assert.ok(cardBox.x >= 12 && cardBox.y >= 0 && cardBox.x + cardBox.width <= width - 12, `${width}x${height} card preserves the 12px viewport gutter`);
       for (const protectedBox of [heading, instruction, safe, cat, form, newRound, surrender, history]) {
         assert.equal(intersects(cardBox, protectedBox, 12), false, `${width}x${height} card avoids protected content or falls into normal flow`);
@@ -1039,9 +1069,14 @@ test("SC05 provider: one persistent atomic hint status and stored-card focus rac
     assert.equal(await announcement.innerText(), `Earned hint: ${earnedFact}`, "the sole persistent status announces the current earned fact");
 
     await controls.hint.focus();
-    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "focus-opened stored card");
+    const focusCard = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "focus-opened stored card");
+    const focusList = await exact(focusCard.getByRole("list", { name: "Stored hint list", exact: true }), "focus-opened stored hint list");
     await page.keyboard.press("Tab");
-    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "Tab focus leave closes the stored card immediately through its public blur behavior");
+    assert.equal(await focusList.evaluate((element) => element === document.activeElement), true, "first Tab from Show hint enters the stored-hint list without closing its card");
+    assert.equal(await focusCard.isVisible(), true, "first Tab keeps focus inside the stored-hint wrapper and leaves its card open");
+    await page.keyboard.press("Tab");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "second Tab leaves the hint wrapper and closes the stored card through public blur behavior");
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "History", "second Tab advances outside the hint wrapper to the next menu action");
 
     await controls.hint.focus();
     await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "reopened stored card for Escape");
