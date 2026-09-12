@@ -1713,3 +1713,54 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
     await controls.code.fill(""); assert.equal(await controls.code.getAttribute("aria-invalid"), null, "D25 clear after invalid syntax restores neutral input"); await exact(page.getByLabel("Cat idle", { exact: true }), "D25 invalid-edit recovery uses idle cat");
   });
 });
+
+test("SC05 provider: a quick stored-hint hover then click opens only the math dialog and leaves no stale card", async () => {
+  await withSession({ width: 1175, height: 900 }, { random: 0.041 }, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await earnFirstHint(page);
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "stored hints after an earned fact");
+    // Move focus outside the hint wrapper so this round starts closed, then re-enter for less than the 150ms hover delay.
+    await controls.code.focus();
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "stored hint card closes before the quick hover-click path");
+    const hintBox = await controls.hint.boundingBox();
+    assert.ok(hintBox, "Show hint has a rendered pointer target");
+    await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+    await page.clock.runFor(149);
+    await controls.hint.click();
+    const dialog = await exact(page.getByRole("dialog", { name: "Solve a quick math question", exact: true }), "quick click opens the math dialog");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "stored card does not mount underneath the dialog before the queued hover deadline");
+    await page.clock.runFor(2);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "expired hover callback cannot mount the stored card under an open dialog");
+    await page.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+    await dialog.waitFor({ state: "hidden" });
+    const focusDrivenCard = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "focus-restored stored card after dialog close");
+    assert.equal(await controls.hint.getAttribute("aria-describedby"), await focusDrivenCard.getAttribute("id"), "the post-close card is the approved focus-driven description of Show hint");
+    await controls.code.focus();
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "blurring Show hint closes its focus-driven stored card");
+    await page.clock.runFor(250);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "no stale hover callback can reopen the card after its legitimate focus-driven close");
+  });
+});
+
+test("SC05 provider: desktop History keeps its eight-pixel anchor and both pointer and keyboard movements visibly update position", async () => {
+  await withSession({ width: 1280, height: 600 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    await controls.history.click();
+    const panel = await exact(page.getByRole("region", { name: "History", exact: true }), "desktop History panel");
+    const handle = await exact(page.getByRole("button", { name: "Move History", exact: true }), "desktop History drag handle");
+    const [initialPanel, historyButton, initialScrollY] = await Promise.all([panel.boundingBox(), controls.history.boundingBox(), page.evaluate(() => scrollY)]);
+    approximatelyEqual(initialPanel.y + initialScrollY - (historyButton.y + initialScrollY + historyButton.height), 8, 1, "desktop History initially anchors eight rendered pixels below its button");
+    const handleBox = await handle.boundingBox();
+    assert.ok(handleBox, "desktop History handle has a rendered box");
+    await dragHistoryHandle(page, handle, { x: Math.max(16, handleBox.x - 80), y: Math.max(16, handleBox.y - 70) });
+    const dragged = await panel.boundingBox();
+    assert.ok(Math.round(dragged.x) !== Math.round(initialPanel.x) || Math.round(dragged.y) !== Math.round(initialPanel.y), "desktop pointer drag visibly relocates History");
+    await handle.focus();
+    await page.keyboard.press("ArrowDown");
+    const afterDown = await panel.boundingBox();
+    assert.ok(afterDown.y > dragged.y, "desktop ArrowDown visibly moves the inline History panel down");
+    await page.keyboard.press("ArrowUp");
+    const afterUp = await panel.boundingBox();
+    assert.ok(afterUp.y < afterDown.y, "desktop ArrowUp visibly moves the inline History panel up");
+  });
+});

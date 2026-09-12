@@ -37,7 +37,7 @@ export function GameMenu() {
   // A short grace period lets the pointer reach the card; opening always cancels a stale close first.
   const show = () => { cancelHoverTimer(); if (facts.length) setOpen(true); };
   const closeLater = (event?: React.PointerEvent<HTMLDivElement>) => { cancelHoverTimer(); if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; } touchContact.current = false; if (event?.pointerType === "touch" && touchLongPressOpen.current) return; hoverTimer.current = setTimeout(() => { hoverTimer.current = null; setOpen(false); }, 200); };
-  const onHintClick = () => { if (longPress.current) { longPress.current = false; return; } if (ended) { show(); return; } controller.showHint(); };
+  const onHintClick = () => { cancelHoverTimer(); if (longPress.current) { longPress.current = false; return; } if (ended) { show(); return; } setOpen(false); controller.showHint(); };
   const onHintWrapBlur = (event: React.FocusEvent<HTMLDivElement>) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) resetStoredHintPresentation(); };
   const onHintWrapKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Escape") return;

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { SafeGameProvider } from "../model/safe-game-provider";
 import { useSafeGameContext } from "../model/safe-game-context";
-import { selectEarnedHintStatusText, selectHintsExhausted, selectTerminalPresentation } from "../model/game.selectors";
+import { selectEarnedHintPresentation, selectTerminalPresentation } from "../model/game.selectors";
 import { CatAvatar } from "./cat-avatar";
 import { GameMenu } from "./game-menu";
 import { HintChallengeDialog } from "./hint-challenge-dialog";
@@ -19,8 +19,7 @@ function SafeGameScreenContent() {
   const controller = useSafeGameContext();
   const { state } = controller;
   const terminalPresentation = selectTerminalPresentation(state);
-  const hintStatus = selectEarnedHintStatusText(state);
-  const hintsExhausted = selectHintsExhausted(state);
+  const { statusText: hintStatus, hintsExhausted } = selectEarnedHintPresentation(state);
   const [reward, setReward] = useState<EarnedHintFact | null>(null);
   const previousAward = useRef<string | null>(null); const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // An older timeout may not clear a reward that has already been replaced by a newer fact.
