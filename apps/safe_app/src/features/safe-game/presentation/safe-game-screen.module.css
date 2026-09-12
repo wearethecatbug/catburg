@@ -28,7 +28,7 @@
 .codeEntry { left: 50%; position: absolute; top: calc(50% + 190px); transform: translateX(-50%); width: 360px; }
 .menuRegion { left: calc(50% + 274px); position: absolute; top: calc(50% - 115px); }
 .earnedHint { margin: 8px 0 0; min-height: 1.25em; text-align: center; }
-.rewardRegion { left:calc(50% + 70px); position:absolute; top:calc(50% - 344px); z-index:3; }
+.rewardRegion { left:calc(50% + 70px); pointer-events:none; position:absolute; top:calc(50% - 344px); z-index:3; }
 .rewardAnnouncement { height:1px; overflow:hidden; position:absolute; width:1px; }
 
 @media (max-width:1279px) {
@@ -41,10 +41,10 @@
 }
 
 @media (max-width:1279px) {
-  .instructions { top: 16px; width: calc(100% - 24px); }
+  .instructions { top: 16px; width:100%; }
   .safeRegion { top: 365px; }
   .catRegion { top: calc(365px - min(230px, (100vw - 24px) * .46) - 15px); }
-  .codeEntry { top: calc(420px + min(140px, (100vw - 24px) * .281)); width: min(360px, (100vw - 24px) * .72); }
+  .codeEntry { top: calc(420px + min(140px, (100vw - 24px) * .281)); width:min(360px, calc(100vw - 24px)); }
   .menuRegion { top:695px; width:min(420px, calc(100vw - 24px)); }
   .menuRegion button { width: 100%; }
   .rewardRegion { left:50%; top:128px; transform:translateX(-50%); }

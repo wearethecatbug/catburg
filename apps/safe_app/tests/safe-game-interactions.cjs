@@ -674,7 +674,7 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
     const petBox = await pet.boundingBox();
     assert.ok(petBox, "petting target has a rendered click area");
     const initialLayout = await page.locator("main").boundingBox();
-    const bubbles = await exact(pet.locator(':scope > [aria-hidden="true"]'), "aria-hidden heart overlay");
+    const bubbles = await exact(pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'), "aria-hidden heart overlay");
     const heartOrigins = () => bubbles.locator(':scope > *').evaluateAll((elements) => elements.map((element) => [element.style.getPropertyValue("--origin-x"), element.style.getPropertyValue("--origin-y")]));
     const resolvedPointerOrigin = (position, round = Math.floor) => ({ x: round(petBox.x + position.x) - petBox.x, y: round(petBox.y + position.y) - petBox.y });
     const originStyle = (position, round) => [`${resolvedPointerOrigin(position, round).x}px`, `${resolvedPointerOrigin(position, round).y}px`];
@@ -731,6 +731,56 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
   });
 });
 
+test("SC05 provider: pet status is externally described for every game outcome", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    const controls = await gameControls(page);
+    const pet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), "petting target with external status");
+    const inspectDescription = async (label, state) => {
+      await exact(page.getByLabel(label, { exact: true }), `${state} public cat state`);
+      const descriptionId = await pet.getAttribute("aria-describedby");
+      assert.ok(descriptionId, `${state} pet target has an external description reference`);
+      const description = await exact(page.locator(`#${descriptionId}`), `${state} external pet description`);
+      assert.equal(await pet.evaluate((element, id) => element.contains(document.getElementById(id)), descriptionId), false, `${state} pet state is not supplied only by a button descendant`);
+      assert.match(await description.innerText(), new RegExp(state, "i"), `${state} external pet description updates with the public cat outcome`);
+    };
+    await inspectDescription("Cat idle", "idle");
+    await controls.code.fill("41"); await controls.submit.click();
+    await inspectDescription("Cat wrong", "wrong");
+    await controls.newRound.click(); await controls.code.fill("42"); await controls.submit.click();
+    await inspectDescription("Cat won", "won");
+    await controls.newRound.click(); await controls.surrender.click();
+    await inspectDescription("Cat surrendered", "surrendered");
+  });
+});
+
+test("SC05 provider: pet origins use unscaled layout coordinates in both responsive scale bands", async () => {
+  for (const [width, height, expectedScale] of [[1440, 900, 1.18], [768, 800, .9]]) await withSession({ width, height }, {}, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await gameControls(page);
+    const pet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), `${width}px pet target`);
+    const overlay = await exact(pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'), `${width}px heart overlay`);
+    const petBox = await pet.boundingBox();
+    const stageScale = await page.locator("main > div").first().evaluate((element) => Math.abs(getComputedStyle(element).transform.match(/matrix\(([^)]+)\)/)?.[1].split(",").map(Number)[0] ?? 1));
+    approximatelyEqual(stageScale, expectedScale, .01, `${width}px pet origin test uses the approved stage scale`);
+    const client = { x: Math.round(petBox.x + petBox.width * .27), y: Math.round(petBox.y + petBox.height * .63) };
+    await page.mouse.click(client.x, client.y);
+    const origins = await overlay.locator(':scope > *').evaluateAll((elements) => elements.map((element) => [Number.parseFloat(element.style.getPropertyValue("--origin-x")), Number.parseFloat(element.style.getPropertyValue("--origin-y"))]));
+    const expectedPointer = [(client.x - petBox.x) / stageScale, (client.y - petBox.y) / stageScale];
+    for (const origin of origins) {
+      approximatelyEqual(origin[0], expectedPointer[0], 1, `${width}px pointer heart x origin converts back to unscaled layout space`);
+      approximatelyEqual(origin[1], expectedPointer[1], 1, `${width}px pointer heart y origin converts back to unscaled layout space`);
+    }
+    await page.clock.runFor(1801);
+    await pet.focus(); await page.keyboard.press("Enter");
+    const keyboardOrigins = await overlay.locator(':scope > *').evaluateAll((elements) => elements.map((element) => [Number.parseFloat(element.style.getPropertyValue("--origin-x")), Number.parseFloat(element.style.getPropertyValue("--origin-y"))]));
+    const expectedKeyboard = [petBox.width / (2 * stageScale), petBox.height / (2 * stageScale)];
+    for (const origin of keyboardOrigins) {
+      approximatelyEqual(origin[0], expectedKeyboard[0], .01, `${width}px keyboard heart x origin is the exact unscaled layout centre`);
+      approximatelyEqual(origin[1], expectedKeyboard[1], .01, `${width}px keyboard heart y origin is the exact unscaled layout centre`);
+    }
+  });
+});
+
 test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only for 700ms", async () => {
   await withSession({ width: 390, height: 844 }, { hasTouch: true }, async ({ page }) => {
     await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
@@ -739,7 +789,7 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
     const pet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), "reduced-motion petting target");
     const petBox = await pet.boundingBox();
     assert.ok(petBox, "reduced-motion petting target has a rendered touch area");
-    const overlay = await exact(pet.locator(':scope > [aria-hidden="true"]'), "reduced-motion aria-hidden heart overlay");
+    const overlay = await exact(pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'), "reduced-motion aria-hidden heart overlay");
     const origin = { x: Math.round(petBox.width * .68), y: Math.round(petBox.height * .31) };
     const client = { x: Math.floor(petBox.x + origin.x), y: Math.floor(petBox.y + origin.y) };
     await pet.dispatchEvent("click", { detail: 1, clientX: client.x, clientY: client.y });
@@ -781,6 +831,21 @@ test("SC05 D06: controls retain actual game semantics, visible focus, and local 
       return [input.getBoundingClientRect().toJSON(), shell.getBoundingClientRect().toJSON(), submit.getBoundingClientRect().toJSON()];
     });
     assert.equal(await controls.code.getAttribute("placeholder"), "Enter a number...", "approved inner-field placeholder is public");
+    const compactForm = await controls.code.evaluate((input) => {
+      const shell = input.parentElement; const submit = shell.querySelector("button");
+      const inputStyle = getComputedStyle(input); const submitStyle = getComputedStyle(submit);
+      const context = document.createElement("canvas").getContext("2d");
+      context.font = `${inputStyle.fontWeight} ${inputStyle.fontSize} ${inputStyle.fontFamily}`;
+      const horizontalPadding = Number.parseFloat(inputStyle.paddingLeft) + Number.parseFloat(inputStyle.paddingRight);
+      return {
+        shell: shell.getBoundingClientRect().toJSON(), input: input.getBoundingClientRect().toJSON(), submit: submit.getBoundingClientRect().toJSON(),
+        submitBoxSizing: submitStyle.boxSizing, placeholderWidth: context.measureText(input.placeholder).width, fourDigitWidth: context.measureText("1000").width,
+        inputContentWidth: input.clientWidth - horizontalPadding,
+      };
+    });
+    assert.ok(compactForm.shell.width >= 296 && compactForm.shell.width <= 320, "320px code form uses the available near-viewport row width");
+    assert.deepEqual([compactForm.submitBoxSizing, Math.round(compactForm.submit.width)], ["border-box", 84], "320px OK retains its exact 84px border-box outer width");
+    assert.ok(compactForm.input.width > 0 && compactForm.placeholderWidth <= compactForm.inputContentWidth && compactForm.fourDigitWidth <= compactForm.inputContentWidth, "320px input keeps both its placeholder and four-digit code affordance unclipped");
     await controls.code.focus();
     const [inputStyle, titleFont, externalFonts, focusedGeometry] = await page.evaluate(() => {
       const title = document.querySelector("h1");
@@ -830,6 +895,9 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
     await card.hover();
     await page.clock.runFor(250);
     assert.equal(await card.isVisible(), true, "moving from trigger into the card cancels its pending leave close");
+    await controls.hint.hover();
+    await page.clock.runFor(250);
+    assert.equal(await card.isVisible(), true, "moving from the card back to its trigger keeps the stored card open beyond the leave delay");
     await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     await page.mouse.move(0, 0);
     await page.clock.runFor(199);
@@ -857,10 +925,26 @@ test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap 
     await exact(page.getByRole("dialog", { name: "Solve a quick math question" }), "short touch math activation");
     await page.getByRole("button", { name: "Close hint challenge", exact: true }).click();
     await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await page.clock.runFor(499);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "a 150-499ms touch contact does not disclose stored hints before the 500ms threshold");
+    await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await page.clock.runFor(500);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "ending a short touch cannot reopen stored hints after its former deadline");
+    const shortTouchDialog = page.getByRole("dialog", { name: "Solve a quick math question" });
+    if (await shortTouchDialog.count()) await page.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await page.clock.runFor(300);
+    await client.send("Input.dispatchTouchEvent", { type: "touchCancel", touchPoints: [] });
+    await page.clock.runFor(500);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "touch cancellation before 500ms cannot reopen stored hints after its former deadline");
+    await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
     await page.clock.runFor(500);
     await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
-    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "500ms touch long-press card");
+    const longPressCard = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "500ms touch long-press card");
     assert.equal(await page.getByRole("dialog", { name: "Solve a quick math question" }).count(), 0, "long press suppresses synthetic math activation");
+    await page.clock.runFor(201);
+    assert.equal(await longPressCard.isVisible(), true, "long-press stored card remains visible beyond the wrapper 200ms hover-close window");
+    assert.equal(await page.getByRole("dialog", { name: "Solve a quick math question" }).count(), 0, "long-press card persistence does not restore a math dialog");
   });
 });
 
@@ -1035,6 +1119,13 @@ test("SC05 provider: reward row retains 12px narrow gutters while copy can reflo
     assert.ok(rewardBox && copyBox, `${width}px reward row and copy render`);
     assert.ok(rewardBox.x >= 12 && rewardBox.x + rewardBox.width <= width - 12, `${width}px reward row itself remains inside the 12px viewport gutters`);
     assert.ok(copyBox.width > 0 && copyBox.x >= rewardBox.x && copyBox.x + copyBox.width <= rewardBox.x + rewardBox.width, `${width}px reward copy may shrink or wrap within its row without escaping it`);
+    assert.equal(await reward.evaluate((element) => getComputedStyle(element).pointerEvents), "none", `${width}px reward wrapper never intercepts scene pointer input`);
+    const pet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), `${width}px still-hittable cat target`);
+    const petBox = await pet.boundingBox();
+    assert.equal(await page.evaluate(({ x, y }) => {
+      const target = document.elementFromPoint(x + 1, y + 1);
+      return target instanceof Element && (target === document.querySelector('[aria-label="Pet the cat"]') || document.querySelector('[aria-label="Pet the cat"]')?.contains(target));
+    }, { x: petBox.x + petBox.width / 2, y: petBox.y + petBox.height / 2 }), true, `${width}px reward leaves the cat hit target at its visible centre`);
   });
 });
 
