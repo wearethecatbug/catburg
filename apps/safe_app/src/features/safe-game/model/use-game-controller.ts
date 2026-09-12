@@ -74,9 +74,10 @@ export function useGameController() {
   function changeGuessInput(input: string) {
     const previous = currentState().input;
     if (input !== previous) {
-      // Removing a digit reverses the dial; clearing the field returns it to its neutral angle.
+      // Keep the rotation cumulative so a wrap never makes the transition spin the long way around.
+      // Clearing the field still returns the dial to its neutral angle.
       if (input === "") setDialAngle(0);
-      else setDialAngle((angle) => input.length < previous.length ? (angle + 324) % 360 : (angle + 36) % 360);
+      else setDialAngle((angle) => input.length < previous.length ? angle - 36 : angle + 36);
     }
     dispatch({ type: "set-input", input });
   }

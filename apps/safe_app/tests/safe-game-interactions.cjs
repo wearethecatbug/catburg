@@ -665,6 +665,42 @@ test("SC05 D04: each accepted public input edit advances only the decorative dia
   });
 });
 
+test("SC05 D04: the tenth accepted input change keeps an unbounded clockwise dial path and deletion reverses only 36 degrees", async () => {
+  await withSession({ width: 768, height: 800 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    const dial = await exactHiddenChild(page.getByLabel("Safe closed", { exact: true }), "unbounded safe dial");
+    const inlineDegrees = async () => {
+      const transform = await dial.evaluate((element) => element.style.transform);
+      const match = transform.match(/^rotate\((-?\d+(?:\.\d+)?)deg\)$/);
+      assert.ok(match, "the public dial exposes its authored rotate value");
+      return Number(match[1]);
+    };
+    const settleDial = () => page.waitForTimeout(220);
+
+    // Replacement is a real accepted edit: it cannot be inferred from a private game value.
+    for (const [index, value] of ["1", "2", "3", "4", "5", "6", "7", "8", "9"].entries()) {
+      await controls.code.fill(value);
+      await settleDial();
+      assert.equal(await controls.code.inputValue(), value, `accepted edit ${index + 1} reaches the public input`);
+      assert.equal(await inlineDegrees(), (index + 1) * 36, `accepted edit ${index + 1} retains its logical clockwise angle`);
+    }
+
+    await controls.code.fill("10");
+    await page.waitForTimeout(90);
+    const clockwiseCrossing = await visibleDialAngle(dial);
+    assert.ok(clockwiseCrossing > 324 && clockwiseCrossing < 360, "the 324-to-360 transition stays on its short clockwise arc instead of reversing 324 degrees");
+    await settleDial();
+    assert.equal(await inlineDegrees(), 360, "the tenth accepted edit remains unbounded at rotate(360deg), not rotate(0deg)");
+
+    await controls.code.press("Backspace");
+    await page.waitForTimeout(90);
+    const counterClockwiseCrossing = await visibleDialAngle(dial);
+    assert.ok(counterClockwiseCrossing > 324 && counterClockwiseCrossing < 360, "deletion crosses back through the same short 360-to-324 arc");
+    await settleDial();
+    assert.equal(await inlineDegrees(), 324, "a deletion reverses exactly one 36-degree logical step");
+  });
+});
+
 test("SC05 D14: the separate dial keeps its approved responsive size and geometric centre independently of rotation", async () => {
   for (const [width, height, expectedSize] of [[1440, 900, 104], [768, 800, 88], [390, 844, 76], [320, 600, 68]]) {
     await withSession({ width, height }, {}, async ({ page }) => {
@@ -1612,6 +1648,46 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
     approximatelyEqual(after.x - before.x, 0, 1, `600/601px D21 ${name} logical x anchor survives the .90 scale transition without a structural jump`);
     approximatelyEqual(after.y - before.y, 0, 1, `600/601px D21 ${name} logical y anchor survives the .90 scale transition without a structural jump`);
   }
+});
+
+test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp, and all children within their own buttons", async () => {
+  for (const width of [361, 375, 390]) await withSession({ width, height: 844 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    const buttons = [controls.newRound, controls.surrender, controls.hint, controls.history];
+    await page.evaluate(() => scrollTo(0, 0));
+    await waitForStableVisualGeometry(page);
+    const buttonBoxes = await Promise.all(buttons.map(async (button) => {
+      const box = await button.boundingBox();
+      assert.ok(box, `${width}px menu button has a visible box`);
+      assert.ok(box.width > 0 && box.height >= 64, `${width}px menu button preserves a 64px minimum hit target`);
+      assert.equal(await button.evaluate((element) => getComputedStyle(element).minHeight), "64px", `${width}px menu control keeps the public 64px minimum`);
+      return box;
+    }));
+
+    assert.ok(Math.abs(buttonBoxes[0].y - buttonBoxes[1].y) <= 1, `${width}px New game and Give up are the first compact row`);
+    assert.ok(Math.abs(buttonBoxes[2].y - buttonBoxes[3].y) <= 1, `${width}px Show hint and History are the second compact row`);
+    assert.ok(buttonBoxes[0].x < buttonBoxes[1].x && buttonBoxes[2].x < buttonBoxes[3].x, `${width}px both compact rows retain left-to-right columns`);
+    assert.ok(buttonBoxes[0].y + buttonBoxes[0].height <= buttonBoxes[2].y, `${width}px compact rows remain ordered without overlap`);
+    for (let index = 0; index < buttonBoxes.length; index += 1) for (let other = index + 1; other < buttonBoxes.length; other += 1) assert.equal(intersects(buttonBoxes[index], buttonBoxes[other]), false, `${width}px buttons ${index}/${other} never overlap`);
+
+    const children = await Promise.all(buttons.map((button) => button.evaluate((element) => {
+      const parent = element.getBoundingClientRect();
+      return [...element.children].map((child) => {
+        const rect = child.getBoundingClientRect();
+        const style = getComputedStyle(child);
+        return { tag: child.tagName.toLowerCase(), text: child.textContent.trim(), x: rect.x, y: rect.y, width: rect.width, height: rect.height, fontSize: style.fontSize, visible: style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0 };
+      });
+    })));
+    for (let index = 0; index < children.length; index += 1) for (const child of children[index]) {
+      const parent = buttonBoxes[index];
+      assert.equal(child.visible, true, `${width}px ${child.tag} is visible in its menu control`);
+      assert.ok(child.x >= parent.x - 1 && child.y >= parent.y - 1 && child.x + child.width <= parent.x + parent.width + 1 && child.y + child.height <= parent.y + parent.height + 1, `${width}px ${child.tag} stays inside its own button border box`);
+      for (let other = 0; other < buttonBoxes.length; other += 1) if (other !== index) assert.equal(intersects(child, buttonBoxes[other]), false, `${width}px ${child.tag} does not intrude into adjacent button ${other}`);
+      if (child.tag === "span") assert.equal(child.fontSize, "18px", `${width}px ${child.text} keeps the approved 18px compact label`);
+    }
+    const lamp = await exact(controls.hint.locator("img[aria-hidden='true']"), `${width}px hint lamp`);
+    assert.deepEqual(await lamp.evaluate((element) => { const rect = element.getBoundingClientRect(); return [getComputedStyle(element).visibility, rect.width, rect.height]; }), ["visible", 14, 14], `${width}px hint lamp stays visibly measurable beside its label`);
+  });
 });
 
 test("SC05 D25: a wrong valid code is visibly rejected and any real input edit clears only transient feedback", async () => {
