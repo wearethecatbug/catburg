@@ -4,6 +4,7 @@ import type { HintOperator, SafeGameAction, SafeGameState } from "../domain";
 import { createChallengeId } from "./challenge-id";
 
 type FocusTarget = "hint" | "input" | "new-game" | null;
+type GuessInputEditIntent = "delete" | "insert";
 
 function createInitialGameState() {
   return createSafeGameState(generateSafeCode(Math.random));
@@ -71,13 +72,13 @@ export function useGameController() {
     dispatch({ type: "submit-guess" });
   }
 
-  function changeGuessInput(input: string) {
+  function changeGuessInput(input: string, editIntent: GuessInputEditIntent = "insert") {
     const previous = currentState().input;
     if (input !== previous) {
       // Keep the rotation cumulative so a wrap never makes the transition spin the long way around.
       // Clearing the field still returns the dial to its neutral angle.
       if (input === "") setDialAngle(0);
-      else setDialAngle((angle) => input.length < previous.length ? angle - 36 : angle + 36);
+      else setDialAngle((angle) => editIntent === "delete" ? angle - 36 : angle + 36);
     }
     dispatch({ type: "set-input", input });
   }

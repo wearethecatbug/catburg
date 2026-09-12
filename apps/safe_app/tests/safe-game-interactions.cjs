@@ -701,6 +701,60 @@ test("SC05 D04: the tenth accepted input change keeps an unbounded clockwise dia
   });
 });
 
+test("SC05 D04: selected-text replacement and paste turn clockwise, while real character removal turns back one step", async () => {
+  await withSession({ width: 768, height: 800 }, {}, async ({ page, context }) => {
+    const controls = await gameControls(page);
+    const dial = await exactHiddenChild(page.getByLabel("Safe closed", { exact: true }), "directional safe dial");
+    const authoredDegrees = async () => {
+      const transform = await dial.evaluate((element) => element.style.transform);
+      const match = transform.match(/^rotate\((-?\d+(?:\.\d+)?)deg\)$/);
+      assert.ok(match, "the decorative dial keeps an authored public rotation");
+      return Number(match[1]);
+    };
+    const settleDial = () => page.waitForTimeout(220);
+
+    await controls.code.focus();
+    await page.keyboard.type("123");
+    await settleDial();
+    assert.equal(await authoredDegrees(), 108, "three inserted characters establish three public clockwise steps");
+
+    await page.keyboard.press("Control+A");
+    await page.keyboard.type("8");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "8", "selected text is replaced by the typed public value");
+    assert.equal(await authoredDegrees(), 144, "a nonempty replacement advances clockwise once even when its text is shorter");
+
+    await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseUrl });
+    await page.evaluate(() => navigator.clipboard.writeText("42"));
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Control+V");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "42", "paste replaces the selected public value");
+    assert.equal(await authoredDegrees(), 180, "a nonempty paste replacement advances clockwise once");
+
+    await page.keyboard.press("End");
+    await page.keyboard.press("Backspace");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "4", "Backspace removes one actual public character");
+    assert.equal(await authoredDegrees(), 144, "Backspace reverses exactly one 36-degree step");
+
+    await page.keyboard.type("2");
+    await settleDial();
+    assert.equal(await authoredDegrees(), 180, "insertion after Backspace advances clockwise once");
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Delete");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "2", "Delete removes one actual public character");
+    assert.equal(await authoredDegrees(), 144, "Delete reverses exactly one 36-degree step");
+
+    await page.keyboard.press("Control+A");
+    await page.keyboard.press("Backspace");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "", "the public field can be cleared");
+    assert.equal(await authoredDegrees(), 0, "clearing the public field restores neutral dial rotation");
+  });
+});
+
 test("SC05 D14: the separate dial keeps its approved responsive size and geometric centre independently of rotation", async () => {
   for (const [width, height, expectedSize] of [[1440, 900, 104], [768, 800, 88], [390, 844, 76], [320, 600, 68]]) {
     await withSession({ width, height }, {}, async ({ page }) => {
@@ -975,6 +1029,39 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
   });
 });
 
+test("SC05 D09: the stored-hint close timer cannot hide a card while keyboard focus remains inside its wrapper", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await earnFirstHint(page);
+    const card = page.getByRole("region", { name: "Stored hints", exact: true });
+    const leaveWrapper = async () => {
+      await controls.hint.hover();
+      await page.mouse.move(0, 0);
+      await page.clock.runFor(200);
+    };
+
+    await controls.hint.focus();
+    await exact(card, "Show hint focus-driven stored card");
+    const describedCardId = await card.getAttribute("id");
+    assert.equal(await controls.hint.getAttribute("aria-describedby"), describedCardId, "Show hint focus describes its visible stored card");
+    await leaveWrapper();
+    assert.equal(await card.count(), 1, "the expired pointer-leave timer preserves the card while Show hint remains focused");
+    assert.equal(await controls.hint.getAttribute("aria-describedby"), describedCardId, "the focused trigger retains its description after the close deadline");
+
+    const list = card.getByRole("list", { name: "Stored hint list", exact: true });
+    await exact(list, "focusable stored-hint list");
+    await list.focus();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Stored hint list", "keyboard focus moves into the stored-hint list");
+    await leaveWrapper();
+    assert.equal(await card.count(), 1, "the expired pointer-leave timer preserves the card while the stored list remains focused");
+    assert.equal(await controls.hint.getAttribute("aria-describedby"), describedCardId, "the trigger keeps its stored-card description while focus is inside the wrapper");
+
+    await controls.code.focus();
+    assert.equal(await card.count(), 0, "a real blur outside the wrapper closes the stored-hint card");
+    assert.equal(await controls.hint.getAttribute("aria-describedby"), null, "a real blur removes the stale stored-card description");
+  });
+});
+
 test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap keeps math activation", async () => {
   await withSession({ width: 390, height: 844 }, { hasTouch: true, random: 0.041 }, async ({ page, context }) => {
     await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
@@ -1164,6 +1251,9 @@ test("SC05 provider: one persistent atomic hint status and stored-card focus rac
     await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "re-entered stored card after obsolete leave deadline");
 
     await page.mouse.move(0, 0);
+    // Restore the stable top-of-game viewport after focus-driven card navigation before a distinct New game activation.
+    await page.evaluate(() => scrollTo(0, 0));
+    await page.waitForTimeout(0);
     await controls.newRound.click();
     await page.clock.runFor(500);
     assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "current-round reset cancels pending local card state instead of reopening stale hints");
