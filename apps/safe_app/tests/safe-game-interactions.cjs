@@ -924,6 +924,16 @@ test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap 
     await controls.hint.tap();
     await exact(page.getByRole("dialog", { name: "Solve a quick math question" }), "short touch math activation");
     await page.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Show hint", "closing the short-touch challenge restores its trigger without stale suppression");
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "restored trigger focus discloses current stored facts");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "Escape closes the refocus-disclosed stored card before the next touch activation");
+    await controls.hint.tap();
+    await exact(page.getByRole("dialog", { name: "Solve a quick math question" }), "refocused short touch math activation");
+    await page.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+    await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "second refocused short-touch stored card");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "second refocus-disclosed card closes before the manual touch-duration checks");
     await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
     await page.clock.runFor(499);
     assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "a 150-499ms touch contact does not disclose stored hints before the 500ms threshold");
@@ -1142,6 +1152,44 @@ test("SC05 provider: current-round reset cancels a pending touch card before it 
     await page.clock.runFor(500);
     await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "reset prevents an old touch timer from reopening a former-round stored card");
+  });
+});
+
+test("SC05 provider: Escape from a keyboard-focused stored-hint list closes once and restores its trigger", async () => {
+  await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    const controls = await earnFirstHint(page);
+    await controls.hint.focus();
+    const card = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), "Escape stored-hint card");
+    const list = await exact(card.getByRole("list", { name: "Stored hint list", exact: true }), "Escape stored-hint list");
+    await page.keyboard.press("Tab");
+    assert.equal(await list.evaluate((element) => element === document.activeElement), true, "Tab enters the stored-hint list before Escape");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "Escape from the list closes the stored card");
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Show hint", "Escape from the list restores focus to Show hint");
+    await page.waitForTimeout(250);
+    assert.equal(await page.getByRole("region", { name: "Stored hints", exact: true }).count(), 0, "restored trigger focus does not reopen the just-dismissed stored card");
+  });
+});
+
+test("SC05 provider: terminal outcomes retain earned stored hints without re-enabling math activation", async () => {
+  for (const outcome of ["won", "surrendered"]) await withSession({ width: 390, height: 844 }, { random: 0.041 }, async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    const controls = await earnFirstHint(page);
+    if (outcome === "won") {
+      await controls.code.fill("42"); await controls.submit.click();
+    } else {
+      await controls.surrender.click();
+    }
+    await page.clock.runFor(5001);
+    assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 0, `${outcome} reward expiry does not discard the earned hint`);
+    await controls.hint.focus();
+    const card = await exact(page.getByRole("region", { name: "Stored hints", exact: true }), `${outcome} retained stored-hint card`);
+    const list = await exact(card.getByRole("list", { name: "Stored hint list", exact: true }), `${outcome} retained stored-hint list`);
+    await page.keyboard.press("Tab");
+    assert.equal(await list.evaluate((element) => element === document.activeElement), true, `${outcome} retains keyboard reachability for the earned hint list`);
+    await page.keyboard.press("Escape");
+    await controls.hint.click();
+    assert.equal(await page.getByRole("dialog", { name: "Solve a quick math question" }).count(), 0, `${outcome} Show hint activation cannot open a new math challenge`);
   });
 });
 

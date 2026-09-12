@@ -18,7 +18,7 @@ export function GameMenu() {
   const facts = state.earnedHintFacts;
   const cancelHoverTimer = () => { if (hoverTimer.current) { clearTimeout(hoverTimer.current); hoverTimer.current = null; } };
   const clearTimers = () => { cancelHoverTimer(); if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; } };
-  const resetStoredHintPresentation = () => { clearTimers(); longPress.current = false; touchContact.current = false; touchLongPressOpen.current = false; setOpen(false); };
+  const resetStoredHintPresentation = () => { clearTimers(); longPress.current = false; touchContact.current = false; touchLongPressOpen.current = false; suppressNextFocus.current = false; setOpen(false); };
   useEffect(() => () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     if (longTimer.current) clearTimeout(longTimer.current);
@@ -37,15 +37,26 @@ export function GameMenu() {
   // A short grace period lets the pointer reach the card; opening always cancels a stale close first.
   const show = () => { cancelHoverTimer(); if (facts.length) setOpen(true); };
   const closeLater = (event?: React.PointerEvent<HTMLDivElement>) => { cancelHoverTimer(); if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; } touchContact.current = false; if (event?.pointerType === "touch" && touchLongPressOpen.current) return; hoverTimer.current = setTimeout(() => { hoverTimer.current = null; setOpen(false); }, 200); };
-  const onHintClick = () => { if (longPress.current) { longPress.current = false; return; } controller.showHint(); };
+  const onHintClick = () => { if (longPress.current) { longPress.current = false; return; } if (ended) { show(); return; } controller.showHint(); };
   const onHintWrapBlur = (event: React.FocusEvent<HTMLDivElement>) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) resetStoredHintPresentation(); };
+  const onHintWrapKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    const trigger = controller.hintButtonRef.current;
+    const shouldRestoreFocus = Boolean(trigger && document.activeElement !== trigger);
+    resetStoredHintPresentation();
+    if (shouldRestoreFocus && trigger && !trigger.disabled && trigger.isConnected) {
+      suppressNextFocus.current = true;
+      trigger.focus();
+    }
+  };
 
   return (
     <nav className={styles.menu} aria-label="Safe game controls">
       <button ref={controller.newGameButtonRef} className={`${styles.menuButton} ${styles.newGame}`} type="button" onClick={() => { resetStoredHintPresentation(); suppressNextFocus.current = false; controller.startNewRound(); }}><MenuIcon kind="new" /><span>New game</span></button>
       <button className={`${styles.menuButton} ${styles.giveUp}`} type="button" disabled={ended} onClick={controller.surrenderRound}><MenuIcon kind="give-up" /><span>Give up</span></button>
-      <div className={styles.hintWrap} onBlur={onHintWrapBlur} onPointerEnter={(event) => { if (event.pointerType !== "touch" && facts.length) { cancelHoverTimer(); hoverTimer.current = setTimeout(show, 150); } }} onPointerLeave={closeLater}>
-        <button ref={controller.hintButtonRef} className={`${styles.menuButton} ${styles.hint}`} type="button" disabled={ended} aria-describedby={open ? "stored-hints-card" : undefined} onFocus={() => { if (suppressNextFocus.current) { suppressNextFocus.current = false; return; } if (!touchContact.current) show(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); resetStoredHintPresentation(); controller.hintButtonRef.current?.focus(); } }} onPointerDown={(event) => { if (event.pointerType === "touch" && facts.length) { touchContact.current = true; touchLongPressOpen.current = false; longPress.current = false; if (longTimer.current) clearTimeout(longTimer.current); longTimer.current = setTimeout(() => { longTimer.current = null; longPress.current = true; touchLongPressOpen.current = true; setOpen(true); }, 500); } }} onPointerUp={() => { const wasTouchContact = touchContact.current; touchContact.current = false; if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; } if (wasTouchContact && !longPress.current) suppressNextFocus.current = true; }} onPointerCancel={resetStoredHintPresentation} onClick={onHintClick}><MenuIcon kind="hint" /><span>Show hint</span><img aria-hidden="true" src={`/safe-cat/hint-lamp-${facts.length ? "on" : "off"}-96.webp`} alt="" /></button>
+      <div className={styles.hintWrap} onBlur={onHintWrapBlur} onKeyDown={onHintWrapKeyDown} onPointerEnter={(event) => { if (event.pointerType !== "touch" && facts.length) { cancelHoverTimer(); hoverTimer.current = setTimeout(show, 150); } }} onPointerLeave={closeLater}>
+        <button ref={controller.hintButtonRef} className={`${styles.menuButton} ${styles.hint}`} type="button" disabled={ended && facts.length === 0} aria-describedby={open ? "stored-hints-card" : undefined} onFocus={() => { if (suppressNextFocus.current) { suppressNextFocus.current = false; return; } if (!touchContact.current) show(); }} onPointerDown={(event) => { if (event.pointerType === "touch" && facts.length) { touchContact.current = true; touchLongPressOpen.current = false; longPress.current = false; if (longTimer.current) clearTimeout(longTimer.current); longTimer.current = setTimeout(() => { longTimer.current = null; longPress.current = true; touchLongPressOpen.current = true; setOpen(true); }, 500); } }} onPointerUp={() => { const wasTouchContact = touchContact.current; touchContact.current = false; if (longTimer.current) { clearTimeout(longTimer.current); longTimer.current = null; } if (wasTouchContact && !longPress.current) suppressNextFocus.current = true; }} onPointerCancel={resetStoredHintPresentation} onClick={onHintClick}><MenuIcon kind="hint" /><span>Show hint</span><img aria-hidden="true" src={`/safe-cat/hint-lamp-${facts.length ? "on" : "off"}-96.webp`} alt="" /></button>
         {open && facts.length > 0 && <StoredHintsCard facts={facts} onPointerEnter={cancelHoverTimer} />}
       </div>
       <button ref={controller.historyButtonRef} className={`${styles.menuButton} ${styles.log}`} type="button" onClick={controller.toggleHistory}><MenuIcon kind="history" /><span>History</span></button>
