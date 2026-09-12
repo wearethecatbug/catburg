@@ -606,7 +606,7 @@ test("SC05 D02: public cat states use the approved contained WebP family and ret
 test("SC05 D04: each accepted public input edit advances only the decorative dial by 36 degrees", async () => {
   await withSession({ width: 768, height: 800 }, {}, async ({ page, context }) => {
     const controls = await gameControls(page);
-    const dial = await exactHiddenChild(page.getByLabel("Safe closed", { exact: true }), "safe dial");
+    const dial = await exactHiddenChild(page.getByRole("img", { name: "Safe closed", exact: true }), "semantic safe dial");
     const angle = () => visibleDialAngle(dial);
     const settleDial = () => page.waitForTimeout(220);
     assert.deepEqual(await dial.evaluate((element) => { const style = getComputedStyle(element); return [style.transitionProperty, style.transitionDuration, style.transitionTimingFunction]; }), ["transform", "0.18s", "cubic-bezier(0.22, 0.61, 0.36, 1)"], "normal motion uses the approved 180ms easing");
@@ -746,6 +746,15 @@ test("SC05 D04: selected-text replacement and paste turn clockwise, while real c
     await settleDial();
     assert.equal(await controls.code.inputValue(), "2", "Delete removes one actual public character");
     assert.equal(await authoredDegrees(), 144, "Delete reverses exactly one 36-degree step");
+
+    await page.keyboard.press("Control+Z");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "42", "undo restores the deleted public character");
+    assert.equal(await authoredDegrees(), 180, "undoing a deletion restores one clockwise step");
+    await page.keyboard.press("Control+Y");
+    await settleDial();
+    assert.equal(await controls.code.inputValue(), "2", "redo reapplies the public deletion");
+    assert.equal(await authoredDegrees(), 144, "redoing a deletion reverses exactly one 36-degree step");
 
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");
@@ -1741,7 +1750,7 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
 });
 
 test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp, and all children within their own buttons", async () => {
-  for (const width of [361, 375, 390]) await withSession({ width, height: 844 }, {}, async ({ page }) => {
+  for (const width of [361, 375, 390, 391, 403, 420, 421]) await withSession({ width, height: 844 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     const buttons = [controls.newRound, controls.surrender, controls.hint, controls.history];
     await page.evaluate(() => scrollTo(0, 0));
@@ -1776,7 +1785,8 @@ test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp,
       if (child.tag === "span") assert.equal(child.fontSize, "18px", `${width}px ${child.text} keeps the approved 18px compact label`);
     }
     const lamp = await exact(controls.hint.locator("img[aria-hidden='true']"), `${width}px hint lamp`);
-    assert.deepEqual(await lamp.evaluate((element) => { const rect = element.getBoundingClientRect(); return [getComputedStyle(element).visibility, rect.width, rect.height]; }), ["visible", 14, 14], `${width}px hint lamp stays visibly measurable beside its label`);
+    const expectedLampSize = width <= 420 ? 14 : 20;
+    assert.deepEqual(await lamp.evaluate((element) => { const rect = element.getBoundingClientRect(); return [getComputedStyle(element).visibility, rect.width, rect.height]; }), ["visible", expectedLampSize, expectedLampSize], `${width}px hint lamp stays visibly measurable beside its label`);
   });
 });
 
@@ -1786,7 +1796,9 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
     assert.equal(await controls.code.getAttribute("aria-invalid"), "true", "D25 wrong but valid code exposes invalid state");
     assert.equal(await controls.code.evaluate((element) => getComputedStyle(element).borderColor), "rgb(197, 101, 123)", "D25 wrong code has red border");
     assert.match(await controls.code.evaluate((element) => getComputedStyle(element).boxShadow), /197, 101, 123/, "D25 wrong code has red ring");
-    await exact(page.getByText("Incorrect code, try again.", { exact: true }), "D25 neutral wrong feedback"); await exact(page.getByLabel("Cat wrong", { exact: true }), "D25 wrong cat");
+    await exact(page.getByText("Incorrect code, try again.", { exact: true }), "D25 neutral wrong feedback"); const wrongCat = await exact(page.getByLabel("Cat wrong", { exact: true }), "D25 wrong cat");
+    await wrongCat.hover(); await page.waitForTimeout(300); await exact(page.getByLabel("Cat wrong", { exact: true }), "D25 wrong cat survives hover");
+    await page.mouse.move(0, 0); await page.waitForTimeout(300); await exact(page.getByLabel("Cat wrong", { exact: true }), "D25 wrong cat survives pointer leave");
     await controls.code.focus();
     await controls.code.press("Backspace");
     assert.equal(await controls.code.getAttribute("aria-invalid"), null, "D25 deletion clears invalid ring");

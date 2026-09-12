@@ -67,7 +67,9 @@ export function reduceSafeGame(state: SafeGameState, action: SafeGameAction): Sa
         catReaction: "idle",
       };
     case "set-cat-hover":
-      return { ...state, catReaction: action.active ? "hover" : "idle" };
+      return state.catReaction === "idle" || state.catReaction === "hover"
+        ? { ...state, catReaction: action.active ? "hover" : "idle" }
+        : state;
     case "surrender":
       return { ...state, phase: "surrendered", feedback: "surrendered", catReaction: "surrendered", revealedCode: state.code, hintChallenge: null, activeHintPredicateId: null, hintFeedback: "none", revealedMathAnswer: null };
     case "submit-guess": {

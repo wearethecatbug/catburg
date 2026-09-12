@@ -7,8 +7,12 @@ export function SafeCodeForm({ inputRef, revealedCode }: { inputRef: RefObject<H
   const terminal = state.phase !== "playing";
   function submit() { if (!terminal) submitGuess(); }
   function changeInput(event: ChangeEvent<HTMLInputElement>) {
+    const nextInput = event.target.value;
     const inputType = (event.nativeEvent as InputEvent).inputType;
-    changeGuessInput(event.target.value, inputType?.startsWith("delete") ? "delete" : "insert");
+    const undoingToLongerInput = inputType === "historyUndo" && nextInput.length > state.input.length;
+    const redoingToShorterInput = inputType === "historyRedo" && nextInput.length < state.input.length;
+    const deleting = inputType?.startsWith("delete") || (inputType === "historyUndo" && !undoingToLongerInput) || redoingToShorterInput;
+    changeGuessInput(nextInput, deleting ? "delete" : "insert");
   }
   return <form className={styles.codeEntry} onSubmit={(event) => { event.preventDefault(); submit(); }}>
     <label className={styles.visuallyHidden} htmlFor="safe-code">Safe code</label>
