@@ -36,7 +36,7 @@
   height: 460px;
   background: url("/safe.png") -100px -80px;
   background-repeat: no-repeat;
-  animation: fadeIn 0.5s ease-in-out 0s;
+  animation: fade-in 0.5s ease-in-out 0s;
 }
 
 .safeClose {
@@ -44,10 +44,10 @@
   height: 460px;
   background: url("/safe.png") -610px -80px;
   background-repeat: no-repeat;
-  animation: fadeIn 0.5s ease-in-out 0s;
+  animation: fade-in 0.5s ease-in-out 0s;
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
   }

@@ -11629,6 +11629,12 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
+      const backdrop = hint.dialog.locator("xpath=../..");
+      assert.equal(
+        await backdrop.getAttribute("role"),
+        "presentation",
+        "the dialog is wrapped by its public presentation backdrop",
+      );
       const answer = solveVisibleQuestion(
         await hint.dialog.locator("label[for='hint-answer']").innerText(),
       );
@@ -11766,6 +11772,11 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
         true,
         "dialog remains modal through 2,499ms of fade",
       );
+      assert.equal(
+        await backdrop.isVisible(),
+        true,
+        "presentation backdrop remains active through 2,499ms of the success fade",
+      );
       assert.ok(
         Number(
           await hint.dialog.evaluate(
@@ -11776,6 +11787,11 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       );
       await page.clock.runFor(1);
       await hint.dialog.waitFor({ state: "hidden" });
+      assert.equal(
+        await backdrop.count(),
+        0,
+        "presentation backdrop unmounts with the dialog at 2,500ms",
+      );
       assert.equal(
         await page.evaluate(() => document.activeElement?.textContent?.trim()),
         "Show hint",
@@ -12871,6 +12887,92 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
         .getByRole("button", { name: "Close hint challenge", exact: true })
         .click();
       await hint.dialog.waitFor({ state: "hidden" });
+    },
+  );
+});
+
+test("SC06: closing a short-tablet dialog restores its nonzero pre-open page scroll", async () => {
+  await withSession(
+    { width: 1024, height: 600 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.scrollIntoViewIfNeeded();
+      const [preOpenScrollY, hintBox] = await Promise.all([
+        page.evaluate(() => scrollY),
+        controls.hint.boundingBox(),
+      ]);
+      assert.ok(
+        preOpenScrollY > 0,
+        "short-tablet fixture exposes a nonzero page position before the modal opens",
+      );
+      assert.ok(
+        hintBox &&
+          hintBox.x >= 0 &&
+          hintBox.y >= 0 &&
+          hintBox.x + hintBox.width <= 1024 &&
+          hintBox.y + hintBox.height <= 600,
+        "the pointer opens the dialog from the already visible Show hint control",
+      );
+      await page.mouse.click(
+        hintBox.x + hintBox.width / 2,
+        hintBox.y + hintBox.height / 2,
+      );
+      const hint = await sc06Dialog(page);
+      const captureLock = () =>
+        page.evaluate(() => {
+          const bodyStyle = getComputedStyle(document.body);
+          return {
+            bodyOverflowY: bodyStyle.overflowY,
+            bodyPosition: bodyStyle.position,
+            bodyTop: Number.parseFloat(bodyStyle.top),
+            bodyVisualTop: document.body.getBoundingClientRect().top,
+            documentOverflowY: getComputedStyle(document.documentElement)
+              .overflowY,
+          };
+        });
+      const lock = await captureLock();
+      assert.deepEqual(
+        {
+          bodyOverflowY: lock.bodyOverflowY,
+          bodyPosition: lock.bodyPosition,
+          documentOverflowY: lock.documentOverflowY,
+        },
+        {
+          bodyOverflowY: "hidden",
+          bodyPosition: "fixed",
+          documentOverflowY: "hidden",
+        },
+        "opening from a nonzero position installs the document scroll lock",
+      );
+      approximatelyEqual(
+        lock.bodyTop,
+        -preOpenScrollY,
+        1,
+        "the fixed body top retains the nonzero pre-open document offset",
+      );
+      approximatelyEqual(
+        lock.bodyVisualTop,
+        lock.bodyTop,
+        1,
+        "the fixed body visibly occupies its preserved negative offset",
+      );
+      await page.keyboard.press("End");
+      await page.mouse.wheel(0, 1_000);
+      assert.deepEqual(
+        await captureLock(),
+        lock,
+        "End and wheel leave the fixed-body lock representation and visual offset unchanged",
+      );
+      await hint.dialog
+        .getByRole("button", { name: "Close hint challenge", exact: true })
+        .click();
+      await hint.dialog.waitFor({ state: "hidden" });
+      assert.equal(
+        await page.evaluate(() => scrollY),
+        preOpenScrollY,
+        "closing restores the exact nonzero page position that was locked",
+      );
     },
   );
 });

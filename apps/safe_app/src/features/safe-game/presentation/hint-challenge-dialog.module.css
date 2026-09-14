@@ -95,7 +95,6 @@
   overflow-wrap: anywhere;
 }
 .screenReaderOnly {
-  clip: rect(0 0 0 0);
   clip-path: inset(50%);
   height: 1px;
   overflow: hidden;
@@ -105,7 +104,6 @@
 }
 
 .feedback.screenReaderOnly {
-  clip: auto;
   clip-path: none;
   height: auto;
   opacity: 0;
