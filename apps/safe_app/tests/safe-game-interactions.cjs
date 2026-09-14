@@ -4851,6 +4851,67 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
     }
 });
 
+test("SC06 Codex P1: short tablet keeps code entry and menu separate and reachable", async () => {
+  await withSession({ width: 1024, height: 600 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    const namedControls = [
+      ["Safe code", controls.code],
+      ["OK", controls.submit],
+      ["New game", controls.newRound],
+      ["Give up", controls.surrender],
+      ["Show hint", controls.hint],
+      ["History", controls.history],
+    ];
+    const documentBoxes = await Promise.all(
+      namedControls.map(async ([name, control]) => {
+        const box = await control.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            x: rect.x + scrollX,
+            y: rect.y + scrollY,
+            width: rect.width,
+            height: rect.height,
+          };
+        });
+        return { name, box };
+      }),
+    );
+    const codeEntry = documentBoxes.slice(0, 2);
+    const menuButtons = documentBoxes.slice(2);
+    for (const entry of codeEntry)
+      for (const menu of menuButtons)
+        assert.equal(
+          intersects(entry.box, menu.box),
+          false,
+          `1024x600 ${entry.name} does not overlap ${menu.name}: entry=${JSON.stringify(entry.box)}, menu=${JSON.stringify(menu.box)}`,
+        );
+
+    for (const [name, control] of namedControls) {
+      await control.scrollIntoViewIfNeeded();
+      const reachability = await control.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const target = document.elementFromPoint(
+          box.left + box.width / 2,
+          box.top + box.height / 2,
+        );
+        return {
+          contained:
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= innerWidth &&
+            box.y + box.height <= innerHeight,
+          receivesPointer: target === element || element.contains(target),
+        };
+      });
+      assert.deepEqual(
+        reachability,
+        { contained: true, receivesPointer: true },
+        `1024x600 ${name} remains visibly reachable without an overlap overlay`,
+      );
+    }
+  });
+});
+
 test("SC06 D21: the initial 360x740 main scene fits every essential control without page scrolling", async () => {
   await withSession({ width: 360, height: 740 }, {}, async ({ page }) => {
     const controls = await gameControls(page);

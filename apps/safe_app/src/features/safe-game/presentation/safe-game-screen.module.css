@@ -322,7 +322,7 @@
     top: calc(420px + min(140px, (100vw - 24px) * 0.281) - 4px);
   }
   .menuRegion {
-    top: min(695px, calc(100svh - 141px));
+    top: 695px;
   }
 }
 @media (min-width: 1280px) and (min-height: 900px) {
