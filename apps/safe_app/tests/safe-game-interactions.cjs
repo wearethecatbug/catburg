@@ -648,7 +648,12 @@ async function visibleQuestionAnswer(page) {
       ),
     ),
   );
-  if (await dialog.isVisible()) await page.locator("body").press("Escape");
+  if (await dialog.isVisible()) {
+    await dialog
+      .getByRole("button", { name: "Close hint challenge", exact: true })
+      .focus();
+    await page.keyboard.press("Escape");
+  }
   await dialog.waitFor({ state: "hidden" });
 }
 
@@ -11802,7 +11807,25 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
               ].find((element) =>
                 /Earned hint:/.test(element.textContent || ""),
               );
-              if (!earnedStatus) return;
+              const vignette = document.querySelector(
+                'aside[aria-hidden="true"]',
+              );
+              const desktopCatSource = vignette?.querySelector(
+                'picture source[media="(min-width: 821px)"]',
+              );
+              const fallbackCat = vignette?.querySelector(
+                'img[src*="hint-popup-cat-"]',
+              );
+              if (
+                !earnedStatus ||
+                !desktopCatSource
+                  ?.getAttribute("srcset")
+                  ?.includes("hint-popup-cat-happy-640.png") ||
+                !fallbackCat
+                  ?.getAttribute("src")
+                  ?.includes("hint-popup-cat-success-1448.png")
+              )
+                return;
               observer.disconnect();
               resolve({
                 rewardCount: document.querySelectorAll(
@@ -11827,17 +11850,14 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                     "Solve this and I’ll give you a hint!",
                   ),
                 ).length,
-                vignetteCatSources: [
-                  ...document.querySelectorAll(
-                    'aside[aria-hidden="true"] img[src*="hint-popup-cat-"]',
-                  ),
-                ].map(
-                  (image) =>
-                    new URL(
-                      image.currentSrc || image.getAttribute("src") || "",
-                      document.baseURI,
-                    ).pathname,
-                ),
+                desktopCatSourceSet: desktopCatSource.getAttribute("srcset"),
+                fallbackCatSource: (() => {
+                  const source = new URL(
+                    fallbackCat.getAttribute("src") || "",
+                    document.baseURI,
+                  );
+                  return source.searchParams.get("url") || source.pathname;
+                })(),
               });
             });
             observer.observe(document.body, {
@@ -11858,7 +11878,8 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
           dialogCount: 1,
           successCopyCount: 1,
           initialPromptCount: 0,
-          vignetteCatSources: ["/safe-cat/hint-popup-cat-happy-640.png"],
+          desktopCatSourceSet: "/safe-cat/hint-popup-cat-happy-640.png",
+          fallbackCatSource: "/safe-cat/hint-popup-cat-success-1448.png",
         },
         "the first public pending-success state atomically replaces the normal cat and ordinary prompt with one reward, success copy, and happy vignette cat",
       );
