@@ -72,6 +72,30 @@ test("SC06 presentation: the public dialog keeps the approved action labels and 
   );
 });
 
+test("SC06 presentation: the five operation choices are a named pressable group", () => {
+  assert.match(
+    dialogSource,
+    /<div(?=[^>]*className=\{styles\.operatorBoard\})(?=[^>]*role="group")(?=[^>]*aria-label="Choose a math operation")[^>]*>/,
+    "the operation-choice container is an explicitly named group",
+  );
+  for (const label of ["Addition", "Subtraction", "Multiplication", "Division"])
+    assert.match(
+      dialogSource,
+      new RegExp(`label: "${label}"`),
+      `${label} remains one of the four labelled operation choices`,
+    );
+  assert.match(
+    dialogSource,
+    /operators\.map[\s\S]*?<button[\s\S]*?type="button"[\s\S]*?aria-label=\{label\}/,
+    "each mapped operation remains a labelled pressable button",
+  );
+  assert.match(
+    dialogSource,
+    /<button[\s\S]*?type="button"[\s\S]*?aria-label="Random operator"/,
+    "the fifth choice remains the labelled Random operator button",
+  );
+});
+
 test("SC06 presentation: the approved cat bubble is decorative and non-announcing", () => {
   assert.match(
     dialogSource,

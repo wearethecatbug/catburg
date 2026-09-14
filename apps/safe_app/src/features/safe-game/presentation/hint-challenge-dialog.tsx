@@ -370,6 +370,7 @@ export function HintChallengeDialog({
               <div
                 className={styles.operatorBoard}
                 aria-label="Choose a math operation"
+                role="group"
               >
                 {operators.map(({ asset, label, operator }) => (
                   <button

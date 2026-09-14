@@ -135,6 +135,27 @@
     gap: 6px;
     padding-inline: 6px;
   }
+
+  .menuButton.hint {
+    column-gap: 6px;
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) 12px;
+  }
+
+  .menuButton.hint svg {
+    grid-column: 1;
+    justify-self: center;
+  }
+
+  .menuButton.hint span {
+    min-width: 0;
+  }
+
+  .menuButton.hint img {
+    grid-column: 3;
+    margin-left: 0;
+  }
+
   .menuButton svg,
   .menuButton img {
     flex-basis: 12px;

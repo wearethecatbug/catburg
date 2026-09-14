@@ -8320,7 +8320,7 @@ test("SC06: responsive narrow challenge title is centered on the full page witho
         const subtitle = hint.dialog.locator("header p");
         const [titleBox, closeBox, subtitleBox, titleMetrics] =
           await Promise.all([
-            visibleTextBounds(title),
+            title.boundingBox(),
             close.boundingBox(),
             subtitle.boundingBox(),
             title.evaluate((element) => {
