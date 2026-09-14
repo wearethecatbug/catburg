@@ -9792,11 +9792,17 @@ test("SC06: mobile close paw, answer cadence, and five equal operators remain sa
           false,
           `${width}x${height} close paw remains clear of the title`,
         );
-        assert.equal(
-          intersects(closeBox, contentBox, 0),
-          false,
-          `${width}x${height} close paw remains clear of challenge controls`,
-        );
+        for (const [name, controlBox] of Object.entries({
+          answer: answerBox,
+          check: checkBox,
+          operators: operatorRowBox,
+          actions: actionsBox,
+        }))
+          assert.equal(
+            intersects(closeBox, controlBox, 0),
+            false,
+            `${width}x${height} close paw remains clear of the ${name} control region`,
+          );
         const stableInsets = closeInsetsByWidth.get(width);
         if (stableInsets) {
           approximatelyEqual(
