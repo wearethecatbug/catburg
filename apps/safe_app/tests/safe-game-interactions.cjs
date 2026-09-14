@@ -11845,6 +11845,90 @@ test("SC06 Copilot P1: a late correct Check after Give up cannot freeze or award
   );
 });
 
+test("SC06 Copilot P2: visibility reconciliation keeps one absolute concern deadline and cancels replaced callbacks", async () => {
+  await withSession(
+    { width: 1024, height: 768 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const clockStart = new Date("2026-01-01T00:00:00Z");
+      await page.clock.install({ time: clockStart });
+      await page.clock.pauseAt(clockStart);
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      let hint = await sc06Dialog(page);
+      const concerned = () =>
+        hint.dialog.locator('img[src*="hint-popup-cat-encouraging-1448.png"]');
+      const reconcileVisibility = () =>
+        page.evaluate(() =>
+          document.dispatchEvent(new Event("visibilitychange")),
+        );
+
+      for (const elapsed of [2_000, 2_000, 2_000]) {
+        await page.clock.runFor(elapsed);
+        await reconcileVisibility();
+      }
+      await page.clock.runFor(3_999);
+      assert.equal(
+        await concerned().count(),
+        0,
+        "repeated visibility reconciliations do not shorten the unresolved challenge deadline",
+      );
+      await page.clock.runFor(1);
+      await concerned().waitFor({ state: "visible" });
+      assert.equal(
+        await concerned().count(),
+        1,
+        "one absolute 10,000ms deadline reaches exactly one public concerned cat",
+      );
+      assert.equal(
+        await page
+          .getByRole("dialog", {
+            name: "Solve a quick math question",
+            exact: true,
+          })
+          .count(),
+        1,
+        "one deadline reconciliation never duplicates the public dialog",
+      );
+
+      await hint.newQuestion.click();
+      hint = await sc06Dialog(page);
+      await page.clock.runFor(5_000);
+      await hint.newQuestion.click();
+      hint = await sc06Dialog(page);
+      await page.clock.runFor(5_000);
+      assert.equal(
+        await concerned().count(),
+        0,
+        "the abandoned replacement deadline cannot turn a newer challenge concerned",
+      );
+      assert.equal(
+        await page
+          .getByRole("dialog", {
+            name: "Solve a quick math question",
+            exact: true,
+          })
+          .count(),
+        1,
+        "stale deadline callbacks do not duplicate or close the replacement dialog",
+      );
+      await page.clock.runFor(4_999);
+      assert.equal(
+        await concerned().count(),
+        0,
+        "the replacement keeps its own absolute deadline after stale callbacks expire",
+      );
+      await page.clock.runFor(1);
+      await concerned().waitFor({ state: "visible" });
+      assert.equal(
+        await concerned().count(),
+        1,
+        "the replacement reaches one concerned state only at its own 10,000ms deadline",
+      );
+    },
+  );
+});
+
 test("SC06: every rendered decorative cat image disables native browser dragging across normal, challenge, and reward states", async () => {
   await withSession(
     { width: 1440, height: 900 },

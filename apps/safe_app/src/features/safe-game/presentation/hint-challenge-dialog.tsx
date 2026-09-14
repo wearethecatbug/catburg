@@ -131,6 +131,10 @@ export function HintChallengeDialog({
     let timeout: ReturnType<typeof setTimeout> | null = null;
     // Reconcile elapsed time after a hidden tab delays callbacks instead of restarting the deadline.
     const reconcile = () => {
+      if (timeout) {
+        clearTimeout(timeout);
+        timeout = null;
+      }
       const elapsed = performance.now() - openedAt;
       if (elapsed >= 10_000) setCatState("concerned");
       else timeout = setTimeout(reconcile, 10_000 - elapsed);
