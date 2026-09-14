@@ -2,7 +2,12 @@ export const SAFE_CODE_MINIMUM = 1;
 export const SAFE_CODE_MAXIMUM = 1000;
 
 export type SafeGamePhase = "playing" | "won" | "surrendered";
-export type SafeGameFeedback = "none" | "invalid" | "wrong" | "won" | "surrendered";
+export type SafeGameFeedback =
+  | "none"
+  | "invalid"
+  | "wrong"
+  | "won"
+  | "surrendered";
 export type CatReaction = "idle" | "wrong" | "won" | "surrendered" | "hover";
 export type SafeHint = "even" | "odd";
 export type HintOperator = "+" | "-" | "×" | "÷";
@@ -46,10 +51,21 @@ export type SafeGameAction =
   | { type: "submit-guess" }
   | { type: "surrender" }
   | { type: "toggle-history" }
-  // New callers attach the public predicate identity; omission preserves existing callers during migration.
+  // New callers attach the public predicate identity; omission preserves existing callers during
+  // migration.
   | { type: "show-hint"; challenge: HintChallenge; predicateId?: string }
-  | { type: "replace-hint-challenge"; roundId: number; challengeId: string; challenge: HintChallenge }
+  | {
+      type: "replace-hint-challenge";
+      roundId: number;
+      challengeId: string;
+      challenge: HintChallenge;
+    }
   | { type: "give-up-hint-challenge"; roundId: number; challengeId: string }
-  | { type: "submit-hint-answer"; roundId: number; challengeId: string; answer: number | null }
+  | {
+      type: "submit-hint-answer";
+      roundId: number;
+      challengeId: string;
+      answer: number | null;
+    }
   | { type: "close-hint-challenge"; roundId: number; challengeId: string }
   | { type: "set-cat-hover"; active: boolean };

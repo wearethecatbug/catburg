@@ -10,7 +10,10 @@ import {
 
 type SafeGameAction = Parameters<typeof reduceSafeGame>[1];
 
-function apply(state: ReturnType<typeof createSafeGameState>, ...actions: SafeGameAction[]) {
+function apply(
+  state: ReturnType<typeof createSafeGameState>,
+  ...actions: SafeGameAction[]
+) {
   return actions.reduce(reduceSafeGame, state);
 }
 
@@ -19,9 +22,18 @@ function roundIdOf(state: object) {
 }
 
 test("generation reaches both inclusive endpoints, allows repeats, and rejects invalid bounds", () => {
-  assert.equal(generateSafeCode(() => 0), 1);
-  assert.equal(generateSafeCode(() => 0.9999999999999999), 1000);
-  assert.equal(generateSafeCode(() => 0, 7, 7), 7);
+  assert.equal(
+    generateSafeCode(() => 0),
+    1,
+  );
+  assert.equal(
+    generateSafeCode(() => 0.9999999999999999),
+    1000,
+  );
+  assert.equal(
+    generateSafeCode(() => 0, 7, 7),
+    7,
+  );
 
   assert.throws(() => generateSafeCode(() => 0, 0, 10), RangeError);
   assert.throws(() => generateSafeCode(() => 0, 1.5, 10), RangeError);
@@ -29,16 +41,39 @@ test("generation reaches both inclusive endpoints, allows repeats, and rejects i
 
   const priorRound = createSafeGameState(777);
   const nextRound = apply(priorRound, { type: "new-round", code: 777 });
-  assert.equal(nextRound.code, priorRound.code, "a new round may repeat the previous code");
-  assert.equal(roundIdOf(priorRound), 1, "a newly created game starts at public round identity 1");
-  assert.equal(roundIdOf(nextRound), 2, "every new round advances identity even when its code repeats");
+  assert.equal(
+    nextRound.code,
+    priorRound.code,
+    "a new round may repeat the previous code",
+  );
+  assert.equal(
+    roundIdOf(priorRound),
+    1,
+    "a newly created game starts at public round identity 1",
+  );
+  assert.equal(
+    roundIdOf(nextRound),
+    2,
+    "every new round advances identity even when its code repeats",
+  );
 });
 
 test("normalization accepts only trimmed whole decimal 1..1000 values and normalizes leading zeroes", () => {
   assert.deepEqual(normalizeSafeGuess(" 0007 "), { valid: true, value: 7 });
   assert.deepEqual(normalizeSafeGuess("1000"), { valid: true, value: 1000 });
 
-  for (const rawInput of ["", "   ", "+7", "-7", "7.0", "1e2", "7x", "0", "0000", "1001"]) {
+  for (const rawInput of [
+    "",
+    "   ",
+    "+7",
+    "-7",
+    "7.0",
+    "1e2",
+    "7x",
+    "0",
+    "0000",
+    "1001",
+  ]) {
     assert.deepEqual(
       normalizeSafeGuess(rawInput),
       { valid: false },
@@ -49,14 +84,22 @@ test("normalization accepts only trimmed whole decimal 1..1000 values and normal
 
 test("invalid attempts are excluded and a valid wrong code remains playable with neutral feedback", () => {
   const initial = createSafeGameState(42);
-  const invalid = apply(initial, { type: "set-input", input: " 7.0 " }, { type: "submit-guess" });
+  const invalid = apply(
+    initial,
+    { type: "set-input", input: " 7.0 " },
+    { type: "submit-guess" },
+  );
 
   assert.equal(invalid.phase, "playing");
   assert.equal(invalid.feedback, "invalid");
   assert.deepEqual(invalid.attempts, []);
   assert.equal(invalid.safeOpen, false);
 
-  const wrong = apply(invalid, { type: "set-input", input: " 0007 " }, { type: "submit-guess" });
+  const wrong = apply(
+    invalid,
+    { type: "set-input", input: " 0007 " },
+    { type: "submit-guess" },
+  );
   assert.equal(wrong.phase, "playing");
   assert.equal(wrong.feedback, "wrong");
   assert.equal(wrong.catReaction, "wrong");
@@ -68,8 +111,16 @@ test("invalid attempts are excluded and a valid wrong code remains playable with
     "wrong",
     "the domain exposes only a neutral wrong-result category, never secret-comparison guidance",
   );
-  assert.equal(apply(wrong, { type: "set-cat-hover", active: true }).catReaction, "wrong", "hover cannot erase a wrong reaction");
-  assert.equal(apply(wrong, { type: "set-cat-hover", active: false }).catReaction, "wrong", "pointer leave cannot erase a wrong reaction");
+  assert.equal(
+    apply(wrong, { type: "set-cat-hover", active: true }).catReaction,
+    "wrong",
+    "hover cannot erase a wrong reaction",
+  );
+  assert.equal(
+    apply(wrong, { type: "set-cat-hover", active: false }).catReaction,
+    "wrong",
+    "pointer leave cannot erase a wrong reaction",
+  );
 });
 
 test("a correct normalized guess atomically wins and every terminal interaction is a no-op", () => {
@@ -127,9 +178,17 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
   assert.equal(withRepeatedWrongGuess.historyVisible, true);
 
   const surrendered = apply(withRepeatedWrongGuess, { type: "surrender" });
-  const surrenderedHistoryClosed = apply(surrendered, { type: "toggle-history" });
-  assert.deepEqual(surrenderedHistoryClosed, { ...surrendered, historyVisible: false });
-  assert.deepEqual(apply(surrenderedHistoryClosed, { type: "toggle-history" }), surrendered);
+  const surrenderedHistoryClosed = apply(surrendered, {
+    type: "toggle-history",
+  });
+  assert.deepEqual(surrenderedHistoryClosed, {
+    ...surrendered,
+    historyVisible: false,
+  });
+  assert.deepEqual(
+    apply(surrenderedHistoryClosed, { type: "toggle-history" }),
+    surrendered,
+  );
   assert.deepEqual(surrendered, {
     code: 42,
     roundId: 1,
@@ -152,7 +211,13 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     latestAwardedFactId: null,
   });
   assert.deepEqual(
-    apply(surrenderedHistoryClosed, { type: "set-input", input: "42" }, { type: "submit-guess" }, { type: "surrender" }, { type: "set-cat-hover", active: true }),
+    apply(
+      surrenderedHistoryClosed,
+      { type: "set-input", input: "42" },
+      { type: "submit-guess" },
+      { type: "surrender" },
+      { type: "set-cat-hover", active: true },
+    ),
     surrenderedHistoryClosed,
     "terminal submit and surrender cannot change a completed round",
   );
