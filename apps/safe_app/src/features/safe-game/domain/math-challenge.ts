@@ -4,44 +4,60 @@ export function hasChallengeId(challengeId: unknown): challengeId is string {
   return typeof challengeId === "string" && challengeId.trim().length > 0;
 }
 
-function isOperand(value: number, maximum = 10) {
-  return Number.isInteger(value) && value >= 1 && value <= maximum;
+function isOperand(value: unknown, maximum = 10): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= maximum
+  );
+}
+
+function isRoundId(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
 /** Confirms that an externally supplied challenge has the same bounds and equation as the generator. */
-export function isValidHintChallenge(challenge: HintChallenge) {
-  if (!hasChallengeId(challenge.challengeId)) return false;
+export function isValidHintChallenge(
+  challenge: unknown,
+): challenge is HintChallenge {
+  if (!challenge || typeof challenge !== "object") return false;
+  const {
+    challengeId,
+    expectedAnswer,
+    leftOperand,
+    operator,
+    rightOperand,
+    roundId,
+  } = challenge as Partial<HintChallenge>;
+  if (!isRoundId(roundId) || !hasChallengeId(challengeId)) return false;
 
-  switch (challenge.operator) {
+  switch (operator) {
     case "+":
       return (
-        isOperand(challenge.leftOperand) &&
-        isOperand(challenge.rightOperand) &&
-        challenge.expectedAnswer ===
-          challenge.leftOperand + challenge.rightOperand
+        isOperand(leftOperand) &&
+        isOperand(rightOperand) &&
+        expectedAnswer === leftOperand + rightOperand
       );
     case "-":
       return (
-        isOperand(challenge.leftOperand) &&
-        isOperand(challenge.rightOperand) &&
-        challenge.leftOperand >= challenge.rightOperand &&
-        challenge.expectedAnswer ===
-          challenge.leftOperand - challenge.rightOperand
+        isOperand(leftOperand) &&
+        isOperand(rightOperand) &&
+        leftOperand >= rightOperand &&
+        expectedAnswer === leftOperand - rightOperand
       );
     case "×":
       return (
-        isOperand(challenge.leftOperand) &&
-        isOperand(challenge.rightOperand) &&
-        challenge.expectedAnswer ===
-          challenge.leftOperand * challenge.rightOperand
+        isOperand(leftOperand) &&
+        isOperand(rightOperand) &&
+        expectedAnswer === leftOperand * rightOperand
       );
     case "÷":
       return (
-        isOperand(challenge.leftOperand, 100) &&
-        isOperand(challenge.rightOperand) &&
-        isOperand(challenge.expectedAnswer) &&
-        challenge.leftOperand ===
-          challenge.rightOperand * challenge.expectedAnswer
+        isOperand(leftOperand, 100) &&
+        isOperand(rightOperand) &&
+        isOperand(expectedAnswer) &&
+        leftOperand === rightOperand * expectedAnswer
       );
     default:
       return false;

@@ -48,8 +48,8 @@ export function reduceSafeGame(
     case "show-hint":
       if (
         state.hintChallenge ||
-        action.challenge.roundId !== state.roundId ||
-        !isValidHintChallenge(action.challenge)
+        !isValidHintChallenge(action.challenge) ||
+        action.challenge.roundId !== state.roundId
       )
         return state;
       {

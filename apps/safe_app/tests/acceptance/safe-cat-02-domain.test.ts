@@ -432,6 +432,29 @@ test("C16/F06: Show hint and New Hint refuse an unidentifiable challenge", () =>
   );
 });
 
+test("C16/F06: Show hint treats deserialized malformed challenges as no-throw identity no-ops", () => {
+  const initial = initialState(52);
+  for (const [description, challenge] of [
+    ["null", null],
+    ["primitive", 17],
+    ["partial object", { roundId: initial.roundId, challengeId: "partial" }],
+  ]) {
+    const action = {
+      type: "show-hint",
+      challenge,
+    } as unknown as SafeGameAction;
+    assert.doesNotThrow(
+      () =>
+        assert.equal(
+          reduceSafeGame(initial, action),
+          initial,
+          `${description} deserialized challenge cannot mutate the game`,
+        ),
+      `${description} deserialized challenge cannot throw at the reducer boundary`,
+    );
+  }
+});
+
 test("C16/F06: absent or empty callback IDs cannot mutate a valid active challenge", () => {
   const initial = initialState(52);
   const valid: HintChallenge = {
