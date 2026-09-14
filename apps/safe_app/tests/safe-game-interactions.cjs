@@ -12103,10 +12103,17 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
       await page.waitForFunction(
         () => document.querySelector("#hint-answer")?.disabled === true,
       );
-      await successCopy.waitFor({ state: "visible" });
+      await successCopy.waitFor({ state: "attached" });
       await exact(
         successCopy,
         "inactive success presentation before its stale synthetic submit",
+      );
+      assert.equal(
+        await successCopy.evaluate(
+          (element) => element.closest("aside[aria-hidden='true']") !== null,
+        ),
+        true,
+        "inactive success remains decorative rather than becoming a live announcement",
       );
       assert.equal(
         await successful.answer.isDisabled(),
