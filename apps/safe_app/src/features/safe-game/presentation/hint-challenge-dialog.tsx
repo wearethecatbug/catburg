@@ -63,6 +63,7 @@ export function HintChallengeDialog({
 }: Props) {
   const controller = useSafeGameContext();
   const completeRef = useRef(controller.completeHintSuccess);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const frameShellRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -86,6 +87,9 @@ export function HintChallengeDialog({
     setRetryVisible(false);
     inputRef.current?.focus({ preventScroll: true });
   }, [identity]);
+  useEffect(() => {
+    if (frozen) closeButtonRef.current?.focus({ preventScroll: true });
+  }, [frozen]);
   useEffect(() => {
     if (abandoned) setRetryVisible(false);
   }, [abandoned]);
@@ -248,6 +252,7 @@ export function HintChallengeDialog({
               </p>
             </div>
             <button
+              ref={closeButtonRef}
               className={styles.closeButton}
               type="button"
               onClick={completeEarly}

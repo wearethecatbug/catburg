@@ -11553,6 +11553,108 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
   );
 });
 
+test("SC06 P2: pending success keeps keyboard focus in the public math modal", async () => {
+  await withSession(
+    { width: 390, height: 844 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const hint = await sc06Dialog(page);
+      const close = await exact(
+        hint.dialog.getByRole("button", {
+          name: "Close hint challenge",
+          exact: true,
+        }),
+        "pending-success accessible close paw",
+      );
+      await hint.answer.fill(
+        String(
+          solveVisibleQuestion(
+            await hint.dialog.locator("label[for='hint-answer']").innerText(),
+          ),
+        ),
+      );
+      await hint.check.click();
+      await page.waitForFunction(
+        () => document.querySelector("#hint-answer")?.disabled === true,
+      );
+      await exact(
+        hint.dialog.getByText("Great job! You earned a hint!", { exact: true }),
+        "pending-success public confirmation",
+      );
+      assert.equal(
+        await hint.answer.isDisabled(),
+        true,
+        "a correct answer disables the public answer input during pending success",
+      );
+      assert.equal(
+        await close.isEnabled(),
+        true,
+        "pending success retains the accessible close paw as a usable modal exit",
+      );
+
+      const gameNavigation = await exact(
+        page.getByRole("navigation", {
+          name: "Safe game controls",
+          exact: true,
+        }),
+        "underlying Safe game controls navigation",
+      );
+      const underlyingControls = [
+        controls.code,
+        controls.submit,
+        gameNavigation.getByRole("button", {
+          name: "New game",
+          exact: true,
+        }),
+        gameNavigation.getByRole("button", { name: "Give up", exact: true }),
+        gameNavigation.getByRole("button", {
+          name: "Show hint",
+          exact: true,
+        }),
+        gameNavigation.getByRole("button", { name: "History", exact: true }),
+      ];
+      for (const control of underlyingControls)
+        await exact(control, "one underlying Safe game controls action");
+      const assertModalFocus = async (description) => {
+        const [insideModal, underlyingActive] = await Promise.all([
+          hint.dialog.evaluate((dialog) =>
+            dialog.contains(document.activeElement),
+          ),
+          Promise.all(
+            underlyingControls.map((control) =>
+              control.evaluate((element) => element === document.activeElement),
+            ),
+          ),
+        ]);
+        assert.equal(
+          insideModal,
+          true,
+          `${description} keeps keyboard focus inside the pending modal`,
+        );
+        assert.equal(
+          underlyingActive.some(Boolean),
+          false,
+          `${description} does not move keyboard focus to an underlying game control`,
+        );
+      };
+
+      const focusStartsOnClose = await close.evaluate(
+        (element) => element === document.activeElement,
+      );
+      if (!focusStartsOnClose) {
+        await page.keyboard.press("Tab");
+        await assertModalFocus("the pending-success focus trap recovery Tab");
+      }
+      for (const key of ["Tab", "Tab", "Shift+Tab", "Shift+Tab"]) {
+        await page.keyboard.press(key);
+        await assertModalFocus(`pending-success ${key}`);
+      }
+    },
+  );
+});
+
 test("SC06: every rendered decorative cat image disables native browser dragging across normal, challenge, and reward states", async () => {
   await withSession(
     { width: 1440, height: 900 },
