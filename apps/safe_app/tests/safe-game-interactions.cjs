@@ -12625,9 +12625,21 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             false,
             `${width}x${height} elevated reward bubble avoids ${name}: bubble=${JSON.stringify(bubbleDocument)}, protected=${JSON.stringify(protectedBox)}`,
           );
+        await page.evaluate(() => scrollTo(0, 0));
+        const [titleRewardViewport, subtitleRewardViewport] = await Promise.all(
+          [
+            page
+              .getByRole("heading", {
+                name: "Guess the number",
+                exact: true,
+              })
+              .boundingBox(),
+            controls.instruction.boundingBox(),
+          ],
+        );
         for (const [state, title, subtitle] of [
           ["before", titleBefore, subtitleBefore],
-          ["reward", titleAfter, subtitleAfter],
+          ["reward", titleRewardViewport, subtitleRewardViewport],
         ]) {
           assert.ok(
             title.y >= 0 &&
