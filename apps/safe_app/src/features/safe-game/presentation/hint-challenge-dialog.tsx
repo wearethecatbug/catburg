@@ -251,6 +251,7 @@ export function HintChallengeDialog({
           className={`${styles.dialog} ${isSuccess ? styles.success : ""}`}
           style={{ "--dialog-scale": frameScale } as CSSProperties}
           data-frame="/safe-cat/hint-popup-background-1327.png"
+          data-success-presentation={isSuccess}
           role="dialog"
           aria-modal="true"
           aria-labelledby="hint-challenge-title"

@@ -649,6 +649,10 @@ async function visibleQuestionAnswer(page) {
     ),
   );
   if (await dialog.isVisible()) {
+    await page.waitForFunction(
+      (element) => element.dataset.successPresentation === "true",
+      await dialog.elementHandle(),
+    );
     await dialog
       .getByRole("button", { name: "Close hint challenge", exact: true })
       .focus();
