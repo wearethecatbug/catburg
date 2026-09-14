@@ -270,11 +270,17 @@ export function useGameController() {
 
   function closeHintChallenge(roundId: number, challengeId: string) {
     const challenge = currentState().hintChallenge;
-    if (
-      !challenge ||
-      challenge.roundId !== roundId ||
-      challenge.challengeId !== challengeId
-    )
+    if (!challenge) {
+      setHintSuccessPending((pending) =>
+        pending &&
+        pending.challenge.roundId === roundId &&
+        pending.challenge.challengeId === challengeId
+          ? null
+          : pending,
+      );
+      return;
+    }
+    if (challenge.roundId !== roundId || challenge.challengeId !== challengeId)
       return;
     pendingFocusRef.current = "hint";
     completedChallengeRef.current = null;

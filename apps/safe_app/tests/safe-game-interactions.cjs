@@ -11655,6 +11655,93 @@ test("SC06 P2: pending success keeps keyboard focus in the public math modal", a
   );
 });
 
+test("SC06: close paw exits at the earliest observable correct-submit completion state", async () => {
+  await withSession(
+    { width: 390, height: 844 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const hint = await sc06Dialog(page);
+      await hint.answer.fill(
+        String(
+          solveVisibleQuestion(
+            await hint.dialog.locator("label[for='hint-answer']").innerText(),
+          ),
+        ),
+      );
+      const close = await exact(
+        hint.dialog.getByRole("button", {
+          name: "Close hint challenge",
+          exact: true,
+        }),
+        "correct-submit completion close paw",
+      );
+      assert.equal(
+        await close.isEnabled(),
+        true,
+        "the close paw is enabled before correct-submit completion begins",
+      );
+      const completionClose = await hint.answer.evaluate((input) => {
+        const form = input.closest("form");
+        const dialog = input.closest('[role="dialog"]');
+        const close = [...(dialog?.querySelectorAll("button") ?? [])].find(
+          (button) =>
+            button.getAttribute("aria-label") === "Close hint challenge",
+        );
+        if (!form || !dialog || !close) return null;
+        const successCopy = "Great job! You earned a hint!";
+        let successAbsentAtCloseActivation = false;
+        close.addEventListener(
+          "click",
+          () => {
+            successAbsentAtCloseActivation =
+              !dialog.textContent?.includes(successCopy);
+          },
+          { capture: true, once: true },
+        );
+        const submitWasPrevented = !form.dispatchEvent(
+          new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+        );
+        close.click();
+        return { submitWasPrevented, successAbsentAtCloseActivation };
+      });
+      assert.deepEqual(
+        completionClose,
+        { submitWasPrevented: true, successAbsentAtCloseActivation: true },
+        "the public close paw activates during completionPending before success presentation is rendered",
+      );
+      await hint.dialog.waitFor({ state: "hidden" });
+      assert.equal(
+        await page
+          .getByRole("dialog", {
+            name: "Solve a quick math question",
+            exact: true,
+          })
+          .count(),
+        0,
+        "close paw unmounts the completed dialog",
+      );
+      assert.equal(
+        await controls.hint.evaluate(
+          (element) => element === document.activeElement,
+        ),
+        true,
+        "close paw restores focus to Show hint instead of leaking it to underlying controls",
+      );
+      const reward = await exact(
+        page.getByLabel("New hint reward", { exact: true }),
+        "earned reward after completion close",
+      );
+      assert.equal(
+        await reward.isVisible(),
+        true,
+        "completion close preserves the already-earned reward",
+      );
+    },
+  );
+});
+
 test("SC06 Copilot P1: a late correct Check after Give up cannot freeze or award the abandoned challenge", async () => {
   await withSession(
     { width: 390, height: 844 },
