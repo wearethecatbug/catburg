@@ -123,7 +123,17 @@ export function useGameController() {
       setHintSuccessPending(null);
       return;
     }
-    if (state.hintChallenge) return;
+    const activeChallenge = state.hintChallenge;
+    if (activeChallenge) {
+      if (
+        activeChallenge.roundId !== pending.challenge.roundId ||
+        activeChallenge.challengeId !== pending.challenge.challengeId ||
+        state.revealedMathAnswer !== null ||
+        !state.activeHintPredicateId
+      )
+        setHintSuccessPending(null);
+      return;
+    }
     // Only a reducer-produced, new public fact promotes the held dialog into success.
     if (
       state.latestAwardedFactId &&
@@ -139,8 +149,11 @@ export function useGameController() {
     setHintSuccessPending(null);
   }, [
     hintSuccessPending,
+    state.activeHintPredicateId,
     state.hintChallenge,
     state.latestAwardedFactId,
+    state.phase,
+    state.revealedMathAnswer,
     state.roundId,
   ]);
 
@@ -277,9 +290,13 @@ export function useGameController() {
     challengeId: string,
     answer: number | null,
   ) {
-    const challenge = currentState().hintChallenge;
+    const latestState = currentState();
+    const challenge = latestState.hintChallenge;
     if (
       !challenge ||
+      latestState.phase !== "playing" ||
+      latestState.revealedMathAnswer !== null ||
+      !latestState.activeHintPredicateId ||
       challenge.roundId !== roundId ||
       challenge.challengeId !== challengeId
     )
@@ -291,7 +308,7 @@ export function useGameController() {
       pendingFocusRef.current = "hint";
       setHintSuccessPending({
         challenge,
-        previousAwardedFactId: currentState().latestAwardedFactId,
+        previousAwardedFactId: latestState.latestAwardedFactId,
       });
     }
     dispatch({
@@ -325,7 +342,15 @@ export function useGameController() {
       challenge.challengeId !== challengeId
     )
       return;
-    completedChallengeRef.current = null;
+    const identity = `${challenge.roundId}:${challenge.challengeId}`;
+    completedChallengeRef.current = identity;
+    setHintSuccessPending((pending) =>
+      pending &&
+      pending.challenge.roundId === challenge.roundId &&
+      pending.challenge.challengeId === challenge.challengeId
+        ? null
+        : pending,
+    );
     dispatch({
       type: "give-up-hint-challenge",
       roundId: challenge.roundId,

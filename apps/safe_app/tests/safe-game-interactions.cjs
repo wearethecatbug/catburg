@@ -11655,6 +11655,109 @@ test("SC06 P2: pending success keeps keyboard focus in the public math modal", a
   );
 });
 
+test("SC06 Copilot P1: a late correct Check after Give up cannot freeze or award the abandoned challenge", async () => {
+  await withSession(
+    { width: 390, height: 844 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      let hint = await sc06Dialog(page);
+      await hint.answer.fill(
+        String(
+          solveVisibleQuestion(
+            await hint.dialog.locator("label[for='hint-answer']").innerText(),
+          ),
+        ),
+      );
+      await hint.giveUp.click();
+      await page.waitForFunction(
+        () => document.querySelector("#hint-answer")?.disabled === true,
+      );
+      const staleSubmitWasPrevented = await hint.answer.evaluate((input) => {
+        const form = input.closest("form");
+        if (!form) return null;
+        return form.dispatchEvent(
+          new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+        );
+      });
+      assert.equal(
+        staleSubmitWasPrevented,
+        false,
+        "the real abandoned answer form still routes its stale submit through the public onSubmit handler",
+      );
+      await page.waitForTimeout(100);
+
+      assert.equal(
+        await hint.dialog
+          .getByText("Great job! You earned a hint!", { exact: true })
+          .count(),
+        0,
+        "a delayed correct Check cannot promote an abandoned challenge to success",
+      );
+      assert.equal(
+        await page
+          .getByRole("status")
+          .getByText(/Earned hint:/)
+          .count(),
+        0,
+        "a delayed correct Check cannot publish an earned fact",
+      );
+      assert.equal(
+        await page.getByLabel("New hint reward", { exact: true }).count(),
+        0,
+        "a delayed correct Check cannot create the reward presentation",
+      );
+      const close = await exact(
+        hint.dialog.getByRole("button", {
+          name: "Close hint challenge",
+          exact: true,
+        }),
+        "abandoned challenge close control",
+      );
+      assert.equal(
+        await hint.dialog.isVisible(),
+        true,
+        "abandoned challenge remains an open dialog",
+      );
+      assert.equal(
+        await close.isEnabled(),
+        true,
+        "abandoned challenge remains closable",
+      );
+      assert.equal(
+        await hint.newQuestion.isEnabled(),
+        true,
+        "abandoned challenge retains New question instead of freezing",
+      );
+
+      await hint.newQuestion.click();
+      hint = await sc06Dialog(page);
+      assert.equal(
+        await hint.answer.isEnabled(),
+        true,
+        "New question restores an answerable challenge",
+      );
+      assert.equal(
+        await hint.check.isEnabled(),
+        true,
+        "New question restores Check",
+      );
+      assert.equal(
+        await hint.dialog
+          .getByText("Great job! You earned a hint!", { exact: true })
+          .count(),
+        0,
+        "the replacement challenge does not inherit stale success presentation",
+      );
+      await hint.dialog
+        .getByRole("button", { name: "Close hint challenge", exact: true })
+        .click();
+      await hint.dialog.waitFor({ state: "hidden" });
+    },
+  );
+});
+
 test("SC06: every rendered decorative cat image disables native browser dragging across normal, challenge, and reward states", async () => {
   await withSession(
     { width: 1440, height: 900 },
