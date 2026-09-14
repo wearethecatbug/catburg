@@ -1753,6 +1753,10 @@
 }
 
 @media (min-width: 821px) {
+  .cat {
+    height: auto;
+  }
+
   .cat.reflectedCat {
     transform: none;
   }

@@ -10954,6 +10954,94 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
     );
 });
 
+test("SC06: desktop challenge cat preserves a loaded square silhouette inside its vignette", async () => {
+  for (const [width, height] of [
+    [821, 900],
+    [1280, 900],
+  ])
+    await withSession(
+      { width, height },
+      { random: 0.041 },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        const hint = await sc06Dialog(page);
+        const vignette = hint.dialog.locator('aside[aria-hidden="true"]');
+        const cat = await exact(
+          vignette.locator('img[src*="hint-popup-cat-"]'),
+          `${width}x${height} desktop challenge cat`,
+        );
+        const [
+          catBox,
+          catAlpha,
+          vignetteBox,
+          headerBox,
+          contentBox,
+          actionsBox,
+        ] = await Promise.all([
+          cat.boundingBox(),
+          visibleAlphaBounds(cat),
+          vignette.boundingBox(),
+          hint.dialog.locator("header").boundingBox(),
+          hint.dialog.locator("section").boundingBox(),
+          hint.newQuestion.locator("xpath=..").boundingBox(),
+        ]);
+        assert.ok(
+          catBox &&
+            catAlpha &&
+            vignetteBox &&
+            headerBox &&
+            contentBox &&
+            actionsBox,
+          `${width}x${height} desktop cat, vignette, and protected dialog regions render`,
+        );
+        const source = await cat.evaluate((element) => ({
+          loaded:
+            element.complete &&
+            element.naturalWidth > 0 &&
+            element.naturalHeight > 0,
+          source: element.currentSrc || element.src,
+        }));
+        assert.equal(
+          source.loaded,
+          true,
+          `${width}x${height} desktop cat source is loaded`,
+        );
+        assert.equal(
+          source.source.includes("hint-popup-cat-thinking-640.png"),
+          true,
+          `${width}x${height} desktop cat uses its approved wide source`,
+        );
+        approximatelyEqual(
+          catBox.width,
+          catBox.height,
+          1,
+          `${width}x${height} desktop cat remains visually square`,
+        );
+        assert.equal(
+          catAlpha.x >= vignetteBox.x - 1 &&
+            catAlpha.y >= vignetteBox.y - 1 &&
+            catAlpha.x + catAlpha.width <=
+              vignetteBox.x + vignetteBox.width + 1 &&
+            catAlpha.y + catAlpha.height <=
+              vignetteBox.y + vignetteBox.height + 1,
+          true,
+          `${width}x${height} desktop cat alpha remains contained by its vignette`,
+        );
+        for (const [name, box] of Object.entries({
+          header: headerBox,
+          challenge: contentBox,
+          actions: actionsBox,
+        }))
+          assert.equal(
+            intersects(catAlpha, box, 0),
+            false,
+            `${width}x${height} desktop cat does not cover protected ${name} content`,
+          );
+      },
+    );
+});
+
 test("SC06: wrong-answer feedback never shifts the responsive challenge layout while retry is cleared", async () => {
   const narrowConcernedAsset = "hint-popup-cat-encouraging-1448.png";
   const desktopConcernedAsset = "hint-popup-cat-concerned-640.png";
@@ -11991,11 +12079,21 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
         ),
       );
       await successful.check.click();
+      const successCopy = successful.dialog.getByText(
+        "Great job! You earned a hint!",
+        { exact: true },
+      );
+      await page.waitForFunction(
+        () => document.querySelector("#hint-answer")?.disabled === true,
+      );
       await exact(
-        successful.dialog.getByText("Great job! You earned a hint!", {
-          exact: true,
-        }),
+        successCopy,
         "inactive success presentation before its stale synthetic submit",
+      );
+      assert.equal(
+        await successful.answer.isDisabled(),
+        true,
+        "inactive success disables the public answer input before its stale form submit",
       );
       assert.equal(
         await setDisabledInputValue(successful.answer, "0"),
