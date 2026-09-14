@@ -76,6 +76,8 @@ export function HintChallengeDialog({
     controller.state.hintChallenge?.roundId === challenge.roundId &&
     controller.state.hintChallenge.challengeId === challenge.challengeId;
   const isSuccess = successFactId !== null;
+  // Keep the success bubble stable while the controller promotes the awarded fact.
+  const displaysSuccess = isSuccess || completionPending;
   const abandoned = active && controller.state.revealedMathAnswer != null;
   const frozen = isSuccess || completionPending;
   useEffect(() => {
@@ -286,7 +288,7 @@ export function HintChallengeDialog({
             <div
               className={`${styles.speechBubble} ${abandoned ? styles.abandonedBubble : ""}`}
             >
-              {isSuccess
+              {displaysSuccess
                 ? "Great job! You earned a hint!"
                 : abandoned
                   ? `The answer is ${controller.state.revealedMathAnswer}. No worries — try another one!`

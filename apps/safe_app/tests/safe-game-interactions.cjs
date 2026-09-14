@@ -11652,6 +11652,20 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                 ).length,
                 dialogCount:
                   document.querySelectorAll('[role="dialog"]').length,
+                successCopyCount: [
+                  ...document.querySelectorAll('aside[aria-hidden="true"]'),
+                ].filter((element) =>
+                  element.textContent?.includes(
+                    "Great job! You earned a hint!",
+                  ),
+                ).length,
+                initialPromptCount: [
+                  ...document.querySelectorAll('aside[aria-hidden="true"]'),
+                ].filter((element) =>
+                  element.textContent?.includes(
+                    "Solve this and I’ll give you a hint!",
+                  ),
+                ).length,
               });
             });
             observer.observe(document.body, {
@@ -11666,8 +11680,14 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       const awardCommit = await firstAwardCommit;
       assert.deepEqual(
         awardCommit,
-        { rewardCount: 1, normalCatCount: 0, dialogCount: 1 },
-        "the first committed earned-status DOM state already synchronously replaces the normal cat with exactly one reward behind its dialog",
+        {
+          rewardCount: 1,
+          normalCatCount: 0,
+          dialogCount: 1,
+          successCopyCount: 1,
+          initialPromptCount: 0,
+        },
+        "the first public pending-success state atomically replaces the normal cat and ordinary prompt with one reward and the approved success copy",
       );
       await exact(
         page.getByRole("status").getByText(/Earned hint:/),
@@ -12478,6 +12498,20 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
               .boundingBox(),
             controls.instruction.boundingBox(),
           ]);
+        const initialScrollY = await page.evaluate(() => scrollY);
+        const toDocumentCoordinates = (box, scrollOffset) => ({
+          ...box,
+          y: box.y + scrollOffset,
+        });
+        const normalCatDocument = toDocumentCoordinates(
+          normalCat,
+          initialScrollY,
+        );
+        const safeDocument = toDocumentCoordinates(safeAlpha, initialScrollY);
+        const titleBeforeDocument = toDocumentCoordinates(
+          titleBefore,
+          initialScrollY,
+        );
         await controls.hint.click();
         const hint = await sc06Dialog(page);
         await hint.answer.fill(
@@ -12511,20 +12545,28 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           `${width}x${height} approved composite cat-with-lamp reward artwork`,
         );
         const rewardEnvelope = await visibleAlphaBounds(rewardComposite);
+        const postDialogScrollY = await page.evaluate(() => scrollY);
+        const rewardEnvelopeDocument = toDocumentCoordinates(
+          rewardEnvelope,
+          postDialogScrollY,
+        );
         assert.ok(
           rewardEnvelope.height >= normalCat.height * 0.9 &&
             rewardEnvelope.width >= normalCat.width * 0.75,
           `${width}x${height} reward envelope does not visually shrink the normal cat presentation: normal=${JSON.stringify(normalCat)}, reward=${JSON.stringify(rewardEnvelope)}`,
         );
         approximatelyEqual(
-          rewardEnvelope.y + rewardEnvelope.height,
-          normalCat.y + normalCat.height,
+          rewardEnvelopeDocument.y + rewardEnvelopeDocument.height,
+          normalCatDocument.y + normalCatDocument.height,
           Math.max(18, normalCat.height * 0.18),
           `${width}x${height} reward keeps the normal cat bottom/safe-top anchor`,
         );
         assert.ok(
-          Math.abs(rewardEnvelope.y + rewardEnvelope.height - safeAlpha.y) <=
-            Math.max(40, safeAlpha.height * 0.18),
+          Math.abs(
+            rewardEnvelopeDocument.y +
+              rewardEnvelopeDocument.height -
+              safeDocument.y,
+          ) <= Math.max(40, safeAlpha.height * 0.18),
           `${width}x${height} reward remains aligned to the safe top`,
         );
         const factBubble = await exact(
@@ -12540,6 +12582,19 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             controls.instruction.boundingBox(),
             controls.code.boundingBox(),
           ]);
+        const bubbleDocument = toDocumentCoordinates(
+          bubbleBox,
+          postDialogScrollY,
+        );
+        const titleAfterDocument = toDocumentCoordinates(
+          titleAfter,
+          postDialogScrollY,
+        );
+        const subtitleAfterDocument = toDocumentCoordinates(
+          subtitleAfter,
+          postDialogScrollY,
+        );
+        const formDocument = toDocumentCoordinates(formBox, postDialogScrollY);
         const comic = await factBubble.evaluate((element) => {
           const style = getComputedStyle(element);
           const tail = getComputedStyle(element, "::after");
@@ -12560,15 +12615,15 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           `${width}x${height} reward fact uses a rounded comic dialog bubble with visible tail`,
         );
         for (const [name, protectedBox] of Object.entries({
-          title: titleAfter,
-          subtitle: subtitleAfter,
-          safe: safeAlpha,
-          form: formBox,
+          title: titleAfterDocument,
+          subtitle: subtitleAfterDocument,
+          safe: safeDocument,
+          form: formDocument,
         }))
           assert.equal(
-            intersects(bubbleBox, protectedBox, 8),
+            intersects(bubbleDocument, protectedBox, 8),
             false,
-            `${width}x${height} elevated reward bubble avoids ${name}: bubble=${JSON.stringify(bubbleBox)}, protected=${JSON.stringify(protectedBox)}`,
+            `${width}x${height} elevated reward bubble avoids ${name}: bubble=${JSON.stringify(bubbleDocument)}, protected=${JSON.stringify(protectedBox)}`,
           );
         for (const [state, title, subtitle] of [
           ["before", titleBefore, subtitleBefore],
@@ -12588,8 +12643,8 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             );
         }
         approximatelyEqual(
-          titleAfter.y,
-          titleBefore.y,
+          titleAfterDocument.y,
+          titleBeforeDocument.y,
           2,
           `${width}x${height} title does not jump between normal and reward states`,
         );
