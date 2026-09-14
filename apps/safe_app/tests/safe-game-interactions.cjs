@@ -10783,6 +10783,20 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
           );
         };
         const stateAsset = async (filename, description, reflected) => {
+          await page.waitForFunction((expectedFilename) => {
+            const cats = document.querySelectorAll(
+              'aside[aria-hidden="true"] img[src*="hint-popup-cat-"]',
+            );
+            if (cats.length !== 1) return false;
+            const cat = cats[0];
+            const source = cat.currentSrc || cat.src;
+            return (
+              cat.complete &&
+              cat.naturalWidth > 0 &&
+              cat.naturalHeight > 0 &&
+              source.includes(expectedFilename)
+            );
+          }, filename);
           const cats = hint.dialog.locator(
             'aside[aria-hidden="true"] img[src*="hint-popup-cat-"]',
           );

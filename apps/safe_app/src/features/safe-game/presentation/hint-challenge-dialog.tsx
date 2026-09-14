@@ -463,12 +463,13 @@ export function HintChallengeDialog({
             <button
               type="button"
               className={`${styles.imageButton} ${styles.giveUpButton}`}
-              onClick={() =>
+              onClick={() => {
+                setCatState("sad");
                 controller.giveUpHintChallenge(
                   challenge.roundId,
                   challenge.challengeId,
-                )
-              }
+                );
+              }}
               disabled={frozen || abandoned}
             >
               <svg

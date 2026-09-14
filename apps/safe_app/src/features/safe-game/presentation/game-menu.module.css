@@ -130,6 +130,18 @@
     width: 14px;
   }
 }
+@media (max-width: 360px) {
+  .menuButton {
+    gap: 6px;
+    padding-inline: 6px;
+  }
+  .menuButton svg,
+  .menuButton img {
+    flex-basis: 12px;
+    height: 12px;
+    width: 12px;
+  }
+}
 @media (max-width: 600px) and (max-height: 760px) {
   .menu {
     gap: 8px;

@@ -1918,13 +1918,29 @@
 }
 
 @media (max-width: 360px) {
+  .backdrop {
+    padding: 0;
+  }
+
+  .dialogShell {
+    width: 100vw;
+  }
+
   .heading {
-    padding-inline: 56px;
+    max-width: 100%;
+    min-width: 0;
+    padding-inline: 0;
+    width: 100%;
   }
 
   .heading h2 {
     font-size: 0.8125rem;
+    left: 50%;
+    max-width: none;
+    position: relative;
+    transform: translateX(-50%);
     white-space: nowrap;
+    width: 192px;
   }
 
   .closeButton {
