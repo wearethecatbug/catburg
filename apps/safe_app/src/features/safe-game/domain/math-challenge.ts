@@ -4,8 +4,16 @@ export function hasChallengeId(challengeId: unknown): challengeId is string {
   return typeof challengeId === "string" && challengeId.trim().length > 0;
 }
 
-/** With random values in [0, 1), subtraction stays nonnegative and division is exact with a nonzero divisor. */
-export function createHintChallenge(random: () => number, roundId: number, operator: HintOperator, challengeId: string): HintChallenge {
+/**
+ * With random values in [0, 1), subtraction stays nonnegative and division is exact with a
+ * nonzero divisor.
+ */
+export function createHintChallenge(
+  random: () => number,
+  roundId: number,
+  operator: HintOperator,
+  challengeId: string,
+): HintChallenge {
   if (!hasChallengeId(challengeId)) {
     throw new RangeError("Hint challenge identity must be a non-empty string.");
   }
@@ -28,5 +36,12 @@ export function createHintChallenge(random: () => number, roundId: number, opera
     expectedAnswer = firstOperand;
   }
 
-  return { roundId, challengeId, operator, leftOperand, rightOperand, expectedAnswer };
+  return {
+    roundId,
+    challengeId,
+    operator,
+    leftOperand,
+    rightOperand,
+    expectedAnswer,
+  };
 }

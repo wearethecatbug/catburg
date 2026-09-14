@@ -7,6 +7,7 @@ export const SafeGameContext = createContext<SafeGameContextValue | null>(null);
 
 export function useSafeGameContext() {
   const context = useContext(SafeGameContext);
-  if (!context) throw new Error("Safe game controls must be used inside SafeGameProvider.");
+  if (!context)
+    throw new Error("Safe game controls must be used inside SafeGameProvider.");
   return context;
 }

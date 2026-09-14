@@ -1,27 +1,105 @@
-.catContainer { background: transparent; border: 0; cursor: pointer; height: 204px; padding: 0; position: relative; width: 272px; }
-.reactionDescription { border:0; clip-path:inset(50%); height:1px; margin:-1px; overflow:hidden; padding:0; position:absolute; white-space:nowrap; width:1px; }
-.art { display:block; height:100%; position:relative; width:100%; }.art img { object-fit:contain; object-position:center bottom; }
-.surrendered .art img { transform:scale(1.3) translateY(13.5%); transform-origin:center bottom; }
-.hearts { inset: 0; pointer-events: none; position: absolute; }
-.hearts i { animation:heart var(--duration) cubic-bezier(.22,.61,.36,1) forwards; color:#ff5d9c; font-size:22px; font-style:normal; left:calc(var(--origin-x) + var(--x)); position:absolute; text-shadow:0 1px 0 rgb(255 246 251 / .9), 0 0 5px rgb(255 93 156 / .4); top:calc(var(--origin-y) + var(--y)); }
-@keyframes heart { 0% { opacity:0; transform:translateY(0) scale(.86) } 30% { opacity:1 } 100% { opacity:0; transform:translateY(calc(var(--rise) * -1)) scale(.96) } }
-@media (prefers-reduced-motion: reduce) { .hearts i { animation:heartFade 700ms linear forwards; } @keyframes heartFade { 0% { opacity:.2; } 50% { opacity:.6; } 100% { opacity:0; } } }
+.catContainer {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  height: 204px;
+  padding: 0;
+  position: relative;
+  width: 272px;
+}
+.reactionDescription {
+  border: 0;
+  clip-path: inset(50%);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+.art {
+  display: block;
+  height: 100%;
+  position: relative;
+  width: 100%;
+}
+.art img {
+  object-fit: contain;
+  object-position: center bottom;
+}
+.surrendered .art img {
+  transform: scale(1.3) translateY(13.5%);
+  transform-origin: center bottom;
+}
+.hearts {
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+.hearts i {
+  animation: heart var(--duration) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  color: #ff5d9c;
+  font-size: 22px;
+  font-style: normal;
+  left: calc(var(--origin-x) + var(--x));
+  position: absolute;
+  text-shadow:
+    0 1px 0 rgb(255 246 251 / 0.9),
+    0 0 5px rgb(255 93 156 / 0.4);
+  top: calc(var(--origin-y) + var(--y));
+}
+@keyframes heart {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.86);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(calc(var(--rise) * -1)) scale(0.96);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hearts i {
+    animation: heartFade 700ms linear forwards;
+  }
+  @keyframes heartFade {
+    0% {
+      opacity: 0.2;
+    }
+    50% {
+      opacity: 0.6;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
 
 .catContainerPlaceholder {
-    width: 128px;
-    height: 128px;
-    visibility: hidden;
+  width: 128px;
+  height: 128px;
+  visibility: hidden;
 }
 
 @media (max-width: 600px) {
-    .catContainer { height:156px; width:208px; } .hearts i { font-size:18px; }
+  .catContainer {
+    height: 156px;
+    width: 208px;
+  }
+  .hearts i {
+    font-size: 18px;
+  }
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
