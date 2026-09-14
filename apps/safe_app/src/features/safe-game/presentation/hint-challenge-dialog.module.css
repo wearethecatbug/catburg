@@ -899,7 +899,7 @@
     overflow: auto;
     padding: 84px 24px 32px;
     position: relative;
-    scale: 1;
+    scale: none;
     transform: none;
     width: 100%;
     align-content: start;
@@ -1280,9 +1280,11 @@
 
   .closeButton {
     height: 60px;
+    position: fixed;
     right: 18px;
     top: 12px;
     width: 60px;
+    z-index: 2001;
   }
 
   .closeButton img {

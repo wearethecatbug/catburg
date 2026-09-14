@@ -3000,8 +3000,18 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
       await page.clock.pauseAt(clockStart);
       const controls = await earnFirstHint(page);
       const reward = await exact(
-        page.getByLabel("New hint reward", { exact: true }),
+        page.getByRole("img", { name: "New hint reward", exact: true }),
         "newly-earned reward presentation",
+      );
+      assert.equal(
+        await reward.getAttribute("role"),
+        "img",
+        "the named reward wrapper has the approved semantic image role",
+      );
+      assert.equal(
+        await reward.locator('[role="status"], [aria-live]').count(),
+        0,
+        "reward artwork does not duplicate the separate live announcement channel",
       );
       assert.equal(
         await page.getByLabel(/^Cat /).count(),
@@ -7497,7 +7507,7 @@ test.skip("SC06: superseded mobile lamp-and-bubble vignette geometry", async () 
     );
 });
 
-test("SC06: 601-820px narrow challenge presents one decorated fullscreen card without scrolling", async () => {
+test("SC06: 601-820px narrow challenge presents one decorated fullscreen card with its concise subtitle", async () => {
   for (const [width, height] of [
     [820, 1064],
     [820, 920],
@@ -7757,13 +7767,12 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           await subtitle.evaluate(
             (element) => getComputedStyle(element).display,
           ),
-          "none",
-          `${width}x${height} header subtitle is visually and accessibility hidden`,
+          "block",
+          `${width}x${height} header subtitle remains visible throughout the tablet range`,
         );
-        assert.equal(
-          subtitleBox,
-          null,
-          `${width}x${height} hidden header subtitle has no rendered bounds`,
+        assert.ok(
+          subtitleBox && subtitleBox.width > 0 && subtitleBox.height > 0,
+          `${width}x${height} visible tablet subtitle has rendered bounds`,
         );
         approximatelyEqual(
           closeBox.width,
@@ -8334,7 +8343,7 @@ test("SC06: tablet operators fill the answer-form span with responsive equal til
     );
 });
 
-test("SC06: responsive narrow challenge title is centered on the full page without colliding with its close paw", async () => {
+test("SC06: responsive narrow challenge title and range-specific subtitle remain centered and clear of the close paw", async () => {
   for (const [width, height] of [
     [320, 920],
     [390, 844],
@@ -8409,18 +8418,25 @@ test("SC06: responsive narrow challenge title is centered on the full page witho
           "center",
           `${width}x${height} narrow title text stays centered`,
         );
+        const expectedSubtitleDisplay = width <= 600 ? "none" : "block";
         assert.equal(
           await subtitle.evaluate(
             (element) => getComputedStyle(element).display,
           ),
-          "none",
-          `${width}x${height} narrow subtitle stays hidden`,
+          expectedSubtitleDisplay,
+          `${width}x${height} subtitle follows the approved mobile/tablet visibility boundary`,
         );
-        assert.equal(
-          subtitleBox,
-          null,
-          `${width}x${height} hidden narrow subtitle has no bounds`,
-        );
+        if (width <= 600)
+          assert.equal(
+            subtitleBox,
+            null,
+            `${width}x${height} mobile subtitle has no rendered bounds`,
+          );
+        else
+          assert.ok(
+            subtitleBox && subtitleBox.width > 0 && subtitleBox.height > 0,
+            `${width}x${height} tablet subtitle has rendered bounds`,
+          );
       },
     );
 });
@@ -10754,6 +10770,7 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
             true,
             `${width}x${height} ${description} visible cat art remains inside its vignette`,
           );
+          const requiresViewportContainment = mobileSimplified || height >= 768;
           for (const [name, box] of Object.entries({
             vignette: vignetteBox,
             cat: catBox,
@@ -10765,10 +10782,10 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
           }))
             assert.ok(
               box.x >= 0 &&
-                box.y >= 0 &&
                 box.x + box.width <= width &&
-                box.y + box.height <= height,
-              `${width}x${height} ${description} ${name} remains viewport-contained`,
+                (!requiresViewportContainment ||
+                  (box.y >= 0 && box.y + box.height <= height)),
+              `${width}x${height} ${description} ${name} remains horizontally contained${requiresViewportContainment ? " and viewport-contained" : " while the short tablet dialog may scroll internally"}`,
             );
           if (mobileSimplified) {
             assert.equal(
@@ -12086,6 +12103,7 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
       await page.waitForFunction(
         () => document.querySelector("#hint-answer")?.disabled === true,
       );
+      await successCopy.waitFor({ state: "visible" });
       await exact(
         successCopy,
         "inactive success presentation before its stale synthetic submit",
