@@ -263,7 +263,7 @@ test("SC06 presentation: opening a dialog locks document scrolling and closing i
   );
 });
 
-test("SC06 presentation: three responsive ranges keep an internally scrollable, framed dialog", () => {
+test("SC06 presentation: canonical responsive seams keep an internally scrollable, framed dialog", () => {
   assert.match(
     dialogStyles,
     /overflow\s*:\s*auto/,
@@ -281,18 +281,23 @@ test("SC06 presentation: three responsive ranges keep an internally scrollable, 
   );
   assert.match(
     dialogStyles,
-    /@media\s*\(min-width:\s*1280px\)/,
-    "desktop treatment begins at 1280px",
+    /@media\s*\(min-width:\s*821px\)/,
+    "desktop treatment begins at 821px",
   );
   assert.match(
     dialogStyles,
-    /@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*1279px\)/,
-    "tablet treatment covers 601px through 1279px",
+    /@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*820px\)/,
+    "narrow/tablet treatment covers 601px through 820px",
   );
   assert.match(
     dialogStyles,
     /@media\s*\(max-width:\s*600px\)/,
     "mobile treatment covers 600px and below",
+  );
+  assert.doesNotMatch(
+    dialogStyles,
+    /@media\s*\(min-width:\s*1280px\)\s*\{\s*\.dialog\s*\{|@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*1279px\)\s*\{\s*\.dialog\s*\{/,
+    "canonical dialog layout must not reintroduce the legacy 601-1279px or 1280px cascade markers",
   );
 });
 

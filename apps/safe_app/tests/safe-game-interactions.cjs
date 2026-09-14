@@ -8888,6 +8888,154 @@ test("SC06: 600px mobile and 821px desktop retain their non-tablet geometry", as
     );
 });
 
+test("SC06: canonical dialog cascade keeps the 600/601px and 820/821px seams intentional", async () => {
+  for (const [width, height, subtitleVisible, composition, closeSize] of [
+    [600, 900, false, "stacked", 56],
+    [601, 900, true, "stacked", 60],
+    [820, 920, true, "stacked", 60],
+    [821, 1040, false, "columns", 76],
+  ])
+    await withSession(
+      { width, height },
+      { random: 0.041 },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        const hint = await sc06Dialog(page);
+        const backdrop = hint.dialog.locator("xpath=../..");
+        const close = await exact(
+          hint.dialog.getByRole("button", {
+            name: "Close hint challenge",
+            exact: true,
+          }),
+          `${width}px responsive-cascade close control`,
+        );
+        const subtitle = hint.dialog.locator("header p");
+        const [
+          backdropMetrics,
+          dialogMetrics,
+          contentBox,
+          vignetteBox,
+          closeWidth,
+        ] = await Promise.all([
+          backdrop.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            return {
+              height: box.height,
+              position: getComputedStyle(element).position,
+              role: element.getAttribute("role"),
+              width: box.width,
+              x: box.x,
+              y: box.y,
+            };
+          }),
+          hint.dialog.evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              display: style.display,
+              gridTemplateColumns: style.gridTemplateColumns,
+            };
+          }),
+          hint.dialog.locator("section").boundingBox(),
+          hint.dialog.locator("aside").boundingBox(),
+          close.evaluate((element) =>
+            Number.parseFloat(getComputedStyle(element).width),
+          ),
+        ]);
+        assert.deepEqual(
+          {
+            position: backdropMetrics.position,
+            role: backdropMetrics.role,
+          },
+          { position: "fixed", role: "presentation" },
+          `${width}px presentation backdrop remains the fixed modal boundary`,
+        );
+        for (const [property, expected] of [
+          ["x", 0],
+          ["y", 0],
+          ["width", width],
+          ["height", height],
+        ])
+          approximatelyEqual(
+            backdropMetrics[property],
+            expected,
+            1,
+            `${width}px presentation backdrop covers the viewport at the responsive seam`,
+          );
+        assert.equal(
+          dialogMetrics.display,
+          "grid",
+          `${width}px semantic dialog keeps its canonical grid boundary`,
+        );
+        assert.ok(
+          contentBox && vignetteBox,
+          `${width}px responsive seam renders both public dialog story regions`,
+        );
+        assert.equal(
+          await subtitle.isVisible(),
+          subtitleVisible,
+          `${width}px subtitle visibility changes only at the approved mobile/tablet seams`,
+        );
+        approximatelyEqual(
+          closeWidth,
+          closeSize,
+          0.01,
+          `${width}px close control retains its cascade-specific logical target`,
+        );
+        if (composition === "stacked") {
+          assert.equal(
+            dialogMetrics.gridTemplateColumns.split(" ").length,
+            1,
+            `${width}px mobile/tablet cascade keeps one dialog column`,
+          );
+          assert.ok(
+            contentBox.y + contentBox.height <= vignetteBox.y,
+            `${width}px mobile/tablet content remains above its vignette`,
+          );
+          approximatelyEqual(
+            contentBox.x + contentBox.width / 2,
+            vignetteBox.x + vignetteBox.width / 2,
+            2,
+            `${width}px stacked story regions retain one horizontal center`,
+          );
+        } else {
+          assert.equal(
+            dialogMetrics.gridTemplateColumns.split(" ").length,
+            2,
+            "821px desktop cascade restores the two-column dialog grid",
+          );
+          assert.ok(
+            contentBox.x + contentBox.width <= vignetteBox.x,
+            "821px desktop content remains left of its vignette",
+          );
+          const desktopNotice = await exact(
+            hint.dialog.getByText(
+              "A correct answer will unlock a hint in the game!",
+              { exact: true },
+            ),
+            "821px visible desktop cat notice",
+          );
+          const desktopNoticeBox = await desktopNotice.boundingBox();
+          assert.equal(
+            await desktopNotice.isVisible(),
+            true,
+            "821px desktop vignette renders its approved visible cat notice",
+          );
+          assert.ok(
+            desktopNoticeBox &&
+              desktopNoticeBox.x >= vignetteBox.x &&
+              desktopNoticeBox.y >= vignetteBox.y &&
+              desktopNoticeBox.x + desktopNoticeBox.width <=
+                vignetteBox.x + vignetteBox.width &&
+              desktopNoticeBox.y + desktopNoticeBox.height <=
+                vignetteBox.y + vignetteBox.height,
+            "821px desktop cat notice remains contained by the vignette",
+          );
+        }
+      },
+    );
+});
+
 test("SC06: narrow background remains the sole <=820px challenge surface while desktop assets stay isolated", async () => {
   for (const [width, height, expectedSurface] of [
     [820, 1064, "narrow"],
