@@ -31,6 +31,13 @@ const screenStyles = readFileSync(
   ),
   "utf8",
 );
+const rewardSource = readFileSync(
+  resolve(
+    process.cwd(),
+    "src/features/safe-game/presentation/reward-presentation.tsx",
+  ),
+  "utf8",
+);
 
 test("SC06 presentation: the public dialog keeps the approved action labels and accessible modal boundary", () => {
   assert.match(dialogSource, /role="dialog"/);
@@ -286,5 +293,41 @@ test("SC06 presentation: three responsive ranges keep an internally scrollable, 
     dialogStyles,
     /@media\s*\(max-width:\s*600px\)/,
     "mobile treatment covers 600px and below",
+  );
+});
+
+test("SC06 presentation: the concise subtitle stays visible throughout tablet widths while mobile keeps it hidden", () => {
+  assert.match(
+    dialogStyles,
+    /@media\s*\(min-width:\s*601px\)\s*and\s*\(max-width:\s*820px\)[\s\S]*?\.subtitle\s*\{[\s\S]*?display\s*:\s*block\s*;/,
+    "the 601px through 820px tablet treatment explicitly renders the subtitle",
+  );
+  assert.match(
+    dialogStyles,
+    /@media\s*\(max-width:\s*600px\)\s*\{\s*\.subtitle\s*\{\s*display\s*:\s*none\s*;/,
+    "the later concise mobile rule is limited to 600px and below rather than overriding tablet",
+  );
+  assert.doesNotMatch(
+    dialogStyles,
+    /@media\s*\(max-width:\s*820px\)\s*\{\s*\.subtitle\s*\{\s*display\s*:\s*none\s*;/,
+    "a broad late narrow-screen hide would conceal the subtitle at 601px through 820px",
+  );
+});
+
+test("SC06 presentation: reward artwork has its own named semantic image without becoming a second live announcement", () => {
+  assert.match(
+    rewardSource,
+    /<div(?=[^>]*className=\{styles\.reward\})(?=[^>]*role="img")(?=[^>]*aria-label="New hint reward")[^>]*>/,
+    "the reward wrapper is discoverable as the named New hint reward image",
+  );
+  assert.doesNotMatch(
+    rewardSource,
+    /role="status"|aria-live=/,
+    "reward artwork must not duplicate the separate live status channel",
+  );
+  assert.match(
+    screenSource,
+    /className=\{styles\.rewardAnnouncement\}[\s\S]*?role="status"[\s\S]*?aria-live="polite"/,
+    "SafeGameScreen retains the separate polite live status owner",
   );
 });
