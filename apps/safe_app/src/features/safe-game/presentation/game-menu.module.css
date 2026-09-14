@@ -137,7 +137,7 @@
   }
 
   .menuButton.hint {
-    column-gap: 6px;
+    column-gap: 4px;
     display: grid;
     grid-template-columns: 12px minmax(0, 1fr) 12px;
   }

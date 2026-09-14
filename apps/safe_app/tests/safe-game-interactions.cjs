@@ -4638,6 +4638,9 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
                 .map((child) => {
                   const rect = child.getBoundingClientRect();
                   const style = getComputedStyle(child);
+                  const textRange = document.createRange();
+                  textRange.selectNodeContents(child);
+                  const textRect = textRange.getBoundingClientRect();
                   return {
                     tag: child.tagName.toLowerCase(),
                     text: child.textContent.trim(),
@@ -4648,6 +4651,15 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
                     clientWidth: child.clientWidth,
                     scrollWidth: child.scrollWidth,
                     lineHeight: Number.parseFloat(style.lineHeight),
+                    textBox:
+                      child.matches("span") && textRect.width > 0
+                        ? {
+                            x: textRect.x,
+                            y: textRect.y + scroll,
+                            width: textRect.width,
+                            height: textRect.height,
+                          }
+                        : null,
                   };
                 })
                 .filter((child) => child.width > 0 && child.height > 0);
@@ -4667,8 +4679,14 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
             );
             if (child.tag === "span" && child.text) {
               assert.ok(
-                child.scrollWidth <= child.clientWidth + 1,
-                `${width}px ${child.text} label does not clip horizontally`,
+                child.textBox &&
+                  child.textBox.x >= parent.x - 1 &&
+                  child.textBox.y >= parent.y - 1 &&
+                  child.textBox.x + child.textBox.width <=
+                    parent.x + parent.width + 1 &&
+                  child.textBox.y + child.textBox.height <=
+                    parent.y + parent.height + 1,
+                `${width}px ${child.text} rendered label stays inside its own menu button border box`,
               );
               assert.ok(
                 !Number.isFinite(child.lineHeight) ||
@@ -4933,6 +4951,36 @@ test("SC06 D21: the initial 360x740 main scene fits every essential control with
       "360x740 End and wheel do not require or activate page scrolling",
     );
   });
+});
+
+test("SC06: short desktop header stays visible and clear of the cat across the header cascade boundary", async () => {
+  for (const [width, height] of [
+    [1280, 600],
+    [1280, 720],
+  ])
+    await withSession({ width, height }, {}, async ({ page }) => {
+      const controls = await gameControls(page);
+      const [title, subtitle, cat] = await Promise.all([
+        page
+          .getByRole("heading", { name: "Guess the number", exact: true })
+          .boundingBox(),
+        controls.instruction.boundingBox(),
+        visibleAlphaBounds(controls.cat),
+      ]);
+      for (const [name, box] of Object.entries({ title, subtitle, cat }))
+        assert.ok(
+          box &&
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= width &&
+            box.y + box.height <= height,
+          `${width}x${height} short-desktop ${name} stays visible in the viewport`,
+        );
+      assert.ok(
+        subtitle.y + subtitle.height <= cat.y - 16,
+        `${width}x${height} short-desktop subtitle keeps the approved 16px cat clearance`,
+      );
+    });
 });
 
 test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp, and all children within their own buttons", async () => {

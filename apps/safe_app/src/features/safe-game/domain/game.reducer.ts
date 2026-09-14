@@ -1,6 +1,6 @@
 import { createSafeGameState } from "./game.factory";
 import { normalizeSafeGuess } from "./guess";
-import { hasChallengeId } from "./math-challenge";
+import { hasChallengeId, isValidHintChallenge } from "./math-challenge";
 import {
   buildPublicCandidateCodes,
   chooseNextHintPredicate,
@@ -49,7 +49,7 @@ export function reduceSafeGame(
       if (
         state.hintChallenge ||
         action.challenge.roundId !== state.roundId ||
-        !hasChallengeId(action.challenge.challengeId)
+        !isValidHintChallenge(action.challenge)
       )
         return state;
       {

@@ -237,6 +237,24 @@ test("C14/F03: the selected operator is an explicit four-symbol contract and eac
   }
 });
 
+test("C14/F03: Show hint rejects a caller-supplied challenge whose displayed equation disagrees with its answer", () => {
+  const initial = initialState(42);
+  const inconsistent: HintChallenge = {
+    roundId: initial.roundId,
+    challengeId: "inconsistent-equation",
+    operator: "+",
+    leftOperand: 2,
+    rightOperand: 3,
+    expectedAnswer: 42,
+  };
+
+  assert.equal(
+    reduceSafeGame(initial, { type: "show-hint", challenge: inconsistent }),
+    initial,
+    "the reducer must not expose or award a mathematically inconsistent challenge",
+  );
+});
+
 test("C14/F03: a fixed random sequence makes every operator challenge deterministic", () => {
   const sequence = [0.06, 0.73, 0.41, 0.9];
   for (const operator of ["+", "-", "×", "÷"] as const) {
