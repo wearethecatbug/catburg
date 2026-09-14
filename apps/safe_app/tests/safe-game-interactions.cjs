@@ -11907,6 +11907,132 @@ test("SC06 Copilot P1: a late correct Check after Give up cannot freeze or award
   );
 });
 
+test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inactive-success presentation state", async () => {
+  const dispatchSubmit = async (input) =>
+    input.evaluate((element) => {
+      const form = element.closest("form");
+      if (!form) return null;
+      return form.dispatchEvent(
+        new SubmitEvent("submit", { bubbles: true, cancelable: true }),
+      );
+    });
+  const setDisabledInputValue = async (input, value) =>
+    input.evaluate((element, nextValue) => {
+      const nativeValueSetter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        "value",
+      )?.set;
+      if (!nativeValueSetter) return null;
+      nativeValueSetter.call(element, nextValue);
+      element.dispatchEvent(
+        new Event("input", { bubbles: true, cancelable: true }),
+      );
+      return element.value;
+    }, value);
+
+  await withSession(
+    { width: 390, height: 844 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const abandoned = await sc06Dialog(page);
+      await abandoned.answer.fill("0");
+      await abandoned.giveUp.click();
+      await abandoned.answer.waitFor({ state: "attached" });
+      assert.equal(
+        await abandoned.answer.isDisabled(),
+        true,
+        "active abandoned state disables the public answer input before a stale form submit",
+      );
+      const staleSubmitWasPrevented = await dispatchSubmit(abandoned.answer);
+      assert.equal(
+        staleSubmitWasPrevented,
+        false,
+        "the real active-abandoned form routes a synthetic submit through public onSubmit handling",
+      );
+      await page.waitForTimeout(100);
+      assert.equal(
+        await abandoned.dialog
+          .locator('img[src*="hint-popup-cat-sad-give-up-1448.png"]')
+          .count(),
+        1,
+        "a stale wrong submit cannot replace the active-abandoned sad cat",
+      );
+      assert.equal(
+        await abandoned.dialog
+          .locator('img[src*="hint-popup-cat-encouraging-1448.png"]')
+          .count(),
+        0,
+        "a stale wrong submit cannot present retry concern art over active abandonment",
+      );
+      assert.equal(
+        await abandoned.answer.getAttribute("aria-invalid"),
+        null,
+        "a stale wrong submit cannot restore retry-invalid state after active abandonment",
+      );
+      await abandoned.dialog
+        .getByRole("button", {
+          name: "Close hint challenge",
+          exact: true,
+        })
+        .click();
+      await abandoned.dialog.waitFor({ state: "hidden" });
+
+      await controls.hint.click();
+      const successful = await sc06Dialog(page);
+      await successful.answer.fill(
+        String(
+          solveVisibleQuestion(
+            await successful.dialog
+              .locator("label[for='hint-answer']")
+              .innerText(),
+          ),
+        ),
+      );
+      await successful.check.click();
+      await exact(
+        successful.dialog.getByText("Great job! You earned a hint!", {
+          exact: true,
+        }),
+        "inactive success presentation before its stale synthetic submit",
+      );
+      assert.equal(
+        await setDisabledInputValue(successful.answer, "0"),
+        "0",
+        "the inactive success input receives the public wrong stale value before submit",
+      );
+      await page.waitForTimeout(0);
+      const successSubmitWasPrevented = await dispatchSubmit(successful.answer);
+      assert.equal(
+        successSubmitWasPrevented,
+        false,
+        "the real inactive-success form routes a synthetic submit through public onSubmit handling",
+      );
+      await page.waitForTimeout(100);
+      assert.equal(
+        await successful.dialog
+          .getByText("Great job! You earned a hint!", { exact: true })
+          .count(),
+        1,
+        "a synthetic submit cannot replace the public inactive-success presentation",
+      );
+      assert.equal(
+        await successful.dialog
+          .locator('img[src*="hint-popup-cat-success-1448.png"]')
+          .count(),
+        1,
+        "a synthetic submit cannot replace the inactive-success happy cat",
+      );
+      assert.equal(
+        await successful.answer.getAttribute("aria-invalid"),
+        null,
+        "an inactive-success submit cannot introduce retry-invalid state",
+      );
+    },
+  );
+});
+
 test("SC06 Copilot P2: visibility reconciliation keeps one absolute concern deadline and cancels replaced callbacks", async () => {
   await withSession(
     { width: 1024, height: 768 },

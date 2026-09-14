@@ -189,6 +189,7 @@ export function HintChallengeDialog({
       controller.closeHintChallenge(challenge.roundId, challenge.challengeId);
   }
   function submit() {
+    if (abandoned || !active) return;
     const raw = answer.trim();
     const value = /^\d+$/.test(raw) ? Number(raw) : null;
     const submittedValue =
