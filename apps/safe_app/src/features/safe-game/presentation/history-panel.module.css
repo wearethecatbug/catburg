@@ -9,9 +9,8 @@
   max-width: calc(100vw - 24px);
   background-color: #ededed;
   color: #202020;
-  font-family: "Audiowide", sans-serif;
-
-  word-wrap: break-word;
+  font-family: Audiowide, sans-serif;
+  overflow-wrap: break-word;
   white-space: normal;
   z-index: 1000;
   display: flex;
@@ -23,7 +22,7 @@
 .textStyle {
   color: #000000;
   font-size: 12px;
-  font-family: "Audiowide", sans-serif;
+  font-family: Audiowide, sans-serif;
   min-width: 100%;
   min-height: 100%;
   overflow: auto;

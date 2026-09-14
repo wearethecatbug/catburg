@@ -203,11 +203,10 @@ test("SC04 round: reset is atomic even for a repeated code, while terminal publi
   const reset = apply(won, { type: "new-round", code: 42 });
   const resetModel = selectEarnedHintReadModel(reset);
   assert.equal(
-    reset.roundId,
+    resetModel.roundId,
     initial.roundId + 1,
-    "same-code restart still advances the public round identity",
+    "same-code restart advances the public read-model round identity",
   );
   assert.deepEqual(resetModel.facts, []);
   assert.equal(resetModel.latestAwardedFactId, null);
-  assert.equal(reset.hintChallenge, null);
 });

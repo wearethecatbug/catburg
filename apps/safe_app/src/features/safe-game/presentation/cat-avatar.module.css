@@ -64,9 +64,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .hearts i {
-    animation: heartFade 700ms linear forwards;
+    animation: heart-fade 700ms linear forwards;
   }
-  @keyframes heartFade {
+  @keyframes heart-fade {
     0% {
       opacity: 0.2;
     }
@@ -95,7 +95,7 @@
   }
 }
 
-@keyframes fadeIn {
+@keyframes fade-in {
   from {
     opacity: 0;
   }

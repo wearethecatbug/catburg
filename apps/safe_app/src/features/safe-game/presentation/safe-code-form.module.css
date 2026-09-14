@@ -1,5 +1,5 @@
 .codeEntry {
-  font-family: "Nunito", "Segoe UI", system-ui, sans-serif;
+  font-family: Nunito, "Segoe UI", system-ui, sans-serif;
   margin: 0;
   max-width: 480px;
   min-width: 0;
@@ -26,7 +26,7 @@
   color: #454158;
   flex: 1 1 0;
   font:
-    20px "Nunito",
+    20px Nunito,
     "Segoe UI",
     system-ui,
     sans-serif;
@@ -67,7 +67,7 @@
   display: flex;
   flex: 0 0 128px;
   font:
-    600 20px "Nunito",
+    600 20px Nunito,
     "Segoe UI",
     system-ui,
     sans-serif;

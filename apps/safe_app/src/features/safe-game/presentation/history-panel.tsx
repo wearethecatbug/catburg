@@ -59,8 +59,8 @@ export function HistoryPanel({
   const [position, setPosition] = useState<Point | null>(null);
 
   const anchoredPosition = useCallback(() => {
-    // Initial placement follows the button in document space; only user movement is viewport-
-    // clamped.
+    // Initial placement follows the button in document space; later movement and resize are
+    // viewport-clamped.
     const panel = panelRef.current;
     const parentRect = panel
       ? getOffsetParentRect(panel)

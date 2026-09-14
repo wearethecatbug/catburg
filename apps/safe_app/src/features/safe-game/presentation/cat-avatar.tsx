@@ -39,8 +39,8 @@ export function CatAvatar({
   const [hearts, setHearts] = useState<HeartNode[]>([]);
   const last = useRef(-Infinity);
   // Pointer bursts use their in-target event point; keyboard activation has no coordinates, so it
-  // uses the target centre. Each node cleans up on its own duration while retaining only two
-  // bursts.
+  // uses the target centre. Each node cleans up on its own duration while retaining only the
+  // previous burst.
   const pet = (event: MouseEvent<HTMLButtonElement>) => {
     const now = Date.now();
     if (now - last.current < 900) return;

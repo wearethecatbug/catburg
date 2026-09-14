@@ -27,7 +27,7 @@
   cursor: pointer;
   display: flex;
   font:
-    600 20px "Nunito",
+    600 20px Nunito,
     "Segoe UI",
     system-ui,
     sans-serif;

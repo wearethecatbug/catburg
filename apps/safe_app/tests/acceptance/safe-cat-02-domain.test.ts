@@ -915,11 +915,22 @@ test("surrendering after an open rejected challenge clears its challenge state",
 
 test("terminal win retains the canonical state keys", () => {
   const winScenario = openChallengeAndAnswerWrong(42, "a02-terminal-keys-win");
+  const closed = apply(winScenario.wrong, {
+    type: "close-hint-challenge",
+    roundId: winScenario.initial.roundId,
+    challengeId: winScenario.challenge.challengeId,
+  });
+  assert.equal(
+    closed.hintChallenge,
+    null,
+    "terminal setup closes the active challenge",
+  );
   const won = apply(
-    winScenario.wrong,
+    closed,
     { type: "set-input", input: "42" },
     { type: "submit-guess" },
   );
+  assert.equal(won.phase, "won", "the terminal-win scenario reaches won");
   assertCanonicalStateKeys(won, "winning keeps the canonical state shape");
 });
 
@@ -940,10 +951,25 @@ test("a same-code restart after a terminal round rebuilds canonical state", () =
     42,
     "a02-restart",
   );
+  const closed = apply(wrong, {
+    type: "close-hint-challenge",
+    roundId: initial.roundId,
+    challengeId: challenge.challengeId,
+  });
+  assert.equal(
+    closed.hintChallenge,
+    null,
+    "restart setup closes the active challenge",
+  );
   const won = apply(
-    wrong,
+    closed,
     { type: "set-input", input: "42" },
     { type: "submit-guess" },
+  );
+  assert.equal(
+    won.phase,
+    "won",
+    "restart setup reaches the terminal win state",
   );
   const restarted = apply(won, { type: "new-round", code: 42 });
   assert.equal(restarted.roundId, initial.roundId + 1);
@@ -962,10 +988,25 @@ test("a same-code restart rejects stale actions from the terminal round", () => 
     42,
     "a02-restart-stale",
   );
+  const closed = apply(wrong, {
+    type: "close-hint-challenge",
+    roundId: initial.roundId,
+    challengeId: challenge.challengeId,
+  });
+  assert.equal(
+    closed.hintChallenge,
+    null,
+    "stale-callback setup closes the active challenge",
+  );
   const won = apply(
-    wrong,
+    closed,
     { type: "set-input", input: "42" },
     { type: "submit-guess" },
+  );
+  assert.equal(
+    won.phase,
+    "won",
+    "stale-callback setup reaches the terminal win state",
   );
   const restarted = apply(won, { type: "new-round", code: 42 });
   assert.deepEqual(

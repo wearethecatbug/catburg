@@ -1,7 +1,7 @@
 .title {
   color: #3e3b50;
   font:
-    800 44px/1 "Chewy",
+    800 44px/1 Chewy,
     "Trebuchet MS",
     cursive;
   height: 72px;
@@ -19,7 +19,7 @@
 }
 .title text {
   fill: #3e3b50;
-  font-family: "Chewy", "Trebuchet MS", cursive;
+  font-family: Chewy, "Trebuchet MS", cursive;
   font-size: 44px;
   font-weight: 800;
   letter-spacing: 0.3px;

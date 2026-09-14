@@ -684,6 +684,7 @@
 
 .dialog {
   --effective-dialog-scale: var(--dialog-scale);
+
   aspect-ratio: 1327 / 1185;
   display: grid;
   gap: 20px 36px;
