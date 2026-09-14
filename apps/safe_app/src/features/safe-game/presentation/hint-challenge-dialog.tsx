@@ -79,6 +79,11 @@ export function HintChallengeDialog({
   // Keep the success bubble stable while the controller promotes the awarded fact.
   const displaysSuccess = isSuccess || completionPending;
   const abandoned = active && controller.state.revealedMathAnswer != null;
+  const displayedCatState = displaysSuccess
+    ? "happy"
+    : abandoned
+      ? "sad"
+      : catState;
   const frozen = isSuccess || completionPending;
   useEffect(() => {
     completeRef.current = controller.completeHintSuccess;
@@ -121,7 +126,7 @@ export function HintChallengeDialog({
     };
   }, []);
   useEffect(() => {
-    if (isSuccess) {
+    if (displaysSuccess) {
       setCatState("happy");
       return;
     }
@@ -150,7 +155,7 @@ export function HintChallengeDialog({
       if (timeout) clearTimeout(timeout);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [identity, abandoned, isSuccess]);
+  }, [identity, abandoned, displaysSuccess]);
   useEffect(() => {
     if (!isSuccess || !successFactId) return;
     // Keep the successful challenge mounted until its matching persisted fact finishes presenting.
@@ -300,11 +305,11 @@ export function HintChallengeDialog({
               <picture className={styles.catPicture}>
                 <source
                   media="(min-width: 821px)"
-                  srcSet={desktopCatAssets[catState]}
+                  srcSet={desktopCatAssets[displayedCatState]}
                 />
                 <Image
-                  className={`${styles.cat} ${catState !== "happy" ? styles.reflectedCat : ""} ${abandoned ? styles.abandonedCat : ""}`}
-                  src={catAssets[catState]}
+                  className={`${styles.cat} ${displayedCatState !== "happy" ? styles.reflectedCat : ""} ${abandoned ? styles.abandonedCat : ""}`}
+                  src={catAssets[displayedCatState]}
                   alt=""
                   width={260}
                   height={260}

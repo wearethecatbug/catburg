@@ -255,6 +255,94 @@ test("C14/F03: Show hint rejects a caller-supplied challenge whose displayed equ
   );
 });
 
+test("C14/F03: Show hint ignores malformed operator payloads without changing state", () => {
+  const initial = initialState(42);
+  const cases: Array<[string, unknown]> = [
+    [
+      "subtraction with an inverted equation",
+      {
+        roundId: initial.roundId,
+        challengeId: "invalid-subtraction",
+        operator: "-",
+        leftOperand: 2,
+        rightOperand: 3,
+        expectedAnswer: -1,
+      },
+    ],
+    [
+      "multiplication with an out-of-range operand",
+      {
+        roundId: initial.roundId,
+        challengeId: "invalid-multiplication",
+        operator: "×",
+        leftOperand: 11,
+        rightOperand: 1,
+        expectedAnswer: 11,
+      },
+    ],
+    [
+      "division with a non-exact equation",
+      {
+        roundId: initial.roundId,
+        challengeId: "invalid-division",
+        operator: "÷",
+        leftOperand: 10,
+        rightOperand: 3,
+        expectedAnswer: 3,
+      },
+    ],
+    [
+      "an unsupported operator",
+      {
+        roundId: initial.roundId,
+        challengeId: "invalid-operator",
+        operator: "%",
+        leftOperand: 6,
+        rightOperand: 2,
+        expectedAnswer: 0,
+      },
+    ],
+    [
+      "a negative round identifier",
+      {
+        roundId: -1,
+        challengeId: "negative-round",
+        operator: "+",
+        leftOperand: 2,
+        rightOperand: 3,
+        expectedAnswer: 5,
+      },
+    ],
+    [
+      "a fractional round identifier",
+      {
+        roundId: initial.roundId + 0.5,
+        challengeId: "fractional-round",
+        operator: "+",
+        leftOperand: 2,
+        rightOperand: 3,
+        expectedAnswer: 5,
+      },
+    ],
+  ];
+
+  for (const [description, challenge] of cases) {
+    const action = {
+      type: "show-hint",
+      challenge,
+    } as unknown as SafeGameAction;
+    assert.doesNotThrow(
+      () => reduceSafeGame(initial, action),
+      `${description} must not throw while deserializing a caller payload`,
+    );
+    assert.equal(
+      reduceSafeGame(initial, action),
+      initial,
+      `${description} must be an identity no-op`,
+    );
+  }
+});
+
 test("C14/F03: a fixed random sequence makes every operator challenge deterministic", () => {
   const sequence = [0.06, 0.73, 0.41, 0.9];
   for (const operator of ["+", "-", "×", "÷"] as const) {

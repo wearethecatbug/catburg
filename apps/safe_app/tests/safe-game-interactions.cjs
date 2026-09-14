@@ -5741,6 +5741,7 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
     [1024, 768],
     [943, 708],
     [820, 920],
+    [821, 1040],
     [768, 1024],
     [601, 900],
     [600, 900],
@@ -11826,6 +11827,17 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                     "Solve this and I’ll give you a hint!",
                   ),
                 ).length,
+                vignetteCatSources: [
+                  ...document.querySelectorAll(
+                    'aside[aria-hidden="true"] img[src*="hint-popup-cat-"]',
+                  ),
+                ].map(
+                  (image) =>
+                    new URL(
+                      image.currentSrc || image.getAttribute("src") || "",
+                      document.baseURI,
+                    ).pathname,
+                ),
               });
             });
             observer.observe(document.body, {
@@ -11846,8 +11858,9 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
           dialogCount: 1,
           successCopyCount: 1,
           initialPromptCount: 0,
+          vignetteCatSources: ["/safe-cat/hint-popup-cat-happy-640.png"],
         },
-        "the first public pending-success state atomically replaces the normal cat and ordinary prompt with one reward and the approved success copy",
+        "the first public pending-success state atomically replaces the normal cat and ordinary prompt with one reward, success copy, and happy vignette cat",
       );
       await exact(
         page.getByRole("status").getByText(/Earned hint:/),

@@ -748,6 +748,11 @@
 }
 
 @media (min-width: 821px) {
+  .answerForm input,
+  .answerForm button {
+    min-height: 64px;
+  }
+
   .closeButton {
     right: -15px;
   }
