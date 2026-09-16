@@ -1,4 +1,5 @@
 export { createSafeGameState, generateSafeCode } from "./game.factory";
+export { defaultRoundSource, type RoundSource } from "./round-source";
 export { reduceSafeGame } from "./game.reducer";
 export { normalizeSafeGuess } from "./guess";
 export { createHintChallenge, hasChallengeId } from "./math-challenge";
@@ -10,7 +11,6 @@ export {
 } from "./earned-hint-facts";
 export { SAFE_CODE_MAXIMUM, SAFE_CODE_MINIMUM } from "./game.types";
 export type {
-  CatReaction,
   HintChallenge,
   HintOperator,
   SafeGameAction,

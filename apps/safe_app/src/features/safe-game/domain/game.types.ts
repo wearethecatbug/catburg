@@ -8,7 +8,6 @@ export type SafeGameFeedback =
   | "wrong"
   | "won"
   | "surrendered";
-export type CatReaction = "idle" | "wrong" | "won" | "surrendered" | "hover";
 export type SafeHint = "even" | "odd";
 export type HintOperator = "+" | "-" | "×" | "÷";
 
@@ -29,10 +28,8 @@ export interface SafeGameState {
   input: string;
   feedback: SafeGameFeedback;
   safeOpen: boolean;
-  catReaction: CatReaction;
   revealedCode: number | null;
   attempts: number[];
-  historyVisible: boolean;
   hintChallenge: HintChallenge | null;
   hintFeedback: "none" | "try-again";
   // A revealed arithmetic answer abandons this question and cannot earn a safe hint.
@@ -50,7 +47,6 @@ export type SafeGameAction =
   | { type: "set-input"; input: string }
   | { type: "submit-guess" }
   | { type: "surrender" }
-  | { type: "toggle-history" }
   // New callers attach the public predicate identity; omission preserves existing callers during
   // migration.
   | { type: "show-hint"; challenge: HintChallenge; predicateId?: string }
@@ -67,5 +63,4 @@ export type SafeGameAction =
       challengeId: string;
       answer: number | null;
     }
-  | { type: "close-hint-challenge"; roundId: number; challengeId: string }
-  | { type: "set-cat-hover"; active: boolean };
+  | { type: "close-hint-challenge"; roundId: number; challengeId: string };

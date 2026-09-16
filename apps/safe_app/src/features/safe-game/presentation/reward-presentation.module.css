@@ -10,7 +10,6 @@
   height: 240px;
   object-fit: contain;
   object-position: center bottom;
-  transform: translateY(6px);
   width: 280px;
 }
 .reward p {
@@ -48,10 +47,11 @@
 @media (max-width: 600px) {
   .reward {
     align-items: flex-start;
-    max-width: calc(100vw - 24px);
-    width: calc(100vw - 24px);
+    max-width: min(100%, calc(100vw - 24px));
+    width: min(100%, calc(100vw - 24px));
   }
   .reward img {
+    flex-shrink: 0;
     height: 157px;
     width: 157px;
   }
@@ -59,14 +59,35 @@
     font-size: 14px;
     margin-left: -28px;
     min-height: 64px;
+    min-width: 0;
     padding: 10px;
     width: min(180px, calc(100vw - 150px));
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .reward {
+    max-width: min(360px, calc(100vw - 24px));
+  }
+
+  .reward img {
+    height: 152px;
+    width: 177px;
+  }
+
+  .reward p {
+    font-size: 14px;
+    margin-left: -22px;
+    max-width: 150px;
+    min-height: 56px;
+    padding: 8px 10px;
+    width: min(150px, calc(100vw - 160px));
   }
 }
 @media (max-width: 600px) {
   .reward {
     margin: 0;
-    max-width: calc(100vw - 24px);
+    max-width: min(100%, calc(100vw - 24px));
   }
   .reward p {
     margin-left: -18px;

@@ -1704,3 +1704,9 @@
     align-self: center;
   }
 }
+
+@media (max-width: 600px) and (max-height: 600px) and (orientation: landscape) {
+  .dialog {
+    align-content: start;
+  }
+}

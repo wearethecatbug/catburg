@@ -2,10 +2,29 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  height: 204px;
+  height: 100%;
   padding: 0;
   position: relative;
-  width: 272px;
+  width: 100%;
+}
+.catContainer:not(button) {
+  cursor: default;
+}
+.catContainer:focus-visible {
+  outline: 3px solid #ff5d9c;
+  outline-offset: 4px;
+}
+.prompt {
+  background: #fff7df;
+  border: 2px solid #2d1d4f;
+  border-radius: 999px;
+  color: #2d1d4f;
+  font-weight: 800;
+  left: 50%;
+  padding: 6px 12px;
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
 }
 .reactionDescription {
   border: 0;
@@ -38,17 +57,20 @@
   position: absolute;
 }
 .hearts i {
-  animation: heart var(--duration) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: heart 1200ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   color: #ff5d9c;
   font-size: 22px;
   font-style: normal;
-  left: calc(var(--origin-x) + var(--x));
+  left: 50%;
   position: absolute;
   text-shadow:
     0 1px 0 rgb(255 246 251 / 0.9),
     0 0 5px rgb(255 93 156 / 0.4);
-  top: calc(var(--origin-y) + var(--y));
+  top: 48%;
 }
+.hearts i:nth-child(1) { margin-left: -24px; animation-delay: 0ms; }
+.hearts i:nth-child(2) { margin-left: 0; animation-delay: 100ms; }
+.hearts i:nth-child(3) { margin-left: 24px; animation-delay: 200ms; }
 @keyframes heart {
   0% {
     opacity: 0;
@@ -59,7 +81,7 @@
   }
   100% {
     opacity: 0;
-    transform: translateY(calc(var(--rise) * -1)) scale(0.96);
+    transform: translateY(-42px) scale(0.96);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -87,8 +109,8 @@
 
 @media (max-width: 600px) {
   .catContainer {
-    height: 156px;
-    width: 208px;
+    height: 100%;
+    width: 100%;
   }
   .hearts i {
     font-size: 18px;

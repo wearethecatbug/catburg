@@ -54,6 +54,7 @@
   cursor: grab;
   background: #ddd;
   color: #202020;
+  min-height: 44px;
   padding: 8px;
   border: 0;
   font: inherit;
