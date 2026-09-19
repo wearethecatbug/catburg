@@ -1,7 +1,7 @@
 export type PresentationMode =
   | "PLAYING" | "WRONG" | "LONG_IDLE" | "PET_PROMPT" | "PET_MISSED"
   | "PET_NORMAL" | "PET_NORMAL_LEAVE_GRACE" | "PET_PROMPT_SUCCESS"
-  | "HINT_ATTENTION" | "STORED_HINTS" | "HISTORY" | "HINT_DIALOG"
+  | "HINT_ATTENTION" | "TERMINAL_STORED_HINTS_PENDING" | "STORED_HINTS" | "HISTORY" | "HINT_DIALOG"
   | "HINT_SUCCESS_HANDOFF" | "HINT_REWARD" | "WON" | "SURRENDERED";
 export type PresentationSurface = "none" | "stored-hints" | "history" | "hint-dialog" | "hint-reward";
 export type PresentationModality = "pointer" | "keyboard" | "touch";
@@ -27,6 +27,7 @@ type Hidden<K extends PresentationTimerKind | null> = K extends PresentationTime
 type Clock<K extends PresentationTimerKind | null> = Visible<K> | Hidden<K>;
 type ActiveBase = "PLAYING" | "WRONG";
 type HistoryBase = ActiveBase | "WON" | "SURRENDERED";
+type StoredResumeMode = "PLAYING" | "WON" | "SURRENDERED";
 type Awarded = readonly [PublicAward, ...PublicAward[]];
 export type PresentationState = Common & (
   | ({ mode: "PLAYING"; surface: "none" } & Clock<"idle">)
@@ -35,15 +36,16 @@ export type PresentationState = Common & (
   | ({ mode: "LONG_IDLE"; surface: "none"; promptCount: 2 } & Clock<null>)
   | ({ mode: "PET_PROMPT"; surface: "none"; promptId: 1 | 2; promptCount: 1 | 2 } & Clock<"prompt-expiry">)
   | ({ mode: "PET_MISSED"; surface: "none"; promptId: 1 | 2; promptCount: 1 | 2 } & Clock<"prompt-missed-settle">)
-  | ({ mode: "PET_NORMAL"; surface: "none"; burstId: number; inputModality: "pointer" } & Clock<null>)
-  | ({ mode: "PET_NORMAL"; surface: "none"; burstId: number; inputModality: "keyboard" | "touch" } & Clock<"pet-normal-settle">)
+  | ({ mode: "PET_NORMAL"; surface: "none"; burstId: number; inputModality: PresentationModality } & Clock<"pet-normal-settle">)
   | ({ mode: "PET_NORMAL_LEAVE_GRACE"; surface: "none"; burstId: number; inputModality: "pointer" } & Clock<"pet-normal-leave-grace">)
   | ({ mode: "PET_PROMPT_SUCCESS"; surface: "none"; promptId: 1 | 2; promptCount: 1 | 2; burstId: number; inputModality: PresentationModality } & Clock<"pet-prompt-success-settle">)
   | ({ mode: "HINT_ATTENTION"; surface: "none"; resumeMode: "PLAYING"; inputModality: PresentationModality; publicAwards: readonly [] } & Clock<null>)
   | ({ mode: "HINT_ATTENTION"; surface: "none"; resumeMode: "PLAYING"; inputModality: "pointer" | "touch"; publicAwards: Awarded } & Clock<"stored-open">)
-  | ({ mode: "STORED_HINTS"; surface: "stored-hints"; resumeMode: "PLAYING"; inputModality: PresentationModality; cardPhase: "open"; publicAwards: Awarded } & Clock<null>)
-  | ({ mode: "STORED_HINTS"; surface: "stored-hints"; resumeMode: "PLAYING"; inputModality: "pointer"; cardPhase: "closing"; publicAwards: Awarded } & Clock<"stored-close">)
+  | ({ mode: "TERMINAL_STORED_HINTS_PENDING"; surface: "none"; resumeMode: "WON" | "SURRENDERED"; inputModality: "pointer" | "touch"; publicAwards: Awarded } & Clock<"stored-open">)
+  | ({ mode: "STORED_HINTS"; surface: "stored-hints"; resumeMode: StoredResumeMode; inputModality: PresentationModality; cardPhase: "open"; publicAwards: Awarded } & Clock<null>)
+  | ({ mode: "STORED_HINTS"; surface: "stored-hints"; resumeMode: StoredResumeMode; inputModality: "pointer"; cardPhase: "closing"; publicAwards: Awarded } & Clock<"stored-close">)
   | ({ mode: "HISTORY"; surface: "history"; resumeMode: HistoryBase } & Clock<null>)
+  | ({ mode: "HISTORY"; surface: "history"; resumeMode: "HINT_REWARD"; challengeId: string; award: PublicAward } & Clock<"reward-expiry">)
   | ({ mode: "HINT_DIALOG"; surface: "hint-dialog"; resumeMode: ActiveBase; challengeId: string } & Clock<null>)
   | ({ mode: "HINT_SUCCESS_HANDOFF"; surface: "hint-dialog"; resumeMode: ActiveBase; challengeId: string; award: PublicAward } & Clock<"hint-success">)
   | ({ mode: "HINT_REWARD"; surface: "hint-reward"; resumeMode: ActiveBase; challengeId: string; award: PublicAward } & Clock<"reward-expiry">)
@@ -55,14 +57,14 @@ export type PresentationEvent =
   | { type: "INPUT_VALUE_CHANGED"; roundEpoch: number; inputRevision: number }
   | { type: "CAT_PET_START"; roundEpoch: number; modality: PresentationModality }
   | { type: "CAT_PET_END"; roundEpoch: number; stateEpoch: number }
-  | { type: "SHOW_HINT_ENTER" | "SHOW_HINT_FOCUS" | "SHOW_HINT_TOUCH_START" | "SHOW_HINT_LEAVE" | "STORED_HINTS_ESCAPE" | "HISTORY_TOGGLE" | "HISTORY_ACTIVITY" | "HISTORY_CLOSE" | "DOCUMENT_HIDDEN" | "DOCUMENT_VISIBLE"; roundEpoch: number }
+  | { type: "SHOW_HINT_ENTER" | "SHOW_HINT_FOCUS" | "SHOW_HINT_TOUCH_START" | "SHOW_HINT_ACTIVATE" | "SHOW_HINT_LEAVE" | "STORED_HINTS_ESCAPE" | "HISTORY_TOGGLE" | "HISTORY_ACTIVITY" | "HISTORY_CLOSE" | "DOCUMENT_HIDDEN" | "DOCUMENT_VISIBLE"; roundEpoch: number }
   | { type: "HINT_DIALOG_OPEN" | "HINT_DIALOG_CLOSED"; roundEpoch: number; challengeId: string }
   | { type: "HINT_AWARDED"; roundEpoch: number; challengeId: string; award: PublicAward }
   | { type: "HINT_SUCCESS_COMPLETE_EARLY"; roundEpoch: number; challengeId: string; factId: string; cause: "close" | "escape" }
   | { type: "IDLE_EXPIRED" | "PET_PROMPT_DUE_EXPIRED" | "PET_PROMPT_EXPIRED" | "PET_MISSED_EXPIRED" | "PET_NORMAL_SETTLE_EXPIRED" | "PET_NORMAL_LEAVE_GRACE_EXPIRED" | "PET_PROMPT_SUCCESS_EXPIRED" | "STORED_OPEN_EXPIRED" | "STORED_CLOSE_EXPIRED" | "HINT_SUCCESS_EXPIRED" | "REWARD_EXPIRED"; token: PresentationTimerToken };
 
 const kinds = new Set<PresentationTimerKind>(["idle", "prompt-due", "prompt-expiry", "prompt-missed-settle", "pet-normal-settle", "pet-normal-leave-grace", "pet-prompt-success-settle", "stored-open", "stored-close", "hint-success", "reward-expiry"]);
-const modes = new Set<PresentationMode>(["PLAYING", "WRONG", "LONG_IDLE", "PET_PROMPT", "PET_MISSED", "PET_NORMAL", "PET_NORMAL_LEAVE_GRACE", "PET_PROMPT_SUCCESS", "HINT_ATTENTION", "STORED_HINTS", "HISTORY", "HINT_DIALOG", "HINT_SUCCESS_HANDOFF", "HINT_REWARD", "WON", "SURRENDERED"]);
+const modes = new Set<PresentationMode>(["PLAYING", "WRONG", "LONG_IDLE", "PET_PROMPT", "PET_MISSED", "PET_NORMAL", "PET_NORMAL_LEAVE_GRACE", "PET_PROMPT_SUCCESS", "HINT_ATTENTION", "TERMINAL_STORED_HINTS_PENDING", "STORED_HINTS", "HISTORY", "HINT_DIALOG", "HINT_SUCCESS_HANDOFF", "HINT_REWARD", "WON", "SURRENDERED"]);
 const timerEventKinds: Record<string, PresentationTimerKind> = {
   IDLE_EXPIRED: "idle", PET_PROMPT_DUE_EXPIRED: "prompt-due", PET_PROMPT_EXPIRED: "prompt-expiry", PET_MISSED_EXPIRED: "prompt-missed-settle", PET_NORMAL_SETTLE_EXPIRED: "pet-normal-settle", PET_NORMAL_LEAVE_GRACE_EXPIRED: "pet-normal-leave-grace", PET_PROMPT_SUCCESS_EXPIRED: "pet-prompt-success-settle", STORED_OPEN_EXPIRED: "stored-open", STORED_CLOSE_EXPIRED: "stored-close", HINT_SUCCESS_EXPIRED: "hint-success", REWARD_EXPIRED: "reward-expiry",
 };
@@ -83,20 +85,19 @@ function expectedTimer(mode: PresentationMode, raw: Record<string, unknown>): Pr
   if (mode === "LONG_IDLE") return raw.promptCount === 2 ? null : "prompt-due";
   if (mode === "PET_PROMPT") return "prompt-expiry";
   if (mode === "PET_MISSED") return "prompt-missed-settle";
-  if (mode === "PET_NORMAL") return raw.inputModality === "pointer" ? null : "pet-normal-settle";
+  if (mode === "PET_NORMAL") return "pet-normal-settle";
   if (mode === "PET_NORMAL_LEAVE_GRACE") return "pet-normal-leave-grace";
   if (mode === "PET_PROMPT_SUCCESS") return "pet-prompt-success-settle";
-  if (mode === "HINT_ATTENTION") return Array.isArray(raw.publicAwards) && raw.publicAwards.length === 0 ? null : "stored-open";
+  if (mode === "HINT_ATTENTION" || mode === "TERMINAL_STORED_HINTS_PENDING") return Array.isArray(raw.publicAwards) && raw.publicAwards.length === 0 ? null : "stored-open";
   if (mode === "STORED_HINTS") return raw.cardPhase === "closing" ? "stored-close" : null;
-  if (mode === "HINT_SUCCESS_HANDOFF") return "hint-success";
-  if (mode === "HINT_REWARD") return "reward-expiry";
+  if (mode === "HINT_SUCCESS_HANDOFF" || mode === "HINT_REWARD" || (mode === "HISTORY" && raw.resumeMode === "HINT_REWARD")) return mode === "HINT_SUCCESS_HANDOFF" ? "hint-success" : "reward-expiry";
   return null;
 }
 function validateState(value: unknown): PresentationState {
   const raw = object(value); const mode = raw.mode; if (typeof mode !== "string" || !modes.has(mode as PresentationMode)) fail();
-  const m = mode as PresentationMode; const surface: Record<PresentationMode, PresentationSurface> = { PLAYING: "none", WRONG: "none", LONG_IDLE: "none", PET_PROMPT: "none", PET_MISSED: "none", PET_NORMAL: "none", PET_NORMAL_LEAVE_GRACE: "none", PET_PROMPT_SUCCESS: "none", HINT_ATTENTION: "none", STORED_HINTS: "stored-hints", HISTORY: "history", HINT_DIALOG: "hint-dialog", HINT_SUCCESS_HANDOFF: "hint-dialog", HINT_REWARD: "hint-reward", WON: "none", SURRENDERED: "none" };
+  const m = mode as PresentationMode; const surface: Record<PresentationMode, PresentationSurface> = { PLAYING: "none", WRONG: "none", LONG_IDLE: "none", PET_PROMPT: "none", PET_MISSED: "none", PET_NORMAL: "none", PET_NORMAL_LEAVE_GRACE: "none", PET_PROMPT_SUCCESS: "none", HINT_ATTENTION: "none", TERMINAL_STORED_HINTS_PENDING: "none", STORED_HINTS: "stored-hints", HISTORY: "history", HINT_DIALOG: "hint-dialog", HINT_SUCCESS_HANDOFF: "hint-dialog", HINT_REWARD: "hint-reward", WON: "none", SURRENDERED: "none" };
   if (raw.surface !== surface[m]) fail(); const common = ["mode", "surface", "roundEpoch", "stateEpoch", "updatedAt", "inputRevision", "idleStartedAt", "promptAnchorAt", "promptCount", "burstSequence", "lastBurstAt", "publicAwards", "challengeIds", "visibility", "hiddenAt", "timer", "suspended"];
-  const extras: Record<PresentationMode, readonly string[]> = { PLAYING: [], WRONG: [], LONG_IDLE: [], PET_PROMPT: ["promptId"], PET_MISSED: ["promptId"], PET_NORMAL: ["burstId", "inputModality"], PET_NORMAL_LEAVE_GRACE: ["burstId", "inputModality"], PET_PROMPT_SUCCESS: ["promptId", "burstId", "inputModality"], HINT_ATTENTION: ["resumeMode", "inputModality"], STORED_HINTS: ["resumeMode", "inputModality", "cardPhase"], HISTORY: ["resumeMode"], HINT_DIALOG: ["resumeMode", "challengeId"], HINT_SUCCESS_HANDOFF: ["resumeMode", "challengeId", "award"], HINT_REWARD: ["resumeMode", "challengeId", "award"], WON: [], SURRENDERED: [] };
+  const extras: Record<PresentationMode, readonly string[]> = { PLAYING: [], WRONG: [], LONG_IDLE: [], PET_PROMPT: ["promptId"], PET_MISSED: ["promptId"], PET_NORMAL: ["burstId", "inputModality"], PET_NORMAL_LEAVE_GRACE: ["burstId", "inputModality"], PET_PROMPT_SUCCESS: ["promptId", "burstId", "inputModality"], HINT_ATTENTION: ["resumeMode", "inputModality"], TERMINAL_STORED_HINTS_PENDING: ["resumeMode", "inputModality"], STORED_HINTS: ["resumeMode", "inputModality", "cardPhase"], HISTORY: raw.resumeMode === "HINT_REWARD" ? ["resumeMode", "challengeId", "award"] : ["resumeMode"], HINT_DIALOG: ["resumeMode", "challengeId"], HINT_SUCCESS_HANDOFF: ["resumeMode", "challengeId", "award"], HINT_REWARD: ["resumeMode", "challengeId", "award"], WON: [], SURRENDERED: [] };
   exactKeys(raw, [...common, ...extras[m]]); const roundEpoch = positive(raw.roundEpoch), stateEpoch = positive(raw.stateEpoch), updatedAt = finite(raw.updatedAt), idleStartedAt = finite(raw.idleStartedAt), promptAnchorAt = finite(raw.promptAnchorAt), inputRevision = nonnegativeInteger(raw.inputRevision), burstSequence = nonnegativeInteger(raw.burstSequence);
   if (idleStartedAt > updatedAt || promptAnchorAt > updatedAt || raw.promptCount !== 0 && raw.promptCount !== 1 && raw.promptCount !== 2) fail();
   const lastBurstAt = raw.lastBurstAt === null ? null : finite(raw.lastBurstAt); if (lastBurstAt !== null && lastBurstAt > updatedAt) fail();
@@ -110,15 +111,17 @@ function validateState(value: unknown): PresentationState {
   if (m === "PET_NORMAL" && raw.inputModality !== "pointer" && raw.inputModality !== "keyboard" && raw.inputModality !== "touch") fail();
   if (m === "PET_NORMAL_LEAVE_GRACE" && raw.inputModality !== "pointer") fail();
   if (m === "HINT_ATTENTION") { if (raw.resumeMode !== "PLAYING" || !isModality(raw.inputModality) || (publicAwards.length > 0 && raw.inputModality === "keyboard")) fail(); }
-  if (m === "STORED_HINTS") { if (raw.resumeMode !== "PLAYING" || !isModality(raw.inputModality) || publicAwards.length === 0 || (raw.cardPhase !== "open" && raw.cardPhase !== "closing") || (raw.cardPhase === "closing" && raw.inputModality !== "pointer")) fail(); }
-  if (m === "HISTORY" && raw.resumeMode !== "PLAYING" && raw.resumeMode !== "WRONG" && raw.resumeMode !== "WON" && raw.resumeMode !== "SURRENDERED") fail();
+  if (m === "TERMINAL_STORED_HINTS_PENDING") { if ((raw.resumeMode !== "WON" && raw.resumeMode !== "SURRENDERED") || raw.inputModality !== "pointer" && raw.inputModality !== "touch" || publicAwards.length === 0) fail(); }
+  if (m === "STORED_HINTS") { if ((raw.resumeMode !== "PLAYING" && raw.resumeMode !== "WON" && raw.resumeMode !== "SURRENDERED") || !isModality(raw.inputModality) || publicAwards.length === 0 || (raw.cardPhase !== "open" && raw.cardPhase !== "closing") || (raw.cardPhase === "closing" && raw.inputModality !== "pointer")) fail(); }
+  if (m === "HISTORY" && raw.resumeMode !== "PLAYING" && raw.resumeMode !== "WRONG" && raw.resumeMode !== "WON" && raw.resumeMode !== "SURRENDERED" && raw.resumeMode !== "HINT_REWARD") fail();
+  if (m === "HISTORY" && raw.resumeMode === "HINT_REWARD") { const id = string(raw.challengeId); if (!challengeIds.includes(id)) fail(); const current = award(raw.award); const latest = publicAwards.at(-1); if (!latest || current.factId !== latest.factId || current.text !== latest.text) fail(); }
   if (m === "HINT_DIALOG" || m === "HINT_SUCCESS_HANDOFF" || m === "HINT_REWARD") { if (raw.resumeMode !== "PLAYING" && raw.resumeMode !== "WRONG") fail(); const id = string(raw.challengeId); if (!challengeIds.includes(id)) fail(); if (m !== "HINT_DIALOG") { const current = award(raw.award); const latest = publicAwards.at(-1); if (!latest || current.factId !== latest.factId || current.text !== latest.text) fail(); } }
   return raw as PresentationState;
 }
 function validateEvent(value: unknown): PresentationEvent {
   const raw = object(value); const type = raw.type; if (typeof type !== "string") fail();
   const round = ["ROUND_STARTED", "VALID_WRONG_GUESS", "ROUND_WON", "ROUND_SURRENDERED"];
-  const simple = ["SHOW_HINT_ENTER", "SHOW_HINT_FOCUS", "SHOW_HINT_TOUCH_START", "SHOW_HINT_LEAVE", "STORED_HINTS_ESCAPE", "HISTORY_TOGGLE", "HISTORY_ACTIVITY", "HISTORY_CLOSE", "DOCUMENT_HIDDEN", "DOCUMENT_VISIBLE"];
+  const simple = ["SHOW_HINT_ENTER", "SHOW_HINT_FOCUS", "SHOW_HINT_TOUCH_START", "SHOW_HINT_ACTIVATE", "SHOW_HINT_LEAVE", "STORED_HINTS_ESCAPE", "HISTORY_TOGGLE", "HISTORY_ACTIVITY", "HISTORY_CLOSE", "DOCUMENT_HIDDEN", "DOCUMENT_VISIBLE"];
   if (round.includes(type) || simple.includes(type)) { exactKeys(raw, ["type", "roundEpoch"]); positive(raw.roundEpoch); return raw as PresentationEvent; }
   if (type === "INPUT_VALUE_CHANGED") { exactKeys(raw, ["type", "roundEpoch", "inputRevision"]); positive(raw.roundEpoch); positive(raw.inputRevision); return raw as PresentationEvent; }
   if (type === "CAT_PET_START") { exactKeys(raw, ["type", "roundEpoch", "modality"]); positive(raw.roundEpoch); if (!isModality(raw.modality)) fail(); return raw as PresentationEvent; }
@@ -139,7 +142,11 @@ function base(state: PresentationState, now: number, overrides: Record<string, u
 function playing(state: PresentationState, now: number, overrides: Record<string, unknown> = {}): PresentationState { const next = base(state, now, { idleStartedAt: now, ...overrides }); return { ...next, mode: "PLAYING", surface: "none", ...clock(next, now, "idle", now + 15001) } as PresentationState; }
 function wrong(state: PresentationState, now: number): PresentationState { const next = base(state, now); return { ...next, mode: "WRONG", surface: "none", ...clock(next, now, null) } as PresentationState; }
 function terminal(state: PresentationState, now: number, mode: "WON" | "SURRENDERED"): PresentationState { const next = base(state, now); return { ...next, mode, surface: "none", ...clock(next, now, null) } as PresentationState; }
+function resumeStored(state: PresentationState, now: number, mode: StoredResumeMode): PresentationState { return mode === "PLAYING" ? playing(state, now) : terminal(state, now, mode); }
 function history(state: PresentationState, now: number, resumeMode: HistoryBase): PresentationState { const next = base(state, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "HISTORY", surface: "history", resumeMode, ...clock(next, now, null) } as PresentationState; }
+function historyReward(state: Extract<PresentationState, { mode: "HINT_REWARD" }>, now: number): PresentationState { if (!state.timer) fail(); const next = base(state, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "HISTORY", surface: "history", resumeMode: "HINT_REWARD", challengeId: state.challengeId, award: state.award, ...clock(next, now, "reward-expiry", state.timer.dueAt) } as PresentationState; }
+function restoreHistoryReward(state: Extract<PresentationState, { mode: "HISTORY"; resumeMode: "HINT_REWARD" }>, now: number): PresentationState { if (!state.timer) fail(); if (now >= state.timer.dueAt) return playing(state, now); const next = base(state, now); return { ...next, mode: "HINT_REWARD", surface: "hint-reward", resumeMode: "PLAYING", challengeId: state.challengeId, award: state.award, ...clock(next, now, "reward-expiry", state.timer.dueAt) } as PresentationState; }
+function resumeHistory(state: PresentationState, now: number, mode: HistoryBase): PresentationState { return mode === "PLAYING" || mode === "WRONG" ? toBase(state, now, mode) : terminal(state, now, mode); }
 function activeBase(state: PresentationState): ActiveBase { return state.mode === "WRONG" || (state.mode === "HISTORY" && state.resumeMode === "WRONG") ? "WRONG" : "PLAYING"; }
 function toBase(state: PresentationState, now: number, mode: ActiveBase): PresentationState { return mode === "WRONG" ? wrong(state, now) : playing(state, now); }
 // A deadline can fire after a round or state transition. Its full token keeps that stale
@@ -190,21 +197,29 @@ export function reducePresentation(state: PresentationState | null, event: Prese
       }
       return history(s, now, s.mode);
     }
+    if ((e.type === "SHOW_HINT_ENTER" || e.type === "SHOW_HINT_FOCUS" || e.type === "SHOW_HINT_TOUCH_START" || e.type === "SHOW_HINT_ACTIVATE") && s.publicAwards.length > 0) {
+      const modality: PresentationModality = e.type === "SHOW_HINT_FOCUS" ? "keyboard" : e.type === "SHOW_HINT_TOUCH_START" ? "touch" : "pointer";
+      const resumeMode = s.mode === "HISTORY" ? s.resumeMode : s.mode;
+      if (resumeMode !== "WON" && resumeMode !== "SURRENDERED") return s;
+      const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now });
+      if (modality === "keyboard" || e.type === "SHOW_HINT_ACTIVATE") return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode, inputModality: modality, cardPhase: "open", ...clock(next, now, null) } as PresentationState;
+      return { ...next, mode: "TERMINAL_STORED_HINTS_PENDING", surface: "none", resumeMode, inputModality: modality, ...clock(next, now, "stored-open", now + (modality === "pointer" ? 150 : 500)) } as PresentationState;
+    }
     return s;
   }
   if (e.type === "VALID_WRONG_GUESS") return s.mode === "HINT_DIALOG" || s.mode === "HINT_SUCCESS_HANDOFF" ? s : s.mode === "HISTORY" ? history(s, now, "WRONG") : wrong(s, now);
   if (e.type === "INPUT_VALUE_CHANGED") { if (e.inputRevision <= s.inputRevision || s.mode === "HINT_DIALOG" || s.mode === "HINT_SUCCESS_HANDOFF") return s; if (s.mode === "HISTORY") return history({ ...s, inputRevision: e.inputRevision } as PresentationState, now, "PLAYING"); return playing({ ...s, inputRevision: e.inputRevision } as PresentationState, now); }
-  if (e.type === "HISTORY_TOGGLE") return s.mode === "HISTORY" ? toBase(s, now, s.resumeMode as ActiveBase) : history(s, now, activeBase(s));
-  if (e.type === "HISTORY_CLOSE") return s.mode === "HISTORY" ? toBase(s, now, s.resumeMode as ActiveBase) : s;
+  if (e.type === "HISTORY_TOGGLE") { if (s.mode === "HISTORY") return s.resumeMode === "HINT_REWARD" ? restoreHistoryReward(s, now) : resumeHistory(s, now, s.resumeMode); return s.mode === "HINT_REWARD" ? historyReward(s, now) : history(s, now, activeBase(s)); }
+  if (e.type === "HISTORY_CLOSE") return s.mode === "HISTORY" ? s.resumeMode === "HINT_REWARD" ? restoreHistoryReward(s, now) : resumeHistory(s, now, s.resumeMode) : s;
   if (e.type === "HISTORY_ACTIVITY") return s.mode === "HISTORY" && (s.resumeMode === "PLAYING" || s.resumeMode === "WRONG") ? history(s, now, s.resumeMode) : s;
   if (e.type === "HINT_DIALOG_OPEN") { if (s.mode === "HINT_DIALOG" || s.mode === "HINT_SUCCESS_HANDOFF") { if (s.challengeId === e.challengeId) return s; } if (s.challengeIds.includes(e.challengeId)) return s; const resumeMode: ActiveBase = s.mode === "HINT_DIALOG" || s.mode === "HINT_SUCCESS_HANDOFF" || s.mode === "HINT_REWARD" ? s.resumeMode : activeBase(s); const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now, challengeIds: [...s.challengeIds, e.challengeId] }); return { ...next, mode: "HINT_DIALOG", surface: "hint-dialog", resumeMode, challengeId: e.challengeId, ...clock(next, now, null) } as PresentationState; }
   if (e.type === "HINT_DIALOG_CLOSED") return s.mode === "HINT_DIALOG" && s.challengeId === e.challengeId ? toBase(s, now, s.resumeMode) : s;
   if (e.type === "HINT_AWARDED") { if ((s.mode !== "HINT_DIALOG" && s.mode !== "HINT_SUCCESS_HANDOFF") || s.challengeId !== e.challengeId) return s; const existing = s.publicAwards.find((item) => item.factId === e.award.factId); if (existing && existing.text === e.award.text) return s; if (existing) fail(); const awards = [...s.publicAwards, e.award] as readonly PublicAward[]; const next = base(s, now, { publicAwards: awards }); return { ...next, mode: "HINT_SUCCESS_HANDOFF", surface: "hint-dialog", resumeMode: s.resumeMode, challengeId: s.challengeId, award: e.award, ...clock(next, now, "hint-success", now + 2500) } as PresentationState; }
   if (e.type === "HINT_SUCCESS_COMPLETE_EARLY") { if (s.mode !== "HINT_SUCCESS_HANDOFF" || s.challengeId !== e.challengeId || s.award.factId !== e.factId) return s; const next = base(s, now); return { ...next, mode: "HINT_REWARD", surface: "hint-reward", resumeMode: s.resumeMode, challengeId: s.challengeId, award: s.award, ...clock(next, now, "reward-expiry", now + 5000) } as PresentationState; }
-  if (e.type === "CAT_PET_START") { if (s.mode === "PET_PROMPT") { if (now >= (s.timer?.dueAt ?? now)) return s; const next = base(s, now, { burstSequence: s.burstSequence + 1, lastBurstAt: now }); return { ...next, mode: "PET_PROMPT_SUCCESS", surface: "none", promptId: s.promptId, burstId: next.burstSequence, inputModality: e.modality, ...clock(next, now, "pet-prompt-success-settle", now + 4000) } as PresentationState; } if (s.mode !== "PLAYING" && s.mode !== "LONG_IDLE" && s.mode !== "PET_NORMAL_LEAVE_GRACE") return s; if (s.mode === "PET_NORMAL_LEAVE_GRACE" && e.modality === "pointer") { const next = base(s, now); return { ...next, mode: "PET_NORMAL", surface: "none", burstId: s.burstId, inputModality: "pointer", ...clock(next, now, null) } as PresentationState; } if (s.lastBurstAt !== null && now - s.lastBurstAt < 900) return s; const next = base(s, now, { burstSequence: s.burstSequence + 1, lastBurstAt: now, idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "PET_NORMAL", surface: "none", burstId: next.burstSequence, inputModality: e.modality, ...clock(next, now, e.modality === "pointer" ? null : "pet-normal-settle", e.modality === "pointer" ? undefined : now + 1200) } as PresentationState; }
-  if (e.type === "CAT_PET_END") { if (s.mode !== "PET_NORMAL" || s.inputModality !== "pointer" || e.stateEpoch !== s.stateEpoch) return s; const next = base(s, now); return { ...next, mode: "PET_NORMAL_LEAVE_GRACE", surface: "none", burstId: s.burstId, inputModality: "pointer", ...clock(next, now, "pet-normal-leave-grace", now + 250) } as PresentationState; }
-  if (e.type === "SHOW_HINT_ENTER" || e.type === "SHOW_HINT_FOCUS" || e.type === "SHOW_HINT_TOUCH_START") { if (s.mode === "PET_PROMPT" && now >= (s.timer?.dueAt ?? now)) return s; if (s.mode !== "PLAYING" && s.mode !== "LONG_IDLE" && s.mode !== "PET_PROMPT" && s.mode !== "HINT_ATTENTION" && s.mode !== "STORED_HINTS" && s.mode !== "HINT_REWARD") return s; const modality: PresentationModality = e.type === "SHOW_HINT_FOCUS" ? "keyboard" : e.type === "SHOW_HINT_TOUCH_START" ? "touch" : "pointer"; if (s.mode === "STORED_HINTS" && s.cardPhase === "open") return s; if (s.mode === "STORED_HINTS" && s.cardPhase === "closing") { const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: "PLAYING", inputModality: modality, cardPhase: "open", ...clock(next, now, null) } as PresentationState; } const facts = s.publicAwards; if (facts.length > 0 && modality === "keyboard") { const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: "PLAYING", inputModality: modality, cardPhase: "open", ...clock(next, now, null) } as PresentationState; } const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "HINT_ATTENTION", surface: "none", resumeMode: "PLAYING", inputModality: modality, ...clock(next, now, facts.length === 0 ? null : "stored-open", facts.length === 0 ? undefined : now + (modality === "pointer" ? 150 : 500)) } as PresentationState; }
-  if (e.type === "SHOW_HINT_LEAVE" || e.type === "STORED_HINTS_ESCAPE") { if (s.mode === "HINT_ATTENTION") return playing(s, now); if (s.mode !== "STORED_HINTS") return s; if (e.type === "STORED_HINTS_ESCAPE" || s.inputModality !== "pointer") return playing(s, now); if (s.cardPhase === "closing") return s; const next = base(s, now); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: "PLAYING", inputModality: "pointer", cardPhase: "closing", ...clock(next, now, "stored-close", now + 201) } as PresentationState; }
+  if (e.type === "CAT_PET_START") { if (s.mode === "PET_PROMPT") { if (now >= (s.timer?.dueAt ?? now)) return s; const next = base(s, now, { burstSequence: s.burstSequence + 1, lastBurstAt: now }); return { ...next, mode: "PET_PROMPT_SUCCESS", surface: "none", promptId: s.promptId, burstId: next.burstSequence, inputModality: e.modality, ...clock(next, now, "pet-prompt-success-settle", now + 4000) } as PresentationState; } if (s.mode !== "PLAYING" && s.mode !== "LONG_IDLE") return s; if (s.lastBurstAt !== null && now - s.lastBurstAt < 900) return s; const next = base(s, now, { burstSequence: s.burstSequence + 1, lastBurstAt: now, idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "PET_NORMAL", surface: "none", burstId: next.burstSequence, inputModality: e.modality, ...clock(next, now, "pet-normal-settle", now + 1200) } as PresentationState; }
+  if (e.type === "CAT_PET_END") return s;
+  if (e.type === "SHOW_HINT_ENTER" || e.type === "SHOW_HINT_FOCUS" || e.type === "SHOW_HINT_TOUCH_START") { if (s.mode === "PET_PROMPT" && now >= (s.timer?.dueAt ?? now)) return s; if (s.mode !== "PLAYING" && s.mode !== "LONG_IDLE" && s.mode !== "PET_PROMPT" && s.mode !== "HINT_ATTENTION" && s.mode !== "STORED_HINTS" && s.mode !== "HINT_REWARD") return s; const modality: PresentationModality = e.type === "SHOW_HINT_FOCUS" ? "keyboard" : e.type === "SHOW_HINT_TOUCH_START" ? "touch" : "pointer"; if (s.mode === "STORED_HINTS" && s.cardPhase === "open") return s; if (s.mode === "STORED_HINTS" && s.cardPhase === "closing") { const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: s.resumeMode, inputModality: modality, cardPhase: "open", ...clock(next, now, null) } as PresentationState; } const facts = s.publicAwards; if (facts.length > 0 && modality === "keyboard") { const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: "PLAYING", inputModality: modality, cardPhase: "open", ...clock(next, now, null) } as PresentationState; } const next = base(s, now, { idleStartedAt: now, promptAnchorAt: now }); return { ...next, mode: "HINT_ATTENTION", surface: "none", resumeMode: "PLAYING", inputModality: modality, ...clock(next, now, facts.length === 0 ? null : "stored-open", facts.length === 0 ? undefined : now + (modality === "pointer" ? 150 : 500)) } as PresentationState; }
+  if (e.type === "SHOW_HINT_LEAVE" || e.type === "STORED_HINTS_ESCAPE") { if (s.mode === "HINT_ATTENTION") return playing(s, now); if (s.mode === "TERMINAL_STORED_HINTS_PENDING") return terminal(s, now, s.resumeMode); if (s.mode !== "STORED_HINTS") return s; if (e.type === "STORED_HINTS_ESCAPE" || s.inputModality !== "pointer") return resumeStored(s, now, s.resumeMode); if (s.cardPhase === "closing") return s; const next = base(s, now); return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: s.resumeMode, inputModality: "pointer", cardPhase: "closing", ...clock(next, now, "stored-close", now + 201) } as PresentationState; }
   if ("token" in e) {
     if (!timerMatches(s, e, now)) return s;
     const kind = e.token.kind;
@@ -225,17 +240,18 @@ export function reducePresentation(state: PresentationState | null, event: Prese
     }
     if (kind === "prompt-missed-settle" || kind === "pet-normal-settle" || kind === "pet-normal-leave-grace" || kind === "pet-prompt-success-settle") return playing(s, now);
     if (kind === "stored-open") {
-      if (s.mode !== "HINT_ATTENTION") return s;
+      if (s.mode !== "HINT_ATTENTION" && s.mode !== "TERMINAL_STORED_HINTS_PENDING") return s;
       const next = base(s, now);
-      return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: "PLAYING", inputModality: s.inputModality, cardPhase: "open", ...clock(next, now, null) } as PresentationState;
+      return { ...next, mode: "STORED_HINTS", surface: "stored-hints", resumeMode: s.resumeMode, inputModality: s.inputModality, cardPhase: "open", ...clock(next, now, null) } as PresentationState;
     }
-    if (kind === "stored-close") return playing(s, now);
+    if (kind === "stored-close") return s.mode === "STORED_HINTS" ? resumeStored(s, now, s.resumeMode) : s;
     if (kind === "hint-success") {
       if (s.mode !== "HINT_SUCCESS_HANDOFF") return s;
       const next = base(s, now);
       return { ...next, mode: "HINT_REWARD", surface: "hint-reward", resumeMode: s.resumeMode, challengeId: s.challengeId, award: s.award, ...clock(next, now, "reward-expiry", now + 5000) } as PresentationState;
     }
     if (kind === "reward-expiry") {
+      if (s.mode === "HISTORY" && s.resumeMode === "HINT_REWARD") return history(s, now, "PLAYING");
       if (s.mode !== "HINT_REWARD") return s;
       return s.resumeMode === "WRONG" ? wrong(s, now) : playing(s, now);
     }

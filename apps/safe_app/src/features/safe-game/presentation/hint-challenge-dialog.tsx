@@ -69,6 +69,7 @@ export function HintChallengeDialog({
   const [catState, setCatState] = useState<CatState>("thinking");
   const [retryVisible, setRetryVisible] = useState(false);
   const [frameScale, setFrameScale] = useState(0.84);
+  const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const identity = `${challenge.roundId}:${challenge.challengeId}`;
   const active =
     controller.state.hintChallenge?.roundId === challenge.roundId &&
@@ -95,34 +96,58 @@ export function HintChallengeDialog({
   useEffect(() => {
     if (abandoned) {
       setRetryVisible(false);
-      closeButtonRef.current?.focus({ preventScroll: true });
+      controller.newHintButtonRef.current?.focus({ preventScroll: true });
     }
   }, [abandoned]);
   useEffect(() => {
     const shell = frameShellRef.current;
-    if (!shell) return;
+    const backdrop = shell?.parentElement;
+    if (!backdrop) return;
     if (typeof ResizeObserver === "undefined") return;
     const narrowLayout = window.matchMedia("(max-width: 820px)");
     const updateScale = () => {
-      if (narrowLayout.matches) {
+      const narrow = narrowLayout.matches;
+      setIsNarrowLayout((current) => (current === narrow ? current : narrow));
+      if (narrow) {
         setFrameScale((current) => (current === 1 ? current : 1));
         return;
       }
-      const { width } = shell.getBoundingClientRect();
-      const nextScale = Math.min(0.84, width / 1120);
+      const backdropRect = backdrop.getBoundingClientRect();
+      const backdropStyles = window.getComputedStyle(backdrop);
+      const horizontalPadding =
+        Number.parseFloat(backdropStyles.paddingLeft) +
+        Number.parseFloat(backdropStyles.paddingRight);
+      const verticalPadding =
+        Number.parseFloat(backdropStyles.paddingTop) +
+        Number.parseFloat(backdropStyles.paddingBottom);
+      const availableWidth = Math.max(
+        0,
+        (backdrop.clientWidth || backdropRect.width) - horizontalPadding,
+      );
+      const availableHeight = Math.max(
+        0,
+        (backdrop.clientHeight || backdropRect.height) - verticalPadding,
+      );
+      const canvasWidth = Math.min(
+        940,
+        availableWidth,
+        (availableHeight * 1327) / 1185,
+      );
+      const nextScale = Math.min(0.84, canvasWidth / 1120);
       setFrameScale((current) =>
         Math.abs(current - nextScale) < 0.001 ? current : nextScale,
       );
     };
     updateScale();
     const observer = new ResizeObserver(updateScale);
-    observer.observe(shell);
+    observer.observe(backdrop);
     narrowLayout.addEventListener("change", updateScale);
     return () => {
       observer.disconnect();
       narrowLayout.removeEventListener("change", updateScale);
     };
   }, []);
+  const compactDesktop = !isNarrowLayout && frameScale < 2 / 3;
   useEffect(() => {
     if (displaysSuccess) {
       setCatState("happy");
@@ -221,10 +246,13 @@ export function HintChallengeDialog({
       className={`${styles.backdrop} ${isSuccess ? styles.success : ""}`}
       role="presentation"
     >
-      <div ref={frameShellRef} className={styles.dialogShell}>
+      <div
+        ref={frameShellRef}
+        className={`${styles.dialogShell} ${compactDesktop ? styles.compactDesktopShell : ""}`}
+      >
         <div
           ref={dialogRef}
-          className={`${styles.dialog} ${isSuccess ? styles.success : ""}`}
+          className={`${styles.dialog} ${isSuccess ? styles.success : ""} ${compactDesktop ? styles.compactDesktopDialog : ""}`}
           style={{ "--dialog-scale": frameScale } as CSSProperties}
           data-frame="/safe-cat/hint-popup-background-1327.png"
           data-success-presentation={isSuccess}

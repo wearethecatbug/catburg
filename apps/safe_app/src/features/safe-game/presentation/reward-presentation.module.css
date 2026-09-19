@@ -10,7 +10,7 @@
   height: 240px;
   object-fit: contain;
   object-position: center bottom;
-  width: 280px;
+  width: 240px;
 }
 .reward p {
   background: #fffdf8;
@@ -65,6 +65,16 @@
   }
 }
 
+@media (max-width: 600px) {
+  .reward {
+    margin: 0;
+    max-width: min(100%, calc(100vw - 24px));
+  }
+  .reward p {
+    margin-left: -18px;
+  }
+}
+
 @media (orientation: landscape) and (max-height: 600px) {
   .reward {
     max-width: min(360px, calc(100vw - 24px));
@@ -82,14 +92,5 @@
     min-height: 56px;
     padding: 8px 10px;
     width: min(150px, calc(100vw - 160px));
-  }
-}
-@media (max-width: 600px) {
-  .reward {
-    margin: 0;
-    max-width: min(100%, calc(100vw - 24px));
-  }
-  .reward p {
-    margin-left: -18px;
   }
 }

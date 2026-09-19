@@ -1,4 +1,5 @@
 import styles from "./game-menu.module.css";
+import { useRef } from "react";
 import { useSafeGameContext } from "../model/safe-game-context";
 import { StoredHintsCard } from "./stored-hints-card";
 
@@ -17,6 +18,7 @@ export function GameMenu() {
   const facts = state.earnedHintFacts;
   // Pointer close grace keeps the card observable until its reducer-owned deadline.
   const cardVisible = presentation.mode === "STORED_HINTS";
+  const touchDwell = useRef<{ pointerId: number; suppressClick: boolean } | null>(null);
 
   return (
     <nav className={styles.menu} aria-label="Safe game controls">
@@ -29,7 +31,11 @@ export function GameMenu() {
       <div
         className={styles.hintWrap}
         onPointerEnter={(event) => { if (event.pointerType !== "touch") controller.showHintEnter(); }}
-        onPointerLeave={() => controller.showHintLeave()}
+        onPointerLeave={(event) => { if (event.pointerType !== "touch") controller.showHintLeave(); }}
+        onBlur={(event) => {
+          const next = event.relatedTarget;
+          if (presentation.mode === "STORED_HINTS" && presentation.inputModality === "keyboard" && !(next instanceof Node && event.currentTarget.contains(next))) controller.showHintFocusLeave();
+        }}
         onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); controller.storedHintsEscape(); } }}
       >
         <button
@@ -39,11 +45,29 @@ export function GameMenu() {
           disabled={ended && facts.length === 0}
           aria-describedby={cardVisible ? "stored-hints-card" : undefined}
           onFocus={controller.showHintFocus}
-          onPointerDown={(event) => { if (event.pointerType === "touch") controller.showHintTouchStart(); }}
-          onClick={() => {
-            // A completed reducer-owned touch dwell has already opened stored hints; the
-            // synthesized click must not turn that long press into a dialog request.
-            if (!cardVisible) controller.showHint();
+          onPointerDown={(event) => {
+            if (event.pointerType !== "touch") return;
+            touchDwell.current = cardVisible ? null : { pointerId: event.pointerId, suppressClick: false };
+            controller.showHintTouchStart();
+          }}
+          onPointerUp={(event) => {
+            const dwell = touchDwell.current;
+            if (!dwell || event.pointerType !== "touch" || dwell.pointerId !== event.pointerId) return;
+            dwell.suppressClick = presentation.mode === "STORED_HINTS" && presentation.inputModality === "touch";
+          }}
+          onPointerCancel={(event) => {
+            if (touchDwell.current?.pointerId === event.pointerId) controller.showHintLeave();
+            touchDwell.current = null;
+          }}
+          onClick={(event) => {
+            const dwell = touchDwell.current;
+            if (dwell?.suppressClick && event.detail > 0) {
+              touchDwell.current = null;
+              return;
+            }
+            touchDwell.current = null;
+            if (ended) controller.showTerminalStoredHints();
+            else controller.showHint();
           }}
         >
           <MenuIcon kind="hint" /><span>Show hint</span>

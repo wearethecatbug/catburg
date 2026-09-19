@@ -110,6 +110,9 @@ export function HistoryPanel({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
   const activityFrameRef = useRef<number | null>(null);
+  const revealFrameRef = useRef<number | null>(null);
+  const revealIncludesAnchorRef = useRef(false);
+  const initialRevealExecutedRef = useRef(false);
   const dragRef = useRef<{
     pointerId: number;
     origin: Point;
@@ -135,6 +138,44 @@ export function HistoryPanel({
     };
   }, [anchorRef]);
 
+  const scheduleVisibilityReconciliation = useCallback((includeAnchor: boolean) => {
+    revealIncludesAnchorRef.current ||= includeAnchor;
+    if (revealFrameRef.current !== null) return;
+    revealFrameRef.current = requestAnimationFrame(() => {
+      revealFrameRef.current = null;
+      const panel = panelRef.current;
+      const anchor = anchorRef.current;
+      if (!panel?.isConnected || !anchor?.isConnected) return;
+      const panelRect = panel.getBoundingClientRect();
+      const anchorRect = anchor.getBoundingClientRect();
+      const revealAnchor = revealIncludesAnchorRef.current;
+      revealIncludesAnchorRef.current = false;
+      const nearestOffset = (start: number, end: number, viewportSize: number) => {
+        if (start < 0) return start;
+        if (end > viewportSize) return end - viewportSize;
+        return 0;
+      };
+      const combinedWidth = Math.max(panelRect.right, anchorRect.right) - Math.min(panelRect.left, anchorRect.left);
+      const combinedHeight = Math.max(panelRect.bottom, anchorRect.bottom) - Math.min(panelRect.top, anchorRect.top);
+      const revealBoth =
+        revealAnchor &&
+        combinedWidth <= window.innerWidth &&
+        combinedHeight <= window.innerHeight;
+      const left = nearestOffset(
+        revealBoth ? Math.min(panelRect.left, anchorRect.left) : panelRect.left,
+        revealBoth ? Math.max(panelRect.right, anchorRect.right) : panelRect.right,
+        window.innerWidth,
+      );
+      const top = nearestOffset(
+        revealBoth ? Math.min(panelRect.top, anchorRect.top) : panelRect.top,
+        revealBoth ? Math.max(panelRect.bottom, anchorRect.bottom) : panelRect.bottom,
+        window.innerHeight,
+      );
+      if (left !== 0 || top !== 0) window.scrollBy({ left, top });
+      if (revealAnchor) initialRevealExecutedRef.current = true;
+    });
+  }, [anchorRef]);
+
   useLayoutEffect(() => {
     const panel = panelRef.current;
     setPosition(panel ? clamp(anchoredPosition(), panel, laneRefs) : anchoredPosition());
@@ -143,17 +184,31 @@ export function HistoryPanel({
   useEffect(
     () => () => {
       if (activityFrameRef.current !== null) cancelAnimationFrame(activityFrameRef.current);
+      if (revealFrameRef.current !== null) {
+        cancelAnimationFrame(revealFrameRef.current);
+        revealFrameRef.current = null;
+      }
+      revealIncludesAnchorRef.current = false;
     },
     [],
   );
   useEffect(() => {
+    if (!position) return;
+    if (!initialRevealExecutedRef.current) {
+      scheduleVisibilityReconciliation(true);
+    } else if (!dragRef.current) {
+      scheduleVisibilityReconciliation(false);
+    }
+  }, [position, scheduleVisibilityReconciliation]);
+  useEffect(() => {
     const onResize = () => {
       if (panelRef.current && position)
         setPosition(clamp(position, panelRef.current, laneRefs));
+      scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [laneRefs, position]);
+  }, [laneRefs, position, scheduleVisibilityReconciliation]);
 
   function move(next: Point) {
     if (panelRef.current) setPosition(clamp(next, panelRef.current, laneRefs));
@@ -194,6 +249,7 @@ export function HistoryPanel({
       cancelAnimationFrame(activityFrameRef.current);
       activityFrameRef.current = null;
     }
+    scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
   }
 
   function onMoveKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
@@ -208,6 +264,7 @@ export function HistoryPanel({
       event.preventDefault();
       const panel = panelRef.current;
       setPosition(panel ? clamp(anchoredPosition(), panel, laneRefs) : anchoredPosition());
+      scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
       return;
     }
     const amount = event.shiftKey ? 1 : 10;
@@ -223,6 +280,7 @@ export function HistoryPanel({
     const current = position ?? anchoredPosition();
     onActivity();
     move({ left: current.left + offset.left, top: current.top + offset.top });
+    scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
   }
 
   return (

@@ -50,9 +50,13 @@
   box-shadow: 0 0 0 3px #c5657b33;
 }
 .codeInput:disabled {
-  background: #f5f2f7;
-  color: #746d82;
+  background: #ebe7ee;
+  border-color: #cbc3d1;
+  color: #625b6d;
   cursor: not-allowed;
+}
+.codeInput:disabled::placeholder {
+  color: transparent;
 }
 .codeInputButton {
   align-items: center;
@@ -90,9 +94,10 @@
   transform: translateY(1px);
 }
 .codeInputButton:disabled {
+  background: #92889d;
   box-shadow: none;
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.82;
 }
 .feedback {
   margin: 8px 0 0;

@@ -50,7 +50,7 @@ export function SafeCodeForm({
           ref={inputRef}
           inputMode="numeric"
           autoComplete="off"
-          placeholder="Enter a number..."
+          placeholder={terminal ? "" : "Enter a number..."}
           value={state.input}
           disabled={terminal}
           aria-invalid={

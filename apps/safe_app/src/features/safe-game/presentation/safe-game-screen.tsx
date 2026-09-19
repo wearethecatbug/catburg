@@ -23,10 +23,17 @@ function SafeGameScreenContent() {
   const panelLaneRef = useRef<HTMLDivElement | null>(null);
   const { state, presentation } = controller;
   const terminal = selectTerminalPresentation(state);
-  const { hintsExhausted } = selectEarnedHintPresentation(state);
+  const { hintsExhausted, statusText } = selectEarnedHintPresentation(state);
   const dialogActive = presentation.surface === "hint-dialog";
   const reward = presentation.mode === "HINT_REWARD" ? presentation.award : null;
-  const announcement = reward?.text ?? (presentation.mode === "PET_PROMPT" && presentation.promptId === 1 ? "Pet me" : "");
+  const announcement =
+    presentation.mode === "HINT_DIALOG" || presentation.mode === "HISTORY"
+      ? ""
+      : statusText
+        ? statusText
+        : presentation.mode === "PET_PROMPT" && presentation.promptId === 1
+          ? "Pet me"
+          : "";
 
   useLayoutEffect(() => {
     if (!dialogActive) return;
@@ -69,7 +76,9 @@ function SafeGameScreenContent() {
   return (
     <main
       ref={screenRef}
-      className={styles.safeGameScreen}
+      className={`${styles.safeGameScreen} ${
+        presentation.mode === "HISTORY" ? styles.historyOpen : ""
+      }`}
       onKeyDown={(event) => {
         if (
           event.key !== "Escape" ||
@@ -84,16 +93,16 @@ function SafeGameScreenContent() {
       <div className={styles.stage}>
         <header ref={headerZoneRef} className={`${styles.header} ${styles.headerZone}`}><CurvedTitle run={controller.titleRun} /><p className={styles.instructions}>Enter a whole code from 1 to 1000.</p></header>
         {!dialogActive && presentation.mode !== "HISTORY" && <p className={styles.rewardAnnouncement} role="status" aria-live="polite" aria-atomic="true">{announcement}</p>}
-        <div ref={characterEffectZoneRef} className={styles.characterEffectZone}>
-          <div className={styles.characterSlot}>
-            <div className={reward ? styles.rewardRegion : styles.catRegion}>
-              {reward ? <RewardPresentation text={reward.text} /> : <CatAvatar presentation={presentation} />}
-            </div>
-          </div>
-        </div>
         <div className={styles.gameplayZone}>
           <div className={styles.safeRegion}>
             <SafeScene safeOpen={terminal.safeOpen} dialAngle={controller.dialAngle} />
+            <div ref={characterEffectZoneRef} className={styles.characterEffectZone}>
+              <div className={styles.characterSlot}>
+                <div className={reward ? styles.rewardRegion : styles.catRegion}>
+                  {reward ? <RewardPresentation text={reward.text} /> : <CatAvatar presentation={presentation} />}
+                </div>
+              </div>
+            </div>
           </div>
           <div className={styles.codeEntry}>
             <SafeCodeForm

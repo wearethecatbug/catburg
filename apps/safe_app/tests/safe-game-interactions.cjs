@@ -3,6 +3,7 @@ const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.SAFE_CAT_BASE_URL || "http://127.0.0.1:3213";
+const fixedClockStart = new Date("2026-01-01T00:00:00Z");
 const viewportCases = [
   [1175, 1098],
   [1440, 900],
@@ -35,6 +36,7 @@ async function withSession(viewport, options, executeCase) {
       }, options.random);
     }
     page = await context.newPage();
+    if (options.clockStart) await page.clock.install({ time: options.clockStart });
     if (options.beforeGoto) await options.beforeGoto(page);
     page.on("pageerror", (error) => monitorFailures.push(error.message));
     page.on("console", (message) => {
@@ -108,6 +110,53 @@ async function exact(locator, description) {
   return locator;
 }
 
+// The character artwork is deliberately decorative.  Its public owner is the
+// presentation-mode carrier; only pettable modes expose a named button.
+async function ordinaryOwner(page, mode, description = `ordinary ${mode} owner`) {
+  await exact(
+    page.locator("[data-presentation-mode]"),
+    `${description} global ordinary owner`,
+  );
+  const owner = page.locator(`[data-presentation-mode="${mode}"]`);
+  await exact(owner, description);
+  return owner;
+}
+
+async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} art`) {
+  const owner = await ordinaryOwner(page, mode, description);
+  const image = await exact(owner.locator("img"), `${description} image`);
+  assert.equal(await image.isVisible(), true, `${description} image is visible`);
+  assert.equal(
+    await image.evaluate(async (element) => {
+      if (!(element instanceof HTMLImageElement))
+        throw new Error("ordinary art image is not an HTMLImageElement");
+      await element.decode();
+      const box = element.getBoundingClientRect();
+      return element.complete && element.naturalWidth > 0 && element.naturalHeight > 0 && box.width > 0 && box.height > 0;
+    }),
+    true,
+    `${description} image is decoded and measurable`,
+  );
+  assert.match(
+    await image.getAttribute("src"),
+    new RegExp(asset),
+    `${description} uses its approved current artwork`,
+  );
+  return owner;
+}
+
+async function expectRewardReplacement(page, description) {
+  await exact(page.getByLabel("New hint reward", { exact: true }), `${description} reward`);
+  assert.equal(await page.locator("[data-presentation-mode]").count(), 0, `${description} has no ordinary character owner`);
+  assert.equal(await page.getByRole("button", { name: "Pet the cat", exact: true }).count(), 0, `${description} has no pet target`);
+}
+
+async function expectOrdinaryReturn(page, mode, pettable, description) {
+  await ordinaryOwner(page, mode, `${description} ordinary owner`);
+  assert.equal(await page.getByLabel("New hint reward", { exact: true }).count(), 0, `${description} clears reward`);
+  assert.equal(await page.getByRole("button", { name: "Pet the cat", exact: true }).count(), pettable ? 1 : 0, `${description} pet target cardinality`);
+}
+
 async function gameControls(page) {
   const controls = {
     instruction: page.getByText("Enter a whole code from 1 to 1000.", {
@@ -119,7 +168,7 @@ async function gameControls(page) {
     surrender: page.getByRole("button", { name: "Give up", exact: true }),
     hint: page.getByRole("button", { name: "Show hint", exact: true }),
     history: page.getByRole("button", { name: "History", exact: true }),
-    cat: page.getByLabel(/^Cat /),
+    cat: page.getByRole("button", { name: "Pet the cat", exact: true }),
   };
   for (const [description, locator] of Object.entries(controls))
     await exact(locator, description);
@@ -456,8 +505,11 @@ async function publicAssetPresentation(locator) {
 }
 
 // Reads the opaque pixels from the public same-origin artwork, then maps them to
-// the rendered contain box.  Layout boxes include transparent WebP padding and
-// are therefore not evidence of the visible cat/safe contact contract.
+// the rendered object-fit/object-position box. Layout boxes include transparent
+// WebP padding and therefore are not evidence of the visible cat/safe contract.
+// The current art transforms are axis-aligned scales; reject a future rotation or
+// skew rather than silently treating its bounding rectangle as an untransformed
+// image plane.
 async function visibleAlphaBounds(locator) {
   return locator.evaluate(async (element) => {
     const rendered =
@@ -494,6 +546,16 @@ async function visibleAlphaBounds(locator) {
       backgroundOwner ||
       element
     ).getBoundingClientRect();
+    const style = getComputedStyle(rendered || backgroundOwner || element);
+    const transform = style.transform;
+    if (transform !== "none") {
+      const matrix = transform
+        .match(/matrix\(([^)]+)\)/)?.[1]
+        .split(",")
+        .map(Number);
+      if (!matrix || matrix.length !== 6 || Math.abs(matrix[1]) > 0.0001 || Math.abs(matrix[2]) > 0.0001)
+        throw new Error(`visible alpha mapper only supports axis-aligned artwork transforms, received ${transform}`);
+    }
     const canvas = document.createElement("canvas");
     canvas.width = source.naturalWidth;
     canvas.height = source.naturalHeight;
@@ -506,7 +568,8 @@ async function visibleAlphaBounds(locator) {
     let bottom = -1;
     for (let y = 0; y < canvas.height; y += 1)
       for (let x = 0; x < canvas.width; x += 1) {
-        if (pixels[(y * canvas.width + x) * 4 + 3] > 8) {
+        const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+        if (alpha > 8) {
           left = Math.min(left, x);
           top = Math.min(top, y);
           right = Math.max(right, x);
@@ -519,15 +582,109 @@ async function visibleAlphaBounds(locator) {
       rect.width / canvas.width,
       rect.height / canvas.height,
     );
-    const offsetX = rect.x + (rect.width - canvas.width * scale) / 2;
-    const offsetY = rect.y + (rect.height - canvas.height * scale) / 2;
+    const parsePosition = (token, axis) => {
+      const value = token.toLowerCase();
+      if (value === "center") return 0.5;
+      if (value === "left" || value === "top") return 0;
+      if (value === "right" || value === "bottom") return 1;
+      if (value.endsWith("%")) return Number.parseFloat(value) / 100;
+      const pixels = Number.parseFloat(value);
+      return Number.isFinite(pixels)
+        ? pixels / Math.max(1, axis)
+        : 0.5;
+    };
+    const position = style.objectPosition.trim().split(/\s+/);
+    const positionX = parsePosition(position[0] || "50%", rect.width - canvas.width * scale);
+    const positionY = parsePosition(position[1] || position[0] || "50%", rect.height - canvas.height * scale);
+    const offsetX = rect.x + (rect.width - canvas.width * scale) * positionX;
+    const offsetY = rect.y + (rect.height - canvas.height * scale) * positionY;
+    const hitTarget = element instanceof HTMLElement
+      ? element.closest("button")
+      : null;
+    const hitBox = hitTarget?.getBoundingClientRect();
+    // Playwright dispatches physical pointer coordinates as integer CSS pixels.
+    // Qualify the alpha under that final coordinate, rather than at an
+    // unclickable fractional source-pixel center beside an alpha edge.
+    const alphaAtPhysicalPoint = (x, y) => {
+      const sourceX = Math.floor((x - offsetX) / scale);
+      const sourceY = Math.floor((y - offsetY) / scale);
+      if (
+        sourceX < 0 || sourceX >= canvas.width ||
+        sourceY < 0 || sourceY >= canvas.height
+      )
+        return null;
+      return pixels[(sourceY * canvas.width + sourceX) * 4 + 3];
+    };
+    const pointFor = (sourceX, sourceY, sourceAlpha) => {
+      const x = Math.round(offsetX + (sourceX + 0.5) * scale);
+      const y = Math.round(offsetY + (sourceY + 0.5) * scale);
+      return {
+        x,
+        y,
+        alpha: alphaAtPhysicalPoint(x, y),
+        sourceAlpha,
+      };
+    };
+    const insideHitTarget = (point) =>
+      !hitBox ||
+      (point.x >= hitBox.left && point.x < hitBox.right &&
+        point.y >= hitBox.top && point.y < hitBox.bottom);
+    const topmostHitTarget = (point) => {
+      const topmost = document.elementFromPoint(point.x, point.y);
+      return Boolean(
+        hitTarget && topmost &&
+        (topmost === hitTarget || hitTarget.contains(topmost)),
+      );
+    };
+    let transparentPoint = null;
+    let opaquePoint = null;
+    if (hitBox)
+      for (let y = 0; y < canvas.height && (!transparentPoint || !opaquePoint); y += 1)
+        for (let x = 0; x < canvas.width && (!transparentPoint || !opaquePoint); x += 1) {
+          const alpha = pixels[(y * canvas.width + x) * 4 + 3];
+          const point = pointFor(x, y, alpha);
+          if (!insideHitTarget(point) || !topmostHitTarget(point)) continue;
+          point.topmostHitTarget = true;
+          if (alpha <= 8 && point.alpha !== null && point.alpha <= 8 && !transparentPoint)
+            transparentPoint = point;
+          if (alpha >= 192 && point.alpha !== null && point.alpha > 8 && !opaquePoint)
+            opaquePoint = point;
+        }
     return {
       x: offsetX + left * scale,
       y: offsetY + top * scale,
       width: (right - left + 1) * scale,
       height: (bottom - top + 1) * scale,
+      transparentPoint,
+      opaquePoint,
     };
   });
+}
+
+function requiredHeaderGap(width, height) {
+  if (height <= 600) return 8;
+  if (width <= 600) return 8;
+  if (width <= 1279) return 12;
+  return 16;
+}
+
+function paintedCatSafeGap(catAlpha, safeAlpha) {
+  return safeAlpha.y - (catAlpha.y + catAlpha.height);
+}
+
+function assertPaintedHeaderClearance({ catAlpha, title, subtitle, width, height, description }) {
+  const gap = requiredHeaderGap(width, height);
+  for (const [name, box] of Object.entries({ title, subtitle })) {
+    assert.equal(
+      intersects(catAlpha, box, 0),
+      false,
+      `${description} painted cat stays disjoint from the permanent ${name}`,
+    );
+  }
+  assert.ok(
+    catAlpha.y - (subtitle.y + subtitle.height) >= gap,
+    `${description} painted cat keeps the ${gap}px breakpoint header gap`,
+  );
 }
 
 // Computed dimensions are the logical component contract.  boundingBox() is
@@ -545,10 +702,6 @@ async function logicalBox(locator) {
       rendered: rect.toJSON(),
     };
   });
-}
-
-function visibleContact(first, second) {
-  return intersects(first, second, 0);
 }
 
 function titleControlPointY(pathData) {
@@ -797,37 +950,22 @@ test("dialog autofocus, operator replacement, tab cycle, Escape opener focus, an
   });
 });
 
-test("controlled clock rejects obsolete leave callbacks across re-entry, restart, and terminal transitions", async () => {
+test("controlled clock rejects obsolete pet-settle callbacks across restart and terminal transitions", async () => {
   await withSession(
     { width: 1175, height: 1098 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await gameControls(page);
-      await controls.cat.hover();
-      await page.mouse.move(0, 0);
+      await controls.cat.click();
       await page.clock.runFor(100);
-      await controls.cat.hover();
-      await page.clock.runFor(150);
-      await exact(
-        page.getByLabel("Cat hover", { exact: true }),
-        "re-entered cat after obsolete deadline",
-      );
-      await page.mouse.move(0, 0);
       await controls.newRound.click();
-      await controls.cat.hover();
+      await ordinaryOwner(page, "PLAYING", "new round cancels the first pet settle");
+      await controls.cat.click();
       await page.clock.runFor(250);
-      await exact(
-        page.getByLabel("Cat hover", { exact: true }),
-        "new-round hover after old leave deadline",
-      );
-      await page.mouse.move(0, 0);
+      await ordinaryOwner(page, "PET_NORMAL", "new-round pet presentation before its settle deadline");
       await controls.surrender.click();
       await page.clock.runFor(250);
-      await exact(
-        page.getByLabel("Cat surrendered", { exact: true }),
-        "terminal cat after pending leave deadline",
-      );
+      await ordinaryOwner(page, "SURRENDERED", "terminal ordinary owner after pending settle deadline");
       await page.goto("about:blank");
       await page.clock.runFor(250);
     },
@@ -1239,56 +1377,135 @@ test("preserved routes load without local asset failures", async () => {
   }
 });
 
-test("SC05 D02: public cat states use the approved contained WebP family and retain a labelled stable fallback box", async () => {
-  await withSession(
-    { width: 1440, height: 900 },
-    { random: 0.041 },
+test("SC07: public ordinary cat states map their timed, attention, and terminal modes to approved contained artwork", async () => {
+  for (const [width, height] of [
+    [1440, 900],
+    [1024, 768],
+    [390, 844],
+    [844, 390],
+  ])
+    await withSession(
+    { width, height },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
       const expected = [
-        ["Cat idle", "cat-idle-768.webp", [272, 204]],
-        ["Cat hover", "cat-attention-768.webp", [272, 204]],
-        ["Cat wrong", "cat-wrong-768.webp", [272, 204]],
-        ["Cat won", "cat-won-640.webp", [272, 204]],
-        ["Cat surrendered", "cat-surrendered-640.webp", [272, 204]],
+        ["PLAYING", "cat-playing-800.webp", [272, 272]],
+        ["PET_NORMAL", "cat-pet-hover-800.webp", [272, 272]],
+        ["PET_PROMPT", "cat-pet-prompt-800.webp", [272, 272]],
+        ["PET_PROMPT_SUCCESS", "cat-pet-success-800.webp", [272, 272]],
+        ["PET_MISSED", "cat-long-idle-800.webp", [272, 272]],
+        ["LONG_IDLE", "cat-long-idle-800.webp", [272, 272]],
+        ["HINT_ATTENTION", "cat-hint-attention-800.webp", [272, 272]],
+        ["WRONG", "cat-wrong-800.webp", [272, 272]],
+        ["WON", "cat-won-800.webp", [272, 272]],
+        ["SURRENDERED", "cat-surrendered-800.webp", [272, 272]],
       ];
-      const inspect = async (label, asset, dimensions) => {
-        const cat = await exact(
-          page.getByLabel(label, { exact: true }),
-          `${label} public state`,
-        );
+      const inspect = async (mode, asset, dimensions) => {
+        const cat = await ordinaryArt(page, mode, asset, `${mode} public state`);
         const box = await logicalBox(cat);
-        assert.deepEqual(
-          [Math.round(box.width), Math.round(box.height)],
-          dimensions,
-          `${label} keeps its approved logical scene box before stage scale`,
-        );
+        if (width === 1440 && height === 900)
+          assert.deepEqual(
+            [Math.round(box.width), Math.round(box.height)],
+            dimensions,
+            `${mode} keeps its approved desktop logical scene box before stage scale`,
+          );
+        else
+          assert.ok(
+            box.width > 0 && box.height > 0,
+            `${width}x${height} ${mode} retains a measurable logical scene box`,
+          );
         const presentation = await publicAssetPresentation(cat);
         assert.match(
           presentation.reference,
           new RegExp(asset),
-          `${label} loads its exact approved derivative`,
+          `${mode} loads its exact approved derivative`,
         );
         assert.equal(
           presentation.fit,
           "contain",
-          `${label} never crops the character`,
+          `${mode} never crops the character`,
         );
+        const [catAlpha, title, subtitle] = await Promise.all([
+          visibleAlphaBounds(cat),
+          page
+            .getByRole("heading", { name: "Guess the number", exact: true })
+            .boundingBox(),
+          controls.instruction.boundingBox(),
+        ]);
+        assertPaintedHeaderClearance({
+          catAlpha,
+          title,
+          subtitle,
+          width,
+          height,
+          description: `${width}x${height} ${mode} timed-state art`,
+        });
       };
       await inspect(...expected[0]);
-      await controls.cat.hover();
+      await controls.cat.click();
       await inspect(...expected[1]);
+      await page.clock.runFor(1200);
+      await page.clock.runFor(30_000);
+      await inspect(...expected[2]);
+      await exact(
+        page.locator("[data-pet-prompt]"),
+        "timed PET_PROMPT visible Pet me activation",
+      );
+      await page.locator("[data-pet-prompt]").click();
+      await inspect(...expected[3]);
+      await page.clock.runFor(4000);
+      await controls.newRound.click();
+      await page.clock.runFor(30_000);
+      await page.clock.runFor(5000);
+      await inspect(...expected[4]);
+      await page.clock.runFor(5000);
+      await inspect(...expected[0]);
+      await page.clock.runFor(15_001);
+      await inspect(...expected[5]);
+      await controls.hint.hover();
+      await inspect(...expected[6]);
       await page.mouse.move(0, 0);
       await controls.code.fill("41");
       await controls.submit.click();
-      await inspect(...expected[2]);
+      await inspect(...expected[7]);
       await controls.newRound.click();
       await controls.code.fill("42");
       await controls.submit.click();
-      await inspect(...expected[3]);
+      await inspect(...expected[8]);
       await controls.newRound.click();
       await controls.surrender.click();
-      await inspect(...expected[4]);
+      await inspect(...expected[9]);
+      assert.equal(
+        await controls.code.isDisabled(),
+        true,
+        "terminal Safe code input retains native disabled semantics",
+      );
+      assert.equal(
+        await controls.submit.isDisabled(),
+        true,
+        "terminal code submission is unavailable with the input",
+      );
+      assert.equal(
+        await controls.code.getAttribute("placeholder"),
+        "",
+        "terminal Safe code input no longer invites entry with placeholder copy",
+      );
+      assert.equal(
+        await page.getByPlaceholder("Enter a number...", { exact: true }).count(),
+        0,
+        "terminal screen exposes no editable-entry invitation",
+      );
+      const terminalInputStyle = await controls.code.evaluate((element) => ({
+        background: getComputedStyle(element).backgroundColor,
+        border: getComputedStyle(element).borderColor,
+        cursor: getComputedStyle(element).cursor,
+      }));
+      assert.notDeepEqual(
+        terminalInputStyle,
+        { background: "rgb(255, 255, 255)", border: "rgb(233, 229, 240)", cursor: "text" },
+        "terminal code input visibly differs from the enabled entry control",
+      );
     },
   );
   let interceptedIdleOptimizerRequests = 0;
@@ -1302,7 +1519,7 @@ test("SC05 D02: public cat states use the approved contained WebP family and ret
     return (
       requestUrl.origin === new URL(baseUrl).origin &&
       requestUrl.pathname === "/_next/image" &&
-      requestUrl.searchParams.get("url") === "/safe-cat/cat-idle-768.webp"
+      requestUrl.searchParams.get("url") === "/safe-cat/cat-playing-800.webp"
     );
   };
   await withSession(
@@ -1322,10 +1539,7 @@ test("SC05 D02: public cat states use the approved contained WebP family and ret
         message === "Failed to load resource: net::ERR_FAILED",
     },
     async ({ page }) => {
-      const fallback = await exact(
-        page.getByLabel("Cat idle", { exact: true }),
-        "failed-asset fallback",
-      );
+      const fallback = await ordinaryOwner(page, "PLAYING", "failed-asset fallback owner");
       const box = await logicalBox(fallback);
       assert.ok(
         interceptedIdleOptimizerRequests >= 1,
@@ -1333,7 +1547,7 @@ test("SC05 D02: public cat states use the approved contained WebP family and ret
       );
       assert.deepEqual(
         [Math.round(box.width), Math.round(box.height)],
-        [208, 156],
+        [224, 224],
         "failed idle asset preserves the approved mobile logical scene box",
       );
       assert.equal(
@@ -1819,9 +2033,8 @@ test("SC05 D04: reduced-motion dial is synchronous and never gains a transition"
 test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles stay bounded and non-mutating", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true },
+    { hasTouch: true, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await gameControls(page);
       const pet = await exact(
         page.getByRole("button", { name: "Pet the cat", exact: true }),
@@ -1830,45 +2043,34 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       const petBox = await pet.boundingBox();
       assert.ok(petBox, "petting target has a rendered click area");
       const initialLayout = await page.locator("main").boundingBox();
-      const bubbles = await exact(
-        pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'),
-        "aria-hidden heart overlay",
+      const bubbles = page.locator(
+        '[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"]',
       );
       const heartOrigins = () =>
         bubbles
           .locator(":scope > *")
-          .evaluateAll((elements) =>
-            elements.map((element) => [
-              element.style.getPropertyValue("--origin-x"),
-              element.style.getPropertyValue("--origin-y"),
-            ]),
-          );
-      const resolvedPointerOrigin = (position, round = Math.floor) => ({
-        x: round(petBox.x + position.x) - petBox.x,
-        y: round(petBox.y + position.y) - petBox.y,
-      });
-      const originStyle = (position, round) => [
-        `${resolvedPointerOrigin(position, round).x}px`,
-        `${resolvedPointerOrigin(position, round).y}px`,
-      ];
+          .allTextContents();
       const pointerOrigin = {
         x: Math.round(petBox.width * 0.24),
         y: Math.round(petBox.height * 0.36),
       };
+      await pet.hover();
+      assert.equal(
+        await page.locator('[data-presentation-mode="PET_NORMAL"]').count(),
+        0,
+        "hover alone does not activate the cat or create hearts",
+      );
       await page.mouse.click(
         petBox.x + pointerOrigin.x,
         petBox.y + pointerOrigin.y,
       );
+      await exact(bubbles, "aria-hidden heart overlay in PET_NORMAL");
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         3,
         "one pet emits exactly three decorative hearts",
       );
-      assert.deepEqual(
-        await heartOrigins(),
-        Array.from({ length: 3 }, () => originStyle(pointerOrigin)),
-        "a pointer pet starts every heart at its actual in-target coordinate",
-      );
+      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "a pointer pet renders three decorative hearts");
       // Sample the rendered animation at one shared WAAPI instant so unused custom properties cannot
       // masquerade as three motions.
       const renderedMotion = await bubbles
@@ -1889,8 +2091,8 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         );
       assert.deepEqual(
         renderedMotion.map((sample) => sample.duration),
-        ["1.4s", "1.6s", "1.8s"],
-        "normal hearts render three distinct computed animation durations",
+        ["1.2s", "1.2s", "1.2s"],
+        "normal hearts use the current shared public-motion duration",
       );
       const sampledRise = renderedMotion.map((sample) =>
         Number(
@@ -1906,8 +2108,8 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       );
       assert.equal(
         new Set(sampledRise.map((rise) => rise.toFixed(3))).size,
-        3,
-        "normal hearts render three distinct sampled rises instead of static or identical motion",
+        1,
+        "normal hearts share one current upward motion while their layout offsets remain decorative",
       );
       assert.deepEqual(
         await page.locator("main").boundingBox(),
@@ -1931,24 +2133,25 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         "none",
         "heart overlay passes pointer input through",
       );
-      await page.clock.runFor(1401);
+      assert.deepEqual(
+        await bubbles.evaluate((element) => [
+          element.style.getPropertyValue("--heart-origin-x"),
+          element.style.getPropertyValue("--heart-origin-y"),
+        ]),
+        [
+          `${(pointerOrigin.x / petBox.width) * 100}%`,
+          `${(pointerOrigin.y / petBox.height) * 100}%`,
+        ],
+        "the pointer burst originates at its actual click position",
+      );
+      await page.clock.runFor(1199);
       assert.equal(
         await bubbles.locator(":scope > *").count(),
-        2,
-        "the 1.4s heart cleans up independently before the longer hearts",
+        3,
+        "pointer leave cannot end the activation-owned pet presentation early",
       );
-      await page.clock.runFor(200);
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        1,
-        "the 1.6s heart cleans up independently before the 1.8s heart",
-      );
-      await page.clock.runFor(200);
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        0,
-        "the first burst is fully cleaned up by its 1.8s lifecycle",
-      );
+      await page.clock.runFor(1);
+      assert.equal(await bubbles.locator(":scope > *").count(), 0, "pointer pet settles exactly at 1200ms");
       const rejectedTouchOrigin = {
         x: Math.round(petBox.width * 0.72),
         y: Math.round(petBox.height * 0.62),
@@ -1959,131 +2162,210 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         3,
         "a fresh touch burst emits exactly three hearts",
       );
-      await pet.tap({ position: pointerOrigin });
+      await page.mouse.click(
+        petBox.x + pointerOrigin.x,
+        petBox.y + pointerOrigin.y,
+      );
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         3,
-        "the 900ms throttle rejects an immediate touch burst",
+        "the active touch burst remains one three-heart effect after a synthetic follow-up tap",
       );
       await page.clock.runFor(900);
-      await pet.tap({ position: pointerOrigin });
+      await page.mouse.click(
+        petBox.x + pointerOrigin.x,
+        petBox.y + pointerOrigin.y,
+      );
       assert.equal(
         await bubbles.locator(":scope > *").count(),
-        6,
-        "two throttled bursts cap the DOM at six hearts",
+        3,
+        "an active burst cannot become a duplicate three-heart series after 900ms",
       );
-      assert.deepEqual(
-        (await heartOrigins()).slice(-3),
-        Array.from({ length: 3 }, () => originStyle(pointerOrigin, Math.round)),
-        "a later touch pet resolves to its own distinct in-target coordinate",
-      );
-      await page.clock.runFor(2701);
+      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "one activation retains one decorative three-heart burst");
+      await page.clock.runFor(300);
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         0,
-        "both throttled bursts complete their individual 1.8s cleanup",
+        "touch pet presentation clears after its reducer-owned settle interval",
       );
       await pet.focus();
       await page.keyboard.press("Enter");
-      assert.deepEqual(
-        await heartOrigins(),
-        Array.from({ length: 3 }, () => [
-          `${petBox.width / 2}px`,
-          `${petBox.height / 2}px`,
-        ]),
-        "keyboard petting resolves every heart at the exact target center",
-      );
-      const durationsAndRises = await bubbles
+      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "Enter petting renders three decorative hearts");
+      const durations = await bubbles
         .locator(":scope > *")
         .evaluateAll((elements) =>
-          elements.map((element) => [
-            element.style.getPropertyValue("--duration"),
-            element.style.getPropertyValue("--rise"),
-          ]),
+          elements.map((element) => getComputedStyle(element).animationDuration),
         );
       assert.deepEqual(
-        durationsAndRises,
-        [
-          ["1400ms", "38px"],
-          ["1600ms", "46px"],
-          ["1800ms", "54px"],
-        ],
-        "normal motion uses the approved deterministic lifecycles and rises",
+        durations,
+        ["1.2s", "1.2s", "1.2s"],
+        "one activation gives all three hearts the same 1200ms effect lifetime",
       );
-      await page.clock.runFor(1801);
+      await page.clock.runFor(1201);
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         0,
-        "keyboard burst is completely cleaned up after its 1.8s maximum lifecycle",
+        "keyboard burst is completely cleaned up after its reducer-owned settle interval",
       );
       await page.keyboard.press("Space");
-      assert.deepEqual(
-        await heartOrigins(),
-        Array.from({ length: 3 }, () => [
-          `${petBox.width / 2}px`,
-          `${petBox.height / 2}px`,
-        ]),
-        "Space petting matches Enter at the exact target center",
-      );
-      await page.clock.runFor(1801);
+      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "Space petting renders three decorative hearts");
+      await page.clock.runFor(1201);
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         0,
-        "Space burst is also completely cleaned up after its 1.8s maximum lifecycle",
+        "Space burst is also completely cleaned up after its reducer-owned settle interval",
+      );
+      await pet.evaluate((node) => node.click());
+      assert.equal(
+        await bubbles.locator(":scope > *").count(),
+        3,
+        "a standalone semantic button click remains an activation without a preceding keydown",
       );
     },
   );
 });
 
-test("SC05 provider: pet status is externally described for every game outcome", async () => {
+test("SC07: transparent physical cat pixels are inert while the visible Pet me prompt is an activation", async () => {
+  await withSession(
+    { width: 390, height: 844 },
+    { hasTouch: true, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      const initialAlpha = await visibleAlphaBounds(controls.cat);
+      const catBox = await controls.cat.boundingBox();
+      assert.ok(catBox, "Pet the cat button exposes a measurable physical hit target");
+      for (const [kind, point, predicate] of [
+        ["transparent", initialAlpha.transparentPoint, (alpha) => alpha <= 8],
+        ["opaque", initialAlpha.opaquePoint, (alpha) => alpha > 8],
+      ]) {
+        assert.ok(point, `approved artwork exposes an in-button ${kind} alpha point`);
+        assert.equal(predicate(point.sourceAlpha), true, `${kind} point has the expected source alpha threshold`);
+        assert.equal(predicate(point.alpha), true, `${kind} final integer physical coordinate keeps the expected alpha threshold`);
+        assert.equal(
+          point.topmostHitTarget,
+          true,
+          `${kind} final physical coordinate is owned by Pet the cat rather than a higher layer`,
+        );
+        if (kind === "opaque")
+          assert.ok(point.sourceAlpha >= 192, "opaque physical mouse point stays inside the painted cat rather than on an alpha edge");
+        assert.ok(
+          point.x >= catBox.x && point.x < catBox.x + catBox.width &&
+            point.y >= catBox.y && point.y < catBox.y + catBox.height,
+          `${kind} alpha point lies inside the physical Pet the cat button`,
+        );
+      }
+      await page.mouse.click(
+        initialAlpha.transparentPoint.x,
+        initialAlpha.transparentPoint.y,
+      );
+      await ordinaryOwner(page, "PLAYING", "transparent physical click leaves the playing cat active");
+      assert.equal(
+        await page.locator('[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"] i').count(),
+        0,
+        "transparent physical click creates no heart burst",
+      );
+      await page.mouse.click(
+        initialAlpha.opaquePoint.x,
+        initialAlpha.opaquePoint.y,
+      );
+      await ordinaryOwner(page, "PET_NORMAL", "opaque physical mouse click activates the cat");
+      assert.equal(
+        await page.locator('[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"] i').count(),
+        3,
+        "opaque physical mouse click creates exactly one three-heart burst",
+      );
+      await page.clock.runFor(1200);
+      await ordinaryOwner(page, "PLAYING", "mouse burst settles before the independent touch check");
+      await controls.newRound.click();
+      const touchAlpha = await visibleAlphaBounds(controls.cat);
+      const touchBox = await controls.cat.boundingBox();
+      assert.ok(touchBox, "fresh Pet the cat button exposes a touch hit target");
+      for (const [kind, point, predicate] of [
+        ["transparent", touchAlpha.transparentPoint, (alpha) => alpha <= 8],
+        ["opaque", touchAlpha.opaquePoint, (alpha) => alpha > 8],
+      ]) {
+        assert.ok(point, `fresh artwork exposes an in-button ${kind} touch point`);
+        assert.equal(predicate(point.sourceAlpha), true, `fresh ${kind} touch point has the expected source alpha threshold`);
+        assert.equal(predicate(point.alpha), true, `fresh ${kind} final integer touch coordinate keeps the expected alpha threshold`);
+        assert.equal(
+          point.topmostHitTarget,
+          true,
+          `fresh ${kind} final touch coordinate is owned by Pet the cat rather than a higher layer`,
+        );
+        if (kind === "opaque")
+          assert.ok(point.sourceAlpha >= 192, "opaque physical touch point stays inside the painted cat rather than on an alpha edge");
+        assert.ok(
+          point.x >= touchBox.x && point.x < touchBox.x + touchBox.width &&
+            point.y >= touchBox.y && point.y < touchBox.y + touchBox.height,
+          `fresh ${kind} touch point lies inside the physical Pet the cat button`,
+        );
+      }
+      await controls.cat.tap({
+        position: {
+          x: touchAlpha.transparentPoint.x - touchBox.x,
+          y: touchAlpha.transparentPoint.y - touchBox.y,
+        },
+      });
+      await ordinaryOwner(page, "PLAYING", "transparent physical touch leaves the cat inactive");
+      assert.equal(
+        await page.locator('[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"] i').count(),
+        0,
+        "transparent physical touch creates no heart burst",
+      );
+      await controls.cat.tap({
+        position: {
+          x: touchAlpha.opaquePoint.x - touchBox.x,
+          y: touchAlpha.opaquePoint.y - touchBox.y,
+        },
+      });
+      await ordinaryOwner(page, "PET_NORMAL", "opaque physical touch activates the cat");
+      assert.equal(
+        await page.locator('[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"] i').count(),
+        3,
+        "opaque physical touch creates exactly one three-heart burst",
+      );
+      await page.clock.runFor(1200);
+      await page.clock.runFor(15_001);
+      await ordinaryOwner(page, "LONG_IDLE", "touch pet settles before its deferred prompt becomes due");
+      await page.clock.runFor(15_000);
+      await ordinaryOwner(page, "PET_PROMPT", "deferred touch prompt retains its public ordinary owner");
+      const prompt = await exact(
+        page.locator("[data-pet-prompt]"),
+        "timed visible Pet me prompt",
+      );
+      await prompt.click();
+      const success = await ordinaryArt(
+        page,
+        "PET_PROMPT_SUCCESS",
+        "cat-pet-success-800.webp",
+        "Pet me prompt activation",
+      );
+      assert.equal(
+        await success.locator(':scope > [aria-hidden="true"] i').count(),
+        3,
+        "one visible Pet me activation emits one three-heart burst",
+      );
+    },
+  );
+});
+
+test("SC05 provider: public presentation owners distinguish pettable and terminal game outcomes", async () => {
   await withSession(
     { width: 390, height: 844 },
     { random: 0.041 },
     async ({ page }) => {
       const controls = await gameControls(page);
-      const pet = await exact(
-        page.getByRole("button", { name: "Pet the cat", exact: true }),
-        "petting target with external status",
-      );
-      const inspectDescription = async (label, state) => {
-        await exact(
-          page.getByLabel(label, { exact: true }),
-          `${state} public cat state`,
-        );
-        const descriptionId = await pet.getAttribute("aria-describedby");
-        assert.ok(
-          descriptionId,
-          `${state} pet target has an external description reference`,
-        );
-        const description = await exact(
-          page.locator(`#${descriptionId}`),
-          `${state} external pet description`,
-        );
-        assert.equal(
-          await pet.evaluate(
-            (element, id) => element.contains(document.getElementById(id)),
-            descriptionId,
-          ),
-          false,
-          `${state} pet state is not supplied only by a button descendant`,
-        );
-        assert.match(
-          await description.innerText(),
-          new RegExp(state, "i"),
-          `${state} external pet description updates with the public cat outcome`,
-        );
-      };
-      await inspectDescription("Cat idle", "idle");
+      await expectOrdinaryReturn(page, "PLAYING", true, "initial playing state");
       await controls.code.fill("41");
       await controls.submit.click();
-      await inspectDescription("Cat wrong", "wrong");
+      await expectOrdinaryReturn(page, "WRONG", false, "wrong state");
       await controls.newRound.click();
       await controls.code.fill("42");
       await controls.submit.click();
-      await inspectDescription("Cat won", "won");
+      await expectOrdinaryReturn(page, "WON", false, "won state");
       await controls.newRound.click();
       await controls.surrender.click();
-      await inspectDescription("Cat surrendered", "surrendered");
+      await expectOrdinaryReturn(page, "SURRENDERED", false, "surrendered state");
     },
   );
 });
@@ -2093,16 +2375,11 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
     [1440, 900, 1],
     [768, 800, 1],
   ])
-    await withSession({ width, height }, {}, async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    await withSession({ width, height }, { clockStart: fixedClockStart }, async ({ page }) => {
       const controls = await gameControls(page);
       const pet = await exact(
         page.getByRole("button", { name: "Pet the cat", exact: true }),
         `${width}px pet target`,
-      );
-      const overlay = await exact(
-        pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'),
-        `${width}px heart overlay`,
       );
       const petBox = await pet.boundingBox();
       const stageScale = await page
@@ -2127,71 +2404,43 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
         y: Math.round(petBox.y + petBox.height * 0.63),
       };
       await page.mouse.click(client.x, client.y);
-      const origins = await overlay
-        .locator(":scope > *")
-        .evaluateAll((elements) =>
-          elements.map((element) => [
-            Number.parseFloat(element.style.getPropertyValue("--origin-x")),
-            Number.parseFloat(element.style.getPropertyValue("--origin-y")),
-          ]),
-        );
-      const expectedPointer = [
-        (client.x - petBox.x) / stageScale,
-        (client.y - petBox.y) / stageScale,
-      ];
-      for (const origin of origins) {
-        approximatelyEqual(
-          origin[0],
-          expectedPointer[0],
-          1,
-          `${width}px pointer heart x origin converts back to unscaled layout space`,
-        );
-        approximatelyEqual(
-          origin[1],
-          expectedPointer[1],
-          1,
-          `${width}px pointer heart y origin converts back to unscaled layout space`,
-        );
-      }
-      await page.clock.runFor(1801);
-      await pet.focus();
+      const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", `${width}px off-center pointer owner`);
+      const overlay = await exact(owner.locator(':scope > [aria-hidden="true"]:not(:has(img))'), `${width}px heart overlay`);
+      const hearts = overlay.locator(":scope > i");
+      assert.equal(await hearts.count(), 3, `${width}px off-center pointer activation renders three decorative hearts`);
+      const origin = await overlay.evaluate((element) => [
+        Number.parseFloat(element.style.getPropertyValue("--heart-origin-x")),
+        Number.parseFloat(element.style.getPropertyValue("--heart-origin-y")),
+      ]);
+      approximatelyEqual(origin[0], ((client.x - petBox.x) / petBox.width) * 100, 0.01, `${width}px pointer heart x origin tracks the actual click`);
+      approximatelyEqual(origin[1], ((client.y - petBox.y) / petBox.height) * 100, 0.01, `${width}px pointer heart y origin tracks the actual click`);
+      assert.equal(await owner.boundingBox().then((box) => Boolean(box && box.width > 0 && box.height > 0)), true, `${width}px PET_NORMAL owner remains measurable after a real off-center click`);
+      await page.mouse.move(0, 0);
+      await page.clock.runFor(1199);
+      await ordinaryOwner(page, "PET_NORMAL", `${width}px pointer activation stays active before 1200ms`);
+      await page.clock.runFor(1);
+      await expectOrdinaryReturn(page, "PLAYING", true, `${width}px pointer activation settles at 1200ms`);
+      const keyboardPet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), `${width}px restored keyboard pet target`);
+      await keyboardPet.focus();
       await page.keyboard.press("Enter");
-      const keyboardOrigins = await overlay
-        .locator(":scope > *")
-        .evaluateAll((elements) =>
-          elements.map((element) => [
-            Number.parseFloat(element.style.getPropertyValue("--origin-x")),
-            Number.parseFloat(element.style.getPropertyValue("--origin-y")),
-          ]),
-        );
-      const expectedKeyboard = [
-        petBox.width / (2 * stageScale),
-        petBox.height / (2 * stageScale),
-      ];
-      for (const origin of keyboardOrigins) {
-        approximatelyEqual(
-          origin[0],
-          expectedKeyboard[0],
-          0.01,
-          `${width}px keyboard heart x origin is the exact unscaled layout centre`,
-        );
-        approximatelyEqual(
-          origin[1],
-          expectedKeyboard[1],
-          0.01,
-          `${width}px keyboard heart y origin is the exact unscaled layout centre`,
-        );
-      }
+      const keyboardOwner = await ordinaryOwner(page, "PET_NORMAL", `${width}px keyboard PET_NORMAL owner`);
+      assert.equal(await keyboardOwner.locator(':scope > [aria-hidden="true"] i').count(), 3, `${width}px Enter renders three decorative hearts`);
+      const keyboardOrigin = await keyboardOwner.locator(':scope > [aria-hidden="true"]').evaluate((element) => [
+        element.style.getPropertyValue("--heart-origin-x"),
+        element.style.getPropertyValue("--heart-origin-y"),
+      ]);
+      assert.deepEqual(keyboardOrigin, ["50%", "50%"], `${width}px keyboard activation centers its burst`);
+      await page.clock.runFor(1200);
+      await expectOrdinaryReturn(page, "PLAYING", true, `${width}px keyboard settle`);
     });
 });
 
 test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only for 700ms", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true },
+    { hasTouch: true, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
-      await page.clock.pauseAt(new Date("2026-01-01T00:00:00Z"));
+      await page.clock.pauseAt(fixedClockStart);
       await page.emulateMedia({ reducedMotion: "reduce" });
       const pet = await exact(
         page.getByRole("button", { name: "Pet the cat", exact: true }),
@@ -2202,10 +2451,6 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         petBox,
         "reduced-motion petting target has a rendered touch area",
       );
-      const overlay = await exact(
-        pet.locator(':scope > [aria-hidden="true"]:not(:has(img))'),
-        "reduced-motion aria-hidden heart overlay",
-      );
       const origin = {
         x: Math.round(petBox.width * 0.68),
         y: Math.round(petBox.height * 0.31),
@@ -2214,31 +2459,16 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         x: Math.floor(petBox.x + origin.x),
         y: Math.floor(petBox.y + origin.y),
       };
-      await pet.dispatchEvent("click", {
-        detail: 1,
-        clientX: client.x,
-        clientY: client.y,
-      });
+      await page.mouse.click(client.x, client.y);
+      const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", "reduced-motion PET_NORMAL owner");
+      const overlay = await exact(owner.locator(':scope > [aria-hidden="true"]:not(:has(img))'), "reduced-motion aria-hidden heart overlay");
       const hearts = overlay.locator(":scope > *");
       assert.equal(
         await hearts.count(),
         3,
         "reduced motion retains exactly three hearts",
       );
-      const resolvedOrigin = [
-        `${client.x - petBox.x}px`,
-        `${client.y - petBox.y}px`,
-      ];
-      assert.deepEqual(
-        await hearts.evaluateAll((elements) =>
-          elements.map((element) => [
-            element.style.getPropertyValue("--origin-x"),
-            element.style.getPropertyValue("--origin-y"),
-          ]),
-        ),
-        Array.from({ length: 3 }, () => resolvedOrigin),
-        "reduced motion keeps the actual resolved touch origin",
-      );
+      assert.deepEqual(await hearts.allTextContents(), ["♥", "♥", "♥"], "reduced motion preserves the public three-heart effect after an off-center real click");
       for (let index = 0; index < 3; index += 1) {
         const style = await hearts
           .nth(index)
@@ -2286,17 +2516,17 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
           lateOpacities[index] < middleOpacities[index],
           "late reduced-motion heart opacity progresses toward cleanup",
         );
-      await page.clock.runFor(699);
+      await page.clock.runFor(1199);
       assert.equal(
         await hearts.count(),
         3,
-        "reduced-motion hearts remain present through controlled 699ms",
+        "reduced-motion CSS fade does not remove the reducer-owned effect before its 1200ms settle",
       );
       await page.clock.runFor(1);
       assert.equal(
         await hearts.count(),
         0,
-        "reduced-motion hearts clean up exactly at controlled 700ms",
+        "reduced-motion effect DOM clears at the reducer-owned 1200ms settle",
       );
       assert.equal(
         await overlay.getAttribute("aria-hidden"),
@@ -2449,9 +2679,8 @@ test("SC05 D06: controls retain actual game semantics, visible focus, and local 
 test("SC05 D07-D09: lamp and stored-hint card are current-round only across hover, focus, and Escape", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await gameControls(page);
       const lamp = await exact(
         controls.hint.locator(
@@ -2558,9 +2787,8 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
 test("SC05 D09: the stored-hint close timer cannot hide a card while keyboard focus remains inside its wrapper", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await earnFirstHint(page);
       const card = page.getByRole("region", {
         name: "Stored hints",
@@ -2635,11 +2863,9 @@ test("SC05 D09: the stored-hint close timer cannot hide a card while keyboard fo
 test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap keeps math activation", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true, random: 0.041 },
+    { hasTouch: true, random: 0.041, clockStart: fixedClockStart },
     async ({ page, context }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await earnFirstHint(page);
       const hintBox = await controls.hint.boundingBox();
       const client = await context.newCDPSession(page);
@@ -3002,11 +3228,9 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
 test("SC05 D09-D10: reward is latest-wins, announces once, expires without losing storage, and New game invalidates old timers", async () => {
   await withSession(
     { width: 768, height: 800 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await earnFirstHint(page);
       const reward = await exact(
         page.getByRole("img", { name: "New hint reward", exact: true }),
@@ -3022,11 +3246,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         0,
         "reward artwork does not duplicate the separate live announcement channel",
       );
-      assert.equal(
-        await page.getByLabel(/^Cat /).count(),
-        0,
-        "the earned reward replaces rather than duplicates the normal CatAvatar",
-      );
+      await expectRewardReplacement(page, "earned reward replacement");
       const announcement = await exact(
         page.locator('[role="status"][aria-live="polite"][aria-atomic="true"]'),
         "single polite reward announcement",
@@ -3049,11 +3269,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         0,
         "reward clears at 5000ms plus the approved tolerance",
       );
-      assert.equal(
-        await page.getByLabel(/^Cat /).count(),
-        1,
-        "normal CatAvatar returns exactly once after reward expiry",
-      );
+      await expectOrdinaryReturn(page, "PLAYING", true, "reward expiry");
       assert.equal(
         await announcement.count(),
         1,
@@ -3081,11 +3297,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         page.getByLabel("New hint reward", { exact: true }),
         "later latest-wins reward",
       );
-      assert.equal(
-        await page.getByLabel(/^Cat /).count(),
-        0,
-        "a replacement reward still owns the sole cat slot",
-      );
+      await expectRewardReplacement(page, "replacement reward");
       const laterText = await laterReward.innerText();
       assert.notEqual(
         laterText,
@@ -3112,11 +3324,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         0,
         "New game invalidates current reward immediately",
       );
-      assert.equal(
-        await page.getByLabel(/^Cat /).count(),
-        1,
-        "New game restores one normal CatAvatar when it cancels reward presentation",
-      );
+      await expectOrdinaryReturn(page, "PLAYING", true, "New game after reward");
       await page.clock.runFor(6000);
       assert.equal(
         await page.getByLabel("New hint reward", { exact: true }).count(),
@@ -3130,9 +3338,8 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
 test("SC05 provider: one persistent atomic hint status and stored-card focus races stay current-round only", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await gameControls(page);
       assert.equal(
         await controls.newRound.locator("xpath=..").getByRole("button").count(),
@@ -3328,9 +3535,8 @@ test("SC05 provider: exhausted hints retain their single public status instead o
 test("SC05 provider: current-round reset cancels a pending touch card before it can reopen", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true, random: 0.041 },
+    { hasTouch: true, random: 0.041, clockStart: fixedClockStart },
     async ({ page, context }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await earnFirstHint(page);
       const hintBox = await controls.hint.boundingBox();
       assert.ok(hintBox, "touch reset checks a rendered Show hint target");
@@ -3412,9 +3618,8 @@ test("SC05 provider: terminal outcomes retain earned stored hints without re-ena
   for (const outcome of ["won", "surrendered"])
     await withSession(
       { width: 390, height: 844 },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
         const controls = await earnFirstHint(page);
         if (outcome === "won") {
           await controls.code.fill("42");
@@ -3427,6 +3632,12 @@ test("SC05 provider: terminal outcomes retain earned stored hints without re-ena
           await page.getByLabel("New hint reward", { exact: true }).count(),
           0,
           `${outcome} reward expiry does not discard the earned hint`,
+        );
+        await expectOrdinaryReturn(
+          page,
+          outcome === "won" ? "WON" : "SURRENDERED",
+          false,
+          `${outcome} terminal presentation`,
         );
         await controls.hint.focus();
         const card = await exact(
@@ -3496,11 +3707,7 @@ test("SC05 provider: reward row retains 12px narrow gutters while copy can reflo
           "none",
           `${width}px reward wrapper never intercepts scene pointer input`,
         );
-        assert.equal(
-          await page.getByLabel(/^Cat /).count(),
-          0,
-          `${width}px reward owns the cat slot instead of leaving an invisible or duplicate pet target`,
-        );
+        await expectRewardReplacement(page, `${width}px reward slot ownership`);
       },
     );
 });
@@ -3640,8 +3847,7 @@ test("SC05 D09-D11: approved protected zones remain reachable and non-overlappin
 });
 
 test("SC05 D10: New game alone runs the 720ms title curve, restarts cleanly, and settles canonically", async () => {
-  await withSession({ width: 768, height: 800 }, {}, async ({ page }) => {
-    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await withSession({ width: 768, height: 800 }, { clockStart: fixedClockStart }, async ({ page }) => {
     const controls = await gameControls(page);
     const curve = await exact(
       page
@@ -3713,8 +3919,7 @@ test("SC05 D10: title remains static at 390px and under reduced motion", async (
     { viewport: { width: 390, height: 844 } },
     { viewport: { width: 768, height: 800 }, reduced: true },
   ]) {
-    await withSession(options.viewport, {}, async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+    await withSession(options.viewport, { clockStart: fixedClockStart }, async ({ page }) => {
       if (options.reduced) await page.emulateMedia({ reducedMotion: "reduce" });
       const controls = await gameControls(page);
       const curve = await exact(
@@ -4344,8 +4549,7 @@ test("SC05 D15/D18/D23: one accessible curved title and subtitle retain the cano
       );
     });
   }
-  await withSession({ width: 768, height: 800 }, {}, async ({ page }) => {
-    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
+  await withSession({ width: 768, height: 800 }, { clockStart: fixedClockStart }, async ({ page }) => {
     const controls = await gameControls(page);
     const arc = page
       .getByRole("heading", { name: "Guess the number", exact: true })
@@ -4394,14 +4598,22 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
           visibleAlphaBounds(controls.cat),
           controls.instruction.boundingBox(),
         ]);
+        const title = await page
+          .getByRole("heading", { name: "Guess the number", exact: true })
+          .boundingBox();
+        const safeGap = paintedCatSafeGap(idleAlpha, safeAlpha);
         assert.ok(
-          visibleContact(safeAlpha, idleAlpha),
-          `${width}x${height} D16 visible idle cat contacts visible safe`,
+          safeGap >= -8 && safeGap <= 8,
+          `${width}x${height} D16 painted idle cat rests on the painted safe edge: ${safeGap}px`,
         );
-        assert.ok(
-          idleAlpha.y - (subtitle.y + subtitle.height) >= 16,
-          `${width}x${height} D26 idle alpha starts at least 16px below subtitle`,
-        );
+        assertPaintedHeaderClearance({
+          catAlpha: idleAlpha,
+          title,
+          subtitle,
+          width,
+          height,
+          description: `${width}x${height} D26 idle art`,
+        });
         const dial = await exactHiddenChild(safe, "D22 dial");
         const [safeBox, dialBox] = await Promise.all([
           safe.boundingBox(),
@@ -4539,45 +4751,61 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
     [2560, 1277],
     [1440, 900],
     [1280, 800],
+    [1024, 768],
     [605, 838],
     [390, 844],
     [321, 838],
+    [844, 390],
     [2554, 436],
     [2554, 450],
   ])
     await withSession(
       { width, height },
       { random: 0.041 },
-      async ({ page }) => {
+        async ({ page }) => {
         const controls = await gameControls(page);
+        const safe = page.getByLabel("Safe closed", { exact: true });
         const samples = [];
-        const inspect = async (label) => {
-          const cat = await exact(
-            page.getByLabel(label, { exact: true }),
-            label,
-          );
-          const bounds = await visibleAlphaBounds(cat);
+        const inspect = async (mode) => {
+          const cat = await ordinaryOwner(page, mode, `${mode} ordinary owner`);
+          const [bounds, safeAlpha] = await Promise.all([
+            visibleAlphaBounds(cat),
+            visibleAlphaBounds(safe),
+          ]);
           const subtitle = await controls.instruction.boundingBox();
-          assert.ok(
-            bounds.y - (subtitle.y + subtitle.height) >= 16,
-            `${width}px ${label} retains D26 subtitle clearance`,
-          );
-          samples.push({ label, bounds });
+          const title = await page
+            .getByRole("heading", { name: "Guess the number", exact: true })
+            .boundingBox();
+          assertPaintedHeaderClearance({
+            catAlpha: bounds,
+            title,
+            subtitle,
+            width,
+            height,
+            description: `${width}px ${mode} D26 art`,
+          });
+          if (mode === "SURRENDERED") {
+            const safeGap = paintedCatSafeGap(bounds, safeAlpha);
+            assert.ok(
+              safeGap >= -8 && safeGap <= 8,
+              `${width}x${height} SURRENDERED painted paws remain in the approved -8..8px safe-contact band: ${safeGap}px`,
+            );
+          }
+          samples.push({ label: mode, bounds });
         };
-        await inspect("Cat idle");
-        await controls.cat.hover();
-        await inspect("Cat hover");
-        await page.mouse.move(0, 0);
+        await inspect("PLAYING");
+        await controls.cat.click();
+        await inspect("PET_NORMAL");
         await controls.code.fill("41");
         await controls.submit.click();
-        await inspect("Cat wrong");
+        await inspect("WRONG");
         await controls.newRound.click();
         await controls.code.fill("42");
         await controls.submit.click();
-        await inspect("Cat won");
+        await inspect("WON");
         await controls.newRound.click();
         await controls.surrender.click();
-        await inspect("Cat surrendered");
+        await inspect("SURRENDERED");
         const idleArea = samples[0].bounds.width * samples[0].bounds.height;
         for (const sample of samples.slice(1)) {
           const ratio = (sample.bounds.width * sample.bounds.height) / idleArea;
@@ -5224,22 +5452,13 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
         page.getByText("Incorrect code, try again.", { exact: true }),
         "D25 neutral wrong feedback",
       );
-      const wrongCat = await exact(
-        page.getByLabel("Cat wrong", { exact: true }),
-        "D25 wrong cat",
-      );
+      const wrongCat = await ordinaryOwner(page, "WRONG", "D25 wrong ordinary owner");
       await wrongCat.hover();
       await page.waitForTimeout(300);
-      await exact(
-        page.getByLabel("Cat wrong", { exact: true }),
-        "D25 wrong cat survives hover",
-      );
+      await ordinaryOwner(page, "WRONG", "D25 wrong owner survives hover");
       await page.mouse.move(0, 0);
       await page.waitForTimeout(300);
-      await exact(
-        page.getByLabel("Cat wrong", { exact: true }),
-        "D25 wrong cat survives pointer leave",
-      );
+      await ordinaryOwner(page, "WRONG", "D25 wrong owner survives pointer leave");
       await controls.code.focus();
       await controls.code.press("Backspace");
       assert.equal(
@@ -5254,10 +5473,7 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
         0,
         "D25 deletion clears transient feedback",
       );
-      await exact(
-        page.getByLabel("Cat idle", { exact: true }),
-        "D25 deletion restores idle cat",
-      );
+      await expectOrdinaryReturn(page, "PLAYING", true, "D25 deletion restores playing owner");
       await controls.code.fill("77");
       assert.equal(
         await controls.code.getAttribute("aria-invalid"),
@@ -5298,10 +5514,7 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
         null,
         "D25 clear after invalid syntax restores neutral input",
       );
-      await exact(
-        page.getByLabel("Cat idle", { exact: true }),
-        "D25 invalid-edit recovery uses idle cat",
-      );
+      await expectOrdinaryReturn(page, "PLAYING", true, "D25 invalid-edit recovery uses playing owner");
     },
   );
 });
@@ -5309,9 +5522,8 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
 test("SC05 provider: a quick stored-hint hover then click opens only the math dialog and leaves no stale card", async () => {
   await withSession(
     { width: 1175, height: 900 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
       const controls = await earnFirstHint(page);
       await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
@@ -10355,11 +10567,9 @@ test("SC06: close paw retains its breakpoint-sized visible target, fine-pointer 
 test("SC06: live breakpoint crossings preserve the active question, answer, and unresolved-deadline identity", async () => {
   await withSession(
     { width: 599, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -10419,11 +10629,9 @@ test("SC06: live breakpoint crossings preserve the active question, answer, and 
 test("SC06: concerned deadline, Give up, replacement, and stale callbacks preserve math-only and secret-neutral behavior", async () => {
   await withSession(
     { width: 1024, height: 768 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -10592,11 +10800,9 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
   ])
     await withSession(
       { width, height },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        const clockStart = new Date("2026-01-01T00:00:00Z");
-        await page.clock.install({ time: clockStart });
-        await page.clock.pauseAt(clockStart);
+        await page.clock.pauseAt(fixedClockStart);
         const controls = await gameControls(page);
         await controls.hint.click();
         let hint = await sc06Dialog(page);
@@ -10895,11 +11101,9 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
   ])
     await withSession(
       { width, height },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        const clockStart = new Date("2026-01-01T00:00:00Z");
-        await page.clock.install({ time: clockStart });
-        await page.clock.pauseAt(clockStart);
+        await page.clock.pauseAt(fixedClockStart);
         const controls = await gameControls(page);
         await controls.hint.click();
         let hint = await sc06Dialog(page);
@@ -11524,11 +11728,9 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
 test("SC06: invalid math answers persist a red accessible error until the first real edit, then may be rejected again", async () => {
   await withSession(
     { width: 943, height: 708 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -11670,11 +11872,9 @@ test("SC06: invalid math answers persist a red accessible error until the first 
 test("SC06: Random operator creates one fresh deterministic challenge and follows the active challenge freeze rules", async () => {
   await withSession(
     { width: 1024, height: 768 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -11785,11 +11985,9 @@ test("SC06: Random operator creates one fresh deterministic challenge and follow
 test("SC06: correct answer immediately replaces the cat behind one full 2,500ms fade, then starts the reward lifetime", async () => {
   await withSession(
     { width: 1440, height: 900 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -11836,7 +12034,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                   '[aria-label="New hint reward"]',
                 ).length,
                 normalCatCount: document.querySelectorAll(
-                  '[aria-label^="Cat "]',
+                  "[data-presentation-mode]",
                 ).length,
                 dialogCount:
                   document.querySelectorAll('[role="dialog"]').length,
@@ -11895,11 +12093,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
         page.getByLabel("New hint reward", { exact: true }),
         "reward cat replacement behind the success dialog",
       );
-      assert.equal(
-        await page.getByLabel(/^Cat /).count(),
-        0,
-        "earned fact immediately replaces normal CatAvatar while success dialog is still mounted",
-      );
+      await expectRewardReplacement(page, "success-dialog reward replacement");
       assert.equal(
         await earlyReward.isVisible(),
         true,
@@ -12448,11 +12642,9 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
 test("SC06 Copilot P2: visibility reconciliation keeps one absolute concern deadline and cancels replaced callbacks", async () => {
   await withSession(
     { width: 1024, height: 768 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -12532,11 +12724,9 @@ test("SC06 Copilot P2: visibility reconciliation keeps one absolute concern dead
 test("SC06: every rendered decorative cat image disables native browser dragging across normal, challenge, and reward states", async () => {
   await withSession(
     { width: 1440, height: 900 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      const clockStart = new Date("2026-01-01T00:00:00Z");
-      await page.clock.install({ time: clockStart });
-      await page.clock.pauseAt(clockStart);
+      await page.clock.pauseAt(fixedClockStart);
       const controls = await gameControls(page);
       await assertNativeDraggingDisabled(
         controls.cat.locator("img"),
@@ -12632,11 +12822,9 @@ test("SC06: Escape can finish success early, while reduced motion keeps the succ
   for (const reduced of [false, true])
     await withSession(
       { width: 390, height: 844 },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        const clockStart = new Date("2026-01-01T00:00:00Z");
-        await page.clock.install({ time: clockStart });
-        await page.clock.pauseAt(clockStart);
+        await page.clock.pauseAt(fixedClockStart);
         if (reduced) await page.emulateMedia({ reducedMotion: "reduce" });
         const controls = await gameControls(page);
         await controls.hint.click();
@@ -12690,11 +12878,9 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
   ])
     await withSession(
       { width, height },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        const clockStart = new Date("2026-01-01T00:00:00Z");
-        await page.clock.install({ time: clockStart });
-        await page.clock.pauseAt(clockStart);
+        await page.clock.pauseAt(fixedClockStart);
         const controls = await gameControls(page);
         const safe = page.getByLabel("Safe closed", { exact: true });
         const [normalCat, safeAlpha, titleBefore, subtitleBefore] =
@@ -12743,11 +12929,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           page.getByLabel("New hint reward", { exact: true }),
           `${width}x${height} reward replacement`,
         );
-        assert.equal(
-          await page.getByLabel(/^Cat /).count(),
-          0,
-          `${width}x${height} hides normal CatAvatar while reward owns its slot`,
-        );
+        await expectRewardReplacement(page, `${width}x${height} reward slot ownership`);
         const rewardComposite = await exact(
           reward.locator('img[src*="cat-hint-reward-lying-1448.png"][alt=""]'),
           `${width}x${height} approved composite cat-with-lamp reward artwork`,
@@ -12880,11 +13062,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           0,
           `${width}x${height} reward expires exactly at 5,000ms`,
         );
-        assert.equal(
-          await page.getByLabel(/^Cat /).count(),
-          1,
-          `${width}x${height} normal CatAvatar returns exactly once after reward expiry`,
-        );
+        await expectOrdinaryReturn(page, "PLAYING", true, `${width}x${height} reward expiry`);
       },
     );
 });
@@ -12924,15 +13102,22 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
         box && box.width > 0 && box.height > 0,
         `${width}x${height} ${label} ${name} renders`,
       );
-    const anchor = safeAlpha.y - (catAlpha.y + catAlpha.height);
+    const anchor = paintedCatSafeGap(catAlpha, safeAlpha);
     assert.ok(
-      anchor >= -38 && anchor <= -34,
-      `${width}x${height} ${label} visible cat-to-safe anchor ${anchor}px remains in the approved -38..-34px band`,
+      anchor >= -8 && anchor <= 8,
+      `${width}x${height} ${label} painted cat-to-safe gap ${anchor}px remains in the approved -8..8px contact band`,
     );
-    assert.ok(
-      catAlpha.y >= subtitleBox.y + subtitleBox.height + 16,
-      `${width}x${height} ${label} cat remains below the subtitle`,
-    );
+    const titleBox = await page
+      .getByRole("heading", { name: "Guess the number", exact: true })
+      .boundingBox();
+    assertPaintedHeaderClearance({
+      catAlpha,
+      title: titleBox,
+      subtitle: subtitleBox,
+      width,
+      height,
+      description: `${width}x${height} ${label} art`,
+    });
     assert.equal(
       intersects(catAlpha, formBox, 0),
       false,
