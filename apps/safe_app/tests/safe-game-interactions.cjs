@@ -131,6 +131,7 @@ async function ordinaryOwner(page, mode, description = `ordinary ${mode} owner`)
 async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} art`) {
   const owner = await ordinaryOwner(page, mode, description);
   const image = await exact(owner.locator("img"), `${description} image`);
+  await waitForStableVisualGeometry(page, false);
   assert.equal(await image.isVisible(), true, `${description} image is visible`);
   let state;
   for (let attempt = 0; attempt < 100 && !state?.ready; attempt += 1) {
@@ -384,7 +385,7 @@ async function waitForViewportResizeRender(page) {
   });
 }
 
-async function waitForStableVisualGeometry(page) {
+async function waitForStableVisualGeometry(page, settleFrames = true) {
   await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all(
@@ -397,10 +398,14 @@ async function waitForStableVisualGeometry(page) {
             }),
       ),
     );
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve)),
-    );
   });
+  if (settleFrames)
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
 }
 
 async function settleViewportAtTop(page) {
@@ -877,8 +882,9 @@ test("deterministic code 42 opens without rendering the secret", async () => {
 test("abandonment earns no fact and a solved even question announces a fresh next hint", async () => {
   await withSession(
     { width: 1175, height: 1098 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
       const hint = await openHintDialog(page);
       await hint.dialog
         .getByRole("button", { name: "Give up", exact: true })
@@ -897,6 +903,10 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
         .innerText();
       await hint.answer.fill(String(solveVisibleQuestion(solvedQuestion)));
       await page.getByRole("button", { name: "Check", exact: true }).click();
+      await hint.dialog
+        .getByText("Great job! You earned a hint!", { exact: true })
+        .waitFor({ state: "visible" });
+      await page.clock.runFor(2500);
       await hint.dialog.waitFor({ state: "hidden" });
       await exact(
         page
@@ -2543,6 +2553,9 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
           "late reduced-motion heart opacity progresses toward cleanup",
         );
       await page.waitForTimeout(800);
+      await page
+        .locator('[data-presentation-mode="PLAYING"]')
+        .waitFor({ state: "visible", timeout: 5000 });
       assert.equal(
         await hearts.count(),
         0,
@@ -10869,6 +10882,7 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
             `${width}x${height} ${state} key notice icon`,
           );
           const noticeText = notice;
+          await waitForStableVisualGeometry(page, false);
           const [
             headingBox,
             contentBox,
