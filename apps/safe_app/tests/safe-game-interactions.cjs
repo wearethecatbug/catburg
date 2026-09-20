@@ -150,7 +150,7 @@ async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} ar
         loading: element.loading,
       };
     });
-    if (!state.ready) await new Promise((resolve) => setTimeout(resolve, 25));
+    if (!state.ready) await page.waitForTimeout(25);
   }
   assert.equal(state?.ready, true, `${description} image is decoded and measurable: ${JSON.stringify(state)}`);
   assert.match(
@@ -387,19 +387,30 @@ async function waitForViewportResizeRender(page) {
 }
 
 async function waitForStableVisualGeometry(page, settleFrames = true) {
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all(
-      [...document.images].map((image) =>
-        image.complete
-          ? image.decode().catch(() => {})
-          : new Promise((resolve) => {
-              image.addEventListener("load", resolve, { once: true });
-              image.addEventListener("error", resolve, { once: true });
-            }),
-      ),
+  await page.evaluate(async () => document.fonts.ready);
+  let pending = [];
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    pending = await page.evaluate(() =>
+      [...document.images]
+        .filter((image) => !image.complete || !image.naturalWidth || !image.naturalHeight)
+        .map((image) => ({
+          src: image.getAttribute("src"),
+          currentSrc: image.currentSrc,
+          complete: image.complete,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+        })),
     );
-  });
+    if (!pending.length) break;
+    await page.waitForTimeout(25);
+  }
+  if (pending.length)
+    throw new Error(
+      `visual geometry image readiness timed out: ${JSON.stringify(pending)}`,
+    );
+  await page.evaluate(() =>
+    Promise.all([...document.images].map((image) => image.decode().catch(() => {}))),
+  );
   if (settleFrames)
     await page.evaluate(
       () =>
@@ -530,8 +541,58 @@ async function publicAssetPresentation(locator) {
 // The current art transforms are axis-aligned scales; reject a future rotation or
 // skew rather than silently treating its bounding rectangle as an untransformed
 // image plane.
-async function visibleAlphaBounds(locator) {
-  return locator.evaluate(async (element) => {
+async function waitForArtworkReadiness(page, locator) {
+  let snapshot;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    snapshot = await locator.evaluate((element) => {
+      const rendered =
+        element instanceof HTMLImageElement
+          ? element
+          : element.querySelector("img");
+      if (rendered instanceof HTMLImageElement)
+        return {
+          kind: "image",
+          ready: rendered.complete && rendered.naturalWidth > 0 && rendered.naturalHeight > 0,
+          src: rendered.getAttribute("src"),
+          currentSrc: rendered.currentSrc,
+          complete: rendered.complete,
+          naturalWidth: rendered.naturalWidth,
+          naturalHeight: rendered.naturalHeight,
+        };
+      const backgroundOwner = [element, ...element.querySelectorAll("*")].find(
+        (candidate) => getComputedStyle(candidate).backgroundImage !== "none",
+      );
+      const reference = getComputedStyle(backgroundOwner || element).backgroundImage;
+      const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1];
+      const images = window.__safeCatArtworkReadiness ||=
+        new Map();
+      let image = images.get(url);
+      if (!image) {
+        image = new Image();
+        image.src = url;
+        images.set(url, image);
+      }
+      return {
+        kind: "background",
+        ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+        src: image.src,
+        reference,
+        complete: image.complete,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+      };
+    });
+    if (snapshot.ready) return snapshot;
+    await page.waitForTimeout(25);
+  }
+  throw new Error(
+    `visible alpha ${snapshot?.kind || "artwork"} readiness timed out: ${JSON.stringify(snapshot)}`,
+  );
+}
+
+async function visibleAlphaBounds(page, locator) {
+  await waitForArtworkReadiness(page, locator);
+  return locator.evaluate((element) => {
     const rendered =
       element instanceof HTMLImageElement
         ? element
@@ -541,26 +602,14 @@ async function visibleAlphaBounds(locator) {
       : [element, ...element.querySelectorAll("*")].find(
           (candidate) => getComputedStyle(candidate).backgroundImage !== "none",
         );
-    if (
-      rendered instanceof HTMLImageElement &&
-      (!rendered.complete || !rendered.naturalWidth)
-    ) {
-      await new Promise((resolve, reject) => {
-        rendered.addEventListener("load", resolve, { once: true });
-        rendered.addEventListener("error", reject, { once: true });
-      });
-    }
     const source =
       rendered ||
-      (await new Promise((resolve, reject) => {
-        const url = getComputedStyle(
-          backgroundOwner || element,
-        ).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = url;
-      }));
+      window.__safeCatArtworkReadiness?.get(
+        getComputedStyle(backgroundOwner || element).backgroundImage
+          .match(/url\(["']?(.*?)["']?\)/)?.[1],
+      );
+    if (!source)
+      throw new Error("visible alpha artwork readiness cache was unavailable");
     const rect = (
       rendered ||
       backgroundOwner ||
@@ -682,7 +731,7 @@ async function visibleAlphaBounds(locator) {
 }
 
 async function clickVisibleArtwork(page, locator) {
-  const { opaquePoint } = await visibleAlphaBounds(locator);
+  const { opaquePoint } = await visibleAlphaBounds(page, locator);
   assert.ok(opaquePoint, "physical artwork activation has an opaque hit point");
   await page.mouse.click(opaquePoint.x, opaquePoint.y);
   return opaquePoint;
@@ -1473,7 +1522,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
           `${mode} never crops the character`,
         );
         const [catAlpha, title, subtitle] = await Promise.all([
-          visibleAlphaBounds(cat),
+          visibleAlphaBounds(page, cat),
           page
             .getByRole("heading", { name: "Guess the number", exact: true })
             .boundingBox(),
@@ -2195,7 +2244,7 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       );
       await page.clock.runFor(1);
       assert.equal(await bubbles.locator(":scope > *").count(), 0, "pointer pet settles exactly at 1200ms");
-      const touchPoint = (await visibleAlphaBounds(pet)).opaquePoint;
+      const touchPoint = (await visibleAlphaBounds(page, pet)).opaquePoint;
       assert.ok(touchPoint, "touch pet has an opaque artwork point");
       await pet.tap({ position: { x: touchPoint.x - petBox.x, y: touchPoint.y - petBox.y } });
       assert.equal(
@@ -2273,7 +2322,7 @@ test("SC07: transparent physical cat pixels are inert while the visible Pet me p
     { hasTouch: true, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
-      const initialAlpha = await visibleAlphaBounds(controls.cat);
+      const initialAlpha = await visibleAlphaBounds(page, controls.cat);
       const catBox = await controls.cat.boundingBox();
       assert.ok(catBox, "Pet the cat button exposes a measurable physical hit target");
       for (const [kind, point, predicate] of [
@@ -2319,7 +2368,7 @@ test("SC07: transparent physical cat pixels are inert while the visible Pet me p
       await page.clock.runFor(1200);
       await ordinaryOwner(page, "PLAYING", "mouse burst settles before the independent touch check");
       await controls.newRound.click();
-      const touchAlpha = await visibleAlphaBounds(controls.cat);
+      const touchAlpha = await visibleAlphaBounds(page, controls.cat);
       const touchBox = await controls.cat.boundingBox();
       assert.ok(touchBox, "fresh Pet the cat button exposes a touch hit target");
       for (const [kind, point, predicate] of [
@@ -2496,7 +2545,7 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         petBox,
         "reduced-motion petting target has a rendered touch area",
       );
-      const alpha = await visibleAlphaBounds(pet);
+      const alpha = await visibleAlphaBounds(page, pet);
       assert.ok(alpha.opaquePoint, "reduced-motion test has a visible cat-art activation point");
       await page.mouse.click(alpha.opaquePoint.x, alpha.opaquePoint.y);
       const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", "reduced-motion PET_NORMAL owner");
@@ -2580,7 +2629,7 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         page.getByRole("button", { name: "Pet the cat", exact: true }),
         "reduced-motion deterministic petting target",
       );
-      const alpha = await visibleAlphaBounds(pet);
+      const alpha = await visibleAlphaBounds(page, pet);
       await page.mouse.click(alpha.opaquePoint.x, alpha.opaquePoint.y);
       const owner = await ordinaryOwner(
         page,
@@ -3862,7 +3911,7 @@ test("SC05 D09-D11: approved protected zones remain reachable and non-overlappin
       { random: 0.041 },
       async ({ page }) => {
         const controls = await gameControls(page);
-        const normalCat = await visibleAlphaBounds(controls.cat);
+        const normalCat = await visibleAlphaBounds(page, controls.cat);
         await controls.hint.click();
         await visibleQuestionAnswer(page);
         await waitForStableVisualGeometry(page);
@@ -3881,7 +3930,7 @@ test("SC05 D09-D11: approved protected zones remain reachable and non-overlappin
             safeScene.boundingBox(),
             controls.code.boundingBox(),
             rewardBubble.boundingBox(),
-            visibleAlphaBounds(safeScene),
+            visibleAlphaBounds(page, safeScene),
           ]);
         for (const [name, box] of Object.entries({
           heading,
@@ -4684,8 +4733,8 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
         const controls = await gameControls(page);
         const safe = page.getByLabel("Safe closed", { exact: true });
         const [safeAlpha, idleAlpha, subtitle] = await Promise.all([
-          visibleAlphaBounds(safe),
-          visibleAlphaBounds(controls.cat),
+          visibleAlphaBounds(page, safe),
+          visibleAlphaBounds(page, controls.cat),
           controls.instruction.boundingBox(),
         ]);
         const title = await page
@@ -4865,8 +4914,8 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
         const inspect = async (mode) => {
           const cat = await ordinaryOwner(page, mode, `${mode} ordinary owner`);
           const [bounds, safeAlpha] = mode === "SURRENDERED"
-            ? await Promise.all([visibleAlphaBounds(cat), visibleAlphaBounds(safe)])
-            : [await visibleAlphaBounds(cat), null];
+            ? await Promise.all([visibleAlphaBounds(page, cat), visibleAlphaBounds(page, safe)])
+            : [await visibleAlphaBounds(page, cat), null];
           const subtitle = await controls.instruction.boundingBox();
           const title = await page
             .getByRole("heading", { name: "Guess the number", exact: true })
@@ -5077,8 +5126,8 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
           dial.boundingBox(),
           controls.code.locator("xpath=..").boundingBox(),
           controls.newRound.locator("xpath=..").boundingBox(),
-          visibleAlphaBounds(controls.cat),
-          visibleAlphaBounds(safe),
+          visibleAlphaBounds(page, controls.cat),
+          visibleAlphaBounds(page, safe),
         ]);
       for (const [name, box] of Object.entries({
         title,
@@ -5308,7 +5357,7 @@ test("SC06: short desktop header stays visible and clear of the cat across the h
           .getByRole("heading", { name: "Guess the number", exact: true })
           .boundingBox(),
         controls.instruction.boundingBox(),
-        visibleAlphaBounds(controls.cat),
+        visibleAlphaBounds(page, controls.cat),
       ]);
       for (const [name, box] of Object.entries({ title, subtitle, cat }))
         assert.ok(
@@ -6282,8 +6331,8 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
           lampDisplay,
           bubbleDisplay,
         ] = await Promise.all([
-          visibleAlphaBounds(lamp),
-          visibleAlphaBounds(popupCat),
+          visibleAlphaBounds(page, lamp),
+          visibleAlphaBounds(page, popupCat),
           bubble.boundingBox(),
           lamp.evaluate(
             (element) =>
@@ -7352,8 +7401,8 @@ test("SC06: desktop and tablet composition use the approved micro-adjustments wh
           content.evaluate((element) => getComputedStyle(element).transform),
           vignette.boundingBox(),
           bubble.boundingBox(),
-          visibleAlphaBounds(vignette.locator('img[src*="hint-popup-cat-"]')),
-          visibleAlphaBounds(lamp),
+          visibleAlphaBounds(page, vignette.locator('img[src*="hint-popup-cat-"]')),
+          visibleAlphaBounds(page, lamp),
           lamp.evaluate((element) => {
             const style = getComputedStyle(element);
             return {
@@ -7575,7 +7624,7 @@ test.skip("SC06: superseded mobile lamp-and-bubble vignette geometry", async () 
           lamp.boundingBox(),
           cat.boundingBox(),
           bubble.boundingBox(),
-          visibleAlphaBounds(lamp),
+          visibleAlphaBounds(page, lamp),
           lamp.evaluate((element) => {
             const style = getComputedStyle(element);
             return {
@@ -7759,7 +7808,7 @@ test.skip("SC06: superseded mobile lamp-and-bubble vignette geometry", async () 
           vignette.evaluate((element) => getComputedStyle(element).display),
           vignette.boundingBox(),
           cat.boundingBox(),
-          visibleAlphaBounds(cat),
+          visibleAlphaBounds(page, cat),
           bubble.boundingBox(),
           notice.boundingBox(),
         ]);
@@ -9870,7 +9919,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
           ] = await Promise.all([
             vignette.evaluate((element) => getComputedStyle(element).display),
             cat.boundingBox(),
-            visibleAlphaBounds(cat),
+            visibleAlphaBounds(page, cat),
             bubble.boundingBox(),
             notice.boundingBox(),
             bubble.evaluate((element) => getComputedStyle(element).display),
@@ -10876,10 +10925,10 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
         let acceptedOuter;
         let acceptedLayout;
         const inspect = async (state, asset) => {
-          await waitForStableVisualGeometry(page, false);
           await hint.dialog.evaluate((element) => {
             element.scrollTop = 0;
           });
+          await waitForStableVisualGeometry(page, false);
           const vignette = await exact(
             hint.dialog.locator('aside[aria-hidden="true"]'),
             `${width}x${height} ${state} simplified vignette`,
@@ -10925,7 +10974,7 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
             vignette.boundingBox(),
             hint.newQuestion.locator("xpath=..").boundingBox(),
             cat.boundingBox(),
-            visibleAlphaBounds(cat),
+            visibleAlphaBounds(page, cat),
             notice.boundingBox(),
             key.boundingBox(),
             noticeText.boundingBox(),
@@ -11247,7 +11296,7 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
             }),
             vignette.boundingBox(),
             cat.boundingBox(),
-            visibleAlphaBounds(cat),
+            visibleAlphaBounds(page, cat),
             bubble.boundingBox(),
             notice.boundingBox(),
             hint.dialog.locator("section").boundingBox(),
@@ -11521,7 +11570,7 @@ test("SC06: desktop challenge cat preserves a loaded square silhouette inside it
           actionsBox,
         ] = await Promise.all([
           cat.boundingBox(),
-          visibleAlphaBounds(cat),
+          visibleAlphaBounds(page, cat),
           vignette.boundingBox(),
           hint.dialog.locator("header").boundingBox(),
           hint.dialog.locator("section").boundingBox(),
@@ -12952,8 +13001,8 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
         const safe = page.getByLabel("Safe closed", { exact: true });
         const [normalCat, safeAlpha, titleBefore, subtitleBefore] =
           await Promise.all([
-            visibleAlphaBounds(controls.cat),
-            visibleAlphaBounds(safe),
+            visibleAlphaBounds(page, controls.cat),
+            visibleAlphaBounds(page, safe),
             page
               .getByRole("heading", { name: "Guess the number", exact: true })
               .boundingBox(),
@@ -13001,7 +13050,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           reward.locator('img[src*="cat-hint-reward-lying-1448.png"][alt=""]'),
           `${width}x${height} approved composite cat-with-lamp reward artwork`,
         );
-        const rewardEnvelope = await visibleAlphaBounds(rewardComposite);
+        const rewardEnvelope = await visibleAlphaBounds(page, rewardComposite);
         const postDialogScrollY = await page.evaluate(() => scrollY);
         const rewardEnvelopeDocument = toDocumentCoordinates(
           rewardEnvelope,
@@ -13152,8 +13201,8 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
   ) => {
     const [catAlpha, safeAlpha, subtitleBox, formBox, menuBox] =
       await Promise.all([
-        visibleAlphaBounds(cat),
-        visibleAlphaBounds(safe),
+        visibleAlphaBounds(page, cat),
+        visibleAlphaBounds(page, safe),
         subtitle.boundingBox(),
         form.boundingBox(),
         menu.boundingBox(),
