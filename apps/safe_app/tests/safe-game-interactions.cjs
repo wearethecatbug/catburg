@@ -1433,6 +1433,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
+      await pauseClockAtCurrentTime(page);
       const expected = [
         ["PLAYING", "cat-playing-800.webp", [272, 272]],
         ["PET_NORMAL", "cat-pet-hover-800.webp", [272, 272]],
@@ -1490,7 +1491,8 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
       await clickVisibleArtwork(page, controls.cat);
       await inspect(...expected[1]);
       await page.clock.runFor(1200);
-      await page.clock.runFor(30_000);
+      await page.clock.runFor(15_001);
+      await page.clock.runFor(15_000);
       await inspect(...expected[2]);
       await exact(
         page.locator("[data-pet-prompt]"),
@@ -1500,7 +1502,8 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
       await inspect(...expected[3]);
       await page.clock.runFor(4000);
       await controls.newRound.click();
-      await page.clock.runFor(30_000);
+      await page.clock.runFor(15_001);
+      await page.clock.runFor(15_000);
       await page.clock.runFor(5000);
       await inspect(...expected[4]);
       await page.clock.runFor(5000);
