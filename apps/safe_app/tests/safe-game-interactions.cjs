@@ -10876,6 +10876,7 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
         let acceptedOuter;
         let acceptedLayout;
         const inspect = async (state, asset) => {
+          await waitForStableVisualGeometry(page, false);
           await hint.dialog.evaluate((element) => {
             element.scrollTop = 0;
           });
@@ -10905,7 +10906,6 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
             `${width}x${height} ${state} key notice icon`,
           );
           const noticeText = notice;
-          await waitForStableVisualGeometry(page, false);
           const [
             headingBox,
             contentBox,
