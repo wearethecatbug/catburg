@@ -39,7 +39,10 @@ function SafeGameScreenContent() {
     if (!dialogActive) return;
     const body = document.body; const html = document.documentElement;
     const previous = { body: body.style.cssText, html: html.style.cssText, x: window.scrollX, y: window.scrollY };
-    html.style.overflow = "hidden"; body.style.overflow = "hidden"; body.style.position = "fixed"; body.style.top = `-${previous.y}px`; body.style.left = `-${previous.x}px`; body.style.right = `${previous.x}px`; body.style.width = "auto";
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth);
+    const bodyPaddingRight = Number.parseFloat(getComputedStyle(body).paddingRight) || 0;
+    // Preserve layout width while the fixed-body dialog lock removes the scrollbar.
+    html.style.overflow = "hidden"; body.style.overflow = "hidden"; body.style.position = "fixed"; body.style.top = `-${previous.y}px`; body.style.left = `-${previous.x}px`; body.style.right = `${previous.x}px`; body.style.width = "auto"; body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
     return () => { body.style.cssText = previous.body; html.style.cssText = previous.html; window.scrollTo(previous.x, previous.y); };
   }, [dialogActive]);
 

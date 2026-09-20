@@ -31,7 +31,17 @@ export function GameMenu() {
       <div
         className={styles.hintWrap}
         onPointerEnter={(event) => { if (event.pointerType !== "touch") controller.showHintEnter(); }}
-        onPointerLeave={(event) => { if (event.pointerType !== "touch") controller.showHintLeave(); }}
+        onPointerLeave={(event) => {
+          if (event.pointerType === "touch") return;
+          const focused = document.activeElement;
+          if (
+            presentation.mode === "STORED_HINTS" &&
+            presentation.inputModality === "keyboard" &&
+            focused instanceof Node &&
+            event.currentTarget.contains(focused)
+          ) return; // Keep a keyboard-open card visible until focus leaves its wrapper.
+          controller.showHintLeave();
+        }}
         onBlur={(event) => {
           const next = event.relatedTarget;
           if (presentation.mode === "STORED_HINTS" && presentation.inputModality === "keyboard" && !(next instanceof Node && event.currentTarget.contains(next))) controller.showHintFocusLeave();
@@ -73,7 +83,7 @@ export function GameMenu() {
           <MenuIcon kind="hint" /><span>Show hint</span>
           <img aria-hidden="true" src={`/safe-cat/hint-lamp-${facts.length ? "on" : "off"}-96.webp`} alt="" />
         </button>
-        {cardVisible && <StoredHintsCard facts={facts} onPointerEnter={controller.showHintEnter} onPointerLeave={controller.showHintLeave} />}
+        {cardVisible && <StoredHintsCard facts={facts} />}
       </div>
       <button ref={controller.historyButtonRef} className={`${styles.menuButton} ${styles.log}`} type="button" onClick={controller.toggleHistory}>
         <MenuIcon kind="history" /><span>History</span>

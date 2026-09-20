@@ -162,7 +162,7 @@ async function observe(name, width, height) {
     const buttons = buttonNames.map((name) =>
       page.getByRole("button", { name, exact: true }),
     );
-    const cat = page.getByLabel("Cat idle", { exact: true });
+    const cat = page.getByLabel("Pet the cat", { exact: true });
     await instruction.waitFor();
     await input.waitFor();
     await ok.waitFor();
@@ -172,6 +172,23 @@ async function observe(name, width, height) {
     await input.fill("1000");
     await cat.hover();
     await page.mouse.move(0, 0);
+    const hoverLeaveState = await page.locator("[data-presentation-mode]").evaluateAll(
+      (owners) => ({
+        modes: owners.map((owner) => owner.getAttribute("data-presentation-mode")),
+        hearts: owners.flatMap((owner) => [...owner.querySelectorAll("i")]).length,
+      }),
+    );
+    await cat.focus();
+    await page.keyboard.press("Enter");
+    const petNormal = page.locator('[data-presentation-mode="PET_NORMAL"]');
+    await petNormal.waitFor();
+    const keyboardPetState = {
+      ownerCount: await petNormal.count(),
+      catCount: await page
+        .getByLabel("Cat is enjoying the pets", { exact: true })
+        .count(),
+      hearts: await petNormal.locator("i").count(),
+    };
     const buttonReachability = [];
     for (let index = 0; index < buttons.length; index += 1)
       buttonReachability.push(
@@ -201,6 +218,10 @@ async function observe(name, width, height) {
           buttons.map((button) => button.count()),
         ),
         okButtonCount: await ok.count(),
+      },
+      petInteraction: {
+        hoverLeaveState,
+        keyboardPetState,
       },
       reachability: {
         instruction: await observeReachability(
@@ -244,7 +265,7 @@ async function observe(name, width, height) {
 }
 
 for (const [name, width, height] of viewports)
-  test(`Safe Cat initial screen and actual cat hover/leave are runtime-safe and reachable at ${width}px`, async () => {
+  test(`Safe Cat initial screen and keyboard pet activation are runtime-safe and reachable at ${width}px`, async () => {
     const observation = await observe(name, width, height);
     assert.equal(observation.status, 200);
     assert.equal(observation.requiredContent.instructionVisible, true);
@@ -266,6 +287,16 @@ for (const [name, width, height] of viewports)
         1,
         "each initial Safe Cat menu control must have exactly one public selector match",
       );
+    assert.deepEqual(
+      observation.petInteraction.hoverLeaveState,
+      { modes: ["PLAYING"], hearts: 0 },
+      "hover and leave keep the initial cat in PLAYING with no decorative hearts",
+    );
+    assert.deepEqual(
+      observation.petInteraction.keyboardPetState,
+      { ownerCount: 1, catCount: 1, hearts: 3 },
+      "Enter on the focused pettable cat creates one PET_NORMAL owner with exactly three decorative hearts",
+    );
     for (const [name, result] of Object.entries({
       instruction: observation.reachability.instruction,
       input: observation.reachability.input,

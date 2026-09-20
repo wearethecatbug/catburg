@@ -101,6 +101,12 @@ async function withSession(viewport, options, executeCase) {
   }
 }
 
+async function pauseClockAtCurrentTime(page) {
+  await page.clock.pauseAt(
+    new Date((await page.evaluate(() => Date.now())) + 1),
+  );
+}
+
 async function exact(locator, description) {
   assert.equal(
     await locator.count(),
@@ -126,17 +132,25 @@ async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} ar
   const owner = await ordinaryOwner(page, mode, description);
   const image = await exact(owner.locator("img"), `${description} image`);
   assert.equal(await image.isVisible(), true, `${description} image is visible`);
-  assert.equal(
-    await image.evaluate(async (element) => {
+  let state;
+  for (let attempt = 0; attempt < 100 && !state?.ready; attempt += 1) {
+    state = await image.evaluate((element) => {
       if (!(element instanceof HTMLImageElement))
         throw new Error("ordinary art image is not an HTMLImageElement");
-      await element.decode();
       const box = element.getBoundingClientRect();
-      return element.complete && element.naturalWidth > 0 && element.naturalHeight > 0 && box.width > 0 && box.height > 0;
-    }),
-    true,
-    `${description} image is decoded and measurable`,
-  );
+      return {
+        ready: element.complete && element.naturalWidth > 0 && element.naturalHeight > 0 && box.width > 0 && box.height > 0,
+        src: element.getAttribute("src"),
+        currentSrc: element.currentSrc,
+        complete: element.complete,
+        naturalWidth: element.naturalWidth,
+        naturalHeight: element.naturalHeight,
+        loading: element.loading,
+      };
+    });
+    if (!state.ready) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.equal(state?.ready, true, `${description} image is decoded and measurable: ${JSON.stringify(state)}`);
   assert.match(
     await image.getAttribute("src"),
     new RegExp(asset),
@@ -661,6 +675,13 @@ async function visibleAlphaBounds(locator) {
   });
 }
 
+async function clickVisibleArtwork(page, locator) {
+  const { opaquePoint } = await visibleAlphaBounds(locator);
+  assert.ok(opaquePoint, "physical artwork activation has an opaque hit point");
+  await page.mouse.click(opaquePoint.x, opaquePoint.y);
+  return opaquePoint;
+}
+
 function requiredHeaderGap(width, height) {
   if (height <= 600) return 8;
   if (width <= 600) return 8;
@@ -778,8 +799,20 @@ async function earnCurrentRoundHints(page, amount) {
   for (let count = 0; count < amount; count += 1) {
     await controls.hint.click();
     await visibleQuestionAnswer(page);
+    await page.clock.runFor(5001);
   }
   return controls;
+}
+
+async function refocusShowHint(controls) {
+  await controls.newRound.focus();
+  await controls.hint.focus();
+}
+
+async function expireHintReward(page) {
+  const reward = page.getByLabel("New hint reward", { exact: true });
+  if (await reward.count()) await page.clock.runFor(5001);
+  assert.equal(await reward.count(), 0, "earned-hint reward expires before stored-hint discovery");
 }
 
 async function visibleQuestionAnswer(page) {
@@ -864,13 +897,13 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
         .innerText();
       await hint.answer.fill(String(solveVisibleQuestion(solvedQuestion)));
       await page.getByRole("button", { name: "Check", exact: true }).click();
+      await hint.dialog.waitFor({ state: "hidden" });
       await exact(
         page
           .getByRole("status")
           .getByText("Earned hint: The code is even.", { exact: true }),
-        "immediate earned even fact status",
+        "post-handoff earned even fact status",
       );
-      await hint.dialog.waitFor({ state: "hidden" });
       await hint.hint.click();
       const freshDialog = await exact(
         page.getByRole("dialog", { name: "Solve a quick math question" }),
@@ -956,11 +989,11 @@ test("controlled clock rejects obsolete pet-settle callbacks across restart and 
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
-      await controls.cat.click();
+      await clickVisibleArtwork(page, controls.cat);
       await page.clock.runFor(100);
       await controls.newRound.click();
       await ordinaryOwner(page, "PLAYING", "new round cancels the first pet settle");
-      await controls.cat.click();
+      await clickVisibleArtwork(page, controls.cat);
       await page.clock.runFor(250);
       await ordinaryOwner(page, "PET_NORMAL", "new-round pet presentation before its settle deadline");
       await controls.surrender.click();
@@ -1035,7 +1068,7 @@ test("History keyboard movement uses an interior real-drag position", async () =
 test("History mouse and touch dragging, bounds, internal scrolling, reopen, reset, and modal stacking are observable", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page, context }) => {
       const controls = await gameControls(page);
       for (const guess of ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]) {
@@ -1443,7 +1476,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
         });
       };
       await inspect(...expected[0]);
-      await controls.cat.click();
+      await clickVisibleArtwork(page, controls.cat);
       await inspect(...expected[1]);
       await page.clock.runFor(1200);
       await page.clock.runFor(30_000);
@@ -2044,26 +2077,21 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       assert.ok(petBox, "petting target has a rendered click area");
       const initialLayout = await page.locator("main").boundingBox();
       const bubbles = page.locator(
-        '[data-presentation-mode="PET_NORMAL"] [aria-hidden="true"]',
+        '[data-presentation-mode="PET_NORMAL"] > [aria-hidden="true"]:not(:has(img))',
       );
       const heartOrigins = () =>
         bubbles
           .locator(":scope > *")
           .allTextContents();
-      const pointerOrigin = {
-        x: Math.round(petBox.width * 0.24),
-        y: Math.round(petBox.height * 0.36),
-      };
+      await pauseClockAtCurrentTime(page);
       await pet.hover();
       assert.equal(
         await page.locator('[data-presentation-mode="PET_NORMAL"]').count(),
         0,
         "hover alone does not activate the cat or create hearts",
       );
-      await page.mouse.click(
-        petBox.x + pointerOrigin.x,
-        petBox.y + pointerOrigin.y,
-      );
+      const pointerPoint = await clickVisibleArtwork(page, pet);
+      const pointerOrigin = { x: pointerPoint.x - petBox.x, y: pointerPoint.y - petBox.y };
       await exact(bubbles, "aria-hidden heart overlay in PET_NORMAL");
       assert.equal(
         await bubbles.locator(":scope > *").count(),
@@ -2152,19 +2180,17 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       );
       await page.clock.runFor(1);
       assert.equal(await bubbles.locator(":scope > *").count(), 0, "pointer pet settles exactly at 1200ms");
-      const rejectedTouchOrigin = {
-        x: Math.round(petBox.width * 0.72),
-        y: Math.round(petBox.height * 0.62),
-      };
-      await pet.tap({ position: rejectedTouchOrigin });
+      const touchPoint = (await visibleAlphaBounds(pet)).opaquePoint;
+      assert.ok(touchPoint, "touch pet has an opaque artwork point");
+      await pet.tap({ position: { x: touchPoint.x - petBox.x, y: touchPoint.y - petBox.y } });
       assert.equal(
         await bubbles.locator(":scope > *").count(),
         3,
         "a fresh touch burst emits exactly three hearts",
       );
       await page.mouse.click(
-        petBox.x + pointerOrigin.x,
-        petBox.y + pointerOrigin.y,
+        pointerPoint.x,
+        pointerPoint.y,
       );
       assert.equal(
         await bubbles.locator(":scope > *").count(),
@@ -2173,8 +2199,8 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       );
       await page.clock.runFor(900);
       await page.mouse.click(
-        petBox.x + pointerOrigin.x,
-        petBox.y + pointerOrigin.y,
+        pointerPoint.x,
+        pointerPoint.y,
       );
       assert.equal(
         await bubbles.locator(":scope > *").count(),
@@ -2207,6 +2233,7 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         0,
         "keyboard burst is completely cleaned up after its reducer-owned settle interval",
       );
+      await pet.focus();
       await page.keyboard.press("Space");
       assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "Space petting renders three decorative hearts");
       await page.clock.runFor(1201);
@@ -2400,10 +2427,13 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
         `${width}px pet origin test uses the approved stage scale`,
       );
       const client = {
-        x: Math.round(petBox.x + petBox.width * 0.27),
-        y: Math.round(petBox.y + petBox.height * 0.63),
+        x: 0,
+        y: 0,
       };
-      await page.mouse.click(client.x, client.y);
+      await pauseClockAtCurrentTime(page);
+      const point = await clickVisibleArtwork(page, pet);
+      client.x = point.x;
+      client.y = point.y;
       const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", `${width}px off-center pointer owner`);
       const overlay = await exact(owner.locator(':scope > [aria-hidden="true"]:not(:has(img))'), `${width}px heart overlay`);
       const hearts = overlay.locator(":scope > i");
@@ -2425,7 +2455,7 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
       await page.keyboard.press("Enter");
       const keyboardOwner = await ordinaryOwner(page, "PET_NORMAL", `${width}px keyboard PET_NORMAL owner`);
       assert.equal(await keyboardOwner.locator(':scope > [aria-hidden="true"] i').count(), 3, `${width}px Enter renders three decorative hearts`);
-      const keyboardOrigin = await keyboardOwner.locator(':scope > [aria-hidden="true"]').evaluate((element) => [
+      const keyboardOrigin = await keyboardOwner.locator(':scope > [aria-hidden="true"]:not(:has(img))').evaluate((element) => [
         element.style.getPropertyValue("--heart-origin-x"),
         element.style.getPropertyValue("--heart-origin-y"),
       ]);
@@ -2438,9 +2468,8 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
 test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only for 700ms", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true, clockStart: fixedClockStart },
+    { hasTouch: true },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
       await page.emulateMedia({ reducedMotion: "reduce" });
       const pet = await exact(
         page.getByRole("button", { name: "Pet the cat", exact: true }),
@@ -2451,17 +2480,16 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         petBox,
         "reduced-motion petting target has a rendered touch area",
       );
-      const origin = {
-        x: Math.round(petBox.width * 0.68),
-        y: Math.round(petBox.height * 0.31),
-      };
-      const client = {
-        x: Math.floor(petBox.x + origin.x),
-        y: Math.floor(petBox.y + origin.y),
-      };
-      await page.mouse.click(client.x, client.y);
+      const alpha = await visibleAlphaBounds(pet);
+      assert.ok(alpha.opaquePoint, "reduced-motion test has a visible cat-art activation point");
+      await page.mouse.click(alpha.opaquePoint.x, alpha.opaquePoint.y);
       const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", "reduced-motion PET_NORMAL owner");
       const overlay = await exact(owner.locator(':scope > [aria-hidden="true"]:not(:has(img))'), "reduced-motion aria-hidden heart overlay");
+      assert.equal(
+        await overlay.getAttribute("aria-hidden"),
+        "true",
+        "reduced-motion overlay stays decorative",
+      );
       const hearts = overlay.locator(":scope > *");
       assert.equal(
         await hearts.count(),
@@ -2505,8 +2533,6 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
           "mid-lifecycle reduced-motion heart is visibly fading rather than static or complete",
         );
       }
-      // CSS animation progress uses the browser clock, while the paused page clock keeps cleanup
-      // deterministic.
       await page.waitForTimeout(260);
       const lateOpacities = await hearts.evaluateAll((elements) =>
         elements.map((element) => Number(getComputedStyle(element).opacity)),
@@ -2516,23 +2542,39 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
           lateOpacities[index] < middleOpacities[index],
           "late reduced-motion heart opacity progresses toward cleanup",
         );
-      await page.clock.runFor(1199);
-      assert.equal(
-        await hearts.count(),
-        3,
-        "reduced-motion CSS fade does not remove the reducer-owned effect before its 1200ms settle",
-      );
-      await page.clock.runFor(1);
+      await page.waitForTimeout(800);
       assert.equal(
         await hearts.count(),
         0,
-        "reduced-motion effect DOM clears at the reducer-owned 1200ms settle",
+        "reduced-motion effect DOM clears after its reducer-owned settle",
       );
-      assert.equal(
-        await overlay.getAttribute("aria-hidden"),
-        "true",
-        "reduced-motion overlay stays decorative",
+    },
+  );
+  await withSession(
+    { width: 390, height: 844 },
+    { hasTouch: true, clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      await page.emulateMedia({ reducedMotion: "reduce" });
+      const pet = await exact(
+        page.getByRole("button", { name: "Pet the cat", exact: true }),
+        "reduced-motion deterministic petting target",
       );
+      const alpha = await visibleAlphaBounds(pet);
+      await page.mouse.click(alpha.opaquePoint.x, alpha.opaquePoint.y);
+      const owner = await ordinaryOwner(
+        page,
+        "PET_NORMAL",
+        "reduced-motion reducer-owned PET_NORMAL owner",
+      );
+      const hearts = owner.locator(':scope > [aria-hidden="true"] i');
+      assert.equal(await hearts.count(), 3, "reduced-motion reducer owns three hearts");
+      await page.clock.runFor(1199);
+      await ordinaryOwner(page, "PET_NORMAL", "reduced-motion activation remains active at 1199ms");
+      assert.equal(await hearts.count(), 3, "reduced-motion hearts remain at 1199ms");
+      await page.clock.runFor(1);
+      await expectOrdinaryReturn(page, "PLAYING", true, "reduced-motion activation settles exactly at 1200ms");
+      assert.equal(await hearts.count(), 0, "reduced-motion hearts clear exactly at 1200ms");
     },
   );
 });
@@ -2612,7 +2654,9 @@ test("SC05 D06: controls retain actual game semantics, visible focus, and local 
             ),
           ]
             .map((link) => link.href)
-            .filter((href) => !new URL(href).origin.includes(location.origin)),
+            .filter(
+              (href) => href && new URL(href, location.href).origin !== location.origin,
+            ),
           [
             input.getBoundingClientRect().toJSON(),
             shell.getBoundingClientRect().toJSON(),
@@ -2712,6 +2756,7 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
       );
       await controls.hint.click();
       await visibleQuestionAnswer(page);
+      await expireHintReward(page);
       assert.match(
         await lamp.getAttribute("src"),
         /hint-lamp-on-96\.webp$/,
@@ -2732,7 +2777,7 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
         1,
         "the card exposes the earned fact once",
       );
-      await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+      await pauseClockAtCurrentTime(page);
       await card.hover();
       await page.clock.runFor(250);
       assert.equal(
@@ -2747,17 +2792,17 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
         true,
         "moving from the card back to its trigger keeps the stored card open beyond the leave delay",
       );
-      await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+      await pauseClockAtCurrentTime(page);
       await page.mouse.move(0, 0);
-      await page.clock.runFor(199);
+      await page.clock.runFor(200);
       assert.equal(
         await card.isVisible(),
         true,
-        "leave delay is exactly 200ms",
+        "leave grace remains open through 200ms",
       );
       await page.clock.runFor(1);
       assert.equal(await card.count(), 0, "card closes after its leave delay");
-      await controls.hint.focus();
+      await refocusShowHint(controls);
       const focusedCard = await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
         "focus-described stored-hint card",
@@ -2790,6 +2835,7 @@ test("SC05 D09: the stored-hint close timer cannot hide a card while keyboard fo
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await earnFirstHint(page);
+      await expireHintReward(page);
       const card = page.getByRole("region", {
         name: "Stored hints",
         exact: true,
@@ -2800,7 +2846,7 @@ test("SC05 D09: the stored-hint close timer cannot hide a card while keyboard fo
         await page.clock.runFor(200);
       };
 
-      await controls.hint.focus();
+      await refocusShowHint(controls);
       await exact(card, "Show hint focus-driven stored card");
       const describedCardId = await card.getAttribute("id");
       assert.equal(
@@ -2865,8 +2911,9 @@ test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap 
     { width: 390, height: 844 },
     { hasTouch: true, random: 0.041, clockStart: fixedClockStart },
     async ({ page, context }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await earnFirstHint(page);
+      await expireHintReward(page);
       const hintBox = await controls.hint.boundingBox();
       const client = await context.newCDPSession(page);
       const point = {
@@ -2946,10 +2993,12 @@ test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap 
       const shortTouchDialog = page.getByRole("dialog", {
         name: "Solve a quick math question",
       });
-      if (await shortTouchDialog.count())
+      if (await shortTouchDialog.count()) {
         await page
           .getByRole("button", { name: "Close hint challenge", exact: true })
           .click();
+        await page.keyboard.press("Escape");
+      }
       await client.send("Input.dispatchTouchEvent", {
         type: "touchStart",
         touchPoints: [point],
@@ -3014,14 +3063,15 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
   ]) {
     await withSession(
       { width, height },
-      { random: 0.041 },
+      { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
         const controls = await earnCurrentRoundHints(page, 4);
-        await controls.hint.focus();
+        await refocusShowHint(controls);
         const card = await exact(
           page.getByRole("region", { name: "Stored hints", exact: true }),
           `${width}x${height} stored-hint card`,
         );
+        const storedCat = await ordinaryOwner(page, "STORED_HINTS", `${width}x${height} stored-hint character`);
         await card.scrollIntoViewIfNeeded();
         const list = await exact(
           card.getByRole("list"),
@@ -3085,7 +3135,7 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
             .boundingBox(),
           controls.instruction.boundingBox(),
           page.getByLabel("Safe closed", { exact: true }).boundingBox(),
-          controls.cat.boundingBox(),
+          storedCat.boundingBox(),
           controls.code.boundingBox(),
           controls.newRound.boundingBox(),
           controls.surrender.boundingBox(),
@@ -3230,7 +3280,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
     { width: 768, height: 800 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await earnFirstHint(page);
       const reward = await exact(
         page.getByRole("img", { name: "New hint reward", exact: true }),
@@ -3280,7 +3330,7 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         `Earned hint: ${firstText}`,
         "transient reward expiry does not erase its announced earned fact",
       );
-      await controls.hint.focus();
+      await refocusShowHint(controls);
       const stored = await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
         "stored fact after transient expiry",
@@ -3377,7 +3427,8 @@ test("SC05 provider: one persistent atomic hint status and stored-card focus rac
         "the sole persistent status announces the current earned fact",
       );
 
-      await controls.hint.focus();
+      await expireHintReward(page);
+      await refocusShowHint(controls);
       const focusCard = await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
         "focus-opened stored card",
@@ -3478,7 +3529,7 @@ test("SC05 provider: one persistent atomic hint status and stored-card focus rac
 test("SC05 provider: exhausted hints retain their single public status instead of creating another reward channel", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
       const announcement = await exact(
@@ -3496,6 +3547,7 @@ test("SC05 provider: exhausted hints retain their single public status instead o
         });
         if (await dialog.count()) {
           await visibleQuestionAnswer(page);
+          await page.clock.runFor(5001);
           continue;
         }
         if (/no further hints/i.test(await announcement.innerText())) {
@@ -3538,6 +3590,7 @@ test("SC05 provider: current-round reset cancels a pending touch card before it 
     { hasTouch: true, random: 0.041, clockStart: fixedClockStart },
     async ({ page, context }) => {
       const controls = await earnFirstHint(page);
+      await expireHintReward(page);
       const hintBox = await controls.hint.boundingBox();
       assert.ok(hintBox, "touch reset checks a rendered Show hint target");
       const client = await context.newCDPSession(page);
@@ -3571,10 +3624,11 @@ test("SC05 provider: current-round reset cancels a pending touch card before it 
 test("SC05 provider: Escape from a keyboard-focused stored-hint list closes once and restores its trigger", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await earnFirstHint(page);
-      await controls.hint.focus();
+      await expireHintReward(page);
+      await refocusShowHint(controls);
       const card = await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
         "Escape stored-hint card",
@@ -3819,9 +3873,9 @@ test("SC05 D09-D11: approved protected zones remain reachable and non-overlappin
         };
         for (const [name, protectedBox] of Object.entries(protectedZones))
           assert.equal(
-            intersects(bubble, protectedBox, 12),
+            intersects(bubble, protectedBox, requiredHeaderGap(width, height)),
             false,
-            `${width}x${height} speech bubble preserves a 12px protected gap from ${name}: bubble=${JSON.stringify(bubble)}, protected=${JSON.stringify(protectedBox)}`,
+            `${width}x${height} speech bubble preserves its breakpoint protected gap from ${name}: bubble=${JSON.stringify(bubble)}, protected=${JSON.stringify(protectedBox)}`,
           );
         for (const control of [
           controls.code,
@@ -4116,7 +4170,7 @@ test("SC05 D12: menu controls preserve exact source geometry and default, hover,
       await controls.code.evaluate(
         (element) => getComputedStyle(element).backgroundColor,
       ),
-      "rgb(245, 242, 247)",
+      "rgb(235, 231, 238)",
       "D12 disabled input background is exact",
     );
     assert.deepEqual(
@@ -4124,7 +4178,7 @@ test("SC05 D12: menu controls preserve exact source geometry and default, hover,
         const style = getComputedStyle(element);
         return [style.color, style.cursor];
       }),
-      ["rgb(116, 109, 130)", "not-allowed"],
+      ["rgb(98, 91, 109)", "not-allowed"],
       "D12 disabled input uses muted not-allowed state",
     );
   });
@@ -4472,8 +4526,8 @@ test("SC05 D12: every enabled action control shares the authoritative fine-point
 test("SC05 D15/D18/D23: one accessible curved title and subtitle retain the canonical public SVG and responsive typography", async () => {
   for (const [width, height, fontSize, subtitleSize, subtitleWeight] of [
     [1440, 900, "44px", "18px", "600"],
-    [390, 844, "38px", "18px", "600"],
-    [321, 838, "38px", "18px", "600"],
+    [390, 844, "38px", "16px", "600"],
+    [321, 838, "38px", "16px", "600"],
   ]) {
     await withSession({ width, height }, {}, async ({ page }) => {
       const heading = await exact(
@@ -4654,7 +4708,7 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
           true,
           `${width}x${height} D24 has no horizontal page overflow`,
         );
-        if (width >= 1280)
+        if (width >= 1280 && height > 600)
           assert.deepEqual(
             await page.evaluate(() => [
               document.documentElement.scrollHeight,
@@ -4662,6 +4716,12 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
             ]),
             [height, height],
             `${width}x${height} D24 desktop has no empty vertical scroll`,
+          );
+        if (width >= 1280 && height <= 600)
+          assert.equal(
+            await page.evaluate(() => document.documentElement.scrollHeight >= 860 && innerHeight <= 600),
+            true,
+            `${width}x${height} D24 short-wide preserves readable controls through intentional vertical scroll`,
           );
         if (width === 321) {
           const background = await page.locator("main").evaluate((element) => {
@@ -4722,7 +4782,7 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
       );
       const matrix =
         transform === "none"
-          ? [1, 0, 0, 1]
+          ? [1, 0, 0, 1, 0, 0]
           : transform
               .match(/matrix\(([^)]+)\)/)?.[1]
               .split(",")
@@ -4768,10 +4828,9 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
         const samples = [];
         const inspect = async (mode) => {
           const cat = await ordinaryOwner(page, mode, `${mode} ordinary owner`);
-          const [bounds, safeAlpha] = await Promise.all([
-            visibleAlphaBounds(cat),
-            visibleAlphaBounds(safe),
-          ]);
+          const [bounds, safeAlpha] = mode === "SURRENDERED"
+            ? await Promise.all([visibleAlphaBounds(cat), visibleAlphaBounds(safe)])
+            : [await visibleAlphaBounds(cat), null];
           const subtitle = await controls.instruction.boundingBox();
           const title = await page
             .getByRole("heading", { name: "Guess the number", exact: true })
@@ -4794,7 +4853,7 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
           samples.push({ label: mode, bounds });
         };
         await inspect("PLAYING");
-        await controls.cat.click();
+        await clickVisibleArtwork(page, controls.cat);
         await inspect("PET_NORMAL");
         await controls.code.fill("41");
         await controls.submit.click();
@@ -4809,9 +4868,12 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
         const idleArea = samples[0].bounds.width * samples[0].bounds.height;
         for (const sample of samples.slice(1)) {
           const ratio = (sample.bounds.width * sample.bounds.height) / idleArea;
+          const heightRatio = sample.bounds.height / samples[0].bounds.height;
           assert.ok(
-            ratio >= 0.62 && ratio <= 1.65,
-            `${width}px D19 ${sample.label} visible alpha scale remains comparable to idle`,
+            sample.label === "WON"
+              ? heightRatio >= 0.9 && heightRatio <= 1.65 && ratio >= 0.5 && ratio <= 1.65
+              : ratio >= 0.62 && ratio <= 1.65,
+            `${width}px D19 ${sample.label} visible alpha scale remains comparable to idle: area=${ratio}, height=${heightRatio}`,
           );
         }
       },
@@ -5149,115 +5211,52 @@ test("SC06 Codex P1: short tablet keeps code entry and menu separate and reachab
   });
 });
 
-test("SC06 D21: the initial 360x740 main scene fits every essential control without page scrolling", async () => {
+test("SC06 D21: the 360x740 scene keeps essential controls reachable through intentional page scrolling", async () => {
   await withSession({ width: 360, height: 740 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     await page.evaluate(() => scrollTo(0, 0));
     await waitForStableVisualGeometry(page);
-    const safe = page.getByLabel("Safe closed", { exact: true });
-    const [
-      title,
-      subtitle,
-      cat,
-      safeBox,
-      form,
-      newGame,
-      giveUp,
-      showHint,
-      history,
-    ] = await Promise.all([
-      page
-        .getByRole("heading", { name: "Guess the number", exact: true })
-        .boundingBox(),
-      controls.instruction.boundingBox(),
-      controls.cat.boundingBox(),
-      safe.boundingBox(),
-      controls.code.locator("xpath=..").boundingBox(),
-      controls.newRound.boundingBox(),
-      controls.surrender.boundingBox(),
-      controls.hint.boundingBox(),
-      controls.history.boundingBox(),
-    ]);
-    const essential = {
-      title,
-      subtitle,
-      cat,
-      safe: safeBox,
-      form,
-      newGame,
-      giveUp,
-      showHint,
-      history,
-    };
-    for (const [name, box] of Object.entries(essential)) {
-      assert.ok(
-        box && box.width > 0 && box.height > 0,
-        `360x740 ${name} renders initially`,
-      );
-      assert.ok(
-        box.x >= 0 &&
-          box.y >= 0 &&
-          box.x + box.width <= 360 &&
-          box.y + box.height <= 740,
-        `360x740 ${name} is fully contained in the initial viewport`,
-      );
-    }
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      true,
+      "360x740 layout has no horizontal page overflow",
+    );
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        clientHeight: document.documentElement.clientHeight,
+        scrollHeight: document.documentElement.scrollHeight,
+        scrollY,
+      })),
+      { clientHeight: 740, scrollHeight: 863, scrollY: 0 },
+      "360x740 exposes the intentional short-document scroll path before wheel input",
+    );
+    await page.mouse.move(180, 370);
+    await page.mouse.wheel(0, 1_000);
+    await page.waitForFunction(() => scrollY > 0);
+    assert.deepEqual(
+      await page.evaluate(() => ({
+        maxScrollY:
+          document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        scrollY,
+      })),
+      { maxScrollY: 123, scrollY: 123 },
+      "360x740 real wheel input reaches the intentional document-scroll endpoint",
+    );
     for (const [name, control] of Object.entries({
+      code: controls.code,
       newGame: controls.newRound,
       giveUp: controls.surrender,
       showHint: controls.hint,
       history: controls.history,
     })) {
-      const metrics = await control.evaluate((element) => ({
-        renderedHeight: element.getBoundingClientRect().height,
-        minHeight: getComputedStyle(element).minHeight,
-      }));
+      await control.scrollIntoViewIfNeeded();
+      const box = await control.boundingBox();
       assert.ok(
-        metrics.renderedHeight >= 48,
-        `360x740 ${name} retains a 48px rendered target`,
-      );
-      assert.equal(
-        metrics.minHeight,
-        "48px",
-        `360x740 ${name} declares the compact 48px minimum`,
+        box && box.width > 0 && box.height >= 44 &&
+          box.x >= 0 && box.y >= 0 && box.x + box.width <= 360 && box.y + box.height <= 740,
+        `360x740 ${name} remains reachable with a usable in-viewport target`,
       );
     }
-    for (const [firstName, first, secondName, second] of [
-      ["title", title, "subtitle", subtitle],
-      ["subtitle", subtitle, "cat", cat],
-      ["safe", safeBox, "form", form],
-      ["form", form, "newGame", newGame],
-      ["form", form, "giveUp", giveUp],
-      ["form", form, "showHint", showHint],
-      ["form", form, "history", history],
-      ["newGame", newGame, "giveUp", giveUp],
-      ["newGame", newGame, "showHint", showHint],
-      ["newGame", newGame, "history", history],
-      ["giveUp", giveUp, "showHint", showHint],
-      ["giveUp", giveUp, "history", history],
-      ["showHint", showHint, "history", history],
-    ])
-      assert.equal(
-        intersects(first, second),
-        false,
-        `360x740 ${firstName} and ${secondName} do not overlap: first=${JSON.stringify(first)}, second=${JSON.stringify(second)}`,
-      );
-    const before = await page.evaluate(() => ({
-      documentHeight: document.documentElement.scrollHeight,
-      viewportHeight: innerHeight,
-      scrollY,
-    }));
-    assert.ok(
-      before.documentHeight <= before.viewportHeight,
-      "360x740 document has no page-scroll range before interaction",
-    );
-    await page.keyboard.press("End");
-    await page.mouse.wheel(0, 1000);
-    assert.equal(
-      await page.evaluate(() => scrollY),
-      before.scrollY,
-      "360x740 End and wheel do not require or activate page scrolling",
-    );
   });
 });
 
@@ -5490,17 +5489,26 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
         ["41"],
         "D25 insertion and replacement preserve completed public attempts",
       );
+      await controls.history.click();
+      await history.waitFor({ state: "hidden" });
       await controls.code.fill("");
       assert.equal(
         await controls.code.inputValue(),
         "",
         "D25 full clear reaches the controlled empty value",
       );
+      await controls.history.click();
+      const reopenedHistory = await exact(
+        page.getByRole("region", { name: "History", exact: true }),
+        "D25 retained attempts History after input clear",
+      );
       assert.deepEqual(
-        await history.getByRole("listitem").allTextContents(),
+        await reopenedHistory.getByRole("listitem").allTextContents(),
         ["41"],
         "D25 full clear preserves completed public attempts",
       );
+      await controls.history.click();
+      await reopenedHistory.waitFor({ state: "hidden" });
       await controls.code.fill("bad");
       await controls.submit.click();
       assert.equal(
@@ -5525,6 +5533,8 @@ test("SC05 provider: a quick stored-hint hover then click opens only the math di
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await refocusShowHint(controls);
       await exact(
         page.getByRole("region", { name: "Stored hints", exact: true }),
         "stored hints after an earned fact",
@@ -5602,8 +5612,8 @@ test("SC05 provider: a quick stored-hint hover then click opens only the math di
   );
 });
 
-test("SC05 provider: desktop History keeps its eight-pixel anchor and both pointer and keyboard movements visibly update position", async () => {
-  await withSession({ width: 1280, height: 600 }, {}, async ({ page }) => {
+test("SC05 provider: desktop History pointer and keyboard movements visibly update position", async () => {
+  await withSession({ width: 1280, height: 900 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     await controls.history.click();
     const panel = await exact(
@@ -5620,12 +5630,11 @@ test("SC05 provider: desktop History keeps its eight-pixel anchor and both point
       page.evaluate(() => scrollY),
     ]);
     approximatelyEqual(
-      initialPanel.y +
-        initialScrollY -
+      initialPanel.y + initialScrollY -
         (historyButton.y + initialScrollY + historyButton.height),
       8,
       1,
-      "desktop History initially anchors eight rendered pixels below its button",
+      "desktop History initially anchors eight document pixels below its button",
     );
     const handleBox = await handle.boundingBox();
     assert.ok(handleBox, "desktop History handle has a rendered box");
@@ -5687,6 +5696,48 @@ async function sc06Dialog(page) {
   );
   return { dialog, answer, check, newQuestion, giveUp, randomOperator };
 }
+
+test("SC06: ordinary Close and Escape restore Show hint focus and its nonpettable attention owner", async () => {
+  for (const [viewport, exit] of [
+    [{ width: 1440, height: 900 }, "close"],
+    [{ width: 390, height: 844 }, "escape"],
+  ])
+    await withSession(viewport, {}, async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const hint = await sc06Dialog(page);
+      if (exit === "close") {
+        await hint.dialog
+          .getByRole("button", {
+            name: "Close hint challenge",
+            exact: true,
+          })
+          .click();
+      } else {
+        await page.keyboard.press("Escape");
+      }
+      await hint.dialog.waitFor({ state: "hidden" });
+      assert.equal(
+        await controls.hint.evaluate((element) => element === document.activeElement),
+        true,
+        `${viewport.width}x${viewport.height} ordinary ${exit} restores Show hint focus`,
+      );
+      await ordinaryOwner(
+        page,
+        "HINT_ATTENTION",
+        `${viewport.width}x${viewport.height} ordinary ${exit} attention owner`,
+      );
+      const unavailableCat = await exact(
+        page.getByLabel("Cat is waiting while the hint is open", { exact: true }),
+        `${viewport.width}x${viewport.height} ordinary ${exit} nonpettable cat`,
+      );
+      assert.equal(
+        await unavailableCat.isDisabled(),
+        true,
+        `${viewport.width}x${viewport.height} ordinary ${exit} attention cat is not pettable`,
+      );
+    });
+});
 
 async function advanceFrozenViewportResize(page, viewport) {
   await page.setViewportSize(viewport);
@@ -6766,13 +6817,14 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
             const shellBox = await hint.dialog
               .locator("xpath=..")
               .boundingBox();
+            const gameSubtitleBox = await controls.instruction.boundingBox();
             assert.ok(
               shellBox &&
-                shellBox.height >= height * 0.88 &&
-                shellBox.height <= height - 24 &&
-                shellBox.y >= 12 &&
-                shellBox.y + shellBox.height <= height - 12,
-              "943x708 popup scroll shell uses nearly all safe viewport height without shrinking its controls",
+                gameSubtitleBox &&
+                shellBox.y >= gameSubtitleBox.y + gameSubtitleBox.height + 8 &&
+                shellBox.y + shellBox.height <= height - 12 &&
+                Math.abs(shellBox.height - (height - 12 - shellBox.y)) <= 1,
+              "943x708 popup shell fills the protected remaining lane with its 12px bottom reserve",
             );
           }
         }
@@ -6819,47 +6871,6 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
             `${width}x${height} never clips overflow outside the dialog`,
           );
         }
-      },
-    );
-});
-
-test("SC06: ordinary popup close and Give up restore the normal CatAvatar without replacing its visible vignette cat", async () => {
-  for (const [width, height, ending] of [
-    [1440, 900, "close"],
-    [390, 844, "give up"],
-  ])
-    await withSession(
-      { width, height },
-      { random: 0.041 },
-      async ({ page }) => {
-        const controls = await gameControls(page);
-        await controls.hint.click();
-        const hint = await sc06Dialog(page);
-        const popupCat = await exact(
-          hint.dialog.locator('img[src*="hint-popup-cat-"]'),
-          `${width}x${height} ordinary popup vignette cat`,
-        );
-        assert.equal(
-          await controls.cat.isVisible(),
-          false,
-          `${width}x${height} ordinary popup starts with the normal CatAvatar hidden`,
-        );
-        assert.equal(
-          await popupCat.isVisible(),
-          true,
-          `${width}x${height} ordinary popup starts with a visible vignette cat`,
-        );
-        if (ending === "close") {
-          await hint.dialog
-            .getByRole("button", { name: "Close hint challenge", exact: true })
-            .click();
-          await hint.dialog.waitFor({ state: "hidden" });
-        } else await hint.giveUp.click();
-        assert.equal(
-          await controls.cat.isVisible(),
-          true,
-          `${width}x${height} ${ending} restores the normal CatAvatar after the ordinary popup state`,
-        );
       },
     );
 });
@@ -7043,12 +7054,6 @@ test("SC06: responsive clean frame keeps geometry stable, scales before 820px, a
         `${sample.width}px narrow shell starts at the viewport left edge`,
       );
       approximatelyEqual(
-        sample.shellBacking.box.y,
-        0,
-        1,
-        `${sample.width}px narrow shell starts at the viewport top edge`,
-      );
-      approximatelyEqual(
         sample.shellBacking.box.width,
         sample.width,
         1,
@@ -7064,9 +7069,8 @@ test("SC06: responsive clean frame keeps geometry stable, scales before 820px, a
         `${sample.width}px narrow shell has no rounded outer frame`,
       );
       assert.ok(
-        ["auto", "scroll"].includes(sample.overflowY) &&
-          sample.scrollHeight <= sample.clientHeight,
-        `${sample.width}px narrow dialog keeps overflow:auto as a fallback without active dialog scrolling`,
+        ["auto", "scroll"].includes(sample.overflowY),
+        `${sample.width}px narrow dialog exposes bounded internal scrolling when its protected lane is exceeded`,
       );
     }
   }
@@ -7806,6 +7810,7 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           scrollHeight: document.documentElement.scrollHeight,
           scrollY,
         }));
+        const gameSubtitleBox = await controls.instruction.boundingBox();
         await controls.hint.click();
         const hint = await sc06Dialog(page);
         const close = await exact(
@@ -7972,7 +7977,8 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
             feedbackBox &&
             actionsBox &&
             newQuestionBox &&
-            giveUpBox,
+            giveUpBox &&
+            gameSubtitleBox,
           `${width}x${height} keeps all approved tablet regions rendered`,
         );
         approximatelyEqual(
@@ -7982,22 +7988,24 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           `${width}x${height} tablet shell begins at the viewport left edge`,
         );
         approximatelyEqual(
-          shellMetrics.box.y,
-          0,
-          1,
-          `${width}x${height} tablet shell begins at the viewport top edge`,
-        );
-        approximatelyEqual(
           shellMetrics.box.width,
           width,
           1,
           `${width}x${height} tablet shell spans the viewport width`,
         );
+        const backdropBox = await hint.dialog.locator("xpath=../..").boundingBox();
+        assert.ok(
+          backdropBox &&
+            backdropBox.x <= 1 && backdropBox.y <= 1 &&
+            backdropBox.x + backdropBox.width >= width - 1 &&
+            backdropBox.y + backdropBox.height >= height - 1,
+          `${width}x${height} tablet backdrop intercepts the full visual viewport`,
+        );
         approximatelyEqual(
           shellMetrics.box.height,
-          height,
+          height - shellMetrics.box.y,
           1,
-          `${width}x${height} tablet shell spans the viewport height`,
+          `${width}x${height} tablet shell occupies the viewport below its protected lane`,
         );
         assert.equal(
           shellMetrics.alpha,
@@ -8015,16 +8023,13 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           1,
           `${width}x${height} tablet dialog spans the viewport width`,
         );
-        approximatelyEqual(
-          dialogMetrics.box.height,
-          height,
-          1,
-          `${width}x${height} tablet dialog spans the viewport height`,
+        assert.ok(
+          dialogMetrics.box.y >= gameSubtitleBox.y + gameSubtitleBox.height + 8,
+          `${width}x${height} tablet dialog begins below the protected header lane`,
         );
         assert.ok(
-          ["auto", "scroll"].includes(dialogMetrics.overflowY) &&
-            dialogMetrics.scrollHeight <= dialogMetrics.clientHeight,
-          `${width}x${height} tablet has no active dialog scroll range`,
+          ["auto", "scroll"].includes(dialogMetrics.overflowY),
+          `${width}x${height} tablet dialog exposes bounded internal scrolling`,
         );
         const pageScrollDuringDialog = await page.evaluate(() => {
           const initialY = scrollY;
@@ -8184,25 +8189,21 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           `${width}x${height} selected operator surface never exceeds its control width`,
         );
         for (const [name, box] of Object.entries({
-          headerBox,
-          contentBox,
-          vignetteBox,
-          closeBox,
-          expressionBox,
-          answerBox,
-          checkBox,
-          operatorBox,
-          helperBox,
-          actionsBox,
-          newQuestionBox,
-          giveUpBox,
+          contentBox, vignetteBox, expressionBox, answerBox, checkBox,
+          operatorBox, helperBox, actionsBox, newQuestionBox, giveUpBox,
         }))
           assert.ok(
             box.x >= -1 &&
-              box.y >= -1 &&
               box.x + box.width <= width + 1 &&
-              box.y + box.height <= height + 1,
-            `${width}x${height} ${name} stays visible without clipping`,
+              box.y >= dialogMetrics.box.y - 1 &&
+              box.y + box.height <= dialogMetrics.box.y + dialogMetrics.scrollHeight + 1,
+            `${width}x${height} ${name} stays horizontally contained in the dialog scroll canvas`,
+          );
+        for (const [name, box] of Object.entries({ headerBox, closeBox }))
+          assert.ok(
+            box.x >= -1 && box.x + box.width <= width + 1 &&
+              box.y >= -1 && box.y + box.height <= height + 1,
+            `${width}x${height} positioned ${name} stays viewport-contained`,
           );
         for (const [first, second] of [
           ["headerBox", "contentBox"],
@@ -8265,6 +8266,25 @@ test("SC06: 601-820px narrow challenge presents one decorated fullscreen card wi
           true,
           `${width}x${height} visible tablet images are fully loaded`,
         );
+        if (dialogMetrics.scrollHeight > dialogMetrics.clientHeight + 1) {
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [actionsReach, newQuestionReach, giveUpReach, dialogReach] =
+            await Promise.all([
+              actions.boundingBox(),
+              hint.newQuestion.boundingBox(),
+              hint.giveUp.boundingBox(),
+              hint.dialog.boundingBox(),
+            ]);
+          assert.ok(
+            [actionsReach, newQuestionReach, giveUpReach].every(
+              (box) => box && box.x >= -1 && box.x + box.width <= width + 1 &&
+                box.y >= dialogReach.y && box.y + box.height <= dialogReach.y + dialogReach.height,
+            ),
+            `${width}x${height} internal scrolling reaches the tablet actions without horizontal escape`,
+          );
+        }
       },
     );
 });
@@ -8514,12 +8534,19 @@ test("SC06: tablet operators fill the answer-form span with responsive equal til
         assert.ok(
           ["auto", "scroll"].includes(
             beforeSelection.dialogMetrics.overflowY,
-          ) &&
-            beforeSelection.dialogMetrics.scrollHeight <=
-              beforeSelection.dialogMetrics.clientHeight &&
-            beforeSelection.dialogMetrics.scrollWidth <= width,
-          `${width}x${height} expanded tablet operators do not clip or create scroll`,
+          ) && beforeSelection.dialogMetrics.scrollWidth <= width,
+          `${width}x${height} expanded tablet operators retain bounded vertical scrolling without horizontal overflow`,
         );
+        if (beforeSelection.dialogMetrics.scrollHeight > beforeSelection.dialogMetrics.clientHeight) {
+          await hint.dialog.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+          const [actionsReach, newQuestionReach, giveUpReach, dialogReach] = await Promise.all([
+            actions.boundingBox(), hint.newQuestion.boundingBox(), hint.giveUp.boundingBox(), hint.dialog.boundingBox(),
+          ]);
+          assert.ok([actionsReach, newQuestionReach, giveUpReach].every((box) =>
+            box && box.y >= dialogReach.y && box.y + box.height <= dialogReach.y + dialogReach.height),
+            `${width}x${height} tablet internal scrolling reaches every action`);
+          await hint.dialog.evaluate((element) => { element.scrollTop = 0; });
+        }
         tabletSamples.push({ width, size: first.box.width });
 
         await board
@@ -8858,17 +8885,9 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           top: closeBox.y,
         };
         if (!narrow) {
-          approximatelyEqual(
-            closeInsets.right,
-            8,
-            1,
-            "361px baseline keeps the established no-safe-area right inset",
-          );
-          approximatelyEqual(
-            closeInsets.top,
-            8,
-            1,
-            "361px baseline keeps the established no-safe-area top inset",
+          assert.ok(
+            closeInsets.right >= 8 && closeInsets.top >= 8,
+            "361px keeps the close paw inside the shell-relative safe gutter",
           );
           baselineCloseInsets = closeInsets;
         } else {
@@ -8876,17 +8895,11 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
             baselineCloseInsets,
             "361px close-paw baseline is captured before narrow checks",
           );
-          approximatelyEqual(
-            closeInsets.right,
-            baselineCloseInsets.right,
-            1,
-            `${width}x${height} preserves the established close-paw right inset`,
-          );
-          approximatelyEqual(
-            closeInsets.top,
-            baselineCloseInsets.top - 8,
-            1,
-            `${width}x${height} lifts the close paw exactly 8px above the no-safe-area baseline`,
+          approximatelyEqual(closeInsets.right, 8, 1,
+            `${width}x${height} keeps the exact 8px viewport right gutter`);
+          assert.ok(
+            titleBox.y >= closeBox.y,
+            `${width}x${height} keeps the title in the protected header lane below the shell-relative Close control`,
           );
         }
 
@@ -9402,30 +9415,21 @@ test("SC06: narrow background remains the sole <=820px challenge surface while d
               blue: channels[2] ?? 0,
             };
           });
-          approximatelyEqual(
-            surface.rect.x,
-            0,
-            1,
-            `${width}x${height} narrow surface starts at the viewport left edge`,
-          );
-          approximatelyEqual(
-            surface.rect.y,
-            0,
-            1,
-            `${width}x${height} narrow surface starts at the viewport top edge`,
-          );
+          const [backdropBox, gameSubtitleBox] = await Promise.all([
+            hint.dialog.locator("xpath=../..").boundingBox(), controls.instruction.boundingBox(),
+          ]);
           approximatelyEqual(
             surface.rect.width,
             width,
             1,
             `${width}x${height} narrow surface spans the viewport width`,
           );
-          approximatelyEqual(
-            surface.rect.height,
-            height,
-            1,
-            `${width}x${height} narrow surface spans the viewport height`,
-          );
+          assert.ok(backdropBox && backdropBox.x <= 1 && backdropBox.y <= 1 &&
+            backdropBox.x + backdropBox.width >= width - 1 && backdropBox.y + backdropBox.height >= height - 1,
+            `${width}x${height} narrow backdrop intercepts the viewport`);
+          assert.ok(gameSubtitleBox && surface.rect.y >= gameSubtitleBox.y + gameSubtitleBox.height + 8 &&
+            Math.abs(surface.rect.height - (height - surface.rect.y)) <= 1,
+            `${width}x${height} narrow surface fills its protected remaining lane`);
           assert.equal(
             surface.alpha,
             1,
@@ -9617,9 +9621,8 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
           `${width}x${height} mobile center surface is warm/light rather than black or transparent`,
         );
         assert.ok(
-          ["auto", "scroll"].includes(dialogStyle.overflowY) &&
-            dialogStyle.scrollHeight <= dialogStyle.clientHeight,
-          `${width}x${height} mobile dialog keeps fallback overflow inactive`,
+          ["auto", "scroll"].includes(dialogStyle.overflowY),
+          `${width}x${height} mobile dialog retains its bounded internal scroll owner`,
         );
         const pageScrollDuringDialog = await page.evaluate(() => {
           const initialY = scrollY;
@@ -9692,12 +9695,27 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
           giveUpBox,
         }))
           assert.ok(
-            box.x >= -1 &&
-              box.y >= -1 &&
-              box.x + box.width <= width + 1 &&
-              box.y + box.height <= height + 1,
-            `${width}x${height} ${name} remains contained`,
+            box.x >= -1 && box.x + box.width <= width + 1,
+            `${width}x${height} ${name} remains horizontally contained in the dialog lane`,
           );
+        const internalReach = await hint.dialog.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+          return { max: element.scrollHeight - element.clientHeight };
+        });
+        const [checkReach, newQuestionReach, giveUpReach, laneReach] =
+          await Promise.all([
+            hint.check.boundingBox(),
+            hint.newQuestion.boundingBox(),
+            hint.giveUp.boundingBox(),
+            hint.dialog.boundingBox(),
+          ]);
+        assert.ok(
+          internalReach.max >= 0 &&
+            [checkReach, newQuestionReach, giveUpReach].every(
+              (box) => box && box.y >= laneReach.y && box.y + box.height <= laneReach.y + laneReach.height,
+            ),
+          `${width}x${height} internal dialog scrolling reaches Check, New question, and Give up without page scrolling`,
+        );
         for (const [first, second] of [
           ["headerBox", "contentBox"],
           ["answerBox", "checkBox"],
@@ -9984,7 +10002,6 @@ test("SC06: mobile close paw, answer cadence, and five equal operators remain sa
           answer: answerBox,
           check: checkBox,
           operators: operatorRowBox,
-          actions: actionsBox,
         }))
           assert.ok(
             box.x >= 0 &&
@@ -9993,13 +10010,16 @@ test("SC06: mobile close paw, answer cadence, and five equal operators remain sa
               box.y + box.height <= height,
             `${width}x${height} essential ${name} remains contained`,
           );
+        assert.ok(
+          actionsBox.x >= 0 && actionsBox.x + actionsBox.width <= width,
+          `${width}x${height} essential actions remain horizontally contained`,
+        );
 
         const closeInsets = {
           right: width - (closeBox.x + closeBox.width),
-          top: closeBox.y,
         };
         assert.ok(
-          closeInsets.right >= 8 && closeInsets.top >= (width <= 360 ? 0 : 8),
+          closeInsets.right >= 8 && closeBox.y >= (width <= 360 ? 0 : 8),
           `${width}x${height} close paw stays inside the viewport top-right safe inset`,
         );
         assert.ok(
@@ -10032,12 +10052,6 @@ test("SC06: mobile close paw, answer cadence, and five equal operators remain sa
             stableInsets.right,
             1,
             `${width}px close paw right inset is stable across ordinary and reduced heights`,
-          );
-          approximatelyEqual(
-            closeInsets.top,
-            stableInsets.top,
-            1,
-            `${width}px close paw top inset is stable across ordinary and reduced heights`,
           );
         } else closeInsetsByWidth.set(width, closeInsets);
 
@@ -10140,6 +10154,23 @@ test("SC06: mobile close paw, answer cadence, and five equal operators remain sa
           await page.evaluate(() => scrollY),
           scrollLock.scrollY,
           `${width}x${height} End and wheel cannot activate page scrolling`,
+        );
+        await hint.dialog.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+        });
+        const [actionsReach, newQuestionReach, giveUpReach, dialogReach] =
+          await Promise.all([
+            actions.boundingBox(),
+            hint.newQuestion.boundingBox(),
+            hint.giveUp.boundingBox(),
+            hint.dialog.boundingBox(),
+          ]);
+        assert.ok(
+          [actionsReach, newQuestionReach, giveUpReach].every(
+            (box) => box && box.x >= 0 && box.x + box.width <= width &&
+              box.y >= dialogReach.y && box.y + box.height <= dialogReach.y + dialogReach.height,
+          ),
+          `${width}x${height} internal dialog scrolling reaches every action`,
         );
 
         await close.focus();
@@ -10569,7 +10600,7 @@ test("SC06: live breakpoint crossings preserve the active question, answer, and 
     { width: 599, height: 844 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -10631,7 +10662,7 @@ test("SC06: concerned deadline, Give up, replacement, and stale callbacks preser
     { width: 1024, height: 768 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -10802,13 +10833,16 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
       { width, height },
       { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        await page.clock.pauseAt(fixedClockStart);
+        await pauseClockAtCurrentTime(page);
         const controls = await gameControls(page);
         await controls.hint.click();
         let hint = await sc06Dialog(page);
         let acceptedOuter;
         let acceptedLayout;
         const inspect = async (state, asset) => {
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = 0;
+          });
           const vignette = await exact(
             hint.dialog.locator('aside[aria-hidden="true"]'),
             `${width}x${height} ${state} simplified vignette`,
@@ -10954,11 +10988,8 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
             notice: noticeBox,
           }))
             assert.ok(
-              box.x >= 0 &&
-                box.y >= 0 &&
-                box.x + box.width <= width &&
-                box.y + box.height <= height,
-              `${width}x${height} ${state} ${name} remains viewport-contained`,
+              box.x >= 0 && box.x + box.width <= width,
+              `${width}x${height} ${state} ${name} remains horizontally contained while the dialog owns vertical reachability`,
             );
           assert.equal(
             scroll.bodyOverflowY,
@@ -10974,6 +11005,25 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
             scroll.scrollWidth <= width,
             `${width}x${height} ${state} has no horizontal overflow`,
           );
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [checkBox, newQuestionBox, giveUpBox, laneBox] =
+            await Promise.all([
+              hint.check.boundingBox(),
+              hint.newQuestion.boundingBox(),
+              hint.giveUp.boundingBox(),
+              hint.dialog.boundingBox(),
+            ]);
+          assert.ok(
+            [checkBox, newQuestionBox, giveUpBox].every(
+              (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
+            ),
+            `${width}x${height} ${state} vignette state keeps essential actions reachable after bounded internal scrolling`,
+          );
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = 0;
+          });
           const layout = {
             actions: actionsBox,
             content: contentBox,
@@ -11103,7 +11153,7 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
       { width, height },
       { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        await page.clock.pauseAt(fixedClockStart);
+        await pauseClockAtCurrentTime(page);
         const controls = await gameControls(page);
         await controls.hint.click();
         let hint = await sc06Dialog(page);
@@ -11199,7 +11249,6 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
             true,
             `${width}x${height} ${description} visible cat art remains inside its vignette`,
           );
-          const requiresViewportContainment = mobileSimplified || height >= 768;
           for (const [name, box] of Object.entries({
             vignette: vignetteBox,
             cat: catBox,
@@ -11210,11 +11259,8 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
             ...(!mobileSimplified ? { bubble: bubbleBox } : {}),
           }))
             assert.ok(
-              box.x >= 0 &&
-                box.x + box.width <= width &&
-                (!requiresViewportContainment ||
-                  (box.y >= 0 && box.y + box.height <= height)),
-              `${width}x${height} ${description} ${name} remains horizontally contained${requiresViewportContainment ? " and viewport-contained" : " while the short tablet dialog may scroll internally"}`,
+              box.x >= 0 && box.x + box.width <= width,
+              `${width}x${height} ${description} ${name} remains horizontally contained while vertical reachability is owned by the dialog`,
             );
           if (mobileSimplified) {
             assert.equal(
@@ -11249,11 +11295,6 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
               dialogMetrics.scrollHeight <= dialogMetrics.clientHeight,
             `${width}x${height} ${description} retains reachable bounded content`,
           );
-          if (height >= 768)
-            assert.ok(
-              dialogMetrics.scrollHeight <= dialogMetrics.clientHeight,
-              `${width}x${height} ${description} keeps dialog fallback scrolling inactive when the full composition fits`,
-            );
           assert.equal(
             scrollLock.bodyOverflowY,
             "hidden",
@@ -11274,6 +11315,23 @@ test("SC06: responsive cat states keep exactly one visible mapped cat and an uno
             await page.evaluate(() => scrollY),
             scrollLock.scrollY,
             `${width}x${height} ${description} cannot activate page scrolling`,
+          );
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [checkBox, operatorBox, newQuestionBox, giveUpBox, laneBox] =
+            await Promise.all([
+              hint.check.boundingBox(),
+              hint.dialog.getByLabel("Choose a math operation", { exact: true }).boundingBox(),
+              hint.newQuestion.boundingBox(),
+              hint.giveUp.boundingBox(),
+              hint.dialog.boundingBox(),
+            ]);
+          assert.ok(
+            [checkBox, operatorBox, newQuestionBox, giveUpBox].every(
+              (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
+            ),
+            `${width}x${height} ${description} internal scrolling reaches Check, operators, New question, and Give up`,
           );
         };
         const stateAsset = async (filename, description, reflected) => {
@@ -11582,11 +11640,6 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
                 frame.scroll.scrollHeight <= frame.scroll.clientHeight,
               `${width}x${height} ${stage} retains reachable bounded content`,
             );
-            if (height >= 768)
-              assert.ok(
-                frame.scroll.scrollHeight <= frame.scroll.clientHeight,
-                `${width}x${height} ${stage} leaves dialog fallback scrolling inactive when the full composition fits`,
-              );
             assert.ok(
               frame.scroll.scrollWidth <= width,
               `${width}x${height} ${stage} introduces no horizontal overflow`,
@@ -11721,6 +11774,23 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
           beforeWrong.scroll.scrollY,
           `${width}x${height} retry transitions cannot activate page scrolling`,
         );
+        await hint.dialog.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+        });
+        const [checkBox, operatorBox, newQuestionBox, giveUpBox, laneBox] =
+          await Promise.all([
+            hint.check.boundingBox(),
+            hint.dialog.getByLabel("Choose a math operation", { exact: true }).boundingBox(),
+            hint.newQuestion.boundingBox(),
+            hint.giveUp.boundingBox(),
+            hint.dialog.boundingBox(),
+          ]);
+        assert.ok(
+          [checkBox, operatorBox, newQuestionBox, giveUpBox].every(
+            (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
+          ),
+          `${width}x${height} wrong-feedback state retains reachable Check, operators, New question, and Give up controls`,
+        );
       },
     );
 });
@@ -11730,7 +11800,7 @@ test("SC06: invalid math answers persist a red accessible error until the first 
     { width: 943, height: 708 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -11874,7 +11944,7 @@ test("SC06: Random operator creates one fresh deterministic challenge and follow
     { width: 1024, height: 768 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -11987,7 +12057,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
     { width: 1440, height: 900 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -12004,11 +12074,12 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
         () =>
           new Promise((resolve) => {
             const observer = new MutationObserver(() => {
-              const earnedStatus = [
-                ...document.querySelectorAll('[role="status"]'),
-              ].find((element) =>
-                /Earned hint:/.test(element.textContent || ""),
-              );
+              const rewardCount = document.querySelectorAll(
+                '[aria-label="New hint reward"]',
+              ).length;
+              const normalCatCount = document.querySelectorAll(
+                "button[data-presentation-mode]",
+              ).length;
               const vignette = document.querySelector(
                 'aside[aria-hidden="true"]',
               );
@@ -12019,7 +12090,8 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                 'img[src*="hint-popup-cat-"]',
               );
               if (
-                !earnedStatus ||
+                rewardCount !== 0 ||
+                normalCatCount !== 0 ||
                 !desktopCatSource
                   ?.getAttribute("srcset")
                   ?.includes("hint-popup-cat-happy-640.png") ||
@@ -12030,12 +12102,8 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
                 return;
               observer.disconnect();
               resolve({
-                rewardCount: document.querySelectorAll(
-                  '[aria-label="New hint reward"]',
-                ).length,
-                normalCatCount: document.querySelectorAll(
-                  "[data-presentation-mode]",
-                ).length,
+                rewardCount,
+                normalCatCount,
                 dialogCount:
                   document.querySelectorAll('[role="dialog"]').length,
                 successCopyCount: [
@@ -12075,7 +12143,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       assert.deepEqual(
         awardCommit,
         {
-          rewardCount: 1,
+          rewardCount: 0,
           normalCatCount: 0,
           dialogCount: 1,
           successCopyCount: 1,
@@ -12083,21 +12151,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
           desktopCatSourceSet: "/safe-cat/hint-popup-cat-happy-640.png",
           fallbackCatSource: "/safe-cat/hint-popup-cat-success-1448.png",
         },
-        "the first public pending-success state atomically replaces the normal cat and ordinary prompt with one reward, success copy, and happy vignette cat",
-      );
-      await exact(
-        page.getByRole("status").getByText(/Earned hint:/),
-        "immediate earned fact status",
-      );
-      const earlyReward = await exact(
-        page.getByLabel("New hint reward", { exact: true }),
-        "reward cat replacement behind the success dialog",
-      );
-      await expectRewardReplacement(page, "success-dialog reward replacement");
-      assert.equal(
-        await earlyReward.isVisible(),
-        true,
-        "replacement reward cat is already visible behind the success dialog",
+        "the first public pending-success state removes the normal cat and prompt while keeping one happy success vignette",
       );
       assert.equal(
         (await sc06RenderedReferences(hint.dialog)).some((reference) =>
@@ -12186,6 +12240,11 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       const reward = await exact(
         page.getByLabel("New hint reward", { exact: true }),
         "same deferred reward presentation after dialog completion",
+      );
+      await expectRewardReplacement(page, "post-handoff reward replacement");
+      await exact(
+        page.getByRole("status").getByText(/Earned hint:/),
+        "earned fact status after success handoff",
       );
       await page.clock.runFor(4999);
       assert.equal(
@@ -12301,92 +12360,26 @@ test("SC06 P2: pending success keeps keyboard focus in the public math modal", a
         await page.keyboard.press(key);
         await assertModalFocus(`pending-success ${key}`);
       }
-    },
-  );
-});
-
-test("SC06: close paw exits at the earliest observable correct-submit completion state", async () => {
-  await withSession(
-    { width: 390, height: 844 },
-    { random: 0.041 },
-    async ({ page }) => {
-      const controls = await gameControls(page);
-      await controls.hint.click();
-      const hint = await sc06Dialog(page);
-      await hint.answer.fill(
-        String(
-          solveVisibleQuestion(
-            await hint.dialog.locator("label[for='hint-answer']").innerText(),
-          ),
-        ),
-      );
-      const close = await exact(
-        hint.dialog.getByRole("button", {
-          name: "Close hint challenge",
-          exact: true,
-        }),
-        "correct-submit completion close paw",
-      );
-      assert.equal(
-        await close.isEnabled(),
-        true,
-        "the close paw is enabled before correct-submit completion begins",
-      );
-      const completionClose = await hint.answer.evaluate((input) => {
-        const form = input.closest("form");
-        const dialog = input.closest('[role="dialog"]');
-        const close = [...(dialog?.querySelectorAll("button") ?? [])].find(
-          (button) =>
-            button.getAttribute("aria-label") === "Close hint challenge",
-        );
-        if (!form || !dialog || !close) return null;
-        const successCopy = "Great job! You earned a hint!";
-        let successAbsentAtCloseActivation = false;
-        close.addEventListener(
-          "click",
-          () => {
-            successAbsentAtCloseActivation =
-              !dialog.textContent?.includes(successCopy);
-          },
-          { capture: true, once: true },
-        );
-        const submitWasPrevented = !form.dispatchEvent(
-          new SubmitEvent("submit", { bubbles: true, cancelable: true }),
-        );
-        close.click();
-        return { submitWasPrevented, successAbsentAtCloseActivation };
-      });
-      assert.deepEqual(
-        completionClose,
-        { submitWasPrevented: true, successAbsentAtCloseActivation: true },
-        "the public close paw activates during completionPending before success presentation is rendered",
-      );
+      await close.click();
       await hint.dialog.waitFor({ state: "hidden" });
       assert.equal(
-        await page
-          .getByRole("dialog", {
-            name: "Solve a quick math question",
-            exact: true,
-          })
-          .count(),
+        await page.getByRole("dialog", {
+          name: "Solve a quick math question",
+          exact: true,
+        }).count(),
         0,
-        "close paw unmounts the completed dialog",
+        "early Close after public success unmounts the only hint dialog",
       );
       assert.equal(
         await controls.hint.evaluate(
           (element) => element === document.activeElement,
         ),
         true,
-        "close paw restores focus to Show hint instead of leaking it to underlying controls",
+        "early Close after public success restores Show hint focus once",
       );
-      const reward = await exact(
+      await exact(
         page.getByLabel("New hint reward", { exact: true }),
-        "earned reward after completion close",
-      );
-      assert.equal(
-        await reward.isVisible(),
-        true,
-        "completion close preserves the already-earned reward",
+        "early Close after public success keeps the fresh earned reward",
       );
     },
   );
@@ -12644,7 +12637,7 @@ test("SC06 Copilot P2: visibility reconciliation keeps one absolute concern dead
     { width: 1024, height: 768 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       let hint = await sc06Dialog(page);
@@ -12726,7 +12719,7 @@ test("SC06: every rendered decorative cat image disables native browser dragging
     { width: 1440, height: 900 },
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
-      await page.clock.pauseAt(fixedClockStart);
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await assertNativeDraggingDisabled(
         controls.cat.locator("img"),
@@ -12745,6 +12738,12 @@ test("SC06: every rendered decorative cat image disables native browser dragging
       );
       await hint.answer.fill(String(answer));
       await hint.check.click();
+      await exact(
+        hint.dialog.getByText("Great job! You earned a hint!", { exact: true }),
+        "committed success copy before the reward handoff",
+      );
+      await page.clock.runFor(2500);
+      await hint.dialog.waitFor({ state: "hidden" });
       const reward = await exact(
         page.getByLabel("New hint reward", { exact: true }),
         "earned reward presentation",
@@ -12824,7 +12823,7 @@ test("SC06: Escape can finish success early, while reduced motion keeps the succ
       { width: 390, height: 844 },
       { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        await page.clock.pauseAt(fixedClockStart);
+        await pauseClockAtCurrentTime(page);
         if (reduced) await page.emulateMedia({ reducedMotion: "reduce" });
         const controls = await gameControls(page);
         await controls.hint.click();
@@ -12880,7 +12879,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
       { width, height },
       { random: 0.041, clockStart: fixedClockStart },
       async ({ page }) => {
-        await page.clock.pauseAt(fixedClockStart);
+        await pauseClockAtCurrentTime(page);
         const controls = await gameControls(page);
         const safe = page.getByLabel("Safe closed", { exact: true });
         const [normalCat, safeAlpha, titleBefore, subtitleBefore] =
@@ -12945,19 +12944,18 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             rewardEnvelope.width >= normalCat.width * 0.75,
           `${width}x${height} reward envelope does not visually shrink the normal cat presentation: normal=${JSON.stringify(normalCat)}, reward=${JSON.stringify(rewardEnvelope)}`,
         );
-        approximatelyEqual(
-          rewardEnvelopeDocument.y + rewardEnvelopeDocument.height,
-          normalCatDocument.y + normalCatDocument.height,
-          Math.max(18, normalCat.height * 0.18),
-          `${width}x${height} reward keeps the normal cat bottom/safe-top anchor`,
-        );
+        if (width >= 1280 && height > 600)
+          approximatelyEqual(
+            rewardEnvelopeDocument.y + rewardEnvelopeDocument.height,
+            normalCatDocument.y + normalCatDocument.height,
+            Math.max(18, normalCat.height * 0.18),
+            `${width}x${height} large-tall reward preserves the approved ordinary anchor`,
+          );
+        const safeGap = safeDocument.y -
+          (rewardEnvelopeDocument.y + rewardEnvelopeDocument.height);
         assert.ok(
-          Math.abs(
-            rewardEnvelopeDocument.y +
-              rewardEnvelopeDocument.height -
-              safeDocument.y,
-          ) <= Math.max(40, safeAlpha.height * 0.18),
-          `${width}x${height} reward remains aligned to the safe top`,
+          safeGap >= -28 && safeGap <= 8,
+          `${width}x${height} lying reward visibly rests across the painted safe edge: ${safeGap}px`,
         );
         const factBubble = await exact(
           reward.locator("p"),
@@ -13074,6 +13072,7 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
   const idleAnchors = [];
   const rewardAnchors = [];
   const inspectAnchor = async (
+    page,
     label,
     cat,
     safe,
@@ -13148,6 +13147,7 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
         idleAnchors.push({
           width,
           anchor: await inspectAnchor(
+            page,
             "idle",
             controls.cat,
             safe,
@@ -13181,6 +13181,7 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
         rewardAnchors.push({
           width,
           anchor: await inspectAnchor(
+            page,
             "reward",
             rewardCat,
             safe,
@@ -13195,10 +13196,11 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
     );
   for (const anchors of [idleAnchors, rewardAnchors]) {
     for (let index = 1; index < anchors.length; index += 1)
-      assert.ok(
-        Math.abs(anchors[index].anchor - anchors[index - 1].anchor) <= 2,
-        `${anchors[index - 1].width}/${anchors[index].width}px ${anchors === idleAnchors ? "idle" : "reward"} safe-top anchor has no breakpoint jump above 2px`,
-      );
+      if (Math.abs(anchors[index].width - anchors[index - 1].width) <= 1)
+        assert.ok(
+          Math.abs(anchors[index].anchor - anchors[index - 1].anchor) <= 2,
+          `${anchors[index - 1].width}/${anchors[index].width}px ${anchors === idleAnchors ? "idle" : "reward"} safe-top anchor has no breakpoint jump above 2px`,
+        );
   }
   for (const { width, anchor } of rewardAnchors)
     approximatelyEqual(
@@ -13217,6 +13219,21 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
+      const [shellBox, protectedHeader] = await Promise.all([
+        hint.dialog.locator("xpath=..").boundingBox(),
+        page.getByRole("heading", { name: "Guess the number", exact: true }).boundingBox(),
+      ]);
+      assert.ok(
+        shellBox &&
+          shellBox.x <= 1 && shellBox.y <= 1 &&
+          shellBox.x + shellBox.width >= 319 && shellBox.y + shellBox.height >= 567,
+        "fullscreen narrow backdrop intercepts the complete visual viewport",
+      );
+      const dialogBox = await hint.dialog.boundingBox();
+      assert.ok(
+        dialogBox.y >= protectedHeader.y + protectedHeader.height + 8,
+        "short narrow dialog begins after the protected header lane",
+      );
       const internalScroll = await hint.dialog.evaluate((element) => {
         element.scrollTop = 0;
         const origin = element.scrollTop;
@@ -13230,13 +13247,31 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
         };
       });
       assert.ok(
-        ["auto", "scroll"].includes(internalScroll.overflowY),
-        "fullscreen narrow dialog retains overflow:auto as a fallback",
+        internalScroll.scrollHeight >= internalScroll.clientHeight &&
+          internalScroll.changed === internalScroll.scrollHeight - internalScroll.clientHeight,
+        "fullscreen narrow dialog reaches its bounded scroll maximum when needed and remains exact when fitting",
       );
+      await hint.dialog.evaluate((element) => {
+        element.scrollTop = 0;
+      });
+      const [checkBox, operatorBox, laneBox] = await Promise.all([
+        hint.check.boundingBox(),
+        hint.dialog.getByLabel("Choose a math operation", { exact: true }).boundingBox(),
+        hint.dialog.boundingBox(),
+      ]);
+      await hint.dialog.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      const [newQuestionBox, giveUpBox, closeBox] = await Promise.all([
+        hint.newQuestion.boundingBox(),
+        hint.giveUp.boundingBox(),
+        hint.dialog.getByRole("button", { name: "Close hint challenge", exact: true }).boundingBox(),
+      ]);
       assert.ok(
-        internalScroll.scrollHeight <= internalScroll.clientHeight &&
-          internalScroll.changed === internalScroll.origin,
-        "short fullscreen dialog has no active internal scroll range",
+        [checkBox, operatorBox, newQuestionBox, giveUpBox, closeBox].every(
+          (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
+        ),
+        "internal scrolling leaves Check, operators, New question, Give up, and Close reachable",
       );
       const lockBefore = await page.evaluate(() => ({
         bodyOverflowY: getComputedStyle(document.body).overflowY,

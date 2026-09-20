@@ -177,7 +177,7 @@ export function CatAvatar({ presentation }: { presentation: PresentationState })
     controller.catPetStart(current?.modality ?? (event.detail === 0 ? "keyboard" : "pointer"));
   };
   const visualMode = presentation.mode === "HISTORY" || ((presentation.mode === "TERMINAL_STORED_HINTS_PENDING" || presentation.mode === "STORED_HINTS") && (presentation.resumeMode === "WON" || presentation.resumeMode === "SURRENDERED")) ? presentation.resumeMode : presentation.mode;
-  const art = <span ref={artRef} aria-hidden="true" className={styles.art}><Image src={`/safe-cat/${artByMode[visualMode]}`} alt="" fill sizes="272px" draggable={false} /></span>;
+  const art = <span ref={artRef} aria-hidden="true" className={styles.art}><Image src={`/safe-cat/${artByMode[visualMode]}`} alt="" fill sizes="272px" loading="eager" draggable={false} /></span>;
   const heartStyle = {
     "--heart-origin-x": `${burstOrigin.x}%`,
     "--heart-origin-y": `${burstOrigin.y}%`,

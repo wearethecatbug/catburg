@@ -58,7 +58,7 @@ function laneBounds(laneRefs: LaneRefs): Rect | null {
     top = Math.max(top, exclusion.bottom + 8);
   }
   return {
-    bottom: laneRect.bottom - 8,
+    bottom: laneRect.bottom,
     left: laneRect.left + 8,
     right: laneRect.right - 8,
     top,
