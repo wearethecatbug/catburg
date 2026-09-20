@@ -1020,6 +1020,7 @@ test("History anchors eight document pixels below its button and Home restores t
   await withSession({ width: 390, height: 844 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     await controls.history.click();
+    await waitForStableVisualGeometry(page);
     const panel = page.getByRole("region", { name: "History", exact: true });
     const handle = page.getByRole("button", {
       name: "Move History",
