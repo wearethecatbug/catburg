@@ -132,6 +132,7 @@ async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} ar
   const owner = await ordinaryOwner(page, mode, description);
   const image = await exact(owner.locator("img"), `${description} image`);
   await waitForStableVisualGeometry(page, false);
+  await image.waitFor({ state: "visible" });
   assert.equal(await image.isVisible(), true, `${description} image is visible`);
   let state;
   for (let attempt = 0; attempt < 100 && !state?.ready; attempt += 1) {
@@ -2478,8 +2479,9 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
 test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only for 700ms", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { hasTouch: true },
+    { hasTouch: true, clockStart: fixedClockStart },
     async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
       await page.emulateMedia({ reducedMotion: "reduce" });
       const pet = await exact(
         page.getByRole("button", { name: "Pet the cat", exact: true }),
@@ -2553,6 +2555,7 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
           "late reduced-motion heart opacity progresses toward cleanup",
         );
       await page.waitForTimeout(800);
+      await page.clock.runFor(1200);
       await page
         .locator('[data-presentation-mode="PLAYING"]')
         .waitFor({ state: "visible", timeout: 5000 });
@@ -3705,6 +3708,22 @@ test("SC05 provider: terminal outcomes retain earned stored hints without re-ena
           outcome === "won" ? "WON" : "SURRENDERED",
           false,
           `${outcome} terminal presentation`,
+        );
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.textContent?.trim()),
+          "New game",
+          `${outcome} initial terminal transition focuses New game`,
+        );
+        await controls.hint.click();
+        await page.clock.runFor(150);
+        await exact(
+          page.getByRole("region", { name: "Stored hints", exact: true }),
+          `${outcome} pointer-opened stored-hint card`,
+        );
+        assert.equal(
+          await page.evaluate(() => document.activeElement?.textContent?.trim()),
+          "Show hint",
+          `${outcome} pointer-opening earned hints does not refocus New game`,
         );
         await controls.hint.focus();
         const card = await exact(
@@ -12642,6 +12661,37 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
         null,
         "an inactive-success submit cannot introduce retry-invalid state",
       );
+    },
+  );
+});
+
+test("SC07 Copilot P2: an initially hidden document pauses presentation deadlines until first visibility", async () => {
+  await withSession(
+    { width: 1024, height: 768 },
+    {
+      clockStart: fixedClockStart,
+      beforeGoto: async (page) => {
+        await page.clock.pauseAt(fixedClockStart);
+        await page.addInitScript(() => {
+          let hidden = true;
+          Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+          Object.defineProperty(document, "visibilityState", { configurable: true, get: () => hidden ? "hidden" : "visible" });
+          globalThis.__safeCatRevealDocument = () => {
+            hidden = false;
+            document.dispatchEvent(new Event("visibilitychange"));
+          };
+        });
+      },
+    },
+    async ({ page }) => {
+      await page.clock.runFor(30_000);
+      await ordinaryOwner(page, "PLAYING", "initially hidden mount before first visibility");
+      await page.evaluate(() => globalThis.__safeCatRevealDocument());
+      await page.clock.runFor(0);
+      await page.clock.runFor(15_000);
+      await ordinaryOwner(page, "PLAYING", "first visible interval preserves its full idle deadline");
+      await page.clock.runFor(1);
+      await ordinaryOwner(page, "LONG_IDLE", "first visible idle deadline begins after reconciliation");
     },
   );
 });

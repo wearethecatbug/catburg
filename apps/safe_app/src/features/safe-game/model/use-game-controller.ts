@@ -79,10 +79,10 @@ export function useGameController(roundSource: RoundSource = defaultRoundSource)
       suppressStoredEscapeRestore.current = false;
       focus("history");
     } else if (
+      pendingFocus.current === "new-game" &&
       state.phase !== "playing" &&
       presentation.mode !== "HISTORY" &&
-      !(presentation.mode === "STORED_HINTS" && presentation.inputModality === "keyboard") &&
-      !(pendingFocus.current === "hint" && suppressStoredEscapeRestore.current)
+      !(presentation.mode === "STORED_HINTS" && presentation.inputModality === "keyboard")
     ) {
       suppressStoredEscapeRestore.current = false;
       focus("new-game");
@@ -123,7 +123,10 @@ export function useGameController(roundSource: RoundSource = defaultRoundSource)
     retainHintFocusThroughReward.current = false;
     const guess = normalizeSafeGuess(current.input);
     dispatch({ type: "submit-guess" });
-    if (guess.valid) send(guess.value === current.code ? { type: "ROUND_WON", roundEpoch: current.roundId } : { type: "VALID_WRONG_GUESS", roundEpoch: current.roundId });
+    if (guess.valid) {
+      if (guess.value === current.code) pendingFocus.current = "new-game";
+      send(guess.value === current.code ? { type: "ROUND_WON", roundEpoch: current.roundId } : { type: "VALID_WRONG_GUESS", roundEpoch: current.roundId });
+    }
   }
   function changeGuessInput(input: string, intent: GuessInputEditIntent = "insert") {
     const current = stateRef.current;

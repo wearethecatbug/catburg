@@ -80,6 +80,7 @@ export function usePresentationMachine(roundEpoch: number) {
         roundEpoch: current.current.roundEpoch,
       });
     document.addEventListener("visibilitychange", onVisibility);
+    onVisibility();
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [send]);
 
