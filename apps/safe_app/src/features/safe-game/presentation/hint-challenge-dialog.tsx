@@ -8,12 +8,12 @@ import type {
   HintOperator,
 } from "../domain/game.types";
 import { useSafeGameContext } from "../model/safe-game-context";
+import type { PresentationState } from "../model/presentation-machine";
 import styles from "./hint-challenge-dialog.module.css";
 
 type Props = {
   challenge: HintChallengeData;
-  successFactId?: string | null;
-  completionPending?: boolean;
+  handoff: Extract<PresentationState, { mode: "HINT_SUCCESS_HANDOFF" }> | null;
 };
 type CatState = "thinking" | "concerned" | "sad" | "happy";
 const operators: Array<{
@@ -58,11 +58,9 @@ const desktopCatAssets: Record<CatState, string> = {
 
 export function HintChallengeDialog({
   challenge,
-  successFactId = null,
-  completionPending = false,
+  handoff,
 }: Props) {
   const controller = useSafeGameContext();
-  const completeRef = useRef(controller.completeHintSuccess);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const frameShellRef = useRef<HTMLDivElement | null>(null);
@@ -75,19 +73,16 @@ export function HintChallengeDialog({
   const active =
     controller.state.hintChallenge?.roundId === challenge.roundId &&
     controller.state.hintChallenge.challengeId === challenge.challengeId;
-  const isSuccess = successFactId !== null;
-  // Keep the success bubble stable while the controller promotes the awarded fact.
-  const displaysSuccess = isSuccess || completionPending;
+  const isSuccess = handoff !== null;
+  const successFactId = handoff?.award.factId ?? null;
+  const displaysSuccess = isSuccess;
   const abandoned = active && controller.state.revealedMathAnswer != null;
   const displayedCatState = displaysSuccess
     ? "happy"
     : abandoned
       ? "sad"
       : catState;
-  const frozen = isSuccess || completionPending;
-  useEffect(() => {
-    completeRef.current = controller.completeHintSuccess;
-  }, [controller.completeHintSuccess]);
+  const frozen = isSuccess;
   useEffect(() => {
     setAnswer("");
     setCatState("thinking");
@@ -98,7 +93,10 @@ export function HintChallengeDialog({
     if (frozen) closeButtonRef.current?.focus({ preventScroll: true });
   }, [frozen]);
   useEffect(() => {
-    if (abandoned) setRetryVisible(false);
+    if (abandoned) {
+      setRetryVisible(false);
+      controller.newHintButtonRef.current?.focus({ preventScroll: true });
+    }
   }, [abandoned]);
   useEffect(() => {
     const shell = frameShellRef.current;
@@ -157,29 +155,11 @@ export function HintChallengeDialog({
     };
   }, [identity, abandoned, displaysSuccess]);
   useEffect(() => {
-    if (!isSuccess || !successFactId) return;
-    // Keep the successful challenge mounted until its matching persisted fact finishes presenting.
-    const timer = setTimeout(
-      () =>
-        completeRef.current(
-          challenge.roundId,
-          challenge.challengeId,
-          successFactId,
-        ),
-      2_500,
-    );
-    return () => clearTimeout(timer);
-  }, [challenge.challengeId, challenge.roundId, isSuccess, successFactId]);
-  useEffect(() => {
     if (!isSuccess) return;
     const onEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape" && successFactId) {
         event.preventDefault();
-        completeRef.current(
-          challenge.roundId,
-          challenge.challengeId,
-          successFactId,
-        );
+        controller.completeHintSuccess(challenge.roundId, challenge.challengeId, successFactId, "escape");
       }
     };
     document.addEventListener("keydown", onEscape);
@@ -187,11 +167,7 @@ export function HintChallengeDialog({
   }, [challenge.challengeId, challenge.roundId, isSuccess, successFactId]);
   function completeEarly() {
     if (isSuccess && successFactId)
-      completeRef.current(
-        challenge.roundId,
-        challenge.challengeId,
-        successFactId,
-      );
+        controller.completeHintSuccess(challenge.roundId, challenge.challengeId, successFactId);
     else
       controller.closeHintChallenge(challenge.roundId, challenge.challengeId);
   }
@@ -315,7 +291,7 @@ export function HintChallengeDialog({
                   width={260}
                   height={260}
                   draggable={false}
-                  priority
+                  loading="eager"
                 />
               </picture>
               <p className={styles.catNotice}>

@@ -340,18 +340,18 @@
     transform: none;
   }
 }
-/* One fixed logical canvas keeps every desktop/tablet element in lockstep. */
+/* Desktop retains one fixed logical canvas so its elements scale in lockstep. */
 .backdrop {
-  padding: 24px;
+  padding: var(--dialog-lane-top, 0px) 24px 12px;
 }
 
 .dialogShell {
   aspect-ratio: 1327 / 1185;
   height: auto;
   isolation: isolate;
-  max-height: calc(100svh - 48px);
+  max-height: calc(100svh - var(--dialog-lane-top, 0px) - 12px);
   position: relative;
-  width: min(940px, calc(100vw - 48px), calc((100svh - 48px) * 1327 / 1185));
+  width: min(940px, calc(100vw - 48px), calc((100svh - var(--dialog-lane-top, 0px) - 12px) * 1327 / 1185));
 }
 
 .dialogShell::before {
@@ -368,7 +368,7 @@
 @media (min-width: 821px) and (max-height: 800px) {
   .dialogShell {
     aspect-ratio: auto;
-    height: calc(100svh - 48px);
+    height: calc(100svh - var(--dialog-lane-top, 0px) - 12px);
     overflow-x: hidden;
     overflow-y: auto;
     width: min(940px, calc(100vw - 48px));
@@ -1174,6 +1174,13 @@
   }
 }
 
+@media (min-width: 601px) and (max-width: 767px) {
+  .heading {
+    box-sizing: border-box;
+    padding-inline: clamp(39px, calc(234px - 26vw), 78px);
+  }
+}
+
 @media (max-width: 600px) {
   .cat.reflectedCat {
     transform: scaleX(-1);
@@ -1675,6 +1682,7 @@
   }
 
   .closeButton {
+    right: calc(8px - clamp(12px, 4vw, 24px));
     top: env(safe-area-inset-top, 0px);
   }
 }
@@ -1702,5 +1710,30 @@
   .cat,
   .catNotice {
     align-self: center;
+  }
+}
+
+@media (max-width: 600px) and (max-height: 600px) {
+  .dialog {
+    align-content: start;
+  }
+}
+
+@media (max-width: 820px) {
+  .backdrop {
+    padding: var(--dialog-lane-top, 0px) 0 0;
+  }
+
+  .dialogShell {
+    height: calc(100svh - var(--dialog-lane-top, 0px));
+  }
+
+  .dialog {
+    height: 100%;
+    min-height: 100%;
+  }
+
+  .closeButton {
+    position: absolute;
   }
 }

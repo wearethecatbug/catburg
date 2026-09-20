@@ -30,7 +30,7 @@ function apply(state: SafeGameState, ...actions: SafeGameAction[]) {
   return actions.reduce(reduceSafeGame, state);
 }
 
-test("F01: New game atomically clears a pending or earned hint and History while advancing the round", () => {
+test("F01: New game atomically clears a pending or earned hint while advancing the round", () => {
   const initial = initialState(1000);
   const challenge = createChallenge(() => 0, initial.roundId, "+", "f01");
   const opened = apply(initial, { type: "show-hint", challenge });
@@ -41,7 +41,7 @@ test("F01: New game atomically clears a pending or earned hint and History while
     answer: challenge.expectedAnswer,
   });
   const reset = apply(
-    { ...earned, historyVisible: true },
+    earned,
     { type: "new-round", code: 1 },
   );
 
@@ -51,7 +51,6 @@ test("F01: New game atomically clears a pending or earned hint and History while
       input: reset.input,
       feedback: reset.feedback,
       attempts: reset.attempts,
-      historyVisible: reset.historyVisible,
       hintChallenge: reset.hintChallenge,
       hintFeedback: reset.hintFeedback,
       revealedMathAnswer: reset.revealedMathAnswer,
@@ -67,7 +66,6 @@ test("F01: New game atomically clears a pending or earned hint and History while
       input: "",
       feedback: "none",
       attempts: [],
-      historyVisible: false,
       hintChallenge: null,
       hintFeedback: "none",
       revealedMathAnswer: null,
@@ -839,18 +837,16 @@ test("F03/F05: invalid or wrong answers keep the challenge open; closing earns n
 });
 
 // Keep the expected shape static so optional-property regressions cannot mirror the state under
-// test.
+// test. Presentation-only fields must stay outside the domain reducer as well.
 const canonicalGameStateKeys = [
   "activeHintPredicateId",
   "attempts",
-  "catReaction",
   "code",
   "earnedHint",
   "earnedHintFacts",
   "feedback",
   "hintChallenge",
   "hintFeedback",
-  "historyVisible",
   "input",
   "issuedHintPredicateIds",
   "latestAwardedFactId",
@@ -868,7 +864,29 @@ function assertCanonicalStateKeys(state: SafeGameState, description: string) {
     canonicalGameStateKeys,
     description,
   );
+  assert.equal(
+    Object.hasOwn(state, "catReaction"),
+    false,
+    `${description}: catReaction belongs to presentation`,
+  );
+  assert.equal(
+    Object.hasOwn(state, "historyVisible"),
+    false,
+    `${description}: historyVisible belongs to presentation`,
+  );
 }
+
+test("the domain action contract excludes presentation-only action names", () => {
+  const retained: SafeGameAction = { type: "set-input", input: "7" };
+  assert.equal(retained.type, "set-input");
+
+  // @ts-expect-error presentation hover belongs to the presentation machine
+  const removedHover: SafeGameAction = { type: "set-cat-hover", active: true };
+  // @ts-expect-error presentation History belongs to the presentation machine
+  const removedHistory: SafeGameAction = { type: "toggle-history" };
+  void removedHover;
+  void removedHistory;
+});
 
 function openChallengeAndAnswerWrong(code: number, challengeId: string) {
   const initial = initialState(code);

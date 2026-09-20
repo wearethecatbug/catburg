@@ -2,10 +2,33 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  height: 204px;
+  height: 100%;
   padding: 0;
   position: relative;
-  width: 272px;
+  width: 100%;
+}
+.catContainer:not(button) {
+  cursor: default;
+}
+.catContainer:disabled {
+  cursor: default;
+}
+.catContainer:focus-visible {
+  outline: 3px solid #ff5d9c;
+  outline-offset: 4px;
+}
+.prompt {
+  background: #fff7df;
+  border: 2px solid #2d1d4f;
+  border-radius: 999px;
+  color: #2d1d4f;
+  font-weight: 800;
+  left: 50%;
+  padding: 6px 12px;
+  position: absolute;
+  /* The source canvas starts above its painted cat.  Keep the real bubble in the reserved effect band. */
+  top: 80px;
+  transform: translateX(-50%);
 }
 .reactionDescription {
   border: 0;
@@ -28,38 +51,54 @@
   object-fit: contain;
   object-position: center bottom;
 }
-.surrendered .art img {
-  transform: scale(1.3) translateY(13.5%);
-  transform-origin: center bottom;
+.catContainer[data-visual-mode="SURRENDERED"] .art img {
+  /* Keep the flag cat in the common slot: its paws stay on the safe while
+     the taller art remains below the permanent subtitle. Its painted paws
+     end at source alpha y=227/272, rather than at the transparent canvas edge. */
+  transform: scale(0.69);
+  transform-origin: center 83.5%;
+}
+.catContainer[data-visual-mode="WON"] .art img {
+  /* The celebrating source is taller above its paws. Scale about the safe
+     contact point (source alpha bottom: 227/272) so its painted pixels
+     clear the permanent subtitle without lifting the paws. */
+  transform: scale(0.62);
+  transform-origin: center 83.5%;
 }
 .hearts {
+  --heart-origin-x: 50%;
+  --heart-origin-y: 50%;
+  --heart-rise: 42px;
   inset: 0;
   pointer-events: none;
   position: absolute;
 }
 .hearts i {
-  animation: heart var(--duration) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: heart 1200ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   color: #ff5d9c;
   font-size: 22px;
   font-style: normal;
-  left: calc(var(--origin-x) + var(--x));
+  left: var(--heart-origin-x);
   position: absolute;
   text-shadow:
     0 1px 0 rgb(255 246 251 / 0.9),
     0 0 5px rgb(255 93 156 / 0.4);
-  top: calc(var(--origin-y) + var(--y));
+  top: var(--heart-origin-y);
 }
+.hearts i:nth-child(1) { --heart-offset-x: -24px; }
+.hearts i:nth-child(2) { --heart-offset-x: 0px; }
+.hearts i:nth-child(3) { --heart-offset-x: 24px; }
 @keyframes heart {
   0% {
     opacity: 0;
-    transform: translateY(0) scale(0.86);
+    transform: translate(var(--heart-offset-x), 0) scale(0.86);
   }
   30% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(calc(var(--rise) * -1)) scale(0.96);
+    transform: translate(var(--heart-offset-x), calc(-1 * var(--heart-rise))) scale(0.96);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -87,12 +126,29 @@
 
 @media (max-width: 600px) {
   .catContainer {
-    height: 156px;
-    width: 208px;
+    height: 100%;
+    width: 100%;
   }
   .hearts i {
     font-size: 18px;
   }
+  .prompt { top: 48px; }
+}
+
+@media (min-width: 391px) and (max-width: 600px) {
+  .prompt { top: 86px; }
+}
+
+@media (min-width: 601px) and (max-width: 1279px) {
+  .prompt { top: 63px; }
+}
+
+@media (min-width: 1280px) and (max-height: 800px) {
+  .prompt { top: 104px; }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .prompt { top: 20px; }
 }
 
 @keyframes fade-in {

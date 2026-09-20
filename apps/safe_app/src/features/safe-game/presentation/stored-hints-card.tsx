@@ -35,20 +35,14 @@ function scrollStoredHints(event: KeyboardEvent<HTMLUListElement>) {
 
 export function StoredHintsCard({
   facts,
-  onPointerEnter,
-  onPointerLeave,
 }: {
   facts: readonly EarnedHintFact[];
-  onPointerEnter?: () => void;
-  onPointerLeave?: () => void;
 }) {
   return (
     <section
       id="stored-hints-card"
       className={styles.card}
       aria-label="Stored hints"
-      onPointerEnter={onPointerEnter}
-      onPointerLeave={onPointerLeave}
     >
       <h2>Stored hints</h2>
       <ul

@@ -1,418 +1,247 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+"use client";
+
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import {
   chooseNextHintPredicate,
   createHintChallenge,
   createSafeGameState,
-  generateSafeCode,
+  defaultRoundSource,
+  normalizeSafeGuess,
   reduceSafeGame,
-} from "../domain";
-import type {
-  HintChallenge,
-  HintOperator,
-  SafeGameAction,
-  SafeGameState,
+  type EarnedHintFact,
+  type HintOperator,
+  type RoundSource,
+  type SafeGameAction,
+  type SafeGameState,
 } from "../domain";
 import { createChallengeId } from "./challenge-id";
+import { usePresentationMachine } from "./use-presentation-machine";
 
-type FocusTarget = "hint" | "input" | "new-game" | null;
+type FocusTarget = "hint" | "history" | "input" | "new-game" | null;
 type GuessInputEditIntent = "delete" | "insert";
-export type HintSuccessPresentation = Readonly<{
-  challenge: HintChallenge;
-  roundId: number;
-  challengeId: string;
-  latestAwardedFactId: string | null;
-}>;
-type HintSuccessPending = Readonly<{
-  challenge: HintChallenge;
-  previousAwardedFactId: string | null;
-}>;
 
-function createInitialGameState() {
-  return createSafeGameState(generateSafeCode(Math.random));
+function factText(fact: EarnedHintFact) {
+  if (fact.kind === "parity") return `The code is ${fact.parity}.`;
+  if (fact.kind === "divisibility") return fact.relation === "divisible" ? `The code is divisible by ${fact.divisor}.` : `The code is not divisible by ${fact.divisor}.`;
+  return `The code is between ${fact.minimum} and ${fact.maximum}.`;
 }
 
-export function useGameController() {
-  const [state, dispatch] = useReducer<
-    SafeGameState,
-    undefined,
-    [SafeGameAction]
-  >(reduceSafeGame, undefined, createInitialGameState);
-  const stateRef = useRef<SafeGameState | null>(null);
-  const roundGenerationRef = useRef(0);
-  const pendingHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const pendingFocusRef = useRef<FocusTarget>("input");
+function initialState(source: RoundSource) {
+  return createSafeGameState(source.nextCode());
+}
+
+/** Sanitized domain-to-presentation adapter. Domain never stores visual state or timers. */
+export function useGameController(roundSource: RoundSource = defaultRoundSource) {
+  const [state, dispatch] = useReducer<SafeGameState, RoundSource, [SafeGameAction]>(reduceSafeGame, roundSource, initialState);
+  const stateRef = useRef(state);
+  const inputRevision = useRef(0);
+  const pendingFocus = useRef<FocusTarget>("input");
+  const retainHintFocusThroughReward = useRef(false);
+  const restoredHintFocus = useRef<{ roundId: number; target: HTMLButtonElement } | null>(null);
+  const suppressStoredEscapeRestore = useRef(false);
+  const pendingStoredFocusLeave = useRef<{ roundEpoch: number; stateEpoch: number } | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const hintButtonRef = useRef<HTMLButtonElement | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement | null>(null);
   const newGameButtonRef = useRef<HTMLButtonElement | null>(null);
   const newHintButtonRef = useRef<HTMLButtonElement | null>(null);
-  const completedChallengeRef = useRef<string | null>(null);
-  const [hintSuccessPresentation, setHintSuccessPresentation] =
-    useState<HintSuccessPresentation | null>(null);
-  const [hintSuccessPending, setHintSuccessPending] =
-    useState<HintSuccessPending | null>(null);
+  const challengeRef = useRef<import("../domain").HintChallenge | null>(null);
   const [dialAngle, setDialAngle] = useState(0);
   const [titleRun, setTitleRun] = useState(0);
+  const { presentation, send } = usePresentationMachine(state.roundId);
 
-  // Browser callbacks consult committed state, never a speculative render's snapshot.
+  useLayoutEffect(() => { stateRef.current = state; }, [state]);
+
+  const focus = (target: FocusTarget) => {
+    const node = target === "hint" ? hintButtonRef.current : target === "history" ? historyButtonRef.current : target === "new-game" ? newGameButtonRef.current : inputRef.current;
+    if (node && !node.disabled && node.isConnected) node.focus({ preventScroll: true });
+  };
+  const focusRestoredHint = () => {
+    const target = hintButtonRef.current;
+    if (!target || target.disabled || !target.isConnected || document.activeElement === target) {
+      restoredHintFocus.current = null;
+      return;
+    }
+    restoredHintFocus.current = { roundId: stateRef.current.roundId, target };
+    try {
+      target.focus({ preventScroll: true });
+    } finally {
+      if (document.activeElement !== target) restoredHintFocus.current = null;
+    }
+  };
   useLayoutEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  function currentState() {
-    return stateRef.current ?? state;
-  }
-
-  function clearPendingHoverTimer() {
-    // Invalidate queued work as well as clearing the currently scheduled timeout.
-    roundGenerationRef.current += 1;
-    if (pendingHoverTimerRef.current) {
-      clearTimeout(pendingHoverTimerRef.current);
-      pendingHoverTimerRef.current = null;
-    }
-  }
-
-  function focusCurrentTarget(target: FocusTarget) {
-    const candidate =
-      target === "hint"
-        ? hintButtonRef.current
-        : target === "new-game"
-          ? newGameButtonRef.current
-          : inputRef.current;
-    if (candidate && !candidate.disabled && candidate.isConnected)
-      candidate.focus({ preventScroll: true });
-  }
-
-  useEffect(() => () => clearPendingHoverTimer(), []);
-  useEffect(() => {
-    if (state.phase !== "playing") clearPendingHoverTimer();
-  }, [state.phase]);
-  useEffect(() => {
-    if (state.phase !== "playing") {
-      focusCurrentTarget("new-game");
-      pendingFocusRef.current = null;
+    const storedFocusLeave = pendingStoredFocusLeave.current;
+    if (storedFocusLeave && (storedFocusLeave.roundEpoch !== presentation.roundEpoch || storedFocusLeave.stateEpoch + 1 !== presentation.stateEpoch || presentation.surface !== "none")) pendingStoredFocusLeave.current = null;
+    if (storedFocusLeave && storedFocusLeave.roundEpoch === presentation.roundEpoch && storedFocusLeave.stateEpoch + 1 === presentation.stateEpoch && presentation.surface === "none") {
+      pendingStoredFocusLeave.current = null;
+      suppressStoredEscapeRestore.current = false;
+    } else if (pendingFocus.current === "history" && presentation.surface === "none") {
+      suppressStoredEscapeRestore.current = false;
+      focus("history");
     } else if (
-      !state.hintChallenge &&
-      !hintSuccessPresentation &&
-      !hintSuccessPending
+      pendingFocus.current === "new-game" &&
+      state.phase !== "playing" &&
+      presentation.mode !== "HISTORY" &&
+      !(presentation.mode === "STORED_HINTS" && presentation.inputModality === "keyboard")
     ) {
-      // Keep dialog autofocus intact until the current challenge actually closes.
-      focusCurrentTarget(pendingFocusRef.current ?? "input");
-      pendingFocusRef.current = null;
+      suppressStoredEscapeRestore.current = false;
+      focus("new-game");
     }
-  }, [
-    state.phase,
-    state.roundId,
-    state.hintChallenge,
-    hintSuccessPresentation,
-    hintSuccessPending,
-  ]);
-
+    else if (pendingFocus.current === "hint" && presentation.mode === "HINT_REWARD") {
+      focusRestoredHint();
+      retainHintFocusThroughReward.current = true;
+    } else if (presentation.surface === "none") {
+      if (retainHintFocusThroughReward.current) retainHintFocusThroughReward.current = false;
+      else if (pendingFocus.current === "hint" && suppressStoredEscapeRestore.current) {
+        suppressStoredEscapeRestore.current = false;
+        focusRestoredHint();
+      } else if (pendingFocus.current === "hint") {
+        suppressStoredEscapeRestore.current = false;
+        focus("hint");
+      } else if (pendingFocus.current === "input") {
+        suppressStoredEscapeRestore.current = false;
+        focus("input");
+      } else {
+        suppressStoredEscapeRestore.current = false;
+      }
+    }
+    if (pendingFocus.current !== "hint" || presentation.mode !== "HINT_SUCCESS_HANDOFF") pendingFocus.current = null;
+  }, [presentation.roundEpoch, presentation.stateEpoch, presentation.surface, state.phase, state.roundId]);
   useEffect(() => {
-    if (!hintSuccessPending) return;
-    const pending = hintSuccessPending;
-    if (state.roundId !== pending.challenge.roundId) {
-      setHintSuccessPending(null);
-      return;
-    }
-    const activeChallenge = state.hintChallenge;
-    if (activeChallenge) {
-      if (
-        activeChallenge.roundId !== pending.challenge.roundId ||
-        activeChallenge.challengeId !== pending.challenge.challengeId ||
-        state.revealedMathAnswer !== null ||
-        !state.activeHintPredicateId
-      )
-        setHintSuccessPending(null);
-      return;
-    }
-    // Only a reducer-produced, new public fact promotes the held dialog into success.
-    if (
-      state.latestAwardedFactId &&
-      state.latestAwardedFactId !== pending.previousAwardedFactId
-    ) {
-      setHintSuccessPresentation({
-        challenge: pending.challenge,
-        roundId: pending.challenge.roundId,
-        challengeId: pending.challenge.challengeId,
-        latestAwardedFactId: state.latestAwardedFactId,
-      });
-    }
-    setHintSuccessPending(null);
-  }, [
-    hintSuccessPending,
-    state.activeHintPredicateId,
-    state.hintChallenge,
-    state.latestAwardedFactId,
-    state.phase,
-    state.revealedMathAnswer,
-    state.roundId,
-  ]);
+    if (presentation.mode === "HINT_REWARD") challengeRef.current = null;
+  }, [presentation.mode]);
 
   function startNewRound() {
-    clearPendingHoverTimer();
-    pendingFocusRef.current = "input";
-    setDialAngle(0);
-    setTitleRun((run) => run + 1);
-    completedChallengeRef.current = null;
-    setHintSuccessPresentation(null);
-    setHintSuccessPending(null);
-    dispatch({ type: "new-round", code: generateSafeCode(Math.random) });
+    const roundEpoch = stateRef.current.roundId + 1;
+    retainHintFocusThroughReward.current = false; pendingStoredFocusLeave.current = null; pendingFocus.current = "input"; inputRevision.current = 0; challengeRef.current = null; setDialAngle(0); setTitleRun((value) => value + 1);
+    dispatch({ type: "new-round", code: roundSource.nextCode() });
+    send({ type: "ROUND_STARTED", roundEpoch });
   }
-
   function submitGuess() {
-    if (currentState().phase !== "playing") return;
+    const current = stateRef.current;
+    if (current.phase !== "playing" || current.hintChallenge) return;
+    retainHintFocusThroughReward.current = false;
+    const guess = normalizeSafeGuess(current.input);
     dispatch({ type: "submit-guess" });
+    if (guess.valid) {
+      if (guess.value === current.code) pendingFocus.current = "new-game";
+      send(guess.value === current.code ? { type: "ROUND_WON", roundEpoch: current.roundId } : { type: "VALID_WRONG_GUESS", roundEpoch: current.roundId });
+    }
   }
-
-  function changeGuessInput(
-    input: string,
-    editIntent: GuessInputEditIntent = "insert",
-  ) {
-    const previous = currentState().input;
-    if (input !== previous) {
-      // Keep the rotation cumulative so a wrap never makes the transition spin the long way around.
-      // Clearing the field still returns the dial to its neutral angle.
-      if (input === "") setDialAngle(0);
-      else
-        setDialAngle((angle) =>
-          editIntent === "delete" ? angle - 36 : angle + 36,
-        );
+  function changeGuessInput(input: string, intent: GuessInputEditIntent = "insert") {
+    const current = stateRef.current;
+    if (input !== current.input) {
+      retainHintFocusThroughReward.current = false;
+      inputRevision.current += 1;
+      setDialAngle((angle) => input === "" ? 0 : intent === "delete" ? angle - 36 : angle + 36);
+      send({ type: "INPUT_VALUE_CHANGED", roundEpoch: current.roundId, inputRevision: inputRevision.current });
     }
     dispatch({ type: "set-input", input });
   }
-
   function surrenderRound() {
-    if (currentState().phase !== "playing") return;
-    clearPendingHoverTimer();
-    completedChallengeRef.current = null;
-    pendingFocusRef.current = "new-game";
-    dispatch({ type: "surrender" });
+    const current = stateRef.current;
+    if (current.phase !== "playing") return;
+    retainHintFocusThroughReward.current = false; pendingFocus.current = "new-game"; challengeRef.current = null; dispatch({ type: "surrender" }); send({ type: "ROUND_SURRENDERED", roundEpoch: current.roundId });
   }
-
   function toggleHistory() {
-    dispatch({ type: "toggle-history" });
+    retainHintFocusThroughReward.current = false;
+    if (presentation.mode === "HISTORY") pendingFocus.current = "history";
+    send({ type: "HISTORY_TOGGLE", roundEpoch: stateRef.current.roundId });
   }
-
   function showHint() {
-    const latestState = currentState();
-    if (latestState.phase !== "playing") return;
-    // Only disclosed round knowledge selects the predicate that the reducer binds to this
-    // challenge.
-    const predicate = chooseNextHintPredicate({
-      facts: latestState.earnedHintFacts,
-      wrongAttempts: latestState.attempts,
-      issuedPredicateIds: latestState.issuedHintPredicateIds,
-    });
+    const current = stateRef.current;
+    if (current.phase !== "playing") return;
+    retainHintFocusThroughReward.current = false;
+    const predicate = chooseNextHintPredicate({ facts: current.earnedHintFacts, wrongAttempts: current.attempts, issuedPredicateIds: current.issuedHintPredicateIds });
     if (!predicate) return;
-    const challenge = createHintChallenge(
-      Math.random,
-      latestState.roundId,
-      "+",
-      createChallengeId(
-        Math.random,
-        Date.now,
-        globalThis.crypto?.randomUUID?.bind(globalThis.crypto),
-      ),
-    );
+    const challenge = createHintChallenge(Math.random, current.roundId, "+", createChallengeId(Math.random, Date.now, globalThis.crypto?.randomUUID?.bind(globalThis.crypto)));
+    challengeRef.current = challenge;
     dispatch({ type: "show-hint", challenge, predicateId: predicate.id });
+    send({ type: "HINT_DIALOG_OPEN", roundEpoch: current.roundId, challengeId: challenge.challengeId });
   }
-
-  function replaceHintChallenge(
-    roundId: number,
-    challengeId: string,
-    operator: HintOperator,
-  ) {
-    // An event from an old dialog must not replace the currently mounted question.
-    const latestState = currentState();
-    const activeChallenge = latestState.hintChallenge;
-    if (
-      !activeChallenge ||
-      latestState.phase !== "playing" ||
-      activeChallenge.roundId !== roundId ||
-      activeChallenge.challengeId !== challengeId
-    )
-      return;
-    const predicate = chooseNextHintPredicate({
-      facts: latestState.earnedHintFacts,
-      wrongAttempts: latestState.attempts,
-      issuedPredicateIds: latestState.issuedHintPredicateIds,
-    });
+  function replaceHintChallenge(roundId: number, challengeId: string, operator: HintOperator) {
+    const current = stateRef.current; const active = current.hintChallenge;
+    if (!active || active.roundId !== roundId || active.challengeId !== challengeId) return;
+    const predicate = chooseNextHintPredicate({ facts: current.earnedHintFacts, wrongAttempts: current.attempts, issuedPredicateIds: current.issuedHintPredicateIds });
     if (!predicate) return;
-    clearPendingHoverTimer();
-    const challenge = createHintChallenge(
-      Math.random,
-      activeChallenge.roundId,
-      operator,
-      createChallengeId(
-        Math.random,
-        Date.now,
-        globalThis.crypto?.randomUUID?.bind(globalThis.crypto),
-      ),
-    );
-    // The reducer rejects direct replacement. Queue an identity-checked discard before the new
-    // public predicate.
-    dispatch({
-      type: "close-hint-challenge",
-      roundId: activeChallenge.roundId,
-      challengeId: activeChallenge.challengeId,
-    });
-    dispatch({ type: "show-hint", challenge, predicateId: predicate.id });
+    const challenge = createHintChallenge(Math.random, roundId, operator, createChallengeId(Math.random, Date.now, globalThis.crypto?.randomUUID?.bind(globalThis.crypto)));
+    challengeRef.current = challenge;
+    dispatch({ type: "close-hint-challenge", roundId, challengeId }); dispatch({ type: "show-hint", challenge, predicateId: predicate.id });
+    send({ type: "HINT_DIALOG_OPEN", roundEpoch: roundId, challengeId: challenge.challengeId });
   }
-
   function closeHintChallenge(roundId: number, challengeId: string) {
-    const challenge = currentState().hintChallenge;
-    if (!challenge) {
-      setHintSuccessPending((pending) =>
-        pending &&
-        pending.challenge.roundId === roundId &&
-        pending.challenge.challengeId === challengeId
-          ? null
-          : pending,
-      );
-      return;
-    }
-    if (challenge.roundId !== roundId || challenge.challengeId !== challengeId)
-      return;
-    pendingFocusRef.current = "hint";
-    completedChallengeRef.current = null;
-    dispatch({
-      type: "close-hint-challenge",
-      roundId: challenge.roundId,
-      challengeId: challenge.challengeId,
-    });
+    const current = stateRef.current;
+    if (current.hintChallenge?.roundId !== roundId || current.hintChallenge.challengeId !== challengeId) return;
+    pendingFocus.current = "hint"; dispatch({ type: "close-hint-challenge", roundId, challengeId }); send({ type: "HINT_DIALOG_CLOSED", roundEpoch: roundId, challengeId });
+    challengeRef.current = null;
   }
-
-  function submitHintAnswer(
-    roundId: number,
-    challengeId: string,
-    answer: number | null,
-  ) {
-    const latestState = currentState();
-    const challenge = latestState.hintChallenge;
+  function submitHintAnswer(roundId: number, challengeId: string, answer: number | null) {
+    const current = stateRef.current; const active = current.hintChallenge;
+    if (!active || active.roundId !== roundId || active.challengeId !== challengeId) return;
+    const action: SafeGameAction = { type: "submit-hint-answer", roundId, challengeId, answer };
+    const next = reduceSafeGame(current, action); dispatch(action);
+    const award = next.earnedHintFacts.at(-1);
+    if (award && award.id !== current.latestAwardedFactId) {
+      pendingFocus.current = "hint";
+      send({ type: "HINT_AWARDED", roundEpoch: roundId, challengeId, award: { factId: award.id, text: factText(award) } });
+    }
+  }
+  function completeHintSuccess(roundId: number, challengeId: string, factId: string, cause: "close" | "escape" = "close") {
     if (
-      !challenge ||
-      latestState.phase !== "playing" ||
-      latestState.revealedMathAnswer !== null ||
-      !latestState.activeHintPredicateId ||
-      challenge.roundId !== roundId ||
-      challenge.challengeId !== challengeId
+      stateRef.current.roundId !== roundId ||
+      presentation.mode !== "HINT_SUCCESS_HANDOFF" ||
+      presentation.roundEpoch !== roundId ||
+      presentation.challengeId !== challengeId ||
+      presentation.award.factId !== factId
     )
       return;
-    const identity = `${challenge.roundId}:${challenge.challengeId}`;
-    if (answer === challenge.expectedAnswer) {
-      if (completedChallengeRef.current === identity) return;
-      completedChallengeRef.current = identity;
-      pendingFocusRef.current = "hint";
-      setHintSuccessPending({
-        challenge,
-        previousAwardedFactId: latestState.latestAwardedFactId,
-      });
+    pendingFocus.current = "hint";
+    retainHintFocusThroughReward.current = false;
+    send({ type: "HINT_SUCCESS_COMPLETE_EARLY", roundEpoch: roundId, challengeId, factId, cause });
+  }
+  function giveUpHintChallenge(roundId: number, challengeId: string) { dispatch({ type: "give-up-hint-challenge", roundId, challengeId }); }
+  function showHintFocus() {
+    const restored = restoredHintFocus.current;
+    if (restored) {
+      restoredHintFocus.current = null;
+      if (restored.roundId === round() && restored.target === hintButtonRef.current && document.activeElement === restored.target) return;
     }
-    dispatch({
-      type: "submit-hint-answer",
-      roundId: challenge.roundId,
-      challengeId: challenge.challengeId,
-      answer,
-    });
+    retainHintFocusThroughReward.current = false;
+    send({ type: "SHOW_HINT_FOCUS", roundEpoch: round() });
+  }
+  function showHintEnter() {
+    retainHintFocusThroughReward.current = false;
+    send({ type: "SHOW_HINT_ENTER", roundEpoch: round() });
+  }
+  function showHintTouchStart() {
+    retainHintFocusThroughReward.current = false;
+    send({ type: "SHOW_HINT_TOUCH_START", roundEpoch: round() });
+  }
+  function showHintFocusLeave() {
+    if (presentation.mode !== "STORED_HINTS" || presentation.inputModality !== "keyboard") return;
+    pendingStoredFocusLeave.current = { roundEpoch: presentation.roundEpoch, stateEpoch: presentation.stateEpoch };
+    send({ type: "SHOW_HINT_LEAVE", roundEpoch: round() });
+  }
+  function showTerminalStoredHints() {
+    const current = stateRef.current;
+    if (current.phase === "playing" || current.earnedHintFacts.length === 0) return;
+    send({ type: "SHOW_HINT_ACTIVATE", roundEpoch: current.roundId });
   }
 
-  function completeHintSuccess(
-    roundId: number,
-    challengeId: string,
-    latestAwardedFactId: string,
-  ) {
-    setHintSuccessPresentation((current) =>
-      current &&
-      current.roundId === roundId &&
-      current.challengeId === challengeId &&
-      current.latestAwardedFactId === latestAwardedFactId
-        ? null
-        : current,
-    );
-  }
-
-  function giveUpHintChallenge(roundId: number, challengeId: string) {
-    const challenge = currentState().hintChallenge;
-    if (
-      !challenge ||
-      challenge.roundId !== roundId ||
-      challenge.challengeId !== challengeId
-    )
-      return;
-    const identity = `${challenge.roundId}:${challenge.challengeId}`;
-    completedChallengeRef.current = identity;
-    setHintSuccessPending((pending) =>
-      pending &&
-      pending.challenge.roundId === challenge.roundId &&
-      pending.challenge.challengeId === challenge.challengeId
-        ? null
-        : pending,
-    );
-    dispatch({
-      type: "give-up-hint-challenge",
-      roundId: challenge.roundId,
-      challengeId: challenge.challengeId,
-    });
-    const newHintButton = newHintButtonRef.current;
-    if (newHintButton && !newHintButton.disabled && newHintButton.isConnected)
-      newHintButton.focus({ preventScroll: true });
-  }
-
-  function handleCatEnter() {
-    clearPendingHoverTimer();
-    if (currentState().phase === "playing")
-      dispatch({ type: "set-cat-hover", active: true });
-  }
-
-  function handleCatLeave() {
-    clearPendingHoverTimer();
-    const roundId = currentState().roundId;
-    const generation = roundGenerationRef.current;
-    pendingHoverTimerRef.current = setTimeout(() => {
-      const latestState = stateRef.current;
-      if (
-        latestState &&
-        roundGenerationRef.current === generation &&
-        latestState.phase === "playing" &&
-        latestState.roundId === roundId
-      ) {
-        dispatch({ type: "set-cat-hover", active: false });
-      }
-    }, 250);
-  }
-
+  const round = () => stateRef.current.roundId;
   return {
-    state,
-    hintSuccessPresentation,
-    hintSuccessPending,
-    inputRef,
-    hintButtonRef,
-    historyButtonRef,
-    newGameButtonRef,
-    newHintButtonRef,
-    dialAngle,
-    titleRun,
-    startNewRound,
-    submitGuess,
-    changeGuessInput,
-    surrenderRound,
-    toggleHistory,
-    showHint,
-    replaceHintChallenge,
-    closeHintChallenge,
-    submitHintAnswer,
-    completeHintSuccess,
-    giveUpHintChallenge,
-    handleCatEnter,
-    handleCatLeave,
+    state, presentation, presentationChallenge: challengeRef.current, inputRef, hintButtonRef, historyButtonRef, newGameButtonRef, newHintButtonRef, dialAngle, titleRun,
+    startNewRound, submitGuess, changeGuessInput, surrenderRound, toggleHistory, showHint, replaceHintChallenge, closeHintChallenge, submitHintAnswer, completeHintSuccess, giveUpHintChallenge,
+    catPetStart: (modality: "pointer" | "keyboard" | "touch") => send({ type: "CAT_PET_START", roundEpoch: round(), modality }),
+    showHintEnter, showHintFocus, showHintTouchStart, showHintFocusLeave, showTerminalStoredHints,
+    showHintLeave: () => send({ type: "SHOW_HINT_LEAVE", roundEpoch: round() }),
+    storedHintsEscape: () => {
+      if (presentation.mode === "STORED_HINTS") {
+        pendingFocus.current = "hint";
+        suppressStoredEscapeRestore.current = true;
+      }
+      send({ type: "STORED_HINTS_ESCAPE", roundEpoch: round() });
+    },
+    historyActivity: () => send({ type: "HISTORY_ACTIVITY", roundEpoch: round() }),
   };
 }

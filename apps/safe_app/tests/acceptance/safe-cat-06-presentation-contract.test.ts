@@ -186,7 +186,27 @@ test("SC06 presentation: one unresolved challenge reaches concerned at 10,000 ms
 });
 
 test("SC06 presentation: accepted success remains modal during a synchronized 2,500 ms popup and backdrop fade", () => {
-  assert.match(dialogSource, /2_?500/, "success timing is exactly 2,500 ms");
+  const presentationMachineSource = readFileSync(
+    resolve(
+      process.cwd(),
+      "src/features/safe-game/model/presentation-machine.ts",
+    ),
+    "utf8",
+  );
+  // Scope the deadline assertion to HINT_AWARDED so another 2,500 ms transition cannot satisfy
+  // the success-handoff contract accidentally.
+  const handoffBranch = presentationMachineSource.match(
+    /if\s*\(\s*e\.type\s*===\s*"HINT_AWARDED"\s*\)\s*\{([\s\S]*?)\}\s*(?=if\s*\(\s*e\.type\s*===\s*"HINT_SUCCESS_COMPLETE_EARLY"\s*\))/,
+  );
+  assert.ok(
+    handoffBranch,
+    "the reducer retains a bounded HINT_AWARDED branch before its next event branch",
+  );
+  assert.match(
+    handoffBranch[1],
+    /return\s*\{\s*\.\.\.next,\s*mode\s*:\s*"HINT_SUCCESS_HANDOFF",\s*surface\s*:\s*"hint-dialog",\s*resumeMode\s*:\s*s\.resumeMode,\s*challengeId\s*:\s*s\.challengeId,\s*award\s*:\s*e\.award,\s*\.\.\.clock\(\s*next,\s*now,\s*"hint-success",\s*now\s*\+\s*2_?500\s*\)/,
+    "the HINT_AWARDED return state owns the exact named hint-success deadline at now + 2,500 ms",
+  );
   assert.match(
     dialogSource,
     /happy/i,

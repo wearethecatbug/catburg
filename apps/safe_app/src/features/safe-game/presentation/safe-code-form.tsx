@@ -5,9 +5,11 @@ import { useSafeGameContext } from "../model/safe-game-context";
 export function SafeCodeForm({
   inputRef,
   revealedCode,
+  feedbackLive,
 }: {
   inputRef: RefObject<HTMLInputElement | null>;
   revealedCode: number | null;
+  feedbackLive: boolean;
 }) {
   const { state, changeGuessInput, submitGuess } = useSafeGameContext();
   const terminal = state.phase !== "playing";
@@ -48,7 +50,7 @@ export function SafeCodeForm({
           ref={inputRef}
           inputMode="numeric"
           autoComplete="off"
-          placeholder="Enter a number..."
+          placeholder={terminal ? "" : "Enter a number..."}
           value={state.input}
           disabled={terminal}
           aria-invalid={
@@ -67,7 +69,11 @@ export function SafeCodeForm({
           OK
         </button>
       </div>
-      <p id="safe-feedback" className={styles.feedback} role="status">
+      <p
+        id="safe-feedback"
+        className={styles.feedback}
+        role={feedbackLive ? "status" : undefined}
+      >
         {state.feedback === "invalid" && "Enter a whole number from 1 to 1000."}
         {state.feedback === "wrong" && "Incorrect code, try again."}
         {state.feedback === "won" && "Safe opened!"}

@@ -21,10 +21,6 @@ export function reduceSafeGame(
     return { ...createSafeGameState(action.code), roundId: state.roundId + 1 };
   }
 
-  if (action.type === "toggle-history") {
-    return { ...state, historyVisible: !state.historyVisible };
-  }
-
   if (action.type === "close-hint-challenge") {
     return action.roundId === state.roundId &&
       state.hintChallenge &&
@@ -152,18 +148,12 @@ export function reduceSafeGame(
           state.feedback === "wrong" || state.feedback === "invalid"
             ? "none"
             : state.feedback,
-        catReaction: "idle",
       };
-    case "set-cat-hover":
-      return state.catReaction === "idle" || state.catReaction === "hover"
-        ? { ...state, catReaction: action.active ? "hover" : "idle" }
-        : state;
     case "surrender":
       return {
         ...state,
         phase: "surrendered",
         feedback: "surrendered",
-        catReaction: "surrendered",
         revealedCode: state.code,
         hintChallenge: null,
         activeHintPredicateId: null,
@@ -184,14 +174,13 @@ export function reduceSafeGame(
           phase: "won",
           feedback: "won",
           safeOpen: true,
-          catReaction: "won",
           hintChallenge: null,
           activeHintPredicateId: null,
           hintFeedback: "none",
           revealedMathAnswer: null,
         };
       }
-      return { ...state, attempts, feedback: "wrong", catReaction: "wrong" };
+      return { ...state, attempts, feedback: "wrong" };
     }
   }
 }

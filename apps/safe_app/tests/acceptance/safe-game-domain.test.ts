@@ -21,6 +21,18 @@ function roundIdOf(state: object) {
   return (state as Record<string, unknown>).roundId;
 }
 
+test("the domain action contract excludes presentation-only action names", () => {
+  const retained: SafeGameAction = { type: "set-input", input: "7" };
+  assert.equal(retained.type, "set-input");
+
+  // @ts-expect-error presentation hover belongs to the presentation machine
+  const removedHover: SafeGameAction = { type: "set-cat-hover", active: true };
+  // @ts-expect-error presentation History belongs to the presentation machine
+  const removedHistory: SafeGameAction = { type: "toggle-history" };
+  void removedHover;
+  void removedHistory;
+});
+
 test("generation reaches both inclusive endpoints, allows repeats, and rejects invalid bounds", () => {
   assert.equal(
     generateSafeCode(() => 0),
@@ -102,7 +114,6 @@ test("invalid attempts are excluded and a valid wrong code remains playable with
   );
   assert.equal(wrong.phase, "playing");
   assert.equal(wrong.feedback, "wrong");
-  assert.equal(wrong.catReaction, "wrong");
   assert.equal(wrong.safeOpen, false);
   assert.deepEqual(wrong.attempts, [7]);
   assert.equal(wrong.revealedCode, null);
@@ -111,16 +122,8 @@ test("invalid attempts are excluded and a valid wrong code remains playable with
     "wrong",
     "the domain exposes only a neutral wrong-result category, never secret-comparison guidance",
   );
-  assert.equal(
-    apply(wrong, { type: "set-cat-hover", active: true }).catReaction,
-    "wrong",
-    "hover cannot erase a wrong reaction",
-  );
-  assert.equal(
-    apply(wrong, { type: "set-cat-hover", active: false }).catReaction,
-    "wrong",
-    "pointer leave cannot erase a wrong reaction",
-  );
+  assert.equal(Object.hasOwn(wrong, "catReaction"), false);
+  assert.equal(Object.hasOwn(wrong, "historyVisible"), false);
 });
 
 test("a correct normalized guess atomically wins and every terminal interaction is a no-op", () => {
@@ -130,9 +133,6 @@ test("a correct normalized guess atomically wins and every terminal interaction 
     { type: "submit-guess" },
   );
 
-  const wonHistoryOpen = apply(won, { type: "toggle-history" });
-  assert.deepEqual(wonHistoryOpen, { ...won, historyVisible: true });
-  assert.deepEqual(apply(wonHistoryOpen, { type: "toggle-history" }), won);
   assert.deepEqual(won, {
     code: 42,
     roundId: 1,
@@ -140,10 +140,8 @@ test("a correct normalized guess atomically wins and every terminal interaction 
     input: "0042",
     feedback: "won",
     safeOpen: true,
-    catReaction: "won",
     revealedCode: null,
     attempts: [42],
-    historyVisible: false,
     hintChallenge: null,
     hintFeedback: "none",
     revealedMathAnswer: null,
@@ -156,39 +154,25 @@ test("a correct normalized guess atomically wins and every terminal interaction 
   });
 
   const afterTerminalEvents = apply(
-    wonHistoryOpen,
+    won,
     { type: "set-input", input: "9" },
     { type: "submit-guess" },
     { type: "surrender" },
-    { type: "set-cat-hover", active: true },
   );
-  assert.deepEqual(afterTerminalEvents, wonHistoryOpen);
+  assert.deepEqual(afterTerminalEvents, won);
 });
 
-test("surrender is terminal, history is value-deduplicated, and a new round fully resets", () => {
+test("surrender is terminal, attempts are value-deduplicated, and a new round fully resets", () => {
   const withRepeatedWrongGuess = apply(
     createSafeGameState(42),
     { type: "set-input", input: "7" },
     { type: "submit-guess" },
     { type: "set-input", input: "0007" },
     { type: "submit-guess" },
-    { type: "toggle-history" },
   );
   assert.deepEqual(withRepeatedWrongGuess.attempts, [7]);
-  assert.equal(withRepeatedWrongGuess.historyVisible, true);
 
   const surrendered = apply(withRepeatedWrongGuess, { type: "surrender" });
-  const surrenderedHistoryClosed = apply(surrendered, {
-    type: "toggle-history",
-  });
-  assert.deepEqual(surrenderedHistoryClosed, {
-    ...surrendered,
-    historyVisible: false,
-  });
-  assert.deepEqual(
-    apply(surrenderedHistoryClosed, { type: "toggle-history" }),
-    surrendered,
-  );
   assert.deepEqual(surrendered, {
     code: 42,
     roundId: 1,
@@ -196,10 +180,8 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     input: "0007",
     feedback: "surrendered",
     safeOpen: false,
-    catReaction: "surrendered",
     revealedCode: 42,
     attempts: [7],
-    historyVisible: true,
     hintChallenge: null,
     hintFeedback: "none",
     revealedMathAnswer: null,
@@ -212,13 +194,12 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
   });
   assert.deepEqual(
     apply(
-      surrenderedHistoryClosed,
+      surrendered,
       { type: "set-input", input: "42" },
       { type: "submit-guess" },
       { type: "surrender" },
-      { type: "set-cat-hover", active: true },
     ),
-    surrenderedHistoryClosed,
+    surrendered,
     "terminal submit and surrender cannot change a completed round",
   );
 
@@ -230,10 +211,8 @@ test("surrender is terminal, history is value-deduplicated, and a new round full
     input: "",
     feedback: "none",
     safeOpen: false,
-    catReaction: "idle",
     revealedCode: null,
     attempts: [],
-    historyVisible: false,
     hintChallenge: null,
     hintFeedback: "none",
     revealedMathAnswer: null,

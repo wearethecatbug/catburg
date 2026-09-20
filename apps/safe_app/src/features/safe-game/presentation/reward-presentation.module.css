@@ -10,8 +10,7 @@
   height: 240px;
   object-fit: contain;
   object-position: center bottom;
-  transform: translateY(6px);
-  width: 280px;
+  width: 240px;
 }
 .reward p {
   background: #fffdf8;
@@ -45,30 +44,68 @@
 .reward p::before {
   content: none;
 }
+
+@media (min-width: 1280px) and (min-height: 801px) {
+  .reward img {
+    transform: translateY(-11.36%);
+  }
+}
+
 @media (max-width: 600px) {
   .reward {
     align-items: flex-start;
-    max-width: calc(100vw - 24px);
-    width: calc(100vw - 24px);
+    max-width: min(100%, calc(100vw - 24px));
+    width: min(100%, calc(100vw - 24px));
   }
   .reward img {
+    flex-shrink: 0;
     height: 157px;
+    transform: translateY(-11.36%);
     width: 157px;
   }
   .reward p {
     font-size: 14px;
     margin-left: -28px;
     min-height: 64px;
+    min-width: 0;
     padding: 10px;
     width: min(180px, calc(100vw - 150px));
   }
 }
+
 @media (max-width: 600px) {
   .reward {
     margin: 0;
-    max-width: calc(100vw - 24px);
+    max-width: min(100%, calc(100vw - 24px));
   }
   .reward p {
     margin-left: -18px;
+  }
+}
+
+@media (max-width: 600px) and (min-height: 601px) {
+  .reward img {
+    transform: translateY(-17%);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .reward {
+    max-width: min(360px, calc(100vw - 24px));
+  }
+
+  .reward img {
+    height: 152px;
+    transform: translateY(-11.36%);
+    width: 177px;
+  }
+
+  .reward p {
+    font-size: 14px;
+    margin-left: -22px;
+    max-width: 150px;
+    min-height: 56px;
+    padding: 8px 10px;
+    width: min(150px, calc(100vw - 160px));
   }
 }

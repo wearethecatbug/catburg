@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2017", "lib": ["dom", "dom.iterable", "esnext"],
+    "strict": true, "noEmit": true, "module": "esnext", "moduleResolution": "bundler", "jsx": "preserve",
+    "allowJs": true, "esModuleInterop": true, "skipLibCheck": true, "resolveJsonModule": true,
+    "isolatedModules": true, "incremental": true, "tsBuildInfoFile": "./.safe-cat-07-harness.tsbuildinfo",
+    "baseUrl": ".", "paths": { "@/*": ["../../../../src/*"] }, "plugins": [{ "name": "next" }]
+  },
+  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", "fixed-round-source.ts", ".next-safe-cat-07-harness/types/**/*.ts"],
+  "exclude": ["node_modules", ".next-safe-cat-07-harness"]
+}

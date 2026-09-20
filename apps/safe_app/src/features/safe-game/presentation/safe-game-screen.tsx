@@ -1,178 +1,133 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
+import type { RoundSource } from "../domain";
 import { SafeGameProvider } from "../model/safe-game-provider";
 import { useSafeGameContext } from "../model/safe-game-context";
-import {
-  selectEarnedHintPresentation,
-  selectTerminalPresentation,
-} from "../model/game.selectors";
+import { selectEarnedHintPresentation, selectTerminalPresentation } from "../model/game.selectors";
 import { CatAvatar } from "./cat-avatar";
+import { CurvedTitle } from "./curved-title";
 import { GameMenu } from "./game-menu";
 import { HintChallengeDialog } from "./hint-challenge-dialog";
 import { HistoryPanel } from "./history-panel";
+import { RewardPresentation } from "./reward-presentation";
 import { SafeCodeForm } from "./safe-code-form";
 import { SafeScene } from "./safe-scene";
-import { CurvedTitle } from "./curved-title";
-import { RewardPresentation } from "./reward-presentation";
 import styles from "./safe-game-screen.module.css";
 
 function SafeGameScreenContent() {
   const controller = useSafeGameContext();
-  const { state } = controller;
-  const terminalPresentation = selectTerminalPresentation(state);
-  const { statusText: hintStatus, hintsExhausted } =
-    selectEarnedHintPresentation(state);
-  const [expiredRewardId, setExpiredRewardId] = useState<string | null>(null);
-  const successPresentation = controller.hintSuccessPresentation;
-  const completionPending = controller.hintSuccessPending;
-  const timerAward = useRef<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reward =
-    state.latestAwardedFactId === expiredRewardId
-      ? null
-      : (state.earnedHintFacts.find(
-          (item) => item.id === state.latestAwardedFactId,
-        ) ?? null);
-  const hideNormalCat = Boolean(
-    state.hintChallenge && !reward && state.revealedMathAnswer === null,
-  );
-  // Start the full reward lifetime only after success presentation has completed.
-  useEffect(() => {
-    if (
-      completionPending ||
-      successPresentation ||
-      !reward ||
-      timerAward.current === reward.id
-    )
-      return;
-    if (timer.current) clearTimeout(timer.current);
-    timerAward.current = reward.id;
-    timer.current = setTimeout(() => setExpiredRewardId(reward.id), 5000);
-  }, [completionPending, reward, successPresentation]);
+  const screenRef = useRef<HTMLElement | null>(null);
+  const headerZoneRef = useRef<HTMLElement | null>(null);
+  const characterEffectZoneRef = useRef<HTMLDivElement | null>(null);
+  const panelLaneRef = useRef<HTMLDivElement | null>(null);
+  const { state, presentation } = controller;
+  const terminal = selectTerminalPresentation(state);
+  const { hintsExhausted, statusText } = selectEarnedHintPresentation(state);
+  const dialogActive = presentation.surface === "hint-dialog";
+  const reward = presentation.mode === "HINT_REWARD" ? presentation.award : null;
+  const announcement =
+    presentation.mode === "HINT_DIALOG" || presentation.mode === "HISTORY"
+      ? ""
+      : statusText
+        ? statusText
+        : presentation.mode === "PET_PROMPT" && presentation.promptId === 1
+          ? "Pet me"
+          : "";
+
   useLayoutEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
-    setExpiredRewardId(null);
-    timerAward.current = null;
-  }, [state.roundId]);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const modalActive = Boolean(
-    state.hintChallenge || successPresentation || completionPending,
-  );
+    if (!dialogActive) return;
+    const body = document.body; const html = document.documentElement;
+    const previous = { body: body.style.cssText, html: html.style.cssText, x: window.scrollX, y: window.scrollY };
+    const scrollbarWidth = Math.max(0, window.innerWidth - html.clientWidth);
+    const bodyPaddingRight = Number.parseFloat(getComputedStyle(body).paddingRight) || 0;
+    // Preserve layout width while the fixed-body dialog lock removes the scrollbar.
+    html.style.overflow = "hidden"; body.style.overflow = "hidden"; body.style.position = "fixed"; body.style.top = `-${previous.y}px`; body.style.left = `-${previous.x}px`; body.style.right = `${previous.x}px`; body.style.width = "auto"; body.style.paddingRight = `${bodyPaddingRight + scrollbarWidth}px`;
+    return () => { body.style.cssText = previous.body; html.style.cssText = previous.html; window.scrollTo(previous.x, previous.y); };
+  }, [dialogActive]);
+
   useLayoutEffect(() => {
-    if (!modalActive) return;
-    const body = document.body;
-    const html = document.documentElement;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    // Restore the exact inline state and document position so the modal cannot shift the game scene.
-    const previous = {
-      bodyCssText: body.style.cssText,
-      htmlCssText: html.style.cssText,
+    if (!dialogActive) return;
+    const screen = screenRef.current;
+    const header = headerZoneRef.current;
+    if (!screen || !header) return;
+    const updateLaneTop = () => {
+      const gap = Number.parseFloat(
+        getComputedStyle(screen).getPropertyValue("--header-gap"),
+      );
+      const headerBottom = header.getBoundingClientRect().bottom;
+      screen.style.setProperty(
+        "--dialog-lane-top",
+        `${Math.max(0, Math.ceil(headerBottom + (Number.isFinite(gap) ? gap : 8)))}px`,
+      );
     };
-    const scrollbarWidth =
-      window.innerWidth - document.documentElement.clientWidth;
-    html.style.overflow = "hidden";
-    body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = `-${scrollX}px`;
-    body.style.width = "100%";
-    if (scrollbarWidth > 0)
-      body.style.paddingRight = `${(Number.parseFloat(window.getComputedStyle(body).paddingRight) || 0) + scrollbarWidth}px`;
+    updateLaneTop();
+    const observer = new ResizeObserver(updateLaneTop);
+    observer.observe(header);
+    window.addEventListener("resize", updateLaneTop);
+    window.visualViewport?.addEventListener("resize", updateLaneTop);
+    window.visualViewport?.addEventListener("scroll", updateLaneTop);
     return () => {
-      body.style.cssText = previous.bodyCssText;
-      html.style.cssText = previous.htmlCssText;
-      window.scrollTo(scrollX, scrollY);
+      observer.disconnect();
+      window.removeEventListener("resize", updateLaneTop);
+      window.visualViewport?.removeEventListener("resize", updateLaneTop);
+      window.visualViewport?.removeEventListener("scroll", updateLaneTop);
+      screen.style.removeProperty("--dialog-lane-top");
     };
-  }, [modalActive]);
+  }, [dialogActive]);
+
   return (
-    <main className={styles.safeGameScreen}>
+    <main
+      ref={screenRef}
+      className={`${styles.safeGameScreen} ${
+        presentation.mode === "HISTORY" ? styles.historyOpen : ""
+      }`}
+      onKeyDown={(event) => {
+        if (
+          event.key !== "Escape" ||
+          event.defaultPrevented ||
+          presentation.mode !== "STORED_HINTS"
+        )
+          return;
+        event.preventDefault();
+        controller.storedHintsEscape();
+      }}
+    >
       <div className={styles.stage}>
-        <header className={styles.header}>
-          <CurvedTitle run={controller.titleRun} />
-          <p className={styles.instructions}>
-            Enter a whole code from 1 to 1000.
-          </p>
-        </header>
-        <p
-          className={styles.rewardAnnouncement}
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {hintStatus ?? ""}
-        </p>
-        <div className={styles.safeRegion}>
-          <SafeScene
-            safeOpen={terminalPresentation.safeOpen}
-            dialAngle={controller.dialAngle}
-          />
-          <div
-            className={
-              reward
-                ? styles.rewardRegion
-                : `${styles.catRegion}${hideNormalCat ? ` ${styles.catHidden}` : ""}`
-            }
-          >
-            {reward ? (
-              <RewardPresentation fact={reward} />
-            ) : (
-              <CatAvatar
-                reaction={terminalPresentation.catReaction}
-                onMouseEnter={controller.handleCatEnter}
-                onMouseLeave={controller.handleCatLeave}
-              />
-            )}
+        <header ref={headerZoneRef} className={`${styles.header} ${styles.headerZone}`}><CurvedTitle run={controller.titleRun} /><p className={styles.instructions}>Enter a whole code from 1 to 1000.</p></header>
+        {!dialogActive && presentation.mode !== "HISTORY" && <p className={styles.rewardAnnouncement} role="status" aria-live="polite" aria-atomic="true">{announcement}</p>}
+        <div className={styles.gameplayZone}>
+          <div className={styles.safeRegion}>
+            <SafeScene safeOpen={terminal.safeOpen} dialAngle={controller.dialAngle} />
+            <div ref={characterEffectZoneRef} className={styles.characterEffectZone}>
+              <div className={styles.characterSlot}>
+                <div className={reward ? styles.rewardRegion : styles.catRegion}>
+                  {reward ? <RewardPresentation text={reward.text} /> : <CatAvatar presentation={presentation} />}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className={styles.codeEntry}>
+            <SafeCodeForm
+              inputRef={controller.inputRef}
+              revealedCode={terminal.revealedCode}
+              feedbackLive={presentation.mode !== "HISTORY"}
+            />
+            {hintsExhausted && <p aria-hidden="true" className={styles.earnedHint}>No further hints are available.</p>}
+          </div>
+          <div ref={panelLaneRef} className={`${styles.panelLane} ${presentation.mode === "HISTORY" ? styles.panelLaneOpen : ""}`}>
+            <div className={styles.menuRegion}><GameMenu /></div>
+            {presentation.mode === "HISTORY" && <HistoryPanel attempts={state.attempts} anchorRef={controller.historyButtonRef} headerZoneRef={headerZoneRef} panelLaneRef={panelLaneRef} characterEffectZoneRef={characterEffectZoneRef} onClose={controller.toggleHistory} onActivity={controller.historyActivity} />}
           </div>
         </div>
-        <div className={styles.codeEntry}>
-          <SafeCodeForm
-            inputRef={controller.inputRef}
-            revealedCode={terminalPresentation.revealedCode}
-          />
-          {hintsExhausted && (
-            <p aria-hidden="true" className={styles.earnedHint}>
-              No further hints are available.
-            </p>
-          )}
-        </div>
-        <div className={styles.menuRegion}>
-          <GameMenu />
-        </div>
       </div>
-      {state.historyVisible && (
-        <HistoryPanel
-          key={`history-${state.roundId}`}
-          attempts={state.attempts}
-          anchorRef={controller.historyButtonRef}
-        />
-      )}
-      {(state.hintChallenge || successPresentation || completionPending) && (
-        <HintChallengeDialog
-          key={`challenge-${(state.hintChallenge ?? successPresentation?.challenge ?? completionPending!.challenge).roundId}-${(state.hintChallenge ?? successPresentation?.challenge ?? completionPending!.challenge).challengeId}`}
-          challenge={
-            state.hintChallenge ??
-            successPresentation?.challenge ??
-            completionPending!.challenge
-          }
-          successFactId={successPresentation?.latestAwardedFactId}
-          completionPending={Boolean(completionPending)}
-        />
-      )}
+      <div className={styles.dialogLane}>
+        {dialogActive && controller.presentationChallenge && <HintChallengeDialog challenge={controller.presentationChallenge} handoff={presentation.mode === "HINT_SUCCESS_HANDOFF" ? presentation : null} />}
+      </div>
     </main>
   );
 }
 
-export default function SafeGameScreen() {
-  return (
-    <SafeGameProvider>
-      <SafeGameScreenContent />
-    </SafeGameProvider>
-  );
+export default function SafeGameScreen({ roundSource }: { roundSource?: RoundSource }) {
+  return <SafeGameProvider roundSource={roundSource}><SafeGameScreenContent /></SafeGameProvider>;
 }
