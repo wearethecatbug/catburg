@@ -1,21 +1,23 @@
 .logViewContainer {
   box-sizing: border-box;
   position: absolute;
-  border: 1px solid black;
-  padding: 0 10px 10px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  padding: 8px;
   width: 250px;
   height: 180px;
   max-height: calc(100vh - 24px);
   max-width: calc(100vw - 24px);
-  background-color: #ededed;
-  color: #202020;
+  background: linear-gradient(145deg, #fbf7ff 0%, #eadcff 58%, #d9c1fa 100%);
+  box-shadow: 0 4px 12px rgb(122 80 190 / 28%), inset 0 0 0 2px rgb(255 255 255 / 72%);
+  color: #34274a;
   font-family: Audiowide, sans-serif;
   overflow-wrap: break-word;
   white-space: normal;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 8px;
   pointer-events: auto;
 }
 
@@ -52,18 +54,52 @@
 
 .dragHandle {
   cursor: grab;
-  background: #ddd;
-  color: #202020;
+  background: rgb(255 255 255 / 45%);
+  border: 1px dotted #80649e;
+  border-radius: 8px;
+  color: #34274a;
   min-height: 44px;
-  padding: 8px;
-  border: 0;
+  min-width: 44px;
+  padding: 0 6px;
   font: inherit;
-  margin: 0 -10px 8px;
   touch-action: none;
-  width: calc(100% + 20px);
+}
+
+.dragHandle:focus-visible {
+  outline: 2px solid #6d4aa6;
+  outline-offset: 2px;
+}
+
+.header {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.header h2 {
+  margin: 0;
+  min-width: 0;
+  font-size: 14px;
+}
+
+.paw {
+  display: block;
+  justify-self: end;
+  width: 44px;
+  height: 44px;
+  pointer-events: none;
+  transform: rotate(8deg);
+  transform-origin: 50% 62%;
 }
 
 .entries {
   flex: 1;
+  min-height: 0;
   overflow: auto;
+  border: 1px solid #d9c8ee;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fffdfc;
+  color: #34274a;
 }

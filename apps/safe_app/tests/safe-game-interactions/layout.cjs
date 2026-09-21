@@ -60,6 +60,32 @@ async function opaqueAncestorBackground(locator) {
   });
 }
 
+// SC08-D05 independently confirms these approved visible gradient stops.
+const HISTORY_SHELL_GRADIENT_STOPS = [
+  "rgb(251, 247, 255)",
+  "rgb(234, 220, 255)",
+  "rgb(217, 193, 250)",
+];
+
+// Entries contrast with their owned surface; header and grip must pass each visible shell stop.
+async function historyContrastMeasurements(entry, heading, handle) {
+  const [entryColor, entrySurface, headingColor, handleColor] = await Promise.all([
+    entry.evaluate((element) => getComputedStyle(element).color),
+    entry.evaluate((element) => {
+      const surface = element.closest("[aria-live='polite']");
+      if (!surface) throw new Error("History entry has no entries surface");
+      return getComputedStyle(surface).backgroundColor;
+    }),
+    heading.evaluate((element) => getComputedStyle(element).color),
+    handle.evaluate((element) => getComputedStyle(element).color),
+  ]);
+  return [
+    contrastRatio(entryColor, entrySurface),
+    ...HISTORY_SHELL_GRADIENT_STOPS.map((surface) => contrastRatio(headingColor, surface)),
+    ...HISTORY_SHELL_GRADIENT_STOPS.map((surface) => contrastRatio(handleColor, surface)),
+  ];
+}
+
 function register01() {
 test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing the two-column menu", async () => {
   const entries = [
@@ -248,18 +274,7 @@ test("empty and populated History contrast are collected separately in light and
           name: "Move History",
           exact: true,
         });
-        const targets = [emptyText, heading, handle];
-        const emptyMeasurements = [];
-        for (const target of targets) {
-          emptyMeasurements.push(
-            contrastRatio(
-              await target.evaluate(
-                (element) => getComputedStyle(element).color,
-              ),
-              await opaqueAncestorBackground(target),
-            ),
-          );
-        }
+        const emptyMeasurements = await historyContrastMeasurements(emptyText, heading, handle);
         await controls.history.focus();
         await page.keyboard.press("Enter");
         for (const guess of [
@@ -282,20 +297,13 @@ test("empty and populated History contrast are collected separately in light and
           name: "History",
           exact: true,
         });
-        const populatedMeasurements = [];
-        for (const target of [
+        const populatedEntries = populatedPanel.locator("[aria-live='polite'] li");
+        assert.equal(await populatedEntries.count(), 10, `${colorScheme} populated History retains all valid attempts`);
+        const populatedMeasurements = await historyContrastMeasurements(
+          populatedEntries.first(),
           populatedPanel.getByRole("heading", { name: "History", exact: true }),
           page.getByRole("button", { name: "Move History", exact: true }),
-        ]) {
-          populatedMeasurements.push(
-            contrastRatio(
-              await target.evaluate(
-                (element) => getComputedStyle(element).color,
-              ),
-              await opaqueAncestorBackground(target),
-            ),
-          );
-        }
+        );
         assert.ok(
           emptyMeasurements.every((ratio) => ratio >= 4.5),
           `${colorScheme} empty History contrast meets 4.5:1`,
@@ -1994,10 +2002,10 @@ test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp,
             );
         }
       const lamp = await exact(
-        controls.hint.locator("img[aria-hidden='true']"),
+        controls.hint.locator(":scope > svg[aria-hidden='true'][focusable='false']"),
         `${width}px hint lamp`,
       );
-      const expectedLampSize = width <= 420 ? 14 : 20;
+      const expectedLampSize = 30;
       assert.deepEqual(
         await lamp.evaluate((element) => {
           const rect = element.getBoundingClientRect();

@@ -1,5 +1,6 @@
 .menu {
   box-sizing: border-box;
+  cursor: default;
   display: grid;
   gap: 12px;
   max-width: 100%;
@@ -47,11 +48,26 @@
   height: 30px;
   width: 30px;
 }
-.menuButton img {
-  flex: 0 0 20px;
-  height: 20px;
-  margin-left: auto;
-  width: 20px;
+.menuButton .hintIcon {
+  flex: 0 0 30px;
+  height: 30px;
+  width: 30px;
+}
+.hintIconBulb {
+  filter: none;
+  transition: fill 220ms ease, stroke 220ms ease, filter 220ms ease;
+}
+.hintIconRays {
+  transition: stroke 220ms ease;
+}
+.hint[data-hint-ready="true"] .hintIconBulb {
+  fill: #ffd45e;
+  filter: drop-shadow(0 0 3px rgb(255 198 64 / 65%));
+  stroke: #a87520;
+  stroke-width: 0.7;
+}
+.hint[data-hint-ready="true"] .hintIconRays {
+  stroke: #b47b16;
 }
 .newGame {
   --btn-top: #d9f8dc;
@@ -81,8 +97,11 @@
 }
 .menuButton:disabled {
   box-shadow: none;
-  cursor: not-allowed;
+  cursor: default;
+  filter: none;
   opacity: 0.5;
+  transform: none;
+  transition: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .menuButton:hover:not(:disabled) {
@@ -124,11 +143,6 @@
     height: 14px;
     width: 14px;
   }
-  .menuButton img {
-    flex-basis: 14px;
-    height: 14px;
-    width: 14px;
-  }
 }
 @media (max-width: 360px) {
   .menuButton {
@@ -136,28 +150,7 @@
     padding-inline: 6px;
   }
 
-  .menuButton.hint {
-    column-gap: 4px;
-    display: grid;
-    grid-template-columns: 12px minmax(0, 1fr) 12px;
-  }
-
-  .menuButton.hint svg {
-    grid-column: 1;
-    justify-self: center;
-  }
-
-  .menuButton.hint span {
-    min-width: 0;
-  }
-
-  .menuButton.hint img {
-    grid-column: 3;
-    margin-left: 0;
-  }
-
-  .menuButton svg,
-  .menuButton img {
+  .menuButton svg {
     flex-basis: 12px;
     height: 12px;
     width: 12px;
@@ -189,6 +182,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .menuButton {
+    transition: none;
+  }
+  .hintIconBulb,
+  .hintIconRays {
     transition: none;
   }
   .menuButton:hover:not(:disabled),
