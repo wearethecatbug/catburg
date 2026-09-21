@@ -1,27 +1,28 @@
 async function waitForStableVisualGeometry(page, settleFrames = true) {
-  await page.evaluate(async () => document.fonts.ready);
-  let pending = [];
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    pending = await page.evaluate(() => [...document.images].filter((image) => !image.complete || !image.naturalWidth || !image.naturalHeight).map((image) => ({ src: image.getAttribute("src"), currentSrc: image.currentSrc, complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight })));
-    if (!pending.length) break;
-    await page.waitForTimeout(25);
-  }
-  if (pending.length) throw new Error(`visual geometry image readiness timed out: ${JSON.stringify(pending)}`);
-  await page.evaluate(() => Promise.all([...document.images].map((image) => image.decode().catch(() => {}))));
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all([...document.images].map((image) => image.complete ? image.decode().catch(() => {}) : new Promise((resolve) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    })));
+  });
   if (settleFrames) await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 async function waitForArtworkReadiness(page, locator) {
-  let snapshot;
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    snapshot = await locator.evaluate((element) => {
+  const snapshot = await locator.evaluate(async (element) => {
       const rendered = element instanceof HTMLImageElement ? element : element.querySelector("img");
-      if (rendered instanceof HTMLImageElement) return { kind: "image", ready: rendered.complete && rendered.naturalWidth > 0 && rendered.naturalHeight > 0, src: rendered.getAttribute("src"), currentSrc: rendered.currentSrc, complete: rendered.complete, naturalWidth: rendered.naturalWidth, naturalHeight: rendered.naturalHeight };
-      const owner = [element, ...element.querySelectorAll("*")].find((candidate) => getComputedStyle(candidate).backgroundImage !== "none"); const reference = getComputedStyle(owner || element).backgroundImage; const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1]; const images = window.__safeCatArtworkReadiness ||= new Map(); let image = images.get(url); if (!image) { image = new Image(); image.src = url; images.set(url, image); } return { kind: "background", ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0, src: image.src, reference, complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
+      if (rendered instanceof HTMLImageElement) {
+        if (rendered.complete) await rendered.decode().catch(() => {});
+        else await new Promise((resolve) => { rendered.addEventListener("load", resolve, { once: true }); rendered.addEventListener("error", resolve, { once: true }); });
+        return { kind: "image", ready: rendered.complete && rendered.naturalWidth > 0 && rendered.naturalHeight > 0, src: rendered.getAttribute("src"), currentSrc: rendered.currentSrc, complete: rendered.complete, naturalWidth: rendered.naturalWidth, naturalHeight: rendered.naturalHeight };
+      }
+      const owner = [element, ...element.querySelectorAll("*")].find((candidate) => getComputedStyle(candidate).backgroundImage !== "none"); const reference = getComputedStyle(owner || element).backgroundImage; const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1]; const images = window.__safeCatArtworkReadiness ||= new Map(); let image = images.get(url); if (!image) { image = new Image(); image.src = url; images.set(url, image); }
+      if (image.complete) await image.decode().catch(() => {});
+      else await new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); });
+      return { kind: "background", ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0, src: image.src, reference, complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
     });
-    if (snapshot.ready) return snapshot;
-    await page.waitForTimeout(25);
-  }
+  if (snapshot.ready) return snapshot;
   throw new Error(`visible alpha ${snapshot?.kind || "artwork"} readiness timed out: ${JSON.stringify(snapshot)}`);
 }
 
