@@ -1,30 +1,36 @@
+function withinReadinessTimeout(promise, description) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${description} timed out after 30000ms`)), 30_000); }),
+  ]).finally(() => clearTimeout(timer));
+}
+
 async function waitForStableVisualGeometry(page, settleFrames = true) {
-  await page.evaluate(async () => {
+  await withinReadinessTimeout(page.evaluate(async () => {
     await document.fonts.ready;
-    await Promise.race([
-      Promise.all([...document.images].map((image) => image.complete ? image.decode().catch(() => {}) : new Promise((resolve) => {
+    await Promise.all([...document.images].map((image) => image.complete ? image.decode().catch(() => {}) : new Promise((resolve) => {
         image.addEventListener("load", resolve, { once: true });
         image.addEventListener("error", resolve, { once: true });
-      }))),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("visual geometry image readiness timed out after 30000ms")), 30_000)),
-    ]);
-  });
+        if (image.complete) resolve();
+      })));
+  }), "visual geometry image readiness");
   if (settleFrames) await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
 async function waitForArtworkReadiness(page, locator) {
-  const snapshot = await locator.evaluate(async (element) => {
+  const snapshot = await withinReadinessTimeout(locator.evaluate(async (element) => {
       const rendered = element instanceof HTMLImageElement ? element : element.querySelector("img");
       if (rendered instanceof HTMLImageElement) {
         if (rendered.complete) await rendered.decode().catch(() => {});
-        else await Promise.race([new Promise((resolve) => { rendered.addEventListener("load", resolve, { once: true }); rendered.addEventListener("error", resolve, { once: true }); }), new Promise((_, reject) => setTimeout(() => reject(new Error("visible alpha image readiness timed out after 30000ms")), 30_000))]);
+        else await new Promise((resolve) => { rendered.addEventListener("load", resolve, { once: true }); rendered.addEventListener("error", resolve, { once: true }); if (rendered.complete) resolve(); });
         return { kind: "image", ready: rendered.complete && rendered.naturalWidth > 0 && rendered.naturalHeight > 0, src: rendered.getAttribute("src"), currentSrc: rendered.currentSrc, complete: rendered.complete, naturalWidth: rendered.naturalWidth, naturalHeight: rendered.naturalHeight };
       }
       const owner = [element, ...element.querySelectorAll("*")].find((candidate) => getComputedStyle(candidate).backgroundImage !== "none"); const reference = getComputedStyle(owner || element).backgroundImage; const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1]; const images = window.__safeCatArtworkReadiness ||= new Map(); let image = images.get(url); if (!image) { image = new Image(); image.src = url; images.set(url, image); }
       if (image.complete) await image.decode().catch(() => {});
-      else await Promise.race([new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); }), new Promise((_, reject) => setTimeout(() => reject(new Error("visible alpha background readiness timed out after 30000ms")), 30_000))]);
+      else await new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); if (image.complete) resolve(); });
       return { kind: "background", ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0, src: image.src, reference, complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
-    });
+    }), "visible alpha artwork readiness");
   if (snapshot.ready) return snapshot;
   throw new Error(`visible alpha ${snapshot?.kind || "artwork"} readiness timed out: ${JSON.stringify(snapshot)}`);
 }
