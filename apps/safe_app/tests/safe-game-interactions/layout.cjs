@@ -60,16 +60,9 @@ async function opaqueAncestorBackground(locator) {
   });
 }
 
-// SC08-D05 independently confirms these approved visible gradient stops.
-const HISTORY_SHELL_GRADIENT_STOPS = [
-  "rgb(251, 247, 255)",
-  "rgb(234, 220, 255)",
-  "rgb(217, 193, 250)",
-];
-
-// Entries contrast with their owned surface; header and grip must pass each visible shell stop.
+// Entries contrast with their owned surface; header and grip use the rendered shell stops.
 async function historyContrastMeasurements(entry, heading, handle) {
-  const [entryColor, entrySurface, headingColor, handleColor] = await Promise.all([
+  const [entryColor, entrySurface, headingColor, handleColor, shellStops] = await Promise.all([
     entry.evaluate((element) => getComputedStyle(element).color),
     entry.evaluate((element) => {
       const surface = element.closest("[aria-live='polite']");
@@ -78,11 +71,21 @@ async function historyContrastMeasurements(entry, heading, handle) {
     }),
     heading.evaluate((element) => getComputedStyle(element).color),
     handle.evaluate((element) => getComputedStyle(element).color),
+    heading.evaluate((element) => {
+      const panel = element.closest("section[aria-label='History']");
+      if (!panel) throw new Error("History heading has no panel");
+      const backgroundImage = getComputedStyle(panel).backgroundImage;
+      if (!backgroundImage.includes("linear-gradient"))
+        throw new Error("History panel has no rendered linear gradient");
+      const stops = backgroundImage.match(/rgba?\([^)]*\)/g) || [];
+      if (!stops.length) throw new Error("History panel gradient has no color stops");
+      return stops;
+    }),
   ]);
   return [
     contrastRatio(entryColor, entrySurface),
-    ...HISTORY_SHELL_GRADIENT_STOPS.map((surface) => contrastRatio(headingColor, surface)),
-    ...HISTORY_SHELL_GRADIENT_STOPS.map((surface) => contrastRatio(handleColor, surface)),
+    ...shellStops.map((surface) => contrastRatio(headingColor, surface)),
+    ...shellStops.map((surface) => contrastRatio(handleColor, surface)),
   ];
 }
 

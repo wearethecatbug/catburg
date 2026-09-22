@@ -53,6 +53,9 @@
   height: 30px;
   width: 30px;
 }
+.hintIconBase {
+  stroke: currentColor;
+}
 .hintIconBulb {
   filter: none;
   transition: fill 220ms ease, stroke 220ms ease, filter 220ms ease;
