@@ -106,7 +106,9 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
           const text = [...button.querySelectorAll("span")].find(
             (element) => element.textContent?.trim() === label,
           );
-          const lamp = button.querySelector('img[aria-hidden="true"]');
+          const lamp = button.querySelector(
+            ':scope > svg[aria-hidden="true"][focusable="false"]',
+          );
           const toBox = (element) => element && element.getBoundingClientRect();
           return {
             name: label,
@@ -114,6 +116,12 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
             icon: toBox(icon),
             label: toBox(text),
             lamp: toBox(lamp),
+            lampCount: button.querySelectorAll(
+              ':scope > svg[aria-hidden="true"][focusable="false"]',
+            ).length,
+            trailingImageCount: button.querySelectorAll(
+              'img[aria-hidden="true"]',
+            ).length,
             clipped: Boolean(text && text.scrollWidth > text.clientWidth),
           };
         }, name),
@@ -184,15 +192,17 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
         `${width}px two menu columns do not overlap`,
       );
       assert.ok(
-        showHint.lamp &&
+        showHint.lampCount === 1 &&
+          showHint.trailingImageCount === 0 &&
+          showHint.lamp &&
           showHint.lamp.x >= showHint.box.x &&
           showHint.lamp.y >= showHint.box.y &&
           showHint.lamp.x + showHint.lamp.width <=
             showHint.box.x + showHint.box.width &&
           showHint.lamp.y + showHint.lamp.height <=
             showHint.box.y + showHint.box.height &&
-          showHint.lamp.x >= showHint.label.x + showHint.label.width,
-        `${width}px trailing Show hint lamp remains contained after its label`,
+          showHint.lamp.x + showHint.lamp.width <= showHint.label.x,
+        `${width}px Show hint has one contained left SVG lamp and no trailing image`,
       );
     });
 
@@ -1588,7 +1598,7 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
                 child.y >= parent.y - 1 &&
                 child.x + child.width <= parent.x + parent.width + 1 &&
                 child.y + child.height <= parent.y + parent.height + 1,
-              `${width}px ${child.tag} stays inside its own menu button border box`,
+              `${width}px ${child.tag} ${JSON.stringify(child.text)} stays inside its own menu button border box; parent=${JSON.stringify(parent)} child=${JSON.stringify(child)}`,
             );
             if (child.tag === "span" && child.text) {
               assert.ok(

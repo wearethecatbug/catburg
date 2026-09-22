@@ -153,6 +153,10 @@
     padding-inline: 6px;
   }
 
+  .menuButton.hint {
+    padding-inline: 4px;
+  }
+
   .menuButton svg {
     flex-basis: 12px;
     height: 12px;
