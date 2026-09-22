@@ -154,7 +154,8 @@
   }
 
   .menuButton.hint {
-    padding-inline: 4px;
+    gap: 4px;
+    padding-inline: 0;
   }
 
   .menuButton svg {
