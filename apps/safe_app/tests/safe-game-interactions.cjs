@@ -3,6 +3,7 @@ const catInteractions = require("./safe-game-interactions/cat-interactions.cjs")
 const hintsRewards = require("./safe-game-interactions/hints-rewards.cjs");
 const history = require("./safe-game-interactions/history.cjs");
 const modal = require("./safe-game-interactions/modal.cjs");
+const sc08 = require("./safe-game-interactions/sc08.cjs");
 
 layout.register01();
 hintsRewards.register01();
@@ -14,3 +15,4 @@ layout.register03();
 hintsRewards.register03();
 history.register02();
 modal.register01();
+sc08.register01();

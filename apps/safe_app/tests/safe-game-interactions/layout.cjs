@@ -60,6 +60,35 @@ async function opaqueAncestorBackground(locator) {
   });
 }
 
+// Entries contrast with their owned surface; header and grip use the rendered shell stops.
+async function historyContrastMeasurements(entry, heading, handle) {
+  const [entryColor, entrySurface, headingColor, handleColor, shellStops] = await Promise.all([
+    entry.evaluate((element) => getComputedStyle(element).color),
+    entry.evaluate((element) => {
+      const surface = element.closest("[aria-live='polite']");
+      if (!surface) throw new Error("History entry has no entries surface");
+      return getComputedStyle(surface).backgroundColor;
+    }),
+    heading.evaluate((element) => getComputedStyle(element).color),
+    handle.evaluate((element) => getComputedStyle(element).color),
+    heading.evaluate((element) => {
+      const panel = element.closest("section[aria-label='History']");
+      if (!panel) throw new Error("History heading has no panel");
+      const backgroundImage = getComputedStyle(panel).backgroundImage;
+      if (!backgroundImage.includes("linear-gradient"))
+        throw new Error("History panel has no rendered linear gradient");
+      const stops = backgroundImage.match(/rgba?\([^)]*\)/g) || [];
+      if (!stops.length) throw new Error("History panel gradient has no color stops");
+      return stops;
+    }),
+  ]);
+  return [
+    contrastRatio(entryColor, entrySurface),
+    ...shellStops.map((surface) => contrastRatio(headingColor, surface)),
+    ...shellStops.map((surface) => contrastRatio(handleColor, surface)),
+  ];
+}
+
 function register01() {
 test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing the two-column menu", async () => {
   const entries = [
@@ -77,7 +106,9 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
           const text = [...button.querySelectorAll("span")].find(
             (element) => element.textContent?.trim() === label,
           );
-          const lamp = button.querySelector('img[aria-hidden="true"]');
+          const lamp = button.querySelector(
+            ':scope > svg[aria-hidden="true"][focusable="false"]',
+          );
           const toBox = (element) => element && element.getBoundingClientRect();
           return {
             name: label,
@@ -85,6 +116,12 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
             icon: toBox(icon),
             label: toBox(text),
             lamp: toBox(lamp),
+            lampCount: button.querySelectorAll(
+              ':scope > svg[aria-hidden="true"][focusable="false"]',
+            ).length,
+            trailingImageCount: button.querySelectorAll(
+              'img[aria-hidden="true"]',
+            ).length,
             clipped: Boolean(text && text.scrollWidth > text.clientWidth),
           };
         }, name),
@@ -155,15 +192,17 @@ test("SC06: narrow mobile menu keeps an eight-pixel icon gap without disturbing 
         `${width}px two menu columns do not overlap`,
       );
       assert.ok(
-        showHint.lamp &&
+        showHint.lampCount === 1 &&
+          showHint.trailingImageCount === 0 &&
+          showHint.lamp &&
           showHint.lamp.x >= showHint.box.x &&
           showHint.lamp.y >= showHint.box.y &&
           showHint.lamp.x + showHint.lamp.width <=
             showHint.box.x + showHint.box.width &&
           showHint.lamp.y + showHint.lamp.height <=
             showHint.box.y + showHint.box.height &&
-          showHint.lamp.x >= showHint.label.x + showHint.label.width,
-        `${width}px trailing Show hint lamp remains contained after its label`,
+          showHint.lamp.x + showHint.lamp.width <= showHint.label.x,
+        `${width}px Show hint has one contained left SVG lamp and no trailing image`,
       );
     });
 
@@ -248,18 +287,7 @@ test("empty and populated History contrast are collected separately in light and
           name: "Move History",
           exact: true,
         });
-        const targets = [emptyText, heading, handle];
-        const emptyMeasurements = [];
-        for (const target of targets) {
-          emptyMeasurements.push(
-            contrastRatio(
-              await target.evaluate(
-                (element) => getComputedStyle(element).color,
-              ),
-              await opaqueAncestorBackground(target),
-            ),
-          );
-        }
+        const emptyMeasurements = await historyContrastMeasurements(emptyText, heading, handle);
         await controls.history.focus();
         await page.keyboard.press("Enter");
         for (const guess of [
@@ -282,20 +310,13 @@ test("empty and populated History contrast are collected separately in light and
           name: "History",
           exact: true,
         });
-        const populatedMeasurements = [];
-        for (const target of [
+        const populatedEntries = populatedPanel.locator("[aria-live='polite'] li");
+        assert.equal(await populatedEntries.count(), 10, `${colorScheme} populated History retains all valid attempts`);
+        const populatedMeasurements = await historyContrastMeasurements(
+          populatedEntries.first(),
           populatedPanel.getByRole("heading", { name: "History", exact: true }),
           page.getByRole("button", { name: "Move History", exact: true }),
-        ]) {
-          populatedMeasurements.push(
-            contrastRatio(
-              await target.evaluate(
-                (element) => getComputedStyle(element).color,
-              ),
-              await opaqueAncestorBackground(target),
-            ),
-          );
-        }
+        );
         assert.ok(
           emptyMeasurements.every((ratio) => ratio >= 4.5),
           `${colorScheme} empty History contrast meets 4.5:1`,
@@ -1577,7 +1598,7 @@ test("SC05 D20/D21: menu never intersects or overflows and every control remains
                 child.y >= parent.y - 1 &&
                 child.x + child.width <= parent.x + parent.width + 1 &&
                 child.y + child.height <= parent.y + parent.height + 1,
-              `${width}px ${child.tag} stays inside its own menu button border box`,
+              `${width}px ${child.tag} ${JSON.stringify(child.text)} stays inside its own menu button border box; parent=${JSON.stringify(parent)} child=${JSON.stringify(child)}`,
             );
             if (child.tag === "span" && child.text) {
               assert.ok(
@@ -1994,10 +2015,10 @@ test("SC05 D20: compact 2x2 menu keeps 64px controls, 18px labels, visible lamp,
             );
         }
       const lamp = await exact(
-        controls.hint.locator("img[aria-hidden='true']"),
+        controls.hint.locator(":scope > svg[aria-hidden='true'][focusable='false']"),
         `${width}px hint lamp`,
       );
-      const expectedLampSize = width <= 420 ? 14 : 20;
+      const expectedLampSize = 30;
       assert.deepEqual(
         await lamp.evaluate((element) => {
           const rect = element.getBoundingClientRect();

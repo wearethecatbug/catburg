@@ -290,19 +290,28 @@ export function HistoryPanel({
       style={position ? { left: position.left, top: position.top } : undefined}
       aria-label="History"
     >
-      <button
-        ref={dragHandleRef}
-        className={styles.dragHandle}
-        type="button"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endPointer}
-        onPointerCancel={endPointer}
-        onKeyDown={onMoveKeyDown}
-      >
-        Move History
-      </button>
-      <h2>History</h2>
+      <div className={styles.header}>
+        <h2>History</h2>
+        <button
+          ref={dragHandleRef}
+          className={styles.dragHandle}
+          type="button"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endPointer}
+          onPointerCancel={endPointer}
+          onKeyDown={onMoveKeyDown}
+        >
+          Move History
+        </button>
+        <img
+          className={styles.paw}
+          src="/safe-cat/history-paw-192.webp"
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+        />
+      </div>
       <div className={styles.entries} aria-live="polite">
         {attempts.length === 0 ? (
           <p>No valid attempts yet.</p>

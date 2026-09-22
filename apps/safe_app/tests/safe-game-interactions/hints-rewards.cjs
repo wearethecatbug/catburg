@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { fixedClockStart } = require("./shared/runtime-context.cjs");
+const { expectHintLamp } = require("./shared/sc08-contract.cjs");
 const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectRewardReplacement, expectOrdinaryReturn, gameControls, openHintDialog, solveVisibleQuestion, visibleQuestionAnswer } = require("./shared/game-controls.cjs");
 const { intersects } = require("./shared/artwork-geometry.cjs");
 
@@ -188,17 +189,7 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
     { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
       const controls = await gameControls(page);
-      const lamp = await exact(
-        controls.hint.locator(
-          'img[src$="hint-lamp-off-96.webp"], img[src$="hint-lamp-on-96.webp"]',
-        ),
-        "hint lamp image",
-      );
-      assert.match(
-        await lamp.getAttribute("src"),
-        /hint-lamp-off-96\.webp$/,
-        "empty current-round collection renders the off lamp",
-      );
+      await expectHintLamp(controls.hint, false, "empty current-round collection");
       await controls.hint.hover();
       await page.clock.runFor(149);
       assert.equal(
@@ -219,11 +210,7 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
       await controls.hint.click();
       await visibleQuestionAnswer(page);
       await expireHintReward(page);
-      assert.match(
-        await lamp.getAttribute("src"),
-        /hint-lamp-on-96\.webp$/,
-        "an accepted current fact immediately derives lamp-on",
-      );
+      await expectHintLamp(controls.hint, true, "an accepted current fact");
       await page.evaluate(() => {
         if (document.activeElement instanceof HTMLElement)
           document.activeElement.blur();
@@ -282,11 +269,7 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
         "Escape returns focus to its trigger",
       );
       await controls.newRound.click();
-      assert.match(
-        await lamp.getAttribute("src"),
-        /hint-lamp-off-96\.webp$/,
-        "New game removes former-round lamp state",
-      );
+      await expectHintLamp(controls.hint, false, "New game");
     },
   );
 });
@@ -837,12 +820,14 @@ test("SC05 D09-D10: reward is latest-wins, announces once, expires without losin
         "New game invalidates current reward immediately",
       );
       await expectOrdinaryReturn(page, "PLAYING", true, "New game after reward");
+      await expectHintLamp(controls.hint, false, "New game invalidates former-round lamp state");
       await page.clock.runFor(6000);
       assert.equal(
         await page.getByLabel("New hint reward", { exact: true }).count(),
         0,
         "stale timer callbacks cannot resurrect former-round reward state",
       );
+      await expectHintLamp(controls.hint, false, "stale former-round callbacks cannot illuminate the new round");
     },
   );
 });
