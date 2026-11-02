@@ -72,6 +72,8 @@ export interface Task {
   remainingSec: number;
   /** Original duration in seconds (for reset) */
   originalDurationSec: number;
+  /** Last wall-clock point accounted for while a duration timer is running. */
+  lastTimerUpdateAt?: string;
   timerStatus: TimerStatus;
   timerControls?: TimerControls;
   pomodoro?: PomodoroConfig;

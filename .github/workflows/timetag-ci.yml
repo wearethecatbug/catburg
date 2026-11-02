@@ -1,0 +1,53 @@
+name: TimeTag CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/timetag/**'
+      - '.github/workflows/timetag-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/timetag/**'
+      - '.github/workflows/timetag-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  timetag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+
+      - name: Select pinned pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global corepack@0.35.0
+          corepack enable
+          corepack pnpm --version
+
+      - name: Install TimeTag dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack pnpm --filter timetag... install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
+
+      - name: Run TimeTag checks
+        working-directory: apps/timetag
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack pnpm test:unit
+          node node_modules/next/dist/bin/next lint --no-cache
+          node node_modules/typescript/bin/tsc --noEmit --incremental false
+          node node_modules/next/dist/bin/next build

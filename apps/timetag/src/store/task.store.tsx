@@ -16,10 +16,9 @@ import {
   CreateTaskInput,
   FilterState,
   SortState,
-  TimerStatus,
 } from '@/domain/task.types';
 import { applyPipeline } from '@/domain/task.pipeline';
-import { toggleTimerState, resetTimerState, tickTimer } from '@/domain/timer.logic';
+import { toggleTimerState, resetTimerState, shouldTickTimer, tickTimer } from '@/domain/timer.logic';
 import { generateId } from '@/domain/helpers';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 
@@ -44,12 +43,12 @@ interface TaskState {
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
   | { type: 'ADD_TASK'; payload: CreateTaskInput }
-  | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task> } }
+  | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task>; nowIso: string } }
   | { type: 'DELETE_TASK'; payload: string }
   | { type: 'DELETE_SELECTED' }
   | { type: 'TOGGLE_TIMER'; payload: { id: string; nowIso: string } }
   | { type: 'RESET_TIMER'; payload: { id: string; nowIso: string } }
-  | { type: 'TICK_TIMERS' }
+  | { type: 'TICK_TIMERS'; payload: { nowIso: string } }
   | { type: 'SET_WORKSPACE'; payload: WorkspaceType }
   | { type: 'SET_FILTER'; payload: Partial<FilterState> }
   | { type: 'SET_SORT'; payload: SortState }
@@ -57,11 +56,11 @@ type TaskAction =
   | { type: 'TOGGLE_SELECT'; payload: string }
   | { type: 'SELECT_ALL' }
   | { type: 'CLEAR_SELECTION' }
-  | { type: 'PAUSE_SELECTED' }
-  | { type: 'PLAY_SELECTED' }
-  | { type: 'RESET_SELECTED' }
-  | { type: 'MARK_DONE_SELECTED' }
-  | { type: 'ARCHIVE_SELECTED' }
+  | { type: 'PAUSE_SELECTED'; payload: { nowIso: string } }
+  | { type: 'PLAY_SELECTED'; payload: { nowIso: string } }
+  | { type: 'RESET_SELECTED'; payload: { nowIso: string } }
+  | { type: 'MARK_DONE_SELECTED'; payload: { nowIso: string } }
+  | { type: 'ARCHIVE_SELECTED'; payload: { nowIso: string } }
   | { type: 'UNDO_DELETE' };
 
 // ============================================================================
@@ -105,7 +104,9 @@ function createTask(input: CreateTaskInput): Task {
     if (input.targetAt) {
       const targetTime = new Date(input.targetAt).getTime();
       const nowTime = new Date(now).getTime();
-      durationSec = Math.max(0, Math.floor((targetTime - nowTime) / 1000));
+      durationSec = Number.isFinite(targetTime)
+        ? Math.max(0, Math.floor((targetTime - nowTime) / 1000))
+        : 0;
     } else {
       durationSec = 0;
     }
@@ -123,6 +124,7 @@ function createTask(input: CreateTaskInput): Task {
     remainingSec: durationSec,
     originalDurationSec: durationSec,
     timerStatus: input.timerControls?.autoStart ? 'running' : 'idle',
+    lastTimerUpdateAt: input.timerControls?.autoStart && !isDeadlineMode ? now : undefined,
     timerControls: input.timerControls ?? {
       autoStart: false,
       autoPlay: false,
@@ -133,6 +135,27 @@ function createTask(input: CreateTaskInput): Task {
     reminders: input.reminders ?? [],
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+function freezeTask(task: Task, status: TaskStatus, nowIso: string): Task {
+  const deadlineAt = task.targetAt ? new Date(task.targetAt).getTime() : Number.NaN;
+  const shouldReconcileDeadline =
+    task.timerMode === 'deadline' && task.status === 'active' && Number.isFinite(deadlineAt);
+  const timerPatch =
+    task.timerStatus === 'running'
+      ? toggleTimerState(task, nowIso)
+      : shouldReconcileDeadline
+        ? tickTimer(task, nowIso) ?? {}
+        : {};
+
+  return {
+    ...task,
+    ...timerPatch,
+    status,
+    timerStatus: timerPatch.timerStatus === 'expired' ? 'expired' : 'paused',
+    lastTimerUpdateAt: undefined,
+    updatedAt: nowIso,
   };
 }
 
@@ -149,12 +172,24 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return { ...state, tasks: [createTask(action.payload), ...state.tasks] };
 
     case 'UPDATE_TASK': {
-      const { id, updates } = action.payload;
+      const { id, updates, nowIso } = action.payload;
       return {
         ...state,
-        tasks: state.tasks.map((t) =>
-          t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t,
-        ),
+        tasks: state.tasks.map((t) => {
+          if (t.id !== id) return t;
+          if (!updates.status || updates.status === 'active') {
+            return { ...t, ...updates, updatedAt: nowIso };
+          }
+
+          const frozen = freezeTask(t, updates.status, nowIso);
+          return {
+            ...frozen,
+            ...updates,
+            timerStatus: frozen.timerStatus,
+            lastTimerUpdateAt: undefined,
+            updatedAt: nowIso,
+          };
+        }),
       };
     }
 
@@ -199,7 +234,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) => {
-          const patch = tickTimer(t);
+          const patch = tickTimer(t, action.payload.nowIso);
           return patch ? { ...t, ...patch } : t;
         }),
       };
@@ -245,7 +280,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id) && t.timerStatus === 'running'
-            ? { ...t, timerStatus: 'paused' as TimerStatus }
+            ? { ...t, ...toggleTimerState(t, action.payload.nowIso) }
             : t,
         ),
       };
@@ -255,7 +290,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id) && (t.timerStatus === 'paused' || t.timerStatus === 'idle')
-            ? { ...t, timerStatus: 'running' as TimerStatus }
+            ? { ...t, ...toggleTimerState(t, action.payload.nowIso) }
             : t,
         ),
       };
@@ -265,7 +300,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id)
-            ? { ...t, remainingSec: t.originalDurationSec, timerStatus: 'idle' as TimerStatus }
+            ? { ...t, ...resetTimerState(t, action.payload.nowIso) }
             : t,
         ),
       };
@@ -275,7 +310,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id)
-            ? { ...t, status: 'done' as TaskStatus, timerStatus: 'paused' as TimerStatus }
+            ? freezeTask(t, 'done', action.payload.nowIso)
             : t,
         ),
         selectedIds: new Set(),
@@ -286,7 +321,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ...state,
         tasks: state.tasks.map((t) =>
           state.selectedIds.has(t.id)
-            ? { ...t, status: 'archived' as TaskStatus, timerStatus: 'paused' as TimerStatus }
+            ? freezeTask(t, 'archived', action.payload.nowIso)
             : t,
         ),
         selectedIds: new Set(),
@@ -368,11 +403,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // Timer tick engine
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const hasRunning = state.tasks.some((t) => t.timerStatus === 'running');
+  const needsClock = state.tasks.some(shouldTickTimer);
 
   useEffect(() => {
-    if (hasRunning) {
-      timerRef.current = setInterval(() => dispatch({ type: 'TICK_TIMERS' }), 1000);
+    if (needsClock) {
+      timerRef.current = setInterval(
+        () => dispatch({ type: 'TICK_TIMERS', payload: { nowIso: new Date().toISOString() } }),
+        1000,
+      );
     }
     return () => {
       if (timerRef.current) {
@@ -380,7 +418,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         timerRef.current = null;
       }
     };
-  }, [hasRunning]);
+  }, [needsClock]);
 
   // Pipeline via domain
   const filteredTasks = useMemo(
@@ -396,7 +434,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // Convenience dispatchers
   const addTask = useCallback((input: CreateTaskInput) => dispatch({ type: 'ADD_TASK', payload: input }), []);
-  const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates } }), []);
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates, nowIso: new Date().toISOString() } }), []);
   const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
   const toggleTimer = useCallback((id: string) => dispatch({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
   const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
@@ -408,11 +446,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const selectAll = useCallback(() => dispatch({ type: 'SELECT_ALL' }), []);
   const clearSelection = useCallback(() => dispatch({ type: 'CLEAR_SELECTION' }), []);
   const deleteSelected = useCallback(() => dispatch({ type: 'DELETE_SELECTED' }), []);
-  const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED' }), []);
-  const playSelected = useCallback(() => dispatch({ type: 'PLAY_SELECTED' }), []);
-  const resetSelected = useCallback(() => dispatch({ type: 'RESET_SELECTED' }), []);
-  const markDoneSelected = useCallback(() => dispatch({ type: 'MARK_DONE_SELECTED' }), []);
-  const archiveSelected = useCallback(() => dispatch({ type: 'ARCHIVE_SELECTED' }), []);
+  const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
+  const playSelected = useCallback(() => dispatch({ type: 'PLAY_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
+  const resetSelected = useCallback(() => dispatch({ type: 'RESET_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
+  const markDoneSelected = useCallback(() => dispatch({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
+  const archiveSelected = useCallback(() => dispatch({ type: 'ARCHIVE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
   const undoDelete = useCallback(() => dispatch({ type: 'UNDO_DELETE' }), []);
 
   const value: TaskContextValue = {
