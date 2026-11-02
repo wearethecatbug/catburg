@@ -40,7 +40,7 @@ export function toggleTimerState(task: Task, nowIso: string): Partial<Task> {
 
   return {
     timerStatus: 'running',
-    lastTimerUpdateAt: task.timerMode === 'duration' ? nowIso : undefined,
+    lastTimerUpdateAt: task.timerMode !== 'deadline' ? nowIso : undefined,
     updatedAt: nowIso,
   };
 }

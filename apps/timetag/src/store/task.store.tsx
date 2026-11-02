@@ -153,7 +153,8 @@ function freezeTask(task: Task, status: TaskStatus, nowIso: string): Task {
     ...task,
     ...timerPatch,
     status,
-    timerStatus: timerPatch.timerStatus === 'expired' ? 'expired' : 'paused',
+    timerStatus:
+      task.timerStatus === 'expired' || timerPatch.timerStatus === 'expired' ? 'expired' : 'paused',
     lastTimerUpdateAt: undefined,
     updatedAt: nowIso,
   };
