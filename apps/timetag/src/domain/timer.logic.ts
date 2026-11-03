@@ -1,10 +1,63 @@
-import { Task } from './task.types';
+import type { PomodoroConfig, Task } from './task.types';
 
 // ============================================================================
 // Timer State Machine (pure, deterministic)
 // ============================================================================
 
 export type TimerEvent = 'toggle' | 'reset' | 'tick';
+
+const MAX_POMODORO_CYCLES = 10;
+const MAX_WORK_MINUTES = 60;
+const MAX_SHORT_BREAK_MINUTES = 30;
+const MAX_LONG_BREAK_MINUTES = 60;
+
+export interface ActivePomodoroConfig extends PomodoroConfig {
+  currentCycle: number;
+  isBreak: boolean;
+}
+
+function isBoundedPositiveInteger(value: unknown, maximum: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= maximum;
+}
+
+/**
+ * Return only the Pomodoro records the current composer can create. Older
+ * records without phase fields start at work cycle zero; malformed persisted
+ * records deliberately keep the established generic-timer behavior.
+ */
+export function getActivePomodoroConfig(
+  config: PomodoroConfig | undefined,
+): ActivePomodoroConfig | null {
+  if (
+    !config ||
+    !isBoundedPositiveInteger(config.cycles, MAX_POMODORO_CYCLES) ||
+    !isBoundedPositiveInteger(config.workDurationMin, MAX_WORK_MINUTES) ||
+    !isBoundedPositiveInteger(config.shortBreakMin, MAX_SHORT_BREAK_MINUTES) ||
+    !isBoundedPositiveInteger(config.longBreakMin, MAX_LONG_BREAK_MINUTES)
+  ) {
+    return null;
+  }
+
+  const currentCycle = config.currentCycle ?? 0;
+  const isBreak = config.isBreak ?? false;
+  if (
+    !Number.isInteger(currentCycle) ||
+    currentCycle < 0 ||
+    currentCycle > config.cycles ||
+    typeof isBreak !== 'boolean' ||
+    (isBreak && currentCycle === 0) ||
+    (!isBreak && currentCycle >= config.cycles)
+  ) {
+    return null;
+  }
+
+  return { ...config, currentCycle, isBreak };
+}
+
+function getPomodoroPhaseDurationSec(config: ActivePomodoroConfig): number {
+  if (!config.isBreak) return config.workDurationMin * 60;
+  return (config.currentCycle % 4 === 0 ? config.longBreakMin : config.shortBreakMin) * 60;
+}
 
 export function getDeadlineRemainingSec(
   targetAt: string | undefined,
@@ -104,6 +157,23 @@ export function toggleTimerState(task: Task, nowIso: string): Partial<Task> {
  * Reset timer to original duration.
  */
 export function resetTimerState(task: Task, nowIso: string): Partial<Task> {
+  const pomodoro = task.timerMode === 'pomodoro'
+    ? getActivePomodoroConfig(task.pomodoro)
+    : null;
+  if (pomodoro) {
+    const initialPomodoro = { ...pomodoro, currentCycle: 0, isBreak: false };
+    const workDurationSec = initialPomodoro.workDurationMin * 60;
+    return {
+      remainingSec: workDurationSec,
+      originalDurationSec: workDurationSec,
+      pomodoro: initialPomodoro,
+      timerStatus: 'idle',
+      lastTimerUpdateAt: undefined,
+      pausedTimerRemainderMs: undefined,
+      updatedAt: nowIso,
+    };
+  }
+
   return {
     remainingSec: task.originalDurationSec,
     timerStatus: 'idle',
@@ -142,6 +212,51 @@ export function tickTimer(task: Task, nowIso: string): Partial<Task> | null {
 
   const elapsedSec = Math.floor((now - anchor) / 1000);
   if (elapsedSec <= 0) return null;
+
+  const pomodoro = task.timerMode === 'pomodoro'
+    ? getActivePomodoroConfig(task.pomodoro)
+    : null;
+  if (pomodoro && Number.isFinite(task.remainingSec) && task.remainingSec >= 0) {
+    let remainingSec = Math.floor(task.remainingSec);
+    let remainingElapsedSec = elapsedSec;
+    let currentPomodoro = pomodoro;
+    let originalDurationSec = task.originalDurationSec;
+    // The validated configuration has at most ten work/break pairs, and each
+    // iteration strictly advances a phase toward the terminal final break.
+    while (remainingElapsedSec >= remainingSec) {
+      remainingElapsedSec -= remainingSec;
+
+      if (!currentPomodoro.isBreak) {
+        const completedWork = currentPomodoro.currentCycle + 1;
+        currentPomodoro = { ...currentPomodoro, currentCycle: completedWork, isBreak: true };
+        remainingSec = getPomodoroPhaseDurationSec(currentPomodoro);
+        originalDurationSec = remainingSec;
+        continue;
+      }
+
+      if (currentPomodoro.currentCycle >= currentPomodoro.cycles) {
+        return {
+          remainingSec: 0,
+          originalDurationSec,
+          pomodoro: currentPomodoro,
+          timerStatus: 'expired',
+          lastTimerUpdateAt: undefined,
+        };
+      }
+
+      currentPomodoro = { ...currentPomodoro, isBreak: false };
+      remainingSec = getPomodoroPhaseDurationSec(currentPomodoro);
+      originalDurationSec = remainingSec;
+    }
+
+    return {
+      remainingSec: remainingSec - remainingElapsedSec,
+      originalDurationSec,
+      pomodoro: currentPomodoro,
+      timerStatus: 'running',
+      lastTimerUpdateAt: new Date(anchor + elapsedSec * 1000).toISOString(),
+    };
+  }
 
   const allowOverdue = task.timerControls?.allowOverdue ?? false;
   const autoReset = task.timerControls?.autoReset ?? false;
