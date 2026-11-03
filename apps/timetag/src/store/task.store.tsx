@@ -197,13 +197,18 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return { ...state, tasks: action.payload };
 
     case 'REPLACE_PERSISTED_TASKS': {
-      const incomingIds = new Set(action.payload.map((task) => task.id));
+      const visibleIds = new Set(applyPipeline(action.payload, {
+        workspace: state.workspace,
+        filter: state.filter,
+        sort: state.sort,
+        searchQuery: state.searchQuery,
+      }).map((task) => task.id));
       return {
         ...state,
         tasks: action.payload,
         selectedIds: action.clearSelection
           ? new Set()
-          : new Set([...state.selectedIds].filter((id) => incomingIds.has(id))),
+          : new Set([...state.selectedIds].filter((id) => visibleIds.has(id))),
         undoStack: null,
       };
     }
@@ -453,7 +458,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     stateRef.current = next;
     setState(next);
-    if (persistTasks && next.tasks !== previous.tasks) {
+    if (persistTasks && JSON.stringify(next.tasks) !== JSON.stringify(previous.tasks)) {
       registerLocalSnapshot(next.tasks);
       persist();
     }

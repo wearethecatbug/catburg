@@ -86,7 +86,7 @@ export function TaskListWidget() {
           <div className="mt-2 flex gap-2">
             {persistence.kind !== 'unsupported' && !(persistence.kind === 'unsaved' && persistence.reason === 'replace') && (
               <button type="button" onClick={retryPersistence} className="rounded border border-amber-500 px-2 py-1 font-medium">
-                Retry save
+                {persistence.kind === 'unsaved' && persistence.reason === 'invalid' ? 'Check storage again' : 'Retry save'}
               </button>
             )}
             {persistence.kind === 'unsaved' && (persistence.reason === 'invalid' || persistence.reason === 'replace') && (

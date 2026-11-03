@@ -165,6 +165,9 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
                 const normalized = normalizeLegacyRunningTasks(decoded.tasks, new Date().toISOString());
                 const requiresWrite = decoded.migrated || normalized.changed;
                 if (requiresWrite && currentRaw !== null && !preserveRaw(currentRaw)) {
+                  publishExternal(normalized.tasks, currentRaw, false);
+                  migrationRef.current = true;
+                  normalizingRef.current = normalized.changed;
                   fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
                   return;
                 }
@@ -218,13 +221,28 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
         if (reload) publishExternal([], raw, true);
         return;
       }
-      if (!reload && (intentRef.current || !sameTasks(desiredRef.current, confirmedTasksRef.current))) {
-        fail({ kind: 'conflict', message: message('conflict'), localTasks: desiredRef.current, externalTasks: decoded.tasks });
+      const hasLocalIntent = intentRef.current || !sameTasks(desiredRef.current, confirmedTasksRef.current);
+      if (!reload && hasLocalIntent) {
+        if (raw !== rawRef.current) {
+          fail({ kind: 'conflict', message: message('conflict'), localTasks: desiredRef.current, externalTasks: decoded.tasks });
+          return;
+        }
+        if (migrationRef.current && raw !== null && !preserveRaw(raw)) {
+          fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
+          return;
+        }
+        blockedRef.current = false;
+        drain();
         return;
       }
-      const normalized = normalizeLegacyRunningTasks(decoded.tasks, new Date().toISOString());
-      const requiresWrite = decoded.migrated || normalized.changed;
+      const normalized = raw === rawRef.current && migrationRef.current
+        ? { tasks: confirmedTasksRef.current, changed: normalizingRef.current }
+        : normalizeLegacyRunningTasks(decoded.tasks, new Date().toISOString());
+      const requiresWrite = migrationRef.current || decoded.migrated || normalized.changed;
       if (requiresWrite && raw !== null && !preserveRaw(raw)) {
+        publishExternal(normalized.tasks, raw, reload);
+        migrationRef.current = true;
+        normalizingRef.current = normalized.changed;
         fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
         return;
       }
@@ -299,6 +317,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
 
   const recover = useCallback(() => {
     const expectedRaw = recoveryRawRef.current;
+    const recoveryGeneration = generationRef.current;
     const lockManager = locks();
     if (expectedRaw === null) return;
     if (!lockManager) {
@@ -307,7 +326,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
     }
     void lockManager.request(TASK_LOCK_NAME, async () => {
       try {
-        if (recoveryRawRef.current !== expectedRaw) return;
+        if (recoveryRawRef.current !== expectedRaw || generationRef.current !== recoveryGeneration) return;
         const currentRaw = window.localStorage.getItem(TASK_STORAGE_KEY);
         if (currentRaw !== expectedRaw || recoveryRawRef.current !== expectedRaw) {
           const decoded = currentRaw === null ? { tasks: [] as Task[] } : decodeTaskStorage(currentRaw);
@@ -329,9 +348,11 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
         blockedRef.current = false;
         if (mountedRef.current) setPersistence({ kind: 'ready' });
       } catch {
+        if (generationRef.current !== recoveryGeneration) return;
         fail({ kind: 'unsaved', reason: 'replace', message: message('unsaved') });
       }
     }).catch(() => {
+      if (generationRef.current !== recoveryGeneration) return;
       fail({ kind: 'unsaved', reason: 'replace', message: message('unsaved') });
     });
   }, [fail, preserveRaw]);
