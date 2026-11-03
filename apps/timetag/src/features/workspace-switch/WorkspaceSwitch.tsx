@@ -58,7 +58,7 @@ export function WorkspaceSwitch() {
 
 
   // Combined tabs for rendering: user tabs (order preserved) + All tab
-  const tabs = [ ALL_TAB, ...userWorkspaces];
+  const tabs = [ALL_TAB, ...userWorkspaces.filter((workspace) => workspace.id !== ALL_TAB.id)];
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {
@@ -74,6 +74,10 @@ export function WorkspaceSwitch() {
       return;
     }
     const id = createWorkspaceId(label);
+    if (id === ALL_TAB.id) {
+      alert('The All workspace is reserved.');
+      return;
+    }
     // avoid duplicates
     if (userWorkspaces.some((w) => w.id === id)) {
       alert('Workspace with similar name already exists.');
