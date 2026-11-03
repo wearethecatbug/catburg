@@ -22,12 +22,14 @@
   border: 2px solid #2d1d4f;
   border-radius: 999px;
   color: #2d1d4f;
+  font-size: 14px;
   font-weight: 800;
-  left: 50%;
-  padding: 6px 12px;
+  left: var(--pet-prompt-left, 50%);
+  line-height: 18px;
+  padding: 4px 10px;
   position: absolute;
   /* The source canvas starts above its painted cat.  Keep the real bubble in the reserved effect band. */
-  top: 80px;
+  top: var(--pet-prompt-top, 80px);
   transform: translateX(-50%);
 }
 .reactionDescription {
@@ -55,7 +57,7 @@
   /* Keep the flag cat in the common slot: its paws stay on the safe while
      the taller art remains below the permanent subtitle. Its painted paws
      end at source alpha y=227/272, rather than at the transparent canvas edge. */
-  transform: scale(0.69);
+  transform: scale(0.97);
   transform-origin: center 83.5%;
 }
 .catContainer[data-visual-mode="WON"] .art img {
@@ -74,7 +76,7 @@
   position: absolute;
 }
 .hearts i {
-  animation: heart 1200ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: heart var(--heart-duration) cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
   color: #ff5d9c;
   font-size: 22px;
   font-style: normal;
@@ -85,20 +87,20 @@
     0 0 5px rgb(255 93 156 / 0.4);
   top: var(--heart-origin-y);
 }
-.hearts i:nth-child(1) { --heart-offset-x: -24px; }
-.hearts i:nth-child(2) { --heart-offset-x: 0px; }
-.hearts i:nth-child(3) { --heart-offset-x: 24px; }
+.hearts i:nth-child(1) { --heart-duration: 900ms; --heart-offset-x: -24px; --heart-offset-y: -9px; }
+.hearts i:nth-child(2) { --heart-duration: 1100ms; --heart-offset-x: 0px; --heart-offset-y: 0px; }
+.hearts i:nth-child(3) { --heart-duration: 1300ms; --heart-offset-x: 24px; --heart-offset-y: 9px; }
 @keyframes heart {
   0% {
     opacity: 0;
-    transform: translate(var(--heart-offset-x), 0) scale(0.86);
+    transform: translate(var(--heart-offset-x), var(--heart-offset-y)) scale(0.86);
   }
   30% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(var(--heart-offset-x), calc(-1 * var(--heart-rise))) scale(0.96);
+    transform: translate(var(--heart-offset-x), calc(var(--heart-offset-y) - var(--heart-rise))) scale(0.96);
   }
 }
 @media (prefers-reduced-motion: reduce) {

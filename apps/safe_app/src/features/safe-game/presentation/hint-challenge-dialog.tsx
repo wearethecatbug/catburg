@@ -336,7 +336,11 @@ export function HintChallengeDialog({
                   placeholder="Enter your answer…"
                   inputMode="numeric"
                   autoComplete="off"
-                  value={answer}
+                  value={
+                    abandoned
+                      ? String(controller.state.revealedMathAnswer)
+                      : answer
+                  }
                   onChange={(event) => {
                     setAnswer(event.target.value);
                     setRetryVisible(false);
@@ -403,7 +407,7 @@ export function HintChallengeDialog({
               Choose which operations can appear in the examples.
             </p>
             <p
-              className={`${styles.feedback} ${!isSuccess && (retryVisible || abandoned) ? styles.screenReaderOnly : ""}`}
+              className={`${styles.feedback} ${!isSuccess && (retryVisible || abandoned) ? styles.screenReaderOnly : ""} ${abandoned ? styles.abandonedFeedback : ""}`}
               role={isSuccess ? undefined : "status"}
               aria-live={isSuccess ? undefined : "polite"}
             >

@@ -11,8 +11,9 @@
   position: relative;
 }
 .hintWrap > section {
+  left: 0;
   position: absolute;
-  right: 0;
+  right: auto;
   top: calc(100% + 16px);
 }
 .menuButton {
@@ -184,8 +185,9 @@
 }
 @media (min-width: 1280px) {
   .hintWrap > section {
-    right: -20px;
-    top: calc(200% + 36px);
+    left: 0;
+    right: auto;
+    top: calc(100% + 16px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

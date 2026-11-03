@@ -680,13 +680,8 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       const petBox = await pet.boundingBox();
       assert.ok(petBox, "petting target has a rendered click area");
       const initialLayout = await page.locator("main").boundingBox();
-      const bubbles = page.locator(
-        '[data-presentation-mode="PET_NORMAL"] > [aria-hidden="true"]:not(:has(img))',
-      );
-      const heartOrigins = () =>
-        bubbles
-          .locator(":scope > *")
-          .allTextContents();
+      const bursts = page.locator("[data-pet-burst-id]");
+      const hearts = bursts.locator("i");
       await pauseClockAtCurrentTime(page);
       await pet.hover();
       assert.equal(
@@ -696,22 +691,21 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       );
       const pointerPoint = await clickVisibleArtwork(page, pet);
       const pointerOrigin = { x: pointerPoint.x - petBox.x, y: pointerPoint.y - petBox.y };
-      await exact(bubbles, "aria-hidden heart overlay in PET_NORMAL");
+      await exact(bursts, "aria-hidden heart burst in PET_NORMAL");
       assert.equal(
-        await bubbles.locator(":scope > *").count(),
+        await hearts.count(),
         3,
         "one pet emits exactly three decorative hearts",
       );
-      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "a pointer pet renders three decorative hearts");
+      assert.deepEqual(await hearts.allTextContents(), ["♥", "♥", "♥"], "a pointer pet renders three decorative hearts");
       // Sample the rendered animation at one shared WAAPI instant so unused custom properties cannot
       // masquerade as three motions.
-      const renderedMotion = await bubbles
-        .locator(":scope > *")
+      const renderedMotion = await hearts
         .evaluateAll((elements) =>
           elements.map((element) => {
             const animation = element.getAnimations()[0];
             animation.pause();
-            animation.currentTime = 700;
+            animation.currentTime = 0;
             const style = getComputedStyle(element);
             const sample = {
               duration: style.animationDuration,
@@ -723,8 +717,8 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         );
       assert.deepEqual(
         renderedMotion.map((sample) => sample.duration),
-        ["1.2s", "1.2s", "1.2s"],
-        "normal hearts use the current shared public-motion duration",
+        ["0.9s", "1.1s", "1.3s"],
+        "normal hearts use staggered public-motion durations",
       );
       const sampledRise = renderedMotion.map((sample) =>
         Number(
@@ -734,14 +728,14 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         ),
       );
       assert.equal(
-        sampledRise.every((rise) => Number.isFinite(rise) && rise < 0),
+        sampledRise.every((rise) => Number.isFinite(rise)),
         true,
-        "normal hearts visibly rise at the representative WAAPI sample",
+        "normal hearts expose measurable starting profiles before ascent",
       );
       assert.equal(
         new Set(sampledRise.map((rise) => rise.toFixed(3))).size,
-        1,
-        "normal hearts share one current upward motion while their layout offsets remain decorative",
+        3,
+        "normal hearts begin from visibly staggered vertical offsets",
       );
       assert.deepEqual(
         await page.locator("main").boundingBox(),
@@ -759,14 +753,14 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         "petting does not alter game action availability",
       );
       assert.equal(
-        await bubbles.evaluate(
+        await bursts.first().evaluate(
           (element) => getComputedStyle(element).pointerEvents,
         ),
         "none",
         "heart overlay passes pointer input through",
       );
       assert.deepEqual(
-        await bubbles.evaluate((element) => [
+        await bursts.first().evaluate((element) => [
           element.style.getPropertyValue("--heart-origin-x"),
           element.style.getPropertyValue("--heart-origin-y"),
         ]),
@@ -776,81 +770,286 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
         ],
         "the pointer burst originates at its actual click position",
       );
-      await page.clock.runFor(1199);
+      await page.clock.runFor(1198);
       assert.equal(
-        await bubbles.locator(":scope > *").count(),
+        await hearts.count(),
         3,
         "pointer leave cannot end the activation-owned pet presentation early",
       );
       await page.clock.runFor(1);
-      assert.equal(await bubbles.locator(":scope > *").count(), 0, "pointer pet settles exactly at 1200ms");
+      assert.equal(await hearts.count(), 3, "pointer burst survives the unchanged game-state settle until its own last profile ends");
+      await page.clock.runFor(102);
+      await page.waitForTimeout(0);
+      assert.equal(await hearts.count(), 0, "pointer burst clears after its final 1300ms profile");
       const touchPoint = (await visibleAlphaBounds(page, pet)).opaquePoint;
       assert.ok(touchPoint, "touch pet has an opaque artwork point");
       await pet.tap({ position: { x: touchPoint.x - petBox.x, y: touchPoint.y - petBox.y } });
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        3,
-        "a fresh touch burst emits exactly three hearts",
-      );
-      await page.mouse.click(
-        pointerPoint.x,
-        pointerPoint.y,
-      );
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        3,
-        "the active touch burst remains one three-heart effect after a synthetic follow-up tap",
-      );
-      await page.clock.runFor(900);
-      await page.mouse.click(
-        pointerPoint.x,
-        pointerPoint.y,
-      );
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        3,
-        "an active burst cannot become a duplicate three-heart series after 900ms",
-      );
-      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "one activation retains one decorative three-heart burst");
-      await page.clock.runFor(300);
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        0,
-        "touch pet presentation clears after its reducer-owned settle interval",
-      );
+      await page.mouse.click(pointerPoint.x, pointerPoint.y);
+      assert.equal(await bursts.count(), 2, "pointer follow-up retains the touch group and appends its own group");
+      assert.equal(await hearts.count(), 6, "two valid activations render six decorative hearts");
+      await page.clock.runFor(1200);
+      assert.equal(await page.locator('[data-presentation-mode="PLAYING"]').count(), 1, "repeated effects do not extend the original semantic settle");
+      await page.clock.runFor(101);
+      await page.waitForTimeout(0);
+      assert.equal(await hearts.count(), 0, "touch and pointer groups independently clean after their final profiles");
+      await page.clock.runFor(101);
       await pet.focus();
       await page.keyboard.press("Enter");
-      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "Enter petting renders three decorative hearts");
-      const durations = await bubbles
-        .locator(":scope > *")
-        .evaluateAll((elements) =>
-          elements.map((element) => getComputedStyle(element).animationDuration),
-        );
-      assert.deepEqual(
-        durations,
-        ["1.2s", "1.2s", "1.2s"],
-        "one activation gives all three hearts the same 1200ms effect lifetime",
-      );
-      await page.clock.runFor(1201);
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        0,
-        "keyboard burst is completely cleaned up after its reducer-owned settle interval",
-      );
+      assert.equal(await bursts.count(), 1, "Enter creates one keyboard-centered burst group");
+      assert.equal(await hearts.count(), 3, "Enter renders its three decorative hearts");
+      await page.clock.runFor(1301);
+      assert.equal(await hearts.count(), 0, "keyboard burst cleans after its final profile");
       await pet.focus();
       await page.keyboard.press("Space");
-      assert.deepEqual(await heartOrigins(), ["♥", "♥", "♥"], "Space petting renders three decorative hearts");
-      await page.clock.runFor(1201);
-      assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        0,
-        "Space burst is also completely cleaned up after its reducer-owned settle interval",
-      );
+      assert.equal(await hearts.count(), 3, "Space renders three decorative hearts");
+      await page.clock.runFor(1301);
+      assert.equal(await hearts.count(), 0, "Space burst cleans after its final profile");
       await pet.evaluate((node) => node.click());
+      assert.equal(await hearts.count(), 3, "a standalone semantic button click remains an activation without a preceding keydown");
+      await controls.newRound.click();
+      assert.equal(await bursts.count(), 0, "New game clears live pet bursts before their natural expiry");
+    },
+  );
+});
+
+test("Pet me stays above the painted cat at desktop and compact widths", async () => {
+  for (const [width, height] of [[1440, 900], [390, 844]])
+    await withSession(
+      { width, height },
+      { clockStart: fixedClockStart },
+      async ({ page }) => {
+        await pauseClockAtCurrentTime(page);
+        await page.clock.runFor(15_001);
+        await page.clock.runFor(15_000);
+        const prompt = await exact(page.locator("[data-pet-prompt]"), `${width}px Pet me prompt`);
+        const cat = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), `${width}px prompt cat target`);
+        const [promptBox, catAlpha, heading, subtitle] = await Promise.all([
+          prompt.boundingBox(),
+          visibleAlphaBounds(page, cat),
+          page.getByRole("heading", { name: "Guess the number", exact: true }).boundingBox(),
+          gameControls(page).then((controls) => controls.instruction.boundingBox()),
+        ]);
+        assert.ok(promptBox && heading && subtitle, `${width}px prompt and protected header content have boxes`);
+        approximatelyEqual(promptBox.x + promptBox.width / 2, catAlpha.x + catAlpha.width / 2, 8, `${width}px Pet me horizontally follows the painted cat`);
+        const gap = catAlpha.y - (promptBox.y + promptBox.height);
+        assert.ok(gap >= 6 && gap <= 32, `${width}px Pet me keeps the approved 6-32px painted-cat gap: ${gap}px`);
+        assert.equal(promptBox.y + promptBox.height <= catAlpha.y, true, `${width}px Pet me stays above the painted cat`);
+        assert.equal(promptBox.y >= subtitle.y + subtitle.height, true, `${width}px Pet me does not overlap the subtitle: prompt ${promptBox.y}-${promptBox.y + promptBox.height}, subtitle ${subtitle.y}-${subtitle.y + subtitle.height}`);
+      },
+    );
+});
+
+test("Each pet creates a distinct activation-point burst without extending the round presentation", async () => {
+  for (const [width, height, tolerance] of [[1440, 900, 8], [390, 844, 10]])
+    await withSession(
+      { width, height },
+      { hasTouch: true, clockStart: fixedClockStart },
+      async ({ page }) => {
+        await pauseClockAtCurrentTime(page);
+        const pet = await exact(
+          page.getByRole("button", { name: "Pet the cat", exact: true }),
+          `${width}px Pet the cat target`,
+        );
+        const pointForCurrentArt = async (excluded) => pet.evaluate(async (button, prior) => {
+          const image = button.querySelector("img");
+          if (!(image instanceof HTMLImageElement) || !image.complete) return null;
+          const canvas = document.createElement("canvas");
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          if (!context) return null;
+          context.drawImage(image, 0, 0);
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          const rect = image.getBoundingClientRect();
+          const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
+          const left = rect.left + (rect.width - canvas.width * scale) / 2;
+          const top = rect.bottom - canvas.height * scale;
+          for (let y = 16; y < canvas.height - 16; y += 12)
+            for (let x = 16; x < canvas.width - 16; x += 12) {
+              if (pixels[(y * canvas.width + x) * 4 + 3] < 192) continue;
+              const point = { x: Math.round(left + (x + 0.5) * scale), y: Math.round(top + (y + 0.5) * scale) };
+              const hit = document.elementFromPoint(point.x, point.y);
+              if (hit && (hit === button || button.contains(hit)) && prior.every((other) => Math.hypot(other.x - point.x, other.y - point.y) > 12)) return point;
+            }
+          return null;
+        }, excluded);
+        const before = await pet.boundingBox();
+        assert.ok(before, `${width}px pet target has a box`);
+        const points = [];
+        for (let index = 0; index < 3; index += 1) {
+          const point = await pointForCurrentArt(points);
+          assert.ok(point, `${width}px activation ${index + 1} has an opaque point in the current art`);
+          points.push(point);
+          await page.mouse.click(point.x, point.y);
+          await page.waitForTimeout(0);
+        }
+        const groups = page.locator("[data-pet-burst-id]");
+        assert.equal(await groups.count(), 3, `${width}px three rapid activations retain three burst groups`);
+        const burst = await groups.evaluateAll((nodes) => nodes.map((node) => ({
+          id: node.getAttribute("data-pet-burst-id"),
+          hidden: node.getAttribute("aria-hidden"),
+          x: Number.parseFloat(node.style.getPropertyValue("--heart-origin-x")),
+          y: Number.parseFloat(node.style.getPropertyValue("--heart-origin-y")),
+          hearts: [...node.querySelectorAll("i")].map((heart) => ({
+            offsetY: Number.parseFloat(getComputedStyle(heart).getPropertyValue("--heart-offset-y")),
+            duration: Number.parseFloat(getComputedStyle(heart).animationDuration) * 1000,
+            text: heart.textContent,
+          })),
+        })));
+        assert.equal(new Set(burst.map((entry) => entry.id)).size, 3, `${width}px burst identities are unique`);
+        assert.equal(burst.every((entry) => entry.hidden === "true" && entry.hearts.length === 3 && entry.hearts.every((heart) => heart.text === "♥")), true, `${width}px each group exposes exactly three decorative hearts`);
+        for (let index = 0; index < burst.length; index += 1) {
+          approximatelyEqual(before.x + before.width * burst[index].x / 100, points[index].x, tolerance, `${width}px burst ${index + 1} tracks its click x`);
+          approximatelyEqual(before.y + before.height * burst[index].y / 100, points[index].y, tolerance, `${width}px burst ${index + 1} tracks its click y`);
+        }
+        const profiles = burst[0].hearts;
+        const durations = profiles.map((heart) => heart.duration).sort((a, b) => a - b);
+        assert.equal(durations.every((duration, index) => index === 0 || duration - durations[index - 1] >= 100), true, `${width}px heart profiles use staggered durations`);
+        const offsets = profiles.map((heart) => heart.offsetY).sort((a, b) => a - b);
+        assert.equal(offsets.every((offset, index) => index === 0 || offset - offsets[index - 1] >= 4), true, `${width}px heart profiles start at distinct vertical offsets: ${offsets.join(", ")}`);
+        await page.clock.runFor(1200);
+        assert.equal(await page.locator('[data-presentation-mode="PLAYING"]').count(), 1, `${width}px repeat petting keeps the original presentation deadline`);
+        assert.equal(await groups.count(), 3, `${width}px burst groups outlive the unchanged game-state settle until their own final profile ends`);
+        await page.clock.runFor(101);
+        assert.equal(await groups.count(), 0, `${width}px every group cleans itself after its longest profile`);
+      },
+    );
+});
+
+test("A click crossing the pet deadline cannot leak its origin into the next accepted burst", async () => {
+  await withSession(
+    { width: 1440, height: 900 },
+    { clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      const pet = await exact(
+        page.getByRole("button", { name: "Pet the cat", exact: true }),
+        "deadline-race Pet the cat target",
+      );
+      const opaquePointAwayFrom = async (excluded) => pet.evaluate(async (button, prior) => {
+        const image = button.querySelector("img");
+        if (!(image instanceof HTMLImageElement) || !image.complete) return null;
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) return null;
+        context.drawImage(image, 0, 0);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const rect = image.getBoundingClientRect();
+        const scale = Math.min(rect.width / canvas.width, rect.height / canvas.height);
+        const left = rect.left + (rect.width - canvas.width * scale) / 2;
+        const top = rect.bottom - canvas.height * scale;
+        for (let y = 16; y < canvas.height - 16; y += 12)
+          for (let x = 16; x < canvas.width - 16; x += 12) {
+            if (pixels[(y * canvas.width + x) * 4 + 3] < 192) continue;
+            const point = { x: Math.round(left + (x + .5) * scale), y: Math.round(top + (y + .5) * scale) };
+            const hit = document.elementFromPoint(point.x, point.y);
+            if (hit && (hit === button || button.contains(hit)) && prior.every((other) => Math.hypot(other.x - point.x, other.y - point.y) > 24)) return point;
+          }
+        return null;
+      }, excluded);
+      const originAt = async (index) => page.locator("[data-pet-burst-id]").nth(index).evaluate((node) => ({
+        x: Number.parseFloat(node.style.getPropertyValue("--heart-origin-x")),
+        y: Number.parseFloat(node.style.getPropertyValue("--heart-origin-y")),
+      }));
+      const assertOrigin = async (origin, point, label) => {
+        const box = await pet.boundingBox();
+        assert.ok(box, `${label} target has a box`);
+        approximatelyEqual(origin.x, ((point.x - box.x) / box.width) * 100, 3, `${label} x uses its click origin`);
+        approximatelyEqual(origin.y, ((point.y - box.y) / box.height) * 100, 3, `${label} y uses its click origin`);
+      };
+      const initial = await opaquePointAwayFrom([]);
+      assert.ok(initial, "deadline-race initial opaque point exists");
+      await page.mouse.click(initial.x, initial.y);
+      const groups = page.locator("[data-pet-burst-id]");
+      assert.equal(await groups.count(), 1, "initial accepted click creates one burst");
+      await assertOrigin(await originAt(0), initial, "initial accepted click");
+      await page.clock.runFor(1199);
+      const rejected = await opaquePointAwayFrom([initial]);
+      assert.ok(rejected, "deadline-race pre-deadline opaque point exists");
+      const bridgeKey = "__petDeadlineNowRestore";
+      await page.evaluate((key) => {
+        const target = performance;
+        const hadOwn = Object.prototype.hasOwnProperty.call(target, "now");
+        const previous = Object.getOwnPropertyDescriptor(target, "now");
+        const original = target.now.bind(target);
+        Object.defineProperty(target, key, {
+          configurable: true,
+          value: () => {
+            if (hadOwn && previous) Object.defineProperty(target, "now", previous);
+            else delete target.now;
+            delete target[key];
+          },
+        });
+        Object.defineProperty(target, "now", {
+          configurable: true,
+          value: () => original() + 2,
+        });
+      }, bridgeKey);
+      try {
+        await page.mouse.click(rejected.x, rejected.y);
+        await page.waitForTimeout(0);
+      } finally {
+        await page.evaluate((key) => performance[key](), bridgeKey);
+      }
+      assert.equal(await groups.count(), 1, "the deadline-rejected click creates no burst group");
+      await assertOrigin(await originAt(0), initial, "deadline-rejected click leaves the existing origin intact");
+      await page.clock.runFor(101);
+      assert.equal(await groups.count(), 0, "the initial burst cleans before the subsequent accepted click");
+      const fresh = await opaquePointAwayFrom([initial, rejected]);
+      assert.ok(fresh, "deadline-race fresh opaque point exists");
+      await page.mouse.click(fresh.x, fresh.y);
+      assert.equal(await groups.count(), 1, "the subsequent accepted click creates exactly one burst");
+      await assertOrigin(await originAt(0), fresh, "subsequent accepted click");
+    },
+  );
+});
+
+test("Dialog transitions and route unmount clear live bursts; /safe remains proportional", async () => {
+  await withSession(
+    { width: 1440, height: 900 },
+    { clockStart: fixedClockStart, route: "/safe" },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      const pet = await exact(
+        page.getByRole("button", { name: "Pet the cat", exact: true }),
+        "/safe Pet the cat target",
+      );
+      const controls = await gameControls(page);
+      const point = (await visibleAlphaBounds(page, pet)).opaquePoint;
+      assert.ok(point, "/safe exposes an opaque painted cat point");
+      await page.mouse.click(point.x, point.y);
+      const groups = page.locator("[data-pet-burst-id]");
+      assert.equal(await groups.count(), 1, "/safe one valid activation creates one burst group");
+      assert.equal(await groups.locator("i").count(), 3, "/safe burst contains three hearts");
       assert.equal(
-        await bubbles.locator(":scope > *").count(),
-        3,
-        "a standalone semantic button click remains an activation without a preceding keydown",
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+        "/safe pet feedback creates no horizontal overflow",
+      );
+      await controls.hint.click();
+      await exact(page.getByRole("dialog"), "hint dialog entered after a live burst");
+      assert.equal(await groups.count(), 0, "dialog entry clears a live burst on its next transition");
+      await page.keyboard.press("Escape");
+      await page.getByRole("dialog").waitFor({ state: "hidden" });
+      assert.equal(await groups.count(), 0, "dialog exit cannot restore a stale burst");
+      await controls.newRound.click();
+      const resumedPet = await exact(
+        page.getByRole("button", { name: "Pet the cat", exact: true }),
+        "/safe resumed Pet the cat target",
+      );
+      const resumedPoint = (await visibleAlphaBounds(page, resumedPet)).opaquePoint;
+      assert.ok(resumedPoint, "/safe resumed cat exposes an opaque point");
+      await page.mouse.click(resumedPoint.x, resumedPoint.y);
+      assert.equal(await groups.count(), 1, "/safe second activation has one live burst before unmount");
+      const response = await page.goto(new URL("/", baseUrl).href, { waitUntil: "networkidle" });
+      assert.equal(response?.status(), 200, "route navigation after a live burst succeeds");
+      assert.equal(await page.locator("[data-pet-burst-id]").count(), 0, "route unmount cannot retain a stale burst");
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+        "scene return after /safe unmount creates no horizontal overflow",
       );
     },
   );
@@ -1039,7 +1238,7 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
       client.x = point.x;
       client.y = point.y;
       const owner = await ordinaryArt(page, "PET_NORMAL", "cat-pet-hover-800.webp", `${width}px off-center pointer owner`);
-      const overlay = await exact(owner.locator(':scope > [aria-hidden="true"]:not(:has(img))'), `${width}px heart overlay`);
+      const overlay = await exact(owner.locator(':scope > [data-pet-burst-id]'), `${width}px heart overlay`);
       const hearts = overlay.locator(":scope > i");
       assert.equal(await hearts.count(), 3, `${width}px off-center pointer activation renders three decorative hearts`);
       const origin = await overlay.evaluate((element) => [
@@ -1054,16 +1253,21 @@ test("SC05 provider: pet origins use unscaled layout coordinates across responsi
       await ordinaryOwner(page, "PET_NORMAL", `${width}px pointer activation stays active before 1200ms`);
       await page.clock.runFor(1);
       await expectOrdinaryReturn(page, "PLAYING", true, `${width}px pointer activation settles at 1200ms`);
+      await page.clock.runFor(101);
       const keyboardPet = await exact(page.getByRole("button", { name: "Pet the cat", exact: true }), `${width}px restored keyboard pet target`);
+      const paintedCenter = await visibleAlphaBounds(page, keyboardPet);
       await keyboardPet.focus();
       await page.keyboard.press("Enter");
       const keyboardOwner = await ordinaryOwner(page, "PET_NORMAL", `${width}px keyboard PET_NORMAL owner`);
-      assert.equal(await keyboardOwner.locator(':scope > [aria-hidden="true"] i').count(), 3, `${width}px Enter renders three decorative hearts`);
-      const keyboardOrigin = await keyboardOwner.locator(':scope > [aria-hidden="true"]:not(:has(img))').evaluate((element) => [
-        element.style.getPropertyValue("--heart-origin-x"),
-        element.style.getPropertyValue("--heart-origin-y"),
-      ]);
-      assert.deepEqual(keyboardOrigin, ["50%", "50%"], `${width}px keyboard activation centers its burst`);
+      assert.equal(await keyboardOwner.locator(':scope > [data-pet-burst-id] i').count(), 3, `${width}px Enter renders three decorative hearts`);
+      const keyboardOrigin = await keyboardOwner.locator(':scope > [data-pet-burst-id]').evaluate((element) => ({
+        x: Number.parseFloat(element.style.getPropertyValue("--heart-origin-x")),
+        y: Number.parseFloat(element.style.getPropertyValue("--heart-origin-y")),
+      }));
+      const keyboardBox = await keyboardOwner.boundingBox();
+      assert.ok(keyboardBox, `${width}px keyboard owner has a box`);
+      approximatelyEqual(keyboardBox.x + keyboardBox.width * keyboardOrigin.x / 100, paintedCenter.x + paintedCenter.width / 2, 8, `${width}px Enter uses painted alpha center on x`);
+      approximatelyEqual(keyboardBox.y + keyboardBox.height * keyboardOrigin.y / 100, paintedCenter.y + paintedCenter.height / 2, 8, `${width}px Enter uses painted alpha center on y`);
       await page.clock.runFor(1200);
       await expectOrdinaryReturn(page, "PLAYING", true, `${width}px keyboard settle`);
     });
@@ -1176,14 +1380,15 @@ test("SC05 D05: reduced-motion petting keeps three decorative hearts fade-only f
         "PET_NORMAL",
         "reduced-motion reducer-owned PET_NORMAL owner",
       );
-      const hearts = owner.locator(':scope > [aria-hidden="true"] i');
+      const hearts = owner.locator(':scope > [data-pet-burst-id] i');
       assert.equal(await hearts.count(), 3, "reduced-motion reducer owns three hearts");
-      await page.clock.runFor(1199);
-      await ordinaryOwner(page, "PET_NORMAL", "reduced-motion activation remains active at 1199ms");
-      assert.equal(await hearts.count(), 3, "reduced-motion hearts remain at 1199ms");
+      await page.clock.runFor(699);
+      assert.equal(await hearts.count(), 3, "reduced-motion hearts remain through their 700ms fade");
       await page.clock.runFor(1);
-      await expectOrdinaryReturn(page, "PLAYING", true, "reduced-motion activation settles exactly at 1200ms");
-      assert.equal(await hearts.count(), 0, "reduced-motion hearts clear exactly at 1200ms");
+      await ordinaryOwner(page, "PET_NORMAL", "reduced-motion cleanup leaves the semantic presentation active");
+      assert.equal(await hearts.count(), 0, "reduced-motion hearts clear at their own 700ms lifetime");
+      await page.clock.runFor(500);
+      await expectOrdinaryReturn(page, "PLAYING", true, "reduced-motion semantic settle still completes at 1200ms");
     },
   );
 });

@@ -214,6 +214,13 @@
   box-shadow: 0 1px 0 #52309e;
   transform: translateY(2px);
 }
+.answerForm button:disabled {
+  background: #e7e1ef;
+  border: 2px solid #c3bbcf;
+  box-shadow: none;
+  color: #766f80;
+  cursor: not-allowed;
+}
 .answerForm input:focus-visible,
 .dialog button:focus-visible {
   border-color: #7147dc;
@@ -304,12 +311,20 @@
   transform: translateY(-14px);
 }
 .imageButton {
+  align-items: center;
   background: #fbf7ff;
   border: 2px solid #cdb7f5;
   border-radius: 16px;
+  display: inline-flex;
   flex: 0 1 26%;
   font-weight: 800;
+  gap: 8px;
+  justify-content: center;
   min-height: 52px;
+}
+.imageButton svg {
+  display: block;
+  flex: 0 0 auto;
 }
 .newQuestionButton {
   background: linear-gradient(
@@ -775,6 +790,16 @@
     top: -21px;
   }
 
+  .abandonedBubble {
+    right: -106px;
+    top: 16px;
+    transform: none;
+  }
+
+  .imageButton {
+    font-size: calc(16px / var(--effective-dialog-scale));
+  }
+
   .boardActions {
     transform: translate(14px, -15px);
   }
@@ -1193,6 +1218,14 @@
 
 /* Mobile keeps every task control in one deliberate warm portrait story. */
 @media (max-width: 600px) {
+  .feedback.screenReaderOnly.abandonedFeedback {
+    clip-path: none;
+    opacity: 1;
+    overflow: visible;
+    position: static;
+    white-space: normal;
+  }
+
   .dialogShell {
     background: #fffdf8;
   }
@@ -1494,7 +1527,7 @@
   }
 
   .cat.reflectedCat.abandonedCat {
-    transform: translateY(10px);
+    transform: translate(-24px, 10px);
   }
 }
 
@@ -1735,5 +1768,74 @@
 
   .closeButton {
     position: absolute;
+  }
+}
+
+/* Anchor the complete wide canvas at the answer-field eye line. */
+@media (min-width: 821px) and (min-height: 801px) {
+  .backdrop {
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 0;
+  }
+
+  .dialogShell {
+    --wide-shell-width: min(940px, calc(100vw - 48px), calc((100svh - var(--dialog-lane-top, 0px) - 12px) * 1327 / 1185));
+    --wide-shell-height: calc(var(--wide-shell-width) * 1185 / 1327);
+    left: clamp(24px, calc(50vw - var(--wide-shell-width) * 0.2805), calc(100vw - 24px - var(--wide-shell-width)));
+    margin: 0;
+    position: absolute;
+    right: auto;
+    top: clamp(24px, calc(45svh - var(--wide-shell-height) * 0.472), calc(100svh - 24px - var(--wide-shell-height)));
+    transform: none;
+    width: var(--wide-shell-width);
+  }
+}
+
+/* Compact screens keep a finite card: the card scrolls, never the locked page. */
+@media (max-width: 600px) {
+  .backdrop {
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 16px;
+  }
+
+  .dialogShell {
+    background: #fffdf8;
+    border-radius: 28px;
+    box-shadow: inset 0 0 0 3px rgb(222 205 251 / 0.72), 0 12px 30px rgb(48 35 78 / 0.18);
+    height: min(920px, calc(100svh - 32px));
+    max-height: calc(100svh - 32px);
+    overflow: hidden;
+    width: min(468px, calc(100vw - 32px));
+  }
+
+  .dialogShell::before { display: none; }
+
+  .dialog {
+    align-content: start;
+    background: #fffdf8 url("/safe-cat/hint-popup-narrow-background-1254.png") center / cover no-repeat;
+    border-radius: inherit;
+    gap: 12px;
+    height: 100%;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 24px 12px 16px;
+    width: 100%;
+  }
+
+  .heading {
+    min-height: 0;
+    padding: 0 48px 0;
+  }
+
+  .heading h2 { margin: 0; }
+
+  .closeButton {
+    position: absolute;
+    right: 8px;
+    top: 8px;
   }
 }

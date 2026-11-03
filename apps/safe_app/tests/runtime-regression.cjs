@@ -182,11 +182,13 @@ async function observe(name, width, height) {
     await page.keyboard.press("Enter");
     const petNormal = page.locator('[data-presentation-mode="PET_NORMAL"]');
     await petNormal.waitFor();
+    const activePet = petNormal.and(
+      page.getByRole("button", { name: "Pet the cat", exact: true }),
+    );
     const keyboardPetState = {
       ownerCount: await petNormal.count(),
-      catCount: await page
-        .getByLabel("Cat is enjoying the pets", { exact: true })
-        .count(),
+      catCount: await activePet.count(),
+      catEnabled: await activePet.isEnabled(),
       hearts: await petNormal.locator("i").count(),
     };
     const buttonReachability = [];
@@ -294,7 +296,7 @@ for (const [name, width, height] of viewports)
     );
     assert.deepEqual(
       observation.petInteraction.keyboardPetState,
-      { ownerCount: 1, catCount: 1, hearts: 3 },
+      { ownerCount: 1, catCount: 1, catEnabled: true, hearts: 3 },
       "Enter on the focused pettable cat creates one PET_NORMAL owner with exactly three decorative hearts",
     );
     for (const [name, result] of Object.entries({
