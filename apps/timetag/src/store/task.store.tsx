@@ -3,11 +3,11 @@
 import React, {
   createContext,
   useContext,
-  useReducer,
   useEffect,
   useCallback,
   useMemo,
   useRef,
+  useState,
 } from 'react';
 import {
   Task,
@@ -27,7 +27,7 @@ import {
   tickTimer,
 } from '@/domain/timer.logic';
 import { generateId } from '@/domain/helpers';
-import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
+import { useTaskPersistence, type TaskPersistenceStatus } from './task.persistence';
 
 // ============================================================================
 // State
@@ -49,6 +49,7 @@ interface TaskState {
 
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
+  | { type: 'REPLACE_PERSISTED_TASKS'; payload: Task[] }
   | { type: 'ADD_TASK'; payload: CreateTaskInput }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task>; nowIso: string } }
   | { type: 'DELETE_TASK'; payload: string }
@@ -93,6 +94,18 @@ const initialState: TaskState = {
   selectedIds: new Set(),
   undoStack: null,
 };
+
+const nonPersistentActionTypes = new Set<TaskAction['type']>([
+  'SET_TASKS',
+  'REPLACE_PERSISTED_TASKS',
+  'SET_WORKSPACE',
+  'SET_FILTER',
+  'SET_SORT',
+  'SET_SEARCH',
+  'TOGGLE_SELECT',
+  'SELECT_ALL',
+  'CLEAR_SELECTION',
+]);
 
 // ============================================================================
 // Task Factory
@@ -182,6 +195,9 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
   switch (action.type) {
     case 'SET_TASKS':
       return { ...state, tasks: action.payload };
+
+    case 'REPLACE_PERSISTED_TASKS':
+      return { ...state, tasks: action.payload, selectedIds: new Set(), undoStack: null };
 
     case 'ADD_TASK':
       return { ...state, tasks: [createTask(action.payload), ...state.tasks] };
@@ -392,6 +408,9 @@ interface TaskContextValue {
   undoDelete: () => void;
   hasSelection: boolean;
   canUndo: boolean;
+  persistence: TaskPersistenceStatus;
+  retryPersistence: () => void;
+  reloadPersistedTasks: () => void;
 }
 
 const TaskContext = createContext<TaskContextValue | null>(null);
@@ -401,32 +420,43 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 // ============================================================================
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
-  const [savedTasks, setSavedTasks, isSavedTasksHydrated] =
-    useLocalStorage<Task[]>('timetag-tasks', []);
+  const stateRef = useRef<TaskState>(initialState);
+  const applyExternalRef = useRef<(tasks: Task[]) => void>(() => {});
+  const applyExternal = useCallback((tasks: Task[]) => applyExternalRef.current(tasks), []);
+  const {
+    persistence,
+    registerLocalSnapshot,
+    persist,
+    retry: retryPersistence,
+    reload: reloadPersistedTasks,
+  } = useTaskPersistence(applyExternal);
 
-  // Always initialize with empty tasks to avoid hydration mismatch
-  const [state, dispatch] = useReducer(taskReducer, initialState);
+  // Always initialize with empty tasks to avoid hydration mismatch. stateRef is
+  // the synchronous transition owner; React state is its single publication.
+  const [state, setState] = useState<TaskState>(initialState);
 
-  // Track if we've loaded from localStorage
-  const hasLoadedRef = useRef(false);
+  const applyAction = useCallback((action: TaskAction, persistTasks: boolean) => {
+    const previous = stateRef.current;
+    const next = taskReducer(previous, action);
+    if (next === previous) return;
 
-  // Persist to localStorage after initial storage hydration + task hydration complete.
-  useEffect(() => {
-    if (!isSavedTasksHydrated || !hasLoadedRef.current) return;
-    setSavedTasks(state.tasks);
-  }, [state.tasks, setSavedTasks, isSavedTasksHydrated]);
-
-  // Hydrate from localStorage when storage read is complete.
-  useEffect(() => {
-    if (!isSavedTasksHydrated || hasLoadedRef.current) return;
-
-    if (savedTasks.length > 0) {
-      dispatch({ type: 'SET_TASKS', payload: savedTasks });
+    stateRef.current = next;
+    setState(next);
+    if (persistTasks && next.tasks !== previous.tasks) {
+      registerLocalSnapshot(next.tasks);
+      persist();
     }
+  }, [persist, registerLocalSnapshot]);
 
-    // Mark hydration complete even when storage is empty.
-    hasLoadedRef.current = true;
-  }, [savedTasks, isSavedTasksHydrated]);
+  // Accept an external snapshot through the same synchronous owner before the
+  // persistence layer advances its confirmed raw baseline.
+  applyExternalRef.current = (tasks) => {
+    applyAction({ type: 'REPLACE_PERSISTED_TASKS', payload: tasks }, false);
+  };
+
+  const dispatchWithIntent = useCallback((action: TaskAction) => {
+    applyAction(action, !nonPersistentActionTypes.has(action.type));
+  }, [applyAction]);
 
   // Timer tick engine
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -435,7 +465,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (needsClock) {
       timerRef.current = setInterval(
-        () => dispatch({ type: 'TICK_TIMERS', payload: { nowIso: new Date().toISOString() } }),
+        () => dispatchWithIntent({ type: 'TICK_TIMERS', payload: { nowIso: new Date().toISOString() } }),
         1000,
       );
     }
@@ -445,7 +475,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         timerRef.current = null;
       }
     };
-  }, [needsClock]);
+  }, [dispatchWithIntent, needsClock]);
 
   // Pipeline via domain
   const filteredTasks = useMemo(
@@ -460,30 +490,30 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   );
 
   // Convenience dispatchers
-  const addTask = useCallback((input: CreateTaskInput) => dispatch({ type: 'ADD_TASK', payload: input }), []);
-  const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatch({ type: 'UPDATE_TASK', payload: { id, updates, nowIso: new Date().toISOString() } }), []);
-  const deleteTask = useCallback((id: string) => dispatch({ type: 'DELETE_TASK', payload: id }), []);
-  const toggleTimer = useCallback((id: string) => dispatch({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
-  const resetTimer = useCallback((id: string) => dispatch({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [],);
-  const setWorkspace = useCallback((ws: WorkspaceType) => dispatch({ type: 'SET_WORKSPACE', payload: ws }), []);
-  const setFilter = useCallback((f: Partial<FilterState>) => dispatch({ type: 'SET_FILTER', payload: f }), []);
-  const setSort = useCallback((s: SortState) => dispatch({ type: 'SET_SORT', payload: s }), []);
-  const setSearch = useCallback((q: string) => dispatch({ type: 'SET_SEARCH', payload: q }), []);
-  const toggleSelect = useCallback((id: string) => dispatch({ type: 'TOGGLE_SELECT', payload: id }), []);
-  const selectAll = useCallback(() => dispatch({ type: 'SELECT_ALL' }), []);
-  const clearSelection = useCallback(() => dispatch({ type: 'CLEAR_SELECTION' }), []);
-  const deleteSelected = useCallback(() => dispatch({ type: 'DELETE_SELECTED' }), []);
-  const pauseSelected = useCallback(() => dispatch({ type: 'PAUSE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
-  const playSelected = useCallback(() => dispatch({ type: 'PLAY_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
-  const resetSelected = useCallback(() => dispatch({ type: 'RESET_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
-  const markDoneSelected = useCallback(() => dispatch({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
-  const archiveSelected = useCallback(() => dispatch({ type: 'ARCHIVE_SELECTED', payload: { nowIso: new Date().toISOString() } }), []);
-  const undoDelete = useCallback(() => dispatch({ type: 'UNDO_DELETE' }), []);
+  const addTask = useCallback((input: CreateTaskInput) => dispatchWithIntent({ type: 'ADD_TASK', payload: input }), [dispatchWithIntent]);
+  const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatchWithIntent({ type: 'UPDATE_TASK', payload: { id, updates, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const deleteTask = useCallback((id: string) => dispatchWithIntent({ type: 'DELETE_TASK', payload: id }), [dispatchWithIntent]);
+  const toggleTimer = useCallback((id: string) => dispatchWithIntent({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const resetTimer = useCallback((id: string) => dispatchWithIntent({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const setWorkspace = useCallback((ws: WorkspaceType) => dispatchWithIntent({ type: 'SET_WORKSPACE', payload: ws }), [dispatchWithIntent]);
+  const setFilter = useCallback((f: Partial<FilterState>) => dispatchWithIntent({ type: 'SET_FILTER', payload: f }), [dispatchWithIntent]);
+  const setSort = useCallback((s: SortState) => dispatchWithIntent({ type: 'SET_SORT', payload: s }), [dispatchWithIntent]);
+  const setSearch = useCallback((q: string) => dispatchWithIntent({ type: 'SET_SEARCH', payload: q }), [dispatchWithIntent]);
+  const toggleSelect = useCallback((id: string) => dispatchWithIntent({ type: 'TOGGLE_SELECT', payload: id }), [dispatchWithIntent]);
+  const selectAll = useCallback(() => dispatchWithIntent({ type: 'SELECT_ALL' }), [dispatchWithIntent]);
+  const clearSelection = useCallback(() => dispatchWithIntent({ type: 'CLEAR_SELECTION' }), [dispatchWithIntent]);
+  const deleteSelected = useCallback(() => dispatchWithIntent({ type: 'DELETE_SELECTED' }), [dispatchWithIntent]);
+  const pauseSelected = useCallback(() => dispatchWithIntent({ type: 'PAUSE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const playSelected = useCallback(() => dispatchWithIntent({ type: 'PLAY_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const resetSelected = useCallback(() => dispatchWithIntent({ type: 'RESET_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const markDoneSelected = useCallback(() => dispatchWithIntent({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const archiveSelected = useCallback(() => dispatchWithIntent({ type: 'ARCHIVE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
+  const undoDelete = useCallback(() => dispatchWithIntent({ type: 'UNDO_DELETE' }), [dispatchWithIntent]);
 
   const value: TaskContextValue = {
     state,
     filteredTasks,
-    dispatch,
+    dispatch: dispatchWithIntent,
     addTask,
     updateTask,
     deleteTask,
@@ -505,6 +535,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     undoDelete,
     hasSelection: state.selectedIds.size > 0,
     canUndo: state.undoStack !== null,
+    persistence,
+    retryPersistence,
+    reloadPersistedTasks,
   };
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
