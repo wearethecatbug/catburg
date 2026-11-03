@@ -319,6 +319,8 @@ async function sc06ResponsiveGeometry(hint) {
       return {
         background: before.backgroundImage,
         borderRadius: before.borderRadius,
+        content: before.content,
+        display: before.display,
         top: Number.parseFloat(before.top),
         right: Number.parseFloat(before.right),
         bottom: Number.parseFloat(before.bottom),
@@ -362,6 +364,8 @@ async function sc06ResponsiveGeometry(hint) {
     bottom: shellBacking.box.y + shellBacking.box.height - shellBacking.bottom,
   };
   if (
+    shellBacking.display !== "none" &&
+    shellBacking.content !== "none" &&
     [
       shellBacking.top,
       shellBacking.right,
@@ -1460,6 +1464,33 @@ test("SC06: responsive clean frame keeps geometry stable, scales before 820px, a
           sample.shellBacking.bottom > 0 &&
           sample.shellBacking.left > 0,
         `${sample.width}px shell ::before is inset on every side so it cannot create a rectangular exterior slab`,
+      );
+    } else if (sample.width <= 600) {
+      const compactWidth = Math.min(468, sample.width - 32);
+      approximatelyEqual(
+        sample.shellBacking.box.x,
+        (sample.width - compactWidth) / 2,
+        1,
+        `${sample.width}px compact shell is centered inside its 16px viewport gutters`,
+      );
+      approximatelyEqual(
+        sample.shellBacking.box.width,
+        compactWidth,
+        1,
+        `${sample.width}px compact shell retains its bounded-card width`,
+      );
+      assert.equal(
+        sample.shellBacking.shellBackgroundImage,
+        "none",
+        `${sample.width}px compact shell removes the desktop frame image`,
+      );
+      assert.ok(
+        Number.parseFloat(sample.shellBacking.shellRadius) > 0,
+        `${sample.width}px compact shell keeps its rounded card boundary`,
+      );
+      assert.ok(
+        ["auto", "scroll"].includes(sample.overflowY),
+        `${sample.width}px compact dialog exposes bounded internal scrolling when its protected lane is exceeded`,
       );
     } else {
       approximatelyEqual(
@@ -3166,7 +3197,7 @@ test("SC06: responsive narrow challenge title and range-specific subtitle remain
     );
 });
 
-test("SC06: <=360px phones keep the exact challenge title on one centered line and lift only the fixed close paw", async () => {
+test("SC06: <=360px phones keep the exact challenge title and bounded-card Close control", async () => {
   let baselineCloseInsets;
   for (const [width, height, narrow] of [
     [361, 844, false],
@@ -3182,6 +3213,12 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
       async ({ page }) => {
         const controls = await gameControls(page);
         await controls.hint.click();
+        await page
+          .getByRole("dialog", {
+            name: "Solve a quick math question",
+            exact: true,
+          })
+          .waitFor({ state: "visible" });
         const hint = await sc06Dialog(page);
         const title = await exact(
           hint.dialog.getByRole("heading", {
@@ -3206,6 +3243,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           contentBox,
           vignetteBox,
           actionsBox,
+          shellBox,
           titleMetrics,
           closeMetrics,
         ] = await Promise.all([
@@ -3214,6 +3252,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           content.boundingBox(),
           vignette.boundingBox(),
           actions.boundingBox(),
+          hint.dialog.locator("xpath=..").boundingBox(),
           title.evaluate((element) => {
             const style = getComputedStyle(element);
             const box = element.getBoundingClientRect();
@@ -3235,7 +3274,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           }),
         ]);
         assert.ok(
-          titleBox && closeBox && contentBox && vignetteBox && actionsBox,
+          titleBox && closeBox && contentBox && vignetteBox && actionsBox && shellBox,
           `${width}x${height} narrow-phone title, close, and established regions render`,
         );
         assert.equal(
@@ -3287,17 +3326,24 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
             closeBox.y >= 0 &&
             closeBox.x + closeBox.width <= width &&
             closeBox.y + closeBox.height <= height,
-          `${width}x${height} fixed close paw stays fully contained`,
+          `${width}x${height} Close paw stays fully contained`,
         );
         assert.equal(
           intersects(closeBox, titleBox, 0),
           false,
-          `${width}x${height} fixed close paw remains clear of the title`,
+          `${width}x${height} Close paw remains clear of the title`,
+        );
+        assert.ok(
+          closeBox.x >= shellBox.x &&
+            closeBox.y >= shellBox.y &&
+            closeBox.x + closeBox.width <= shellBox.x + shellBox.width &&
+            closeBox.y + closeBox.height <= shellBox.y + shellBox.height,
+          `${width}x${height} Close paw remains inside the bounded card`,
         );
 
         const closeInsets = {
-          right: width - (closeBox.x + closeBox.width),
-          top: closeBox.y,
+          right: shellBox.x + shellBox.width - (closeBox.x + closeBox.width),
+          top: closeBox.y - shellBox.y,
         };
         if (!narrow) {
           assert.ok(
@@ -3311,7 +3357,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
             "361px close-paw baseline is captured before narrow checks",
           );
           approximatelyEqual(closeInsets.right, 8, 1,
-            `${width}x${height} keeps the exact 8px viewport right gutter`);
+            `${width}x${height} keeps the exact 8px bounded-card right gutter`);
           assert.ok(
             titleBox.y >= closeBox.y,
             `${width}x${height} keeps the title in the protected header lane below the shell-relative Close control`,
@@ -3321,7 +3367,6 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
         for (const [name, box] of Object.entries({
           content: contentBox,
           vignette: vignetteBox,
-          actions: actionsBox,
         }))
           assert.ok(
             box.x >= 0 &&
@@ -3330,6 +3375,53 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
               box.y + box.height <= height,
             `${width}x${height} established ${name} region remains contained`,
           );
+        const actionsFitViewport =
+          actionsBox.x >= 0 &&
+          actionsBox.y >= 0 &&
+          actionsBox.x + actionsBox.width <= width &&
+          actionsBox.y + actionsBox.height <= height;
+        const dialogOverflow = await hint.dialog.evaluate((element) => ({
+          max: element.scrollHeight - element.clientHeight,
+          overflowY: getComputedStyle(element).overflowY,
+        }));
+        const shortCompactFixture = width === 320 && height === 568;
+        if (!shortCompactFixture || dialogOverflow.max <= 0)
+          assert.equal(
+            actionsFitViewport,
+            true,
+            `${width}x${height} established actions region remains contained`,
+          );
+        else {
+          assert.ok(
+            ["auto", "scroll"].includes(dialogOverflow.overflowY),
+            `${width}x${height} short bounded card owns its local overflow`,
+          );
+          const pageScrollBeforeActions = await page.evaluate(() => scrollY);
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [actionsReach, dialogReach] = await Promise.all([
+            actions.boundingBox(),
+            hint.dialog.boundingBox(),
+          ]);
+          assert.ok(
+            actionsReach &&
+              dialogReach &&
+              actionsReach.x >= dialogReach.x &&
+              actionsReach.y >= dialogReach.y &&
+              actionsReach.x + actionsReach.width <= dialogReach.x + dialogReach.width &&
+              actionsReach.y + actionsReach.height <= dialogReach.y + dialogReach.height,
+            `${width}x${height} local scrolling reaches the full actions region`,
+          );
+          assert.equal(
+            await page.evaluate(() => scrollY),
+            pageScrollBeforeActions,
+            `${width}x${height} action reachability keeps page scrolling locked`,
+          );
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = 0;
+          });
+        }
         assert.equal(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
@@ -4255,6 +4347,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
           );
           const [
             vignetteDisplay,
+            scrolledVignetteBox,
             catBox,
             catAlpha,
             bubbleBox,
@@ -4262,6 +4355,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             bubbleDisplay,
           ] = await Promise.all([
             vignette.evaluate((element) => getComputedStyle(element).display),
+            vignette.boundingBox(),
             cat.boundingBox(),
             visibleAlphaBounds(page, cat),
             bubble.boundingBox(),
@@ -4279,7 +4373,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             `${width}x${height} compact vignette remains visible`,
           );
           assert.ok(
-            vignetteBox && catBox && noticeBox,
+            scrolledVignetteBox && catBox && noticeBox,
             `${width}x${height} compact state scene remains rendered`,
           );
           const contained = (inner, outer) =>
@@ -4288,7 +4382,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             inner.x + inner.width <= outer.x + outer.width + 1 &&
             inner.y + inner.height <= outer.y + outer.height + 1;
           assert.equal(
-            contained(catAlpha, vignetteBox),
+            contained(catAlpha, scrolledVignetteBox),
             true,
             `${width}x${height} compact cat art remains inside the vignette`,
           );

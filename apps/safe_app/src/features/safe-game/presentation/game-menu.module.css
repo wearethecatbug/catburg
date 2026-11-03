@@ -187,7 +187,7 @@
   .hintWrap > section {
     left: 0;
     right: auto;
-    top: calc(100% + 16px);
+    top: calc(200% + 36px);
   }
 }
 @media (prefers-reduced-motion: reduce) {

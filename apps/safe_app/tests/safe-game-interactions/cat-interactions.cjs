@@ -199,7 +199,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
 test("SC05 D04: each accepted public input edit advances only the decorative dial by 36 degrees", async () => {
   await withSession(
     { width: 768, height: 800 },
-    {},
+    { random: 0.041 },
     async ({ page, context }) => {
       const controls = await gameControls(page);
       const dial = await exactHiddenChild(
@@ -225,14 +225,56 @@ test("SC05 D04: each accepted public input edit advances only the decorative dia
         0,
         "a new round starts at the public zero angle",
       );
+      await dial.evaluate((element) => {
+        element.__safeCatDialTransitionRun = new Promise((resolve, reject) => {
+          const timeout = window.setTimeout(() => {
+            element.removeEventListener("transitionrun", onTransitionRun);
+            reject(new Error("normal-motion dial did not start a transform CSS transition"));
+          }, 1000);
+          const onTransitionRun = (event) => {
+            if (event.propertyName !== "transform") return;
+            element.removeEventListener("transitionrun", onTransitionRun);
+            window.clearTimeout(timeout);
+            const transition = element
+              .getAnimations()
+              .find(
+                (animation) =>
+                  animation instanceof CSSTransition &&
+                  animation.transitionProperty === "transform",
+              );
+            if (!transition) {
+              reject(new Error("normal-motion dial does not expose a transform CSS transition"));
+              return;
+            }
+            transition.pause();
+            element.__safeCatDialTransformTransition = transition;
+            resolve();
+          };
+          element.addEventListener("transitionrun", onTransitionRun);
+        });
+      });
       await controls.code.fill("1");
-      await page.waitForTimeout(90);
+      await dial.evaluate(async (element) => {
+        await element.__safeCatDialTransitionRun;
+        const transition = element.__safeCatDialTransformTransition;
+        if (!transition)
+          throw new Error("normal-motion dial transform transition was not captured");
+        await transition.ready;
+        transition.currentTime = 90;
+      });
       const middleAngle = await angle();
       assert.ok(
         middleAngle > 0 && middleAngle < 36,
         "normal-motion dial visibly progresses before its 180ms endpoint",
       );
-      await settleDial();
+      await dial.evaluate((element) => {
+        const transition = element.__safeCatDialTransformTransition;
+        if (!transition)
+          throw new Error("normal-motion dial transform transition disappeared before completion");
+        transition.finish();
+        delete element.__safeCatDialTransitionRun;
+        delete element.__safeCatDialTransformTransition;
+      });
       assert.equal(
         await angle(),
         36,
@@ -785,6 +827,7 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       assert.ok(touchPoint, "touch pet has an opaque artwork point");
       await pet.tap({ position: { x: touchPoint.x - petBox.x, y: touchPoint.y - petBox.y } });
       await page.mouse.click(pointerPoint.x, pointerPoint.y);
+      await bursts.nth(1).waitFor({ state: "attached" });
       assert.equal(await bursts.count(), 2, "pointer follow-up retains the touch group and appends its own group");
       assert.equal(await hearts.count(), 6, "two valid activations render six decorative hearts");
       await page.clock.runFor(1200);
