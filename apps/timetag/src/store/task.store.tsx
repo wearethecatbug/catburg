@@ -130,7 +130,7 @@ function createTask(input: CreateTaskInput): Task {
   return {
     id: generateId(),
     title: input.title,
-    workspace: input.workspace ?? 'work',
+    workspace: input.workspace === 'all' ? 'work' : (input.workspace ?? 'work'),
     status: 'active',
     timerMode,
     targetAt: input.targetAt,
@@ -170,6 +170,10 @@ function freezeTask(task: Task, status: TaskStatus, nowIso: string): Task {
   };
 }
 
+function isRunnableTask(task: Task): boolean {
+  return task.status === 'active';
+}
+
 // ============================================================================
 // Reducer (delegates to domain functions)
 // ============================================================================
@@ -189,7 +193,16 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         tasks: state.tasks.map((t) => {
           if (t.id !== id) return t;
           if (!updates.status || updates.status === 'active') {
-            return { ...t, ...updates, updatedAt: nowIso };
+            const updatedTask = { ...t, ...updates, updatedAt: nowIso };
+            if (
+              updates.status === 'active' &&
+              !isRunnableTask(t) &&
+              updatedTask.timerStatus === 'running' &&
+              updatedTask.timerMode !== 'deadline'
+            ) {
+              return { ...updatedTask, lastTimerUpdateAt: nowIso };
+            }
+            return updatedTask;
           }
 
           const frozen = freezeTask(t, updates.status, nowIso);
@@ -229,7 +242,9 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-            t.id === action.payload.id ? { ...t, ...toggleTimerState(t, action.payload.nowIso) } : t,
+            t.id === action.payload.id && isRunnableTask(t)
+              ? { ...t, ...toggleTimerState(t, action.payload.nowIso) }
+              : t,
         ),
       };
 
@@ -245,6 +260,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) => {
+          if (!isRunnableTask(t)) return t;
           const patch = tickTimer(t, action.payload.nowIso);
           return patch ? { ...t, ...patch } : t;
         }),
@@ -290,7 +306,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          state.selectedIds.has(t.id) && t.timerStatus === 'running'
+          state.selectedIds.has(t.id) && isRunnableTask(t) && t.timerStatus === 'running'
             ? { ...t, ...toggleTimerState(t, action.payload.nowIso) }
             : t,
         ),
@@ -300,7 +316,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return {
         ...state,
         tasks: state.tasks.map((t) =>
-          state.selectedIds.has(t.id) && (t.timerStatus === 'paused' || t.timerStatus === 'idle')
+          state.selectedIds.has(t.id) && isRunnableTask(t) && (t.timerStatus === 'paused' || t.timerStatus === 'idle')
             ? { ...t, ...toggleTimerState(t, action.payload.nowIso) }
             : t,
         ),
@@ -414,7 +430,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // Timer tick engine
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const needsClock = state.tasks.some(shouldTickTimer);
+  const needsClock = state.tasks.some((task) => isRunnableTask(task) && shouldTickTimer(task));
 
   useEffect(() => {
     if (needsClock) {

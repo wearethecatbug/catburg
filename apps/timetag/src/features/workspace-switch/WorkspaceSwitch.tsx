@@ -58,7 +58,8 @@ export function WorkspaceSwitch() {
 
 
   // Combined tabs for rendering: user tabs (order preserved) + All tab
-  const tabs = [ ALL_TAB, ...userWorkspaces];
+  const visibleUserWorkspaces = userWorkspaces.filter((workspace) => workspace.id !== ALL_TAB.id);
+  const tabs = [ALL_TAB, ...visibleUserWorkspaces];
 
   // Toggle add input
   const handleToggleAdd = useCallback(() => {
@@ -74,6 +75,10 @@ export function WorkspaceSwitch() {
       return;
     }
     const id = createWorkspaceId(label);
+    if (id === ALL_TAB.id) {
+      alert('The All workspace is reserved.');
+      return;
+    }
     // avoid duplicates
     if (userWorkspaces.some((w) => w.id === id)) {
       alert('Workspace with similar name already exists.');
@@ -216,7 +221,7 @@ export function WorkspaceSwitch() {
               )}
 
               {/* Placeholder hint when no user workspaces and not adding */}
-              {userWorkspaces.length === 0 && !isAdding && (
+              {visibleUserWorkspaces.length === 0 && !isAdding && (
                   <div className="ml-3 text-xs text-gray-400 italic">
                     Click + to add workspace
                   </div>
