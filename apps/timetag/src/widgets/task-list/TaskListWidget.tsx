@@ -84,12 +84,12 @@ export function TaskListWidget() {
         <section className="mx-4 mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status" aria-live="polite">
           <p>{persistence.message}</p>
           <div className="mt-2 flex gap-2">
-            {persistence.kind !== 'unsupported' && (
+            {persistence.kind !== 'unsupported' && !(persistence.kind === 'unsaved' && persistence.reason === 'replace') && (
               <button type="button" onClick={retryPersistence} className="rounded border border-amber-500 px-2 py-1 font-medium">
                 Retry save
               </button>
             )}
-            {persistence.kind === 'unsaved' && persistence.reason === 'invalid' && (
+            {persistence.kind === 'unsaved' && (persistence.reason === 'invalid' || persistence.reason === 'replace') && (
               <button type="button" onClick={recoverPersistedTasks} className="rounded border border-amber-500 px-2 py-1 font-medium">
                 Recover storage
               </button>

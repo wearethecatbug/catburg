@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PomodoroConfig, Task, TaskStatus, TimerControls, TimerMode, TimerStatus } from '@/domain/task.types';
+import { shouldTickTimer } from '@/domain/timer.logic';
 
 export const TASK_STORAGE_KEY = 'timetag-tasks';
 export const TASK_RECOVERY_KEY = 'timetag-tasks-recovery';
@@ -9,7 +10,7 @@ const TASK_LOCK_NAME = TASK_STORAGE_KEY;
 
 export type TaskPersistenceStatus =
   | { kind: 'ready' }
-  | { kind: 'unsaved'; reason: 'invalid' | 'read' | 'recovery' | 'write'; message: string }
+  | { kind: 'unsaved'; reason: 'invalid' | 'read' | 'recovery' | 'replace' | 'write'; message: string }
   | { kind: 'conflict'; message: string; localTasks: Task[]; externalTasks: Task[] }
   | { kind: 'unsupported'; message: string };
 
@@ -83,6 +84,15 @@ function recoveryKey(raw: string): string {
   }
   return `${TASK_RECOVERY_KEY}-${raw.length}-${(hash >>> 0).toString(16)}`;
 }
+function normalizeLegacyRunningTasks(tasks: Task[], nowIso: string): { tasks: Task[]; changed: boolean } {
+  let changed = false;
+  const normalized = tasks.map((task) => {
+    if (task.status !== 'active' || !shouldTickTimer(task) || task.timerMode === 'deadline' || task.lastTimerUpdateAt !== undefined) return task;
+    changed = true;
+    return { ...task, lastTimerUpdateAt: nowIso };
+  });
+  return { tasks: normalized, changed };
+}
 
 export interface TaskPersistenceController {
   persistence: TaskPersistenceStatus;
@@ -101,6 +111,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
   const generationRef = useRef(0);
   const intentRef = useRef(false);
   const migrationRef = useRef(false);
+  const normalizingRef = useRef(false);
   const blockedRef = useRef(false);
   const recoveryRawRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
@@ -150,6 +161,21 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
             const currentRaw = window.localStorage.getItem(TASK_STORAGE_KEY);
             if (currentRaw !== rawRef.current) {
               const decoded = currentRaw === null ? { tasks: [] as Task[], migrated: false } : decodeTaskStorage(currentRaw);
+              if (decoded && normalizingRef.current && !intentRef.current) {
+                const normalized = normalizeLegacyRunningTasks(decoded.tasks, new Date().toISOString());
+                const requiresWrite = decoded.migrated || normalized.changed;
+                if (requiresWrite && currentRaw !== null && !preserveRaw(currentRaw)) {
+                  fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
+                  return;
+                }
+                blockedRef.current = false;
+                recoveryRawRef.current = null;
+                migrationRef.current = requiresWrite;
+                normalizingRef.current = normalized.changed;
+                publishExternal(normalized.tasks, currentRaw, false);
+                if (!requiresWrite && mountedRef.current) setPersistence({ kind: 'ready' });
+                return;
+              }
               fail({ kind: 'conflict', message: message('conflict'), localTasks: desiredRef.current, externalTasks: decoded?.tasks ?? [] });
               return;
             }
@@ -165,6 +191,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
             rawRef.current = nextRaw;
             confirmedTasksRef.current = latestDesired;
             migrationRef.current = false;
+            normalizingRef.current = false;
             intentRef.current = false;
             if (mountedRef.current) setPersistence({ kind: 'ready' });
           });
@@ -177,7 +204,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
         if (!blockedRef.current && (!sameTasks(desiredRef.current, confirmedTasksRef.current) || migrationRef.current)) drain();
       }
     })();
-  }, [fail]);
+  }, [fail, preserveRaw, publishExternal]);
 
   const readLive = useCallback((reload: boolean) => {
     if (typeof window === 'undefined') return;
@@ -195,15 +222,18 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
         fail({ kind: 'conflict', message: message('conflict'), localTasks: desiredRef.current, externalTasks: decoded.tasks });
         return;
       }
-      if (decoded.migrated && raw !== null && !preserveRaw(raw)) {
+      const normalized = normalizeLegacyRunningTasks(decoded.tasks, new Date().toISOString());
+      const requiresWrite = decoded.migrated || normalized.changed;
+      if (requiresWrite && raw !== null && !preserveRaw(raw)) {
         fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
         return;
       }
       blockedRef.current = false;
       recoveryRawRef.current = null;
-      migrationRef.current = decoded.migrated;
-      publishExternal(decoded.tasks, raw, reload);
-      if (decoded.migrated) drain();
+      migrationRef.current = requiresWrite;
+      normalizingRef.current = normalized.changed;
+      publishExternal(normalized.tasks, raw, reload);
+      if (requiresWrite) drain();
       else setPersistence({ kind: 'ready' });
     } catch {
       fail({ kind: 'unsaved', reason: 'read', message: message('unsaved') });
@@ -253,6 +283,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
       return;
     }
     if (persistence.kind === 'unsaved' && persistence.reason !== 'write') {
+      if (persistence.reason === 'replace') return;
       readLive(false);
       return;
     }
@@ -276,6 +307,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
     }
     void lockManager.request(TASK_LOCK_NAME, async () => {
       try {
+        if (recoveryRawRef.current !== expectedRaw) return;
         const currentRaw = window.localStorage.getItem(TASK_STORAGE_KEY);
         if (currentRaw !== expectedRaw || recoveryRawRef.current !== expectedRaw) {
           const decoded = currentRaw === null ? { tasks: [] as Task[] } : decodeTaskStorage(currentRaw);
@@ -297,10 +329,10 @@ export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection
         blockedRef.current = false;
         if (mountedRef.current) setPersistence({ kind: 'ready' });
       } catch {
-        fail({ kind: 'unsaved', reason: 'write', message: message('unsaved') });
+        fail({ kind: 'unsaved', reason: 'replace', message: message('unsaved') });
       }
     }).catch(() => {
-      fail({ kind: 'unsaved', reason: 'write', message: message('unsaved') });
+      fail({ kind: 'unsaved', reason: 'replace', message: message('unsaved') });
     });
   }, [fail, preserveRaw]);
 
