@@ -18,7 +18,13 @@ import {
   SortState,
 } from '@/domain/task.types';
 import { applyPipeline } from '@/domain/task.pipeline';
-import { toggleTimerState, resetTimerState, shouldTickTimer, tickTimer } from '@/domain/timer.logic';
+import {
+  getDeadlineRemainingSec,
+  toggleTimerState,
+  resetTimerState,
+  shouldTickTimer,
+  tickTimer,
+} from '@/domain/timer.logic';
 import { generateId } from '@/domain/helpers';
 import { useLocalStorage } from '@/shared/hooks/useLocalStorage';
 
@@ -101,15 +107,7 @@ function createTask(input: CreateTaskInput): Task {
   let durationSec: number;
   if (isDeadlineMode) {
     // Calculate remaining seconds from targetAt to now
-    if (input.targetAt) {
-      const targetTime = new Date(input.targetAt).getTime();
-      const nowTime = new Date(now).getTime();
-      durationSec = Number.isFinite(targetTime)
-        ? Math.max(0, Math.floor((targetTime - nowTime) / 1000))
-        : 0;
-    } else {
-      durationSec = 0;
-    }
+    durationSec = getDeadlineRemainingSec(input.targetAt, now, false) ?? 0;
   } else {
     durationSec = input.durationSec ?? 25 * 60;
   }
