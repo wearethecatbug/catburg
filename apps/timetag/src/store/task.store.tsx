@@ -49,7 +49,7 @@ interface TaskState {
 
 type TaskAction =
   | { type: 'SET_TASKS'; payload: Task[] }
-  | { type: 'REPLACE_PERSISTED_TASKS'; payload: Task[] }
+  | { type: 'REPLACE_PERSISTED_TASKS'; payload: Task[]; clearSelection: boolean }
   | { type: 'ADD_TASK'; payload: CreateTaskInput }
   | { type: 'UPDATE_TASK'; payload: { id: string; updates: Partial<Task>; nowIso: string } }
   | { type: 'DELETE_TASK'; payload: string }
@@ -96,8 +96,8 @@ const initialState: TaskState = {
 };
 
 const nonPersistentActionTypes = new Set<TaskAction['type']>([
-  'SET_TASKS',
   'REPLACE_PERSISTED_TASKS',
+  'TICK_TIMERS',
   'SET_WORKSPACE',
   'SET_FILTER',
   'SET_SORT',
@@ -196,8 +196,17 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     case 'SET_TASKS':
       return { ...state, tasks: action.payload };
 
-    case 'REPLACE_PERSISTED_TASKS':
-      return { ...state, tasks: action.payload, selectedIds: new Set(), undoStack: null };
+    case 'REPLACE_PERSISTED_TASKS': {
+      const incomingIds = new Set(action.payload.map((task) => task.id));
+      return {
+        ...state,
+        tasks: action.payload,
+        selectedIds: action.clearSelection
+          ? new Set()
+          : new Set([...state.selectedIds].filter((id) => incomingIds.has(id))),
+        undoStack: null,
+      };
+    }
 
     case 'ADD_TASK':
       return { ...state, tasks: [createTask(action.payload), ...state.tasks] };
@@ -411,6 +420,7 @@ interface TaskContextValue {
   persistence: TaskPersistenceStatus;
   retryPersistence: () => void;
   reloadPersistedTasks: () => void;
+  recoverPersistedTasks: () => void;
 }
 
 const TaskContext = createContext<TaskContextValue | null>(null);
@@ -421,14 +431,15 @@ const TaskContext = createContext<TaskContextValue | null>(null);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const stateRef = useRef<TaskState>(initialState);
-  const applyExternalRef = useRef<(tasks: Task[]) => void>(() => {});
-  const applyExternal = useCallback((tasks: Task[]) => applyExternalRef.current(tasks), []);
+  const applyExternalRef = useRef<(tasks: Task[], clearSelection: boolean) => void>(() => {});
+  const applyExternal = useCallback((tasks: Task[], clearSelection: boolean) => applyExternalRef.current(tasks, clearSelection), []);
   const {
     persistence,
     registerLocalSnapshot,
     persist,
     retry: retryPersistence,
     reload: reloadPersistedTasks,
+    recover: recoverPersistedTasks,
   } = useTaskPersistence(applyExternal);
 
   // Always initialize with empty tasks to avoid hydration mismatch. stateRef is
@@ -450,8 +461,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // Accept an external snapshot through the same synchronous owner before the
   // persistence layer advances its confirmed raw baseline.
-  applyExternalRef.current = (tasks) => {
-    applyAction({ type: 'REPLACE_PERSISTED_TASKS', payload: tasks }, false);
+  applyExternalRef.current = (tasks, clearSelection) => {
+    const nowIso = new Date().toISOString();
+    const reconciledTasks = tasks.map((task) => (
+      isRunnableTask(task) && shouldTickTimer(task)
+        ? { ...task, ...(tickTimer(task, nowIso) ?? {}) }
+        : task
+    ));
+    applyAction({ type: 'REPLACE_PERSISTED_TASKS', payload: reconciledTasks, clearSelection }, false);
   };
 
   const dispatchWithIntent = useCallback((action: TaskAction) => {
@@ -538,6 +555,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     persistence,
     retryPersistence,
     reloadPersistedTasks,
+    recoverPersistedTasks,
   };
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

@@ -23,7 +23,11 @@ function isIntegerIn(value: unknown, minimum: number, maximum: number): value is
   return isFiniteNumber(value) && Number.isInteger(value) && value >= minimum && value <= maximum;
 }
 function isOneOf<T extends string>(value: unknown, values: readonly T[]): value is T { return typeof value === 'string' && values.includes(value as T); }
-function isIsoTimestamp(value: unknown): value is string { return isString(value) && Number.isFinite(new Date(value).getTime()); }
+function isIsoTimestamp(value: unknown): value is string {
+  if (!isString(value)) return false;
+  const timestamp = new Date(value);
+  return Number.isFinite(timestamp.getTime()) && timestamp.toISOString() === value;
+}
 function isTimerControls(value: unknown): value is TimerControls {
   return isRecord(value) && ['autoStart', 'autoPlay', 'autoReset', 'allowOverdue'].every((field) => typeof value[field] === 'boolean');
 }
@@ -55,6 +59,7 @@ export function decodeTaskStorage(raw: string): DecodedTasks | null {
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return null; }
   if (!Array.isArray(parsed) || !parsed.every(isTask)) return null;
+  if (new Set(parsed.map((task) => task.id)).size !== parsed.length) return null;
   const migrated = parsed.some((task) => task.workspace === 'all');
   return { tasks: parsed.map((task) => task.workspace === 'all' ? { ...task, workspace: 'work' } : task), migrated };
 }
@@ -85,9 +90,10 @@ export interface TaskPersistenceController {
   persist: () => void;
   retry: () => void;
   reload: () => void;
+  recover: () => void;
 }
 
-export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): TaskPersistenceController {
+export function useTaskPersistence(applyExternal: (tasks: Task[], clearSelection: boolean) => void): TaskPersistenceController {
   const [persistence, setPersistence] = useState<TaskPersistenceStatus>({ kind: 'ready' });
   const confirmedTasksRef = useRef<Task[]>([]);
   const rawRef = useRef<string | null>(null);
@@ -96,6 +102,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
   const intentRef = useRef(false);
   const migrationRef = useRef(false);
   const blockedRef = useRef(false);
+  const recoveryRawRef = useRef<string | null>(null);
   const drainingRef = useRef(false);
   const mountedRef = useRef(true);
 
@@ -113,10 +120,10 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
       return true;
     } catch { return false; }
   }, []);
-  const publishExternal = useCallback((tasks: Task[], raw: string | null) => {
+  const publishExternal = useCallback((tasks: Task[], raw: string | null, clearSelection: boolean) => {
     // The Provider updates its synchronous state owner before this raw value can
     // become the baseline for a later local compare-and-swap.
-    applyExternal(tasks);
+    applyExternal(tasks, clearSelection);
     generationRef.current += 1;
     rawRef.current = raw;
     confirmedTasksRef.current = tasks;
@@ -139,7 +146,7 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
           await lockManager.request(TASK_LOCK_NAME, async () => {
             // A held lock may allow add/delete/undo/reload. Only the latest
             // generation is eligible once exclusive access actually begins.
-            if (queuedGeneration !== generationRef.current) return;
+            if (blockedRef.current || queuedGeneration !== generationRef.current) return;
             const currentRaw = window.localStorage.getItem(TASK_STORAGE_KEY);
             if (currentRaw !== rawRef.current) {
               const decoded = currentRaw === null ? { tasks: [] as Task[], migrated: false } : decodeTaskStorage(currentRaw);
@@ -179,8 +186,9 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
       const decoded = raw === null ? { tasks: [] as Task[], migrated: false } : decodeTaskStorage(raw);
       if (!decoded) {
         const recovered = raw !== null && preserveRaw(raw);
+        recoveryRawRef.current = recovered ? raw : null;
         fail({ kind: 'unsaved', reason: recovered ? 'invalid' : 'recovery', message: message('unsaved') });
-        if (reload) publishExternal([], raw);
+        if (reload) publishExternal([], raw, true);
         return;
       }
       if (!reload && (intentRef.current || !sameTasks(desiredRef.current, confirmedTasksRef.current))) {
@@ -192,8 +200,9 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
         return;
       }
       blockedRef.current = false;
+      recoveryRawRef.current = null;
       migrationRef.current = decoded.migrated;
-      publishExternal(decoded.tasks, raw);
+      publishExternal(decoded.tasks, raw, reload);
       if (decoded.migrated) drain();
       else setPersistence({ kind: 'ready' });
     } catch {
@@ -209,8 +218,14 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
   useEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.storageArea !== window.localStorage || (event.key !== TASK_STORAGE_KEY && event.key !== null)) return;
-      // Event payloads can be stale; key null represents clear(). The live key
-      // is reread by readLive before any external snapshot is accepted.
+      // A delayed event may describe the already-confirmed raw value. Do not
+      // turn a pending local edit into a conflict for an unchanged snapshot.
+      // Blocked states still reread it so recovery retries are never swallowed.
+      try {
+        if (!blockedRef.current && window.localStorage.getItem(TASK_STORAGE_KEY) === rawRef.current) return;
+      } catch {
+        // readLive reports the storage failure through the visible status.
+      }
       readLive(false);
     };
     window.addEventListener('storage', onStorage);
@@ -224,7 +239,20 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
   }, []);
   const persist = useCallback(() => drain(), [drain]);
   const retry = useCallback(() => {
-    if (persistence.kind === 'conflict' || (persistence.kind === 'unsaved' && persistence.reason !== 'write')) {
+    if (persistence.kind === 'conflict') {
+      try {
+        if (window.localStorage.getItem(TASK_STORAGE_KEY) === rawRef.current) {
+          blockedRef.current = false;
+          drain();
+          return;
+        }
+      } catch {
+        // readLive below reports the storage failure.
+      }
+      readLive(false);
+      return;
+    }
+    if (persistence.kind === 'unsaved' && persistence.reason !== 'write') {
       readLive(false);
       return;
     }
@@ -238,5 +266,43 @@ export function useTaskPersistence(applyExternal: (tasks: Task[]) => void): Task
     readLive(true);
   }, [readLive]);
 
-  return { persistence, registerLocalSnapshot, persist, retry, reload };
+  const recover = useCallback(() => {
+    const expectedRaw = recoveryRawRef.current;
+    const lockManager = locks();
+    if (expectedRaw === null) return;
+    if (!lockManager) {
+      fail({ kind: 'unsupported', message: message('unsupported') });
+      return;
+    }
+    void lockManager.request(TASK_LOCK_NAME, async () => {
+      try {
+        const currentRaw = window.localStorage.getItem(TASK_STORAGE_KEY);
+        if (currentRaw !== expectedRaw || recoveryRawRef.current !== expectedRaw) {
+          const decoded = currentRaw === null ? { tasks: [] as Task[] } : decodeTaskStorage(currentRaw);
+          fail({ kind: 'conflict', message: message('conflict'), localTasks: desiredRef.current, externalTasks: decoded?.tasks ?? [] });
+          return;
+        }
+        if (!preserveRaw(expectedRaw)) {
+          fail({ kind: 'unsaved', reason: 'recovery', message: message('unsaved') });
+          return;
+        }
+        const replacement = desiredRef.current;
+        const replacementRaw = JSON.stringify(replacement);
+        window.localStorage.setItem(TASK_STORAGE_KEY, replacementRaw);
+        rawRef.current = replacementRaw;
+        confirmedTasksRef.current = replacement;
+        migrationRef.current = false;
+        intentRef.current = false;
+        recoveryRawRef.current = null;
+        blockedRef.current = false;
+        if (mountedRef.current) setPersistence({ kind: 'ready' });
+      } catch {
+        fail({ kind: 'unsaved', reason: 'write', message: message('unsaved') });
+      }
+    }).catch(() => {
+      fail({ kind: 'unsaved', reason: 'write', message: message('unsaved') });
+    });
+  }, [fail, preserveRaw]);
+
+  return { persistence, registerLocalSnapshot, persist, retry, reload, recover };
 }

@@ -32,6 +32,7 @@ export function TaskListWidget() {
     persistence,
     retryPersistence,
     reloadPersistedTasks,
+    recoverPersistedTasks,
   } = useTasks();
   const { showToast, ToastContainer } = useToast();
 
@@ -68,6 +69,11 @@ export function TaskListWidget() {
     });
   };
 
+  const handleReload = () => {
+    if (persistence.kind !== 'ready' && !window.confirm('Reloading saved tasks will discard unsaved tasks in this tab. Continue?')) return;
+    reloadPersistedTasks();
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <Header />
@@ -78,10 +84,17 @@ export function TaskListWidget() {
         <section className="mx-4 mt-3 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" role="status" aria-live="polite">
           <p>{persistence.message}</p>
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={retryPersistence} className="rounded border border-amber-500 px-2 py-1 font-medium">
-              Retry save
-            </button>
-            <button type="button" onClick={reloadPersistedTasks} className="rounded border border-amber-500 px-2 py-1 font-medium">
+            {persistence.kind !== 'unsupported' && (
+              <button type="button" onClick={retryPersistence} className="rounded border border-amber-500 px-2 py-1 font-medium">
+                Retry save
+              </button>
+            )}
+            {persistence.kind === 'unsaved' && persistence.reason === 'invalid' && (
+              <button type="button" onClick={recoverPersistedTasks} className="rounded border border-amber-500 px-2 py-1 font-medium">
+                Recover storage
+              </button>
+            )}
+            <button type="button" onClick={handleReload} className="rounded border border-amber-500 px-2 py-1 font-medium">
               Reload saved tasks
             </button>
           </div>
