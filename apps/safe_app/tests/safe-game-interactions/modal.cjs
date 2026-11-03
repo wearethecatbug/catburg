@@ -3,7 +3,7 @@ const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { runtimeBaseUrl: baseUrl, fixedClockStart } = require("./shared/runtime-context.cjs");
 const { sc06RenderedReferences } = require("./shared/sc06.cjs");
-const { waitForStableVisualGeometry, visibleAlphaBounds } = require("./shared/readiness.cjs");
+const { waitForArtworkReadiness, waitForStableVisualGeometry, visibleAlphaBounds } = require("./shared/readiness.cjs");
 const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectRewardReplacement, expectOrdinaryReturn, gameControls, solveVisibleQuestion, approximatelyEqual } = require("./shared/game-controls.cjs");
 const { intersects, visibleTextBounds, paintedCatSafeGap, assertPaintedHeaderClearance, transformScale, transformTranslation, isPurple, isErrorRed } = require("./shared/artwork-geometry.cjs");
 
@@ -40,6 +40,20 @@ async function sc06Dialog(page) {
     "SC06 Random operator action",
   );
   return { dialog, answer, check, newQuestion, giveUp, randomOperator };
+}
+
+async function waitForChallengeArtwork(page, dialog, asset, description) {
+  const candidates = dialog.locator(
+    `picture:has(source[srcset*="${asset}"]) img, img[src*="${asset}"]`,
+  );
+  await candidates.first().waitFor({ state: "visible" });
+  const cat = await exact(candidates, `${description} mapped cat`);
+  const artwork = await waitForArtworkReadiness(page, cat);
+  assert.equal(
+    artwork.currentSrc.includes(asset),
+    true,
+    `${description} uses the expected rendered artwork`,
+  );
 }
 
 
@@ -5120,6 +5134,12 @@ test("SC06: concerned deadline, Give up, replacement, and stale callbacks preser
       );
       await hint.newQuestion.click();
       hint = await sc06Dialog(page);
+      await waitForChallengeArtwork(
+        page,
+        hint.dialog,
+        "hint-popup-cat-thinking-640.png",
+        "New question thinking",
+      );
       assert.equal(
         (await sc06RenderedReferences(hint.dialog)).some((reference) =>
           reference.source.includes("hint-popup-cat-thinking-640.png"),
@@ -5412,6 +5432,12 @@ test("SC06: <=600px simplifies the vignette to one state cat beside the persiste
         await inspect("retry-cleared concern", assets.concerned);
         await hint.newQuestion.click();
         hint = await sc06Dialog(page);
+        await waitForChallengeArtwork(
+          page,
+          hint.dialog,
+          assets.thinking,
+          `${width}x${height} new-question thinking`,
+        );
         await inspect("new-question thinking", assets.thinking);
         await page.clock.runFor(10_000);
         await inspect("ten-second concern", assets.concerned);
