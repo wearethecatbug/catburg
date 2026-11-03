@@ -80,6 +80,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
       await inspect(...expected[1]);
       await page.clock.runFor(1200);
       await page.clock.runFor(15_001);
+      await inspect(...expected[5]);
       await page.clock.runFor(15_000);
       await inspect(...expected[2]);
       await exact(
@@ -91,6 +92,7 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
       await page.clock.runFor(4000);
       await controls.newRound.click();
       await page.clock.runFor(15_001);
+      await inspect(...expected[5]);
       await page.clock.runFor(15_000);
       await page.clock.runFor(5000);
       await inspect(...expected[4]);
