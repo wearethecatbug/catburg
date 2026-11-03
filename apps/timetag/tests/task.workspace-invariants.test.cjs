@@ -101,6 +101,45 @@ for (const status of ['done', 'archived']) {
   });
 }
 
+for (const status of ['done', 'archived']) {
+  test(`reactivating a legacy ${status} running timer rebases its inactive anchor`, () => {
+    const legacyRunning = task(`${status}-legacy-running`, {
+      status,
+      timerStatus: 'running',
+      lastTimerUpdateAt: at(0),
+    });
+    const inactiveSnapshot = JSON.stringify(legacyRunning);
+    const afterInactiveTick = taskReducer(stateWith([legacyRunning]), {
+      type: 'TICK_TIMERS',
+      payload: { nowIso: at(5) },
+    });
+
+    assert.equal(
+      JSON.stringify(afterInactiveTick.tasks[0]),
+      inactiveSnapshot,
+      `${status} legacy timer state must remain raw and unchanged while inactive`,
+    );
+
+    const reactivated = taskReducer(afterInactiveTick, {
+      type: 'UPDATE_TASK',
+      payload: { id: legacyRunning.id, updates: { status: 'active' }, nowIso: at(5) },
+    });
+    const afterImmediateTick = taskReducer(reactivated, {
+      type: 'TICK_TIMERS',
+      payload: { nowIso: at(5) },
+    });
+    const afterOneSecond = taskReducer(afterImmediateTick, {
+      type: 'TICK_TIMERS',
+      payload: { nowIso: at(6) },
+    });
+
+    assert.equal(reactivated.tasks[0].remainingSec, 300, 'reactivation must not consume inactive wall time');
+    assert.equal(reactivated.tasks[0].lastTimerUpdateAt, at(5), 'reactivation must rebase a running timer');
+    assert.equal(afterImmediateTick.tasks[0].remainingSec, 300, 'an immediate tick must not consume elapsed time');
+    assert.equal(afterOneSecond.tasks[0].remainingSec, 299, 'the next explicit one-second tick consumes exactly one second');
+  });
+}
+
 test('bulk play starts an active paused task but ignores stale done and archived selections', () => {
   const active = task('active', { timerStatus: 'paused' });
   const done = task('done', { status: 'done', timerStatus: 'paused' });

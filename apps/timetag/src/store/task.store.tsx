@@ -193,7 +193,16 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         tasks: state.tasks.map((t) => {
           if (t.id !== id) return t;
           if (!updates.status || updates.status === 'active') {
-            return { ...t, ...updates, updatedAt: nowIso };
+            const updatedTask = { ...t, ...updates, updatedAt: nowIso };
+            if (
+              updates.status === 'active' &&
+              !isRunnableTask(t) &&
+              updatedTask.timerStatus === 'running' &&
+              updatedTask.timerMode !== 'deadline'
+            ) {
+              return { ...updatedTask, lastTimerUpdateAt: nowIso };
+            }
+            return updatedTask;
           }
 
           const frozen = freezeTask(t, updates.status, nowIso);
