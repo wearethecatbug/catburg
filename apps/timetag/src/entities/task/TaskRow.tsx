@@ -15,6 +15,7 @@ import {
 import { formatTimeBadge } from '@/domain/helpers';
 import { getTimeDisplay } from '@/shared/utils/formatTime';
 import { getUrgencyLevel } from '@/domain/task.urgency';
+import { formatMmSs, getActivePomodoroConfig } from '@/domain/timer.logic';
 
 interface TaskRowProps {
   task: Task;
@@ -43,11 +44,20 @@ export function TaskRow({
   
   // Calculate urgency level for timer ring visualization
   const urgency = getUrgencyLevel(task);
+  const pomodoro = task.timerMode === 'pomodoro'
+    ? getActivePomodoroConfig(task.pomodoro)
+    : null;
+  const pomodoroPhaseLabel = pomodoro
+    ? pomodoro.isBreak
+      ? `Break ${pomodoro.currentCycle}/${pomodoro.cycles}`
+      : `Work ${pomodoro.currentCycle + 1}/${pomodoro.cycles}`
+    : null;
+  const pomodoroTime = pomodoro ? formatMmSs(task.remainingSec) : null;
 
   const getDisplayTime = (): string => {
-    // For pomodoro mode: show cycles and work duration
-    if (task.timerMode === 'pomodoro' && task.pomodoro) {
-      return `${task.pomodoro.cycles}×${task.pomodoro.workDurationMin}m`;
+    // For pomodoro mode: show the current persisted phase and interval.
+    if (pomodoroTime) {
+      return pomodoroTime;
     }
 
     // For deadline mode with > 24 hours, show days; otherwise use standard format
@@ -60,9 +70,9 @@ export function TaskRow({
   };
 
   const getFullTimeText = (): string => {
-    // For pomodoro mode: show detailed breakdown
-    if (task.timerMode === 'pomodoro' && task.pomodoro) {
-      return `${task.pomodoro.cycles} cycles: ${task.pomodoro.workDurationMin}m work, ${task.pomodoro.shortBreakMin}m break, ${task.pomodoro.longBreakMin}m long break`;
+    // For pomodoro mode: retain configuration and add the current phase.
+    if (pomodoro && pomodoroPhaseLabel && pomodoroTime) {
+      return `${pomodoroPhaseLabel}: ${pomodoroTime}. ${pomodoro.cycles} cycles: ${pomodoro.workDurationMin}m work, ${pomodoro.shortBreakMin}m break, ${pomodoro.longBreakMin}m long break`;
     }
 
     // Full tooltip text for deadline mode
@@ -103,7 +113,7 @@ export function TaskRow({
         </button>
 
         <span
-            className={`flex-1 text-sm ${
+            className={`flex-1 text-sm ${pomodoroPhaseLabel ? 'min-w-0 ' : ''}${
                 task.status === 'done'
                     ? 'text-gray-400 line-through'
                     : task.status === 'archived'
@@ -111,7 +121,13 @@ export function TaskRow({
                         : 'text-gray-900'
             }`}
         >
-        {task.title}
+          {pomodoroPhaseLabel && (
+            <>
+              <span className="block truncate">{task.title}</span>
+              <span className="block text-xs text-gray-500 tabular-nums">{pomodoroPhaseLabel}</span>
+            </>
+          )}
+          {!pomodoroPhaseLabel && task.title}
       </span>
 
         <TimerRingButton

@@ -20,6 +20,7 @@ import {
 import { applyPipeline } from '@/domain/task.pipeline';
 import {
   getDeadlineRemainingSec,
+  getActivePomodoroConfig,
   toggleTimerState,
   resetTimerState,
   shouldTickTimer,
@@ -102,34 +103,45 @@ function createTask(input: CreateTaskInput): Task {
 
   // For deadline mode: calculate remainingSec from targetAt
   // For other modes: use durationSec with default fallback
-  const isDeadlineMode = input.timerMode === 'deadline';
+  const timerMode = input.timerMode ?? 'duration';
+  const isDeadlineMode = timerMode === 'deadline';
+  const pomodoro = timerMode === 'pomodoro'
+    ? getActivePomodoroConfig(input.pomodoro)
+    : null;
 
   let durationSec: number;
   if (isDeadlineMode) {
     // Calculate remaining seconds from targetAt to now
     durationSec = getDeadlineRemainingSec(input.targetAt, now, false) ?? 0;
+  } else if (pomodoro) {
+    durationSec = pomodoro.workDurationMin * 60;
   } else {
     durationSec = input.durationSec ?? 25 * 60;
   }
+
+  const timerControls = input.timerControls ?? {
+    autoStart: pomodoro?.autoStart ?? false,
+    autoPlay: false,
+    autoReset: false,
+    allowOverdue: false,
+  };
+  const shouldAutoStart = input.timerControls?.autoStart ?? pomodoro?.autoStart ?? false;
 
   return {
     id: generateId(),
     title: input.title,
     workspace: input.workspace ?? 'work',
     status: 'active',
-    timerMode: input.timerMode ?? 'duration',
+    timerMode,
     targetAt: input.targetAt,
     remainingSec: durationSec,
     originalDurationSec: durationSec,
-    timerStatus: input.timerControls?.autoStart ? 'running' : 'idle',
-    lastTimerUpdateAt: input.timerControls?.autoStart && !isDeadlineMode ? now : undefined,
-    timerControls: input.timerControls ?? {
-      autoStart: false,
-      autoPlay: false,
-      autoReset: false,
-      allowOverdue: false,
-    },
-    pomodoro: input.pomodoro,
+    timerStatus: shouldAutoStart ? 'running' : 'idle',
+    lastTimerUpdateAt: shouldAutoStart && !isDeadlineMode ? now : undefined,
+    timerControls,
+    pomodoro: pomodoro
+      ? { ...pomodoro, currentCycle: 0, isBreak: false }
+      : input.pomodoro,
     reminders: input.reminders ?? [],
     createdAt: now,
     updatedAt: now,
