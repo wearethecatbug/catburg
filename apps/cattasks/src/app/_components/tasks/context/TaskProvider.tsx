@@ -1,290 +1,149 @@
 'use client';
-import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,} from 'react';
-import type {ParsedTask} from '../lib/ParseTasksArr';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import type {CatalogTask} from '../catalog/taskCatalog';
 import {useTasksArr} from '../hooks/UseTasks';
-
-type TestResultDetail = { resultText: string; areAllTestsPassed: boolean };
-type ContentTab = 'description' | 'solution' | 'info';
+import {
+    beginTaskRun,
+    clearTaskSelection,
+    completeTaskRun,
+    createTaskWorkspaceState,
+    type ContentTab,
+    type TaskRunRecord,
+    type TaskRunToken,
+    type TaskWorkspace,
+    type TaskWorkspaceState,
+    selectTask as selectTaskState,
+    setTaskDraft as setTaskDraftState,
+} from './taskWorkspaceState';
+import type {IsolatedTaskResult} from '../lib/IsolatedTaskRunner';
 
 type TaskContextValue = {
-    tasks: ParsedTask[];
+    tasks: readonly CatalogTask[];
+    catalogError: Error | null;
+    retryCatalog: () => void;
     selectedId: string | null;
-    selectedTask: ParsedTask | null;
-
-    setSelectedId: (id: string | null) => void;
-    selectTask: (id: string) => void;
-
+    selectedTask: CatalogTask | null;
+    selectedWorkspace: TaskWorkspace | null;
     headerInput: string;
-    setHeaderInput: (v: string) => void;
-
-    updateTask: (id: string, patch: Partial<ParsedTask>) => void;
-    clearSelectedFields: () => void;
-    setTaskSolution: (id: string, solution: string) => void;
-
-    showSolution: boolean;
-    setShowSolution: (v: boolean) => void;
-    toggleShowSolution: (next?: boolean) => void;
-
-    runTest: boolean;
-    setRunTest: (v: boolean) => void;
-
-    validSolution: boolean;
-    setValidSolution: (v: boolean) => void;
-
-    activeContentTab: ContentTab;
-    setActiveContentTab: (v: ContentTab) => void;
-
-    isMainPanelMinimized: boolean;
-    setMainPanelMinimized: (v: boolean) => void;
-
+    setTaskFilter: (value: string) => void;
+    selectTask: (id: string) => void;
+    clearSelection: () => void;
     selectPreviousTask: () => void;
     selectNextTask: () => void;
-
-    editorSolution: string;
-    setEditorSolution: (v: string) => void;
-
-    editorUserCode: string;
-    setEditorUserCode: (v: string) => void;
-
-    testNotificationText: string;
-    setTestNotificationText: (v: string) => void;
-
-    setEditorUserCodeAndReset: (next: string) => void;
+    activeContentTab: ContentTab;
+    selectContentTab: (tab: ContentTab) => void;
+    setSelectedDraft: (draft: string) => void;
+    beginSelectedRun: (mode: TaskRunRecord['mode']) => TaskRunToken | null;
+    completeRun: (token: TaskRunToken, result: IsolatedTaskResult) => void;
 };
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
-
-// модуль с корректной работой на отрицательных значениях
 const modulo = (value: number, divisor: number) => ((value % divisor) + divisor) % divisor;
 
 export function TaskProvider({children}: { children: React.ReactNode }) {
-    const sourceTasks = useTasksArr() ?? [];
+    const {tasks, error: catalogError, retry: retryCatalog} = useTasksArr();
+    const [workspaceState, setWorkspaceState] = useState<TaskWorkspaceState>(createTaskWorkspaceState);
+    const workspaceStateRef = useRef(workspaceState);
+    workspaceStateRef.current = workspaceState;
+    const [headerInput, setHeaderInput] = useState('');
+    const didInitializeSelection = useRef(false);
 
-    const [tasks, setTasks] = useState<ParsedTask[]>(sourceTasks);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const selectedTask = useMemo(() => {
+        if (!workspaceState.selectedId) return null;
+        return tasks.find(task => task.id === workspaceState.selectedId) ?? null;
+    }, [tasks, workspaceState.selectedId]);
+    const selectedWorkspace = selectedTask
+        ? workspaceState.workspaces.get(selectedTask.id) ?? {draft: selectedTask.starterCode, draftGeneration: 0, runGeneration: 0}
+        : null;
 
-    const [headerInput, setHeaderInput] = useState<string>('');
-
-    const [showSolution, setShowSolution] = useState<boolean>(false);
-    const [runTest, setRunTest] = useState<boolean>(false);
-    const [validSolution, setValidSolution] = useState<boolean>(false);
-
-    const [editorSolution, setEditorSolution] = useState<string>('No solution available.');
-    const [editorUserCode, setEditorUserCode] = useState<string>('');
-
-    //
-    const defaultSolutionText = '"No solution available."';
-    const defaultTestInfoText = 'No additional information.';
-
-
-    const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
-    const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
-
-    const didInitRef = useRef(false);
-
-    const updateTask = useCallback((id: string, patch: Partial<ParsedTask>) => {
-        setTasks(prevTasks => prevTasks.map(task => (task.id === id ? {...task, ...patch} : task)));
+    const commitState = useCallback((nextState: TaskWorkspaceState) => {
+        workspaceStateRef.current = nextState;
+        setWorkspaceState(nextState);
     }, []);
 
-    const [testNotificationText, setTestNotificationText] =
-        useState<string>(defaultTestInfoText);
+    const selectTask = useCallback((id: string) => {
+        const task = tasks.find(candidate => candidate.id === id);
+        if (!task) return;
+        commitState(selectTaskState(workspaceStateRef.current, task.id, task.starterCode));
+        setHeaderInput(`${task.ordinal}. ${task.title}`);
+    }, [commitState, tasks]);
 
-    // синхронизация задач из источника
+    const clearSelection = useCallback(() => {
+        didInitializeSelection.current = true;
+        commitState(clearTaskSelection(workspaceStateRef.current));
+        setHeaderInput('');
+    }, [commitState]);
+
     useEffect(() => {
-        setTasks(sourceTasks);
-    }, [sourceTasks]);
+        if (didInitializeSelection.current || tasks.length === 0) return;
+        didInitializeSelection.current = true;
+        selectTask(tasks[0].id);
+    }, [selectTask, tasks]);
 
-    const selectedTask = useMemo<ParsedTask | null>(() => {
-        if (!selectedId) return null;
-        return tasks.find(t => t.id === selectedId) ?? null;
-    }, [tasks, selectedId]);
-
-    // единая точка смены задачи
-    const selectTask = useCallback(
-        (id: string) => {
-            if (id === selectedId) return;
-            setSelectedId(id);
-
-            const task = tasks.find(t => t.id === id);
-            if (task) setHeaderInput(`${task.no}. ${task.title}`);
-
-            setActiveContentTab('description');
-            setShowSolution(false);
-            setRunTest(false);
-            setValidSolution(false);
-            // setEditorUserCode('');
-            setEditorSolution(defaultSolutionText);
-            setTestNotificationText(defaultTestInfoText);
-
-        },
-        [tasks, selectedId, defaultSolutionText, defaultTestInfoText]
-    );
-
-    // производить showSolution из вкладки
-    useEffect(() => {
-        const isSolution = activeContentTab === 'solution';
-        setShowSolution(isSolution);
-        if (isSolution) {
-            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
-        }
-    }, [activeContentTab, selectedTask?.solution, defaultSolutionText]);
-
-    // навигация стрелками
     const selectPreviousTask = useCallback(() => {
         if (tasks.length === 0) return;
-        const currentIndex = selectedId ? tasks.findIndex(t => t.id === selectedId) : -1;
-        const previousIndex = modulo(currentIndex === -1 ? tasks.length - 1 : currentIndex - 1, tasks.length);
-        selectTask(tasks[previousIndex].id);
-    }, [tasks, selectedId, selectTask]);
+        const selectedId = workspaceStateRef.current.selectedId;
+        const currentIndex = selectedId ? tasks.findIndex(task => task.id === selectedId) : -1;
+        selectTask(tasks[modulo(currentIndex === -1 ? tasks.length - 1 : currentIndex - 1, tasks.length)].id);
+    }, [selectTask, tasks]);
 
     const selectNextTask = useCallback(() => {
         if (tasks.length === 0) return;
-        const currentIndex = selectedId ? tasks.findIndex(t => t.id === selectedId) : -1;
-        const nextIndex = modulo(currentIndex + 1, tasks.length);
-        selectTask(tasks[nextIndex].id);
-    }, [tasks, selectedId, selectTask]);
+        const selectedId = workspaceStateRef.current.selectedId;
+        const currentIndex = selectedId ? tasks.findIndex(task => task.id === selectedId) : -1;
+        selectTask(tasks[modulo(currentIndex + 1, tasks.length)].id);
+    }, [selectTask, tasks]);
 
-    // показать/скрыть решение с подстановкой текста
-    const toggleShowSolution = useCallback(
-        (next?: boolean) => {
-            setShowSolution(prev => {
-                const newValue = next ?? !prev;
-                if (newValue) {
-                    setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
-                } else {
-                    setEditorSolution(defaultSolutionText);
-                }
-                return newValue;
-            });
-        },
-        [selectedTask?.solution, defaultSolutionText]
-    );
+    const selectContentTab = useCallback((activeContentTab: ContentTab) => {
+        const current = workspaceStateRef.current;
+        if (current.activeContentTab === activeContentTab) return;
+        commitState({...current, activeContentTab});
+    }, [commitState]);
 
-    // если решение обновилось при открытой панели — синхронизировать
-    useEffect(() => {
-        if (showSolution) {
-            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
-        }
-    }, [showSolution, selectedTask?.solution, defaultSolutionText]);
+    const setSelectedDraft = useCallback((draft: string) => {
+        const task = tasks.find(candidate => candidate.id === workspaceStateRef.current.selectedId);
+        if (!task) return;
+        commitState(setTaskDraftState(workspaceStateRef.current, task.id, draft, task.starterCode));
+    }, [commitState, tasks]);
 
-    // первичная инициализация выбора
-    useEffect(() => {
-        if (didInitRef.current) return;                 // уже инициализировано или была ручная очистка
-        if (!selectedId && tasks.length > 0) {
-            const first = tasks[0];
-            setSelectedId(first.id);
-            setHeaderInput(`${first.no}. ${first.title}`);
-            setShowSolution(false);
-            setEditorSolution(defaultSolutionText);
-            didInitRef.current = true;                  // больше не автоселектить
-        }
-    }, [tasks, selectedId, defaultSolutionText]);
+    const beginSelectedRun = useCallback((mode: TaskRunRecord['mode']) => {
+        const task = tasks.find(candidate => candidate.id === workspaceStateRef.current.selectedId);
+        if (!task) return null;
+        const started = beginTaskRun(workspaceStateRef.current, task.id, task.starterCode, mode);
+        if (!started) return null;
+        commitState(started.state);
+        return started.token;
+    }, [commitState, tasks]);
 
-    // единый обработчик результатов тестов
-    useEffect(() => {
-        const handle = (event: Event) => {
-            const {detail} = event as CustomEvent<TestResultDetail>;
-            if (!detail) return;
-            setTestNotificationText(detail.resultText);
-            setRunTest(true);
-            setValidSolution(detail.areAllTestsPassed);
-        };
-
-        if (typeof window !== 'undefined') {
-            window.addEventListener('capibara:testResult', handle as EventListener);
-            return () =>
-                window.removeEventListener('capibara:testResult', handle as EventListener);
-        }
-        return;
-    }, []);
-
-    // сброс результата тестов при смене выбранной задачи
-    useEffect(() => {
-        // когда задача сменилась или была очищена, старый результат теста нам не нужен
-        setRunTest(false);
-        setValidSolution(false);
-        setTestNotificationText(defaultTestInfoText);
-    }, [selectedId, defaultTestInfoText]);
-
-    const setTaskSolution = useCallback(
-        (id: string, solution: string) => {
-            updateTask(id, {solution});
-            if (id === selectedId && showSolution) {
-                setEditorSolution(solution || defaultSolutionText);
-            }
-        },
-        [updateTask, selectedId, showSolution, defaultSolutionText]
-    );
-
-    const setEditorUserCodeAndReset = useCallback((next: string) => {
-        setEditorUserCode(next);
-        setRunTest(false);
-        setValidSolution(false);
-        setTestNotificationText(defaultTestInfoText);
-    }, [defaultTestInfoText]);
-
-    const clearSelectedFields = useCallback(() => {
-        didInitRef.current = true;                      // после ручной очистки не автоселектить
-        setHeaderInput('');
-        setSelectedId(null);
-        setShowSolution(false);
-        setRunTest(false);
-        setValidSolution(false);
-        setEditorSolution(defaultSolutionText);
-        setTestNotificationText(defaultTestInfoText);
-    }, [defaultSolutionText, defaultTestInfoText]);
+    const completeRun = useCallback((token: TaskRunToken, result: IsolatedTaskResult) => {
+        commitState(completeTaskRun(workspaceStateRef.current, token, result));
+    }, [commitState]);
 
     const value: TaskContextValue = {
         tasks,
-        selectedId,
+        catalogError,
+        retryCatalog,
+        selectedId: workspaceState.selectedId,
         selectedTask,
-
-        setSelectedId,
-        selectTask,
-
+        selectedWorkspace,
         headerInput,
-        setHeaderInput,
-
-        updateTask,
-        clearSelectedFields,
-        setTaskSolution,
-
-        showSolution,
-        setShowSolution,
-        toggleShowSolution,
-
-        runTest,
-        setRunTest,
-
-        validSolution,
-        setValidSolution,
-
+        setTaskFilter: setHeaderInput,
+        selectTask,
+        clearSelection,
         selectPreviousTask,
         selectNextTask,
-
-        editorSolution,
-        setEditorSolution,
-
-        editorUserCode,
-        setEditorUserCode,
-
-        testNotificationText,
-        setTestNotificationText,
-
-        setEditorUserCodeAndReset,
-
-        activeContentTab,
-        setActiveContentTab,
-
-        isMainPanelMinimized,
-        setMainPanelMinimized,
+        activeContentTab: workspaceState.activeContentTab,
+        selectContentTab,
+        setSelectedDraft,
+        beginSelectedRun,
+        completeRun,
     };
 
     return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }
 
 export function useTaskContext() {
-    const ctx = useContext(TaskContext);
-    if (!ctx) throw new Error('useTaskContext must be used inside TaskProvider');
-    return ctx;
+    const context = useContext(TaskContext);
+    if (!context) throw new Error('useTaskContext must be used inside TaskProvider');
+    return context;
 }

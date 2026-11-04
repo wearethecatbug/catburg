@@ -25,14 +25,11 @@ export default function MainBtnInfo({
                                         onClick,
                                         ariaLabel,
                                     }: MainBtnInfoProps) {
-    const {
-        validSolution,
-        runTest,
-    } = useTaskContext();
+    const {selectedWorkspace} = useTaskContext();
 
     const getBtnClassName = combineClassNames(
         styles.btnTestInfo,
-        runTest ? (validSolution ? styles.success : styles.fail) :
+        selectedWorkspace?.result?.mode === 'test' ? (selectedWorkspace.result.result.status === 'completed' ? styles.success : styles.fail) :
             isDisabled ? styles.disabled : styles.default,
         className,
     );

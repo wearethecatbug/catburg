@@ -1,7 +1,6 @@
 import type {Metadata} from "next";
 import {Geist, Geist_Mono, Orbitron} from "next/font/google";
 import "./globals.css";
-import {TaskProvider} from './_components/tasks/context/TaskProvider';
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -36,9 +35,7 @@ export default function RootLayout({
             suppressHydrationWarning
             className={`${geistSans.variable} ${geistMono.variable} ${orbitron.variable} antialiased`}
         >
-        <TaskProvider>
-            {children}
-        </TaskProvider>
+        {children}
         </body>
         </html>
     );
