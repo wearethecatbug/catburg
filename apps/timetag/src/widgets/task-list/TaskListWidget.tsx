@@ -13,6 +13,7 @@ import {
 } from '@/features';
 import { TaskList } from '@/widgets';
 import { useToast, Chip } from '@/shared/ui';
+import { ToastContainer } from '@/shared/ui/Toast';
 import { useKeyboardShortcuts } from '@/shared/hooks';
 import { useTasks } from '@/store';
 
@@ -24,7 +25,6 @@ export function TaskListWidget() {
   const {
     deleteTask,
     deleteSelected,
-    undoDelete,
     hasSelection,
     state,
     setFilter,
@@ -34,7 +34,7 @@ export function TaskListWidget() {
     reloadPersistedTasks,
     recoverPersistedTasks,
   } = useTasks();
-  const { showToast, ToastContainer } = useToast();
+  const { toasts, showToast, removeToast } = useToast();
 
   const addInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -51,17 +51,31 @@ export function TaskListWidget() {
   // Delete with undo toast
   const handleDeleteTask = useCallback(
     (id: string) => {
-      deleteTask(id);
-      showToast('Task deleted', { label: 'Undo', onClick: undoDelete });
+      const undo = deleteTask(id);
+      if (undo) {
+        showToast('Task deleted', {
+          label: 'Undo',
+          onClick: undo.undo,
+          isAvailable: undo.isAvailable,
+          unavailableMessage: 'Task deleted. Undo unavailable after saved tasks changed.',
+        });
+      }
     },
-    [deleteTask, showToast, undoDelete],
+    [deleteTask, showToast],
   );
 
   const handleDeleteSelected = useCallback(() => {
     if (!hasSelection) return;
-    deleteSelected();
-    showToast('Tasks deleted', { label: 'Undo', onClick: undoDelete });
-  }, [deleteSelected, hasSelection, showToast, undoDelete]);
+    const undo = deleteSelected();
+    if (undo) {
+      showToast('Tasks deleted', {
+        label: 'Undo',
+        onClick: undo.undo,
+        isAvailable: undo.isAvailable,
+        unavailableMessage: 'Tasks deleted. Undo unavailable after saved tasks changed.',
+      });
+    }
+  }, [deleteSelected, hasSelection, showToast]);
 
   const disableApproachingRed = () => {
     setFilter({
@@ -131,7 +145,7 @@ export function TaskListWidget() {
         <TaskList onDeleteTask={handleDeleteTask} />
       </main>
 
-      <ToastContainer />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }
