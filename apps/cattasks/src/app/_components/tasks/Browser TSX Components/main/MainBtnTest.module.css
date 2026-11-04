@@ -1,17 +1,21 @@
 .btnTest {
-    background-image: url("/BtnTest1.png");
-    border: none;
-    background-repeat: no-repeat;
-    background-size: contain;
+    border: 1px solid #cedacf;
+    border-radius: 10px;
+    background: #fafbfb;
     cursor: pointer;
     background-position: center;
-    width: 170px;
-    height: 65px;
+    width: 144px;
+    min-height: 44px;
     transition: transform .15s ease, filter .15s ease, opacity .15s ease;
     display: inline-block;
     box-sizing: border-box;
-    flex: 0 0 170px;
+    flex: 0 0 144px;
+    color: #254532;
+    font-size: 14px;
+    font-weight: 700;
 }
+
+.btnTest::after { content: 'Test'; }
 
 .default {
     /*background-image: url("/btnTest1.png");*/

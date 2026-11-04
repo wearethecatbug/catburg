@@ -1,30 +1,131 @@
 .arrowButton {
-    border: none;
-    background-repeat: no-repeat;
-    background-size: contain;
+    --plaque-width: 112px;
+    --plaque-height: 52px;
+    --mascot-width: 168px;
+    --mascot-height: 108px;
+    --anchor-x: 53.5px;
+    --mirrored-anchor-x: 114.5px;
+    --anchor-bottom-offset: 8px;
+    position: relative;
+    flex: 0 0 var(--plaque-width);
+    width: var(--plaque-width);
+    height: var(--plaque-height);
+    margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset));
+    box-sizing: border-box;
+    border: 3px solid #865634;
+    border-radius: 18px;
+    background: #fed196;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), 0 3px 0 #b77a4d;
     cursor: pointer;
     align-items: center;
     justify-content: center;
     display: flex;
-    background-position: center;
-    /*height: 120px;*/
+    color: #5d3d28;
+    overflow: visible;
 }
 
-.arrowLeft {
-    background-image: url("/capibaraArrowInactiveLeft.png");
+.mascotCanvas {
+    position: absolute;
+    z-index: 0;
+    left: calc(50% - var(--anchor-x));
+    bottom: calc(100% - var(--anchor-bottom-offset));
+    width: var(--mascot-width);
+    height: var(--mascot-height);
+    transform-origin: center;
+    pointer-events: none;
 }
 
-.arrowLeft:hover {
-    background-image: url("/capibaraArrowActiveLeft.png");
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+.mascotNormal,
+.mascotReveal {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
-.arrowRight {
-    background-image: url("/capibaraArrowInactiveRight.png");
+.mascotReveal {
+    opacity: 0;
 }
 
-.arrowRight:hover {
-    background-image: url("/capibaraArrowActiveRight.png");
-    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));
+.arrowButton:hover:not(:disabled) .mascotNormal,
+.arrowButton:focus-visible:not(:disabled) .mascotNormal {
+    opacity: 0;
 }
 
+.arrowButton:hover:not(:disabled) .mascotReveal,
+.arrowButton:focus-visible:not(:disabled) .mascotReveal {
+    opacity: 1;
+}
+
+.arrowLeft .mascotCanvas {
+    left: calc(50% - var(--mirrored-anchor-x));
+    transform: scaleX(-1);
+}
+
+.directionArrow {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 24px;
+    height: 4px;
+    background: currentColor;
+}
+
+.directionArrow::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+}
+
+.arrowLeft .directionArrow::after {
+    left: -1px;
+    border-right: 13px solid currentColor;
+}
+
+.arrowRight .directionArrow::after {
+    right: -1px;
+    border-left: 13px solid currentColor;
+}
+
+.arrowButton:disabled {
+    cursor: default;
+    opacity: .62;
+}
+
+@media (max-width: 600px) {
+    .arrowButton {
+        --plaque-width: 56px;
+        --plaque-height: 28px;
+        --mascot-width: 84px;
+        --mascot-height: 54px;
+        --anchor-x: 26.75px;
+        --mirrored-anchor-x: 57.25px;
+        --anchor-bottom-offset: 4px;
+        border-width: 2px;
+        border-radius: 10px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 0 #b77a4d;
+    }
+
+    .directionArrow {
+        width: 12px;
+        height: 2px;
+    }
+
+    .directionArrow::after {
+        border-top-width: 5px;
+        border-bottom-width: 5px;
+    }
+
+    .arrowLeft .directionArrow::after {
+        border-right-width: 7px;
+    }
+
+    .arrowRight .directionArrow::after {
+        border-left-width: 7px;
+    }
+}

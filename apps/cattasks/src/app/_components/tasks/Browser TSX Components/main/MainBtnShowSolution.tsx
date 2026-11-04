@@ -33,6 +33,8 @@ export default function MainBtnShowSolution({
             disabled={isDisabled}
             aria-pressed={isActive}
             aria-label={ariaLabel ?? (isActive ? 'Показано решение' : 'Показать решение')}
-        />
+        >
+            <span>Give up</span>
+        </button>
     );
 }

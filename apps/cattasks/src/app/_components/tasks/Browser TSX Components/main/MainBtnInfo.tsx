@@ -44,7 +44,9 @@ export default function MainBtnInfo({
             disabled={isDisabled}
             aria-disabled={isDisabled}
             onClick={onClick}
-        />
+        >
+            <span>Info</span>
+        </button>
     );
 }
 

@@ -4,47 +4,109 @@
     justify-content: flex-start; /* вдоль колонки: сверху */
     align-items: center; /* по горизонтали: по центру */
     width: 100%;
-    max-width: 600px; /* контейнер не шире 600px */
+    max-width: 875px;
     min-width: 0;
-    height: 100%; /* чтобы 80% было детерминировано */
+    height: auto;
     box-sizing: border-box;
-    padding-bottom: 16px;
+    padding-bottom: 0;
     padding-top: 10px;
     background: transparent;
 }
 
+.solutionCard {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #cedacf;
+    border-radius: 18px;
+    background: #fafbfb;
+    box-shadow: 0 8px 22px rgba(37, 69, 50, .10);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.solutionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 72px;
+    padding: 12px 18px;
+    border-bottom: 1px solid #cedacf;
+    background: #ebefe9;
+}
+
+.solutionHeading,
+.languageLabel {
+    margin: 0;
+    color: #254532;
+}
+
+.solutionHeading { font-size: 18px; }
+.languageLabel { margin-top: 3px; font-size: 13px; }
+
 .buttonsRow {
     display: flex;
     flex-direction: row;
-    gap: 12px;
-    justify-content: center;
+    flex: 0 0 auto;
+    gap: 8px;
+    justify-content: flex-end;
     align-items: center;
-    width: 100%;
-    height: 80px;
+    width: auto;
+    min-height: 44px;
 }
 
 .codeEditorFrame {
     display: flex; /* чтобы .editor растягивался */
     width: 100%;
-    max-width: 600px;
+    max-width: none;
     box-sizing: border-box;
 
-    height: 80%; /* 80% высоты контейнера */
+    height: auto;
     min-height: 0;
+    flex: 1 1 auto;
 
     padding: 12px 16px;
     cursor: default;
 
-    --b: 18px;
-    --r: 24px;
-    --alpha: .85;
+    border: 0;
+    border-radius: 0;
+    background: #fafbfb;
+    box-shadow: none;
+}
 
-    border: var(--b) solid transparent;
-    border-radius: calc(var(--r) + var(--b));
-    background: linear-gradient(rgba(255, 255, 255, var(--alpha)), rgba(255, 255, 255, var(--alpha))) padding-box,
-    conic-gradient(#ff9bc4, #ffc08a, #ffe782, #b9f6c1, #a4d7ff, #c6b5ff, #ff9bc4) border-box;
+.outputPanel {
+    width: 100%;
+    max-width: none;
+    overflow: hidden;
+    border: 0;
+    border-top: 1px solid #cedacf;
+    border-radius: 0;
+    background: #fafbfb;
+    box-shadow: none;
+    color: #254532;
+    flex: 0 0 auto;
+}
 
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .35);
+.outputHeading {
+    margin: 0;
+    padding: 10px 16px;
+    border-bottom: 1px solid #cedacf;
+    background: #ebefe9;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.outputMessage {
+    min-height: 54px;
+    max-height: 142px;
+    margin: 0;
+    overflow: auto;
+    padding: 12px 16px;
+    color: #254532;
+    font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .editor {
@@ -79,8 +141,6 @@
 
     .codeEditorFrame {
         padding: 8px;
-        --b: 10px;
-        --r: 16px;
     }
 
     .buttonsRow {
@@ -97,11 +157,43 @@
         flex: 0 0 auto;
     }
 
+    .solutionHeader {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .buttonsRow {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
     .codeEditorContainer .codeEditorFrame {
         width: 100%;
         max-width: none;
         height: 288px;
         min-height: 288px;
         flex: 0 0 auto;
+    }
+
+}
+
+@media (min-width: 601px) {
+    .codeEditorContainer { padding-top: 0; }
+
+    .codeEditorFrame {
+        min-height: 240px;
+    }
+
+    .outputPanel {
+        display: flex;
+        flex: 0 0 clamp(180px, 20.7dvh, 220px);
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .outputMessage {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
     }
 }

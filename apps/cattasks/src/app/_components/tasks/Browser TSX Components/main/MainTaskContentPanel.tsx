@@ -90,46 +90,34 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     return (
         <div className={combineClassNames(styles.root, isMinimized && styles.min, className)} {...rest}>
             <div className={styles.taskDetailsContainer}>
-                {/* ряд с кнопками — только в развернутом состоянии */}
+                <button
+                    ref={minimizeButtonRef}
+                    type="button"
+                    onClick={handleToggleMinimize}
+                    aria-expanded={!isMinimized}
+                    aria-controls="taskPanelContent"
+                    className={styles.buttonMinimizeBase}
+                    aria-label={isMinimized ? "Показать панель" : "Свернуть панель"}
+                >
+                    <span>{isMinimized ? 'Show task' : 'Hide task'}</span>
+                </button>
+
                 {!isMinimized && (
                     <div className={combineClassNames(styles.mainButtonsRow, styles.btnContainer)}
                          role="group" aria-label="Режим содержимого">
-                        <button
-                            ref={minimizeButtonRef}
-                            type="button"
-                            onClick={handleToggleMinimize}
-                            aria-expanded={!isMinimized}
-                            aria-controls="taskPanelContent"
-                            className={combineClassNames(
-                                styles.buttonMinimizeBase,
-                                styles.buttonMinimizeInline,
-                                styles.buttonMinimizeInactive
-                            )}
-                            aria-label="Свернуть панель"
+                        <MainBtnShowDescription
+                            isActive={activeContentTab === 'description'}
+                            onClick={handleShowDescription}
+                            ariaLabel={activeContentTab === 'description' ? 'Показано описание' : 'Показать описание'}
+                            className={styles.mainBtnTask}
                         />
-
-                        <div className={styles.toolsGroup}>
-                            <MainBtnShowDescription
-                                isActive={activeContentTab === 'description'}
-                                onClick={handleShowDescription}
-                                ariaLabel={activeContentTab === 'description' ? 'Показано описание' : 'Показать описание'}
-                                className={styles.mainBtnTask}
-                            />
-                            <MainBtnShowSolution
-                                isActive={activeContentTab === 'solution'}
-                                isDisabled={!isTaskSelected}
-                                onClick={handleShowSolution}
-                                ariaLabel={activeContentTab === 'solution' ? 'Показано решение' : 'Показать решение'}
-                                className={styles.mainBtnSolution}
-                            />
-                            <MainBtnInfo
-                                isActive={activeContentTab === 'info'}
-                                isDisabled={!isTaskSelected}
-                                onClick={handleShowInfo}
-                                ariaLabel={activeContentTab === 'info' ? 'Показана информация' : 'Показать информацию'}
-                                className={styles.mainBtnInfo}
-                            />
-                        </div>
+                        <MainBtnInfo
+                            isActive={activeContentTab === 'info'}
+                            isDisabled={!isTaskSelected}
+                            onClick={handleShowInfo}
+                            ariaLabel={activeContentTab === 'info' ? 'Показана информация' : 'Показать информацию'}
+                            className={styles.mainBtnInfo}
+                        />
                     </div>
                 )}
 
@@ -157,14 +145,17 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                     {activeContentTab === 'description' && (
                         <div
                             className={combineClassNames(styles.contentContainerFrame, styles.taskDescriptionContainer)}>
-              <pre
-                  ref={taskDescriptionPreElementRef}
-                  tabIndex={-1}
-                  className={styles.taskDescriptionPre}
-                  aria-label={isTaskSelected ? 'Описание задачи' : 'Нет выбранной задачи'}
-              >
-                {descriptionText}
-              </pre>
+                            <div className={styles.descriptionBody}>
+                                <h2 className={styles.challengeHeading}>The challenge</h2>
+                                <pre
+                                    ref={taskDescriptionPreElementRef}
+                                    tabIndex={-1}
+                                    className={styles.taskDescriptionPre}
+                                    aria-label={isTaskSelected ? 'Описание задачи' : 'Нет выбранной задачи'}
+                                >
+                                    {descriptionText}
+                                </pre>
+                            </div>
                         </div>
                     )}
 
@@ -179,24 +170,16 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         </div>
                     )}
                 </div>
+                {!isMinimized && (
+                    <MainBtnShowSolution
+                        isActive={activeContentTab === 'solution'}
+                        isDisabled={!isTaskSelected}
+                        onClick={handleShowSolution}
+                        ariaLabel={activeContentTab === 'solution' ? 'Показано решение' : 'Показать решение'}
+                        className={styles.mainBtnSolution}
+                    />
+                )}
             </div>
-
-            {/* плавающая кнопка — только в свернутом состоянии */}
-            {isMinimized && (
-                <button
-                    ref={minimizeButtonRef}
-                    type="button"
-                    onClick={handleToggleMinimize}
-                    aria-expanded={!isMinimized}
-                    aria-controls="taskPanelContent"
-                    className={combineClassNames(
-                        styles.buttonMinimizeBase,
-                        styles.buttonMinimizeFloating,
-                        styles.buttonMinimizeActive
-                    )}
-                    aria-label="Показать панель"
-                />
-            )}
         </div>
     );
 }
