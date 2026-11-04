@@ -826,16 +826,30 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       const touchPoint = (await visibleAlphaBounds(page, pet)).opaquePoint;
       assert.ok(touchPoint, "touch pet has an opaque artwork point");
       await pet.tap({ position: { x: touchPoint.x - petBox.x, y: touchPoint.y - petBox.y } });
-      await page.mouse.click(pointerPoint.x, pointerPoint.y);
+      await bursts.first().waitFor({ state: "attached" });
+      assert.equal(await bursts.count(), 1, "touch pet creates one activation-owned burst group");
+      await page.clock.runFor(100);
+      await clickVisibleArtwork(page, pet);
       await bursts.nth(1).waitFor({ state: "attached" });
       assert.equal(await bursts.count(), 2, "pointer follow-up retains the touch group and appends its own group");
       assert.equal(await hearts.count(), 6, "two valid activations render six decorative hearts");
-      await page.clock.runFor(1200);
+      await page.clock.runFor(1100);
       assert.equal(await page.locator('[data-presentation-mode="PLAYING"]').count(), 1, "repeated effects do not extend the original semantic settle");
       await page.clock.runFor(101);
       await page.waitForTimeout(0);
-      assert.equal(await hearts.count(), 0, "touch and pointer groups independently clean after their final profiles");
-      await page.clock.runFor(101);
+      assert.equal(await bursts.count(), 1, "touch group expires at its own deadline while the pointer group remains");
+      await page.clock.runFor(100);
+      await page.waitForTimeout(0);
+      assert.equal(await hearts.count(), 0, "pointer group clears after its own deadline");
+      await pet.focus();
+      await page.keyboard.down("Enter");
+      await bursts.first().waitFor({ state: "attached" });
+      await page.keyboard.down("Enter");
+      await page.keyboard.up("Enter");
+      assert.equal(await bursts.count(), 1, "held Enter creates one keyboard burst group");
+      assert.equal(await hearts.count(), 3, "held Enter ignores auto-repeat heart bursts");
+      await page.clock.runFor(1301);
+      assert.equal(await hearts.count(), 0, "held Enter burst cleans after its final profile");
       await pet.focus();
       await page.keyboard.press("Enter");
       assert.equal(await bursts.count(), 1, "Enter creates one keyboard-centered burst group");
@@ -848,9 +862,17 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       await page.clock.runFor(1301);
       assert.equal(await hearts.count(), 0, "Space burst cleans after its final profile");
       await pet.evaluate((node) => node.click());
+      await bursts.first().waitFor({ state: "attached" });
       assert.equal(await hearts.count(), 3, "a standalone semantic button click remains an activation without a preceding keydown");
       await controls.newRound.click();
       assert.equal(await bursts.count(), 0, "New game clears live pet bursts before their natural expiry");
+      await pet.evaluate((node) => node.click());
+      await bursts.first().waitFor({ state: "attached" });
+      await controls.surrender.click();
+      const surrendered = page.locator('[data-presentation-mode="SURRENDERED"]');
+      await surrendered.waitFor({ state: "visible" });
+      assert.equal(await surrendered.count(), 1, "surrender commits its terminal presentation owner");
+      assert.equal(await bursts.count(), 0, "committed terminal outcome clears live pet bursts");
     },
   );
 });
@@ -1464,14 +1486,18 @@ test("SC05 D06: controls retain actual game semantics, visible focus, and local 
       const horizontalPadding =
         Number.parseFloat(inputStyle.paddingLeft) +
         Number.parseFloat(inputStyle.paddingRight);
+      const horizontalBorder =
+        Number.parseFloat(inputStyle.borderLeftWidth) +
+        Number.parseFloat(inputStyle.borderRightWidth);
+      const inputBox = input.getBoundingClientRect().toJSON();
       return {
         shell: shell.getBoundingClientRect().toJSON(),
-        input: input.getBoundingClientRect().toJSON(),
+        input: inputBox,
         submit: submit.getBoundingClientRect().toJSON(),
         submitBoxSizing: submitStyle.boxSizing,
         placeholderWidth: context.measureText(input.placeholder).width,
         fourDigitWidth: context.measureText("1000").width,
-        inputContentWidth: input.clientWidth - horizontalPadding,
+        inputContentWidth: inputBox.width - horizontalBorder - horizontalPadding,
       };
     });
     assert.ok(

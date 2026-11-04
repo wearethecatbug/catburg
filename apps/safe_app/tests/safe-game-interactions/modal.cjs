@@ -65,7 +65,13 @@ async function installNextCommittedPresentationOwner(page) {
         return;
       }
       const snapshot = () => ({
-        ordinary: document.querySelectorAll("[data-presentation-mode]").length,
+        ordinary: [...document.querySelectorAll("[data-presentation-mode]")].filter((node) => {
+          for (let current = node; current; current = current.parentElement) {
+            const style = getComputedStyle(current);
+            if (style.display === "none" || style.visibility === "hidden" || Number.parseFloat(style.opacity) === 0) return false;
+          }
+          return node.getClientRects().length > 0;
+        }).length,
         reward: document.querySelectorAll('[aria-label="New hint reward"]').length,
       });
       const closesDialog = (records) => records.some((record) => {
@@ -205,6 +211,7 @@ async function sc06SceneSnapshot(page) {
     return {
       image: sceneLayer.style.backgroundImage,
       position: sceneLayer.style.backgroundPosition,
+      display: sceneLayer.style.display,
       scrollY,
       owner: {
         x: ownerRect.x,
@@ -467,6 +474,7 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
           ),
           `${width}x${height} retains the selected background variant`,
         );
+        assert.notEqual(during.display, "none", `${width}x${height} paints the selected scene layer`);
         assert.deepEqual(
           {
             image: during.image,
@@ -7589,6 +7597,10 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           `${width}x${height} reward bubble does not intersect its painted cat alpha`,
         );
         assert.ok(
+          horizontalGap >= 0,
+          `${width}x${height} reward bubble remains to the right of the painted cat alpha`,
+        );
+        assert.ok(
           horizontalGap <= Math.max(32, rewardEnvelopeDocument.width * .25),
           `${width}x${height} reward bubble horizontal gap ${horizontalGap}px remains adjacent to cat alpha`,
         );
@@ -7857,15 +7869,16 @@ test("Short narrow modal keeps card-local overflow and does not create page scro
       await hint.dialog.evaluate((element) => {
         element.scrollTop = element.scrollHeight;
       });
-      const [newQuestionBox, giveUpBox] = await Promise.all([
+      const [newQuestionBox, giveUpBox, closeAfterScroll] = await Promise.all([
         hint.newQuestion.boundingBox(),
         hint.giveUp.boundingBox(),
+        hint.dialog.getByRole("button", { name: "Close hint challenge", exact: true }).boundingBox(),
       ]);
       assert.ok(
-        [checkBox, operatorBox, newQuestionBox, giveUpBox].every(
+        [checkBox, operatorBox, newQuestionBox, giveUpBox, closeAfterScroll].every(
           (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
         ),
-        "internal scrolling leaves Check, operators, New question, and Give up reachable",
+        "internal scrolling leaves Check, operators, New question, Give up, and Close reachable",
       );
       assert.ok(
         closeBeforeScroll && closeBeforeScroll.y >= laneBox.y &&
@@ -8327,7 +8340,7 @@ test("Give up centers its actions and exposes only the public arithmetic result"
             assert.equal(await hint.check.isVisible(), true, `${routeName} ${width}x${height} disabled Check remains a visible control`);
             const disabledCheck = await hint.check.evaluate((button) => {
               const style = getComputedStyle(button);
-              const opaque = (color) => color !== "transparent" && !/rgba\\([^)]*,\\s*0\\)$/.test(color);
+              const opaque = (color) => color !== "transparent" && !/rgba\([^)]*,\s*0\)$/.test(color);
               return {
                 label: button.querySelector("span")?.textContent?.trim(),
                 paint: [style.backgroundColor, style.backgroundImage, style.color, style.opacity, style.filter].join("|"),

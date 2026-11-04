@@ -98,12 +98,13 @@ async function assertHistoryGrip(page, description) {
           icon instanceof Element &&
           getComputedStyle(icon).display !== "none" &&
           getComputedStyle(icon).visibility !== "hidden" &&
+          Number.parseFloat(getComputedStyle(icon).opacity) > 0 &&
           icon.getClientRects().length > 0,
       ),
     };
   });
   const hasSymbolGrip = [grip.text, ...grip.pseudoContents].some(
-    (content) => /[^\p{L}\p{N}\s]/u.test(content),
+    (content) => /^[^\p{L}\p{N}\s]+$/u.test(content),
   );
   assert.ok(
     hasSymbolGrip || grip.hasVisibleIcon,

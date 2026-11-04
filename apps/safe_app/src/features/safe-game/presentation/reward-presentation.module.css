@@ -80,6 +80,7 @@
   }
   .reward p {
     margin-left: -2px;
+    overflow-wrap: break-word;
   }
 }
 
