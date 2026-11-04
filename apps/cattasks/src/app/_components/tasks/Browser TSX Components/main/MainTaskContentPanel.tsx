@@ -97,7 +97,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                     aria-expanded={!isMinimized}
                     aria-controls="taskPanelContent"
                     className={styles.buttonMinimizeBase}
-                    aria-label={isMinimized ? "Показать панель" : "Свернуть панель"}
+                    aria-label={isMinimized ? 'Show task: Показать панель' : 'Hide task: Свернуть панель'}
                 >
                     <span>{isMinimized ? 'Show task' : 'Hide task'}</span>
                 </button>

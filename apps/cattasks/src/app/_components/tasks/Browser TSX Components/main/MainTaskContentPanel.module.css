@@ -112,7 +112,17 @@
 
 .min { height: auto; }
 .min .taskDetailsContainer { flex: 0 0 auto; }
+.min .buttonMinimizeBase {
+    position: static;
+    border-left: 0;
+}
 .min .contentContainerBase { display: none; }
+
+@media (max-width: 1150px) {
+    .taskSolutionContainer {
+        height: clamp(200px, 50dvh, 420px);
+    }
+}
 
 @media (max-width: 600px) {
     .taskDetailsContainer { border-radius: 18px; }

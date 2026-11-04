@@ -138,7 +138,7 @@
     background: radial-gradient(ellipse at 72% 7%, rgba(251, 249, 241, .92), transparent 36%), linear-gradient(135deg, #d6e1d4 0%, #e3ebe2 68%, #dce6d7 100%);
 }
 
-.headerContainer, .mainContainer, .footerContainer { position: relative; z-index: 1; }
+.headerContainer, .mainContainer, .footerContainer { position: relative; }
 .headerContainer { min-height: 137px; height: auto; }
 .mainContainer { flex: 1 1 auto; min-height: 0; }
 .footerContainer { min-height: 90px; height: auto; }
