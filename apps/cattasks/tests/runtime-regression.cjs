@@ -23,7 +23,9 @@ async function observeReachability(page, selector, locator) {
   const box = await locator.boundingBox();
   if (!box) return { selector, rendered: false, unclipped: false, receivesPointer: false };
   const hit = await locator.evaluate((element) => { const r = element.getBoundingClientRect(); const target = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return { receivesPointer: target === element || element.contains(target), target: target && { tag: target.tagName, id: target.id, className: String(target.className) } }; });
-  return { selector, box, rendered: box.width > 0 && box.height > 0, unclipped: box.x >= 0 && box.y >= 0 && box.x + box.width <= page.viewportSize().width && box.y + box.height <= page.viewportSize().height, ...hit };
+  // Playwright may leave a subpixel vertical offset after scrolling a control into view.
+  const verticalRoundingTolerance = 0.5;
+  return { selector, box, rendered: box.width > 0 && box.height > 0, unclipped: box.x >= 0 && box.y >= -verticalRoundingTolerance && box.x + box.width <= page.viewportSize().width && box.y + box.height <= page.viewportSize().height + verticalRoundingTolerance, ...hit };
 }
 
 async function observeEditorUsability(editor) {
@@ -46,23 +48,29 @@ async function observe(name, width, height) {
     page.on("requestfailed", request => { if (request.url().startsWith(baseUrl)) localRequestFailures.push({ url: request.url(), failure: request.failure() }); });
     page.on("response", response => { if (!response.url().startsWith(baseUrl) || response.status() < 400) return; const failure = { url: response.url(), status: response.status() }; if (new URL(response.url()).pathname === "/favicon.ico") faviconExceptions.push(failure); else localHttpFailures.push(failure); });
     const response = await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
-    const description = page.locator("pre[aria-label]").first(); const editor = page.locator(".monaco-editor").first(); const previous = page.locator("button[aria-label='Показано описание']"); const next = page.locator("button[aria-label='Test Code']");
+    const description = page.locator("pre[aria-label]").first(); const editor = page.locator(".monaco-editor").first(); const previous = page.locator("button[aria-label='Task: Показано описание']"); const next = page.locator("button[aria-label='Test Code']");
     await description.waitFor({ state: "visible", timeout: 10000 }); await editor.waitFor({ state: "visible", timeout: 10000 }); await previous.waitFor({ state: "visible", timeout: 10000 }); await next.waitFor({ state: "visible", timeout: 10000 });
     const controls = [
       ["header previous arrow", "button[class*='arrowLeft']", page.locator("button[class*='arrowLeft']")],
       ["clear task selection", "button[aria-label='Очистить выбор задачи']", page.locator("button[aria-label='Очистить выбор задачи']")],
       ["header next arrow", "button[class*='arrowRight']", page.locator("button[class*='arrowRight']")],
-      ["minimize", "button[aria-label='Свернуть панель']", page.locator("button[aria-label='Свернуть панель']")],
-      ["description tab", "button[aria-label='Показано описание']", previous],
-      ["solution tab", "button[aria-label='Показать решение']", page.locator("button[aria-label='Показать решение']")],
-      ["information", "button[aria-label='Показать информацию']", page.locator("button[aria-label='Показать информацию']")],
+      ["minimize", "button[aria-label='Hide task: Свернуть панель']", page.locator("button[aria-label='Hide task: Свернуть панель']")],
+      ["description tab", "button[aria-label='Task: Показано описание']", previous],
+      ["solution tab", "button[aria-label='Give up: Показать решение']", page.locator("button[aria-label='Give up: Показать решение']")],
+      ["information", "button[aria-label='Info: Показать информацию']", page.locator("button[aria-label='Info: Показать информацию']")],
       ["Test Code", "button[aria-label='Test Code']", next],
       ["Run Code", "button[aria-label='Run Code']", page.locator("button[aria-label='Run Code']")]
     ];
     const taskListInput = page.locator("input[placeholder='Список задач...']");
     const descriptionCount = await description.count();
     const controlReachability = {}; const controlInventory = {}; for (const [name, selector, locator] of controls) { controlInventory[name] = { selector, count: await locator.count() }; controlReachability[name] = await observeReachability(page, selector, locator); }
-    const observation = { app: "cattasks", viewport: { name, width, height }, status: response && response.status(), scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), clientWidth: await page.evaluate(() => document.documentElement.clientWidth), requiredContent: { descriptionLength: descriptionCount ? (await description.innerText()).trim().length : 0, editorVisible: await editor.isVisible(), previousVisible: await previous.isVisible(), nextVisible: await next.isVisible(), taskListInputCount: await taskListInput.count(), productControlInventory: controlInventory }, reachability: { description: await observeReachability(page, "pre[aria-label]", description), editor: await observeReachability(page, ".monaco-editor", editor), taskListInput: await observeReachability(page, "input[placeholder='Список задач...']", taskListInput), controls: controlReachability }, editorUsability: await observeEditorUsability(editor), consoleErrors, pageErrors, localRequestFailures, localHttpFailures, faviconExceptions };
+    await controls[3][2].click();
+    const restore = page.locator("button[aria-label='Show task: Показать панель']");
+    await restore.waitFor({state: "visible", timeout: 10_000});
+    const restoreControl = { selector: "button[aria-label='Show task: Показать панель']", count: await restore.count(), reachability: await observeReachability(page, "button[aria-label='Show task: Показать панель']", restore) };
+    await restore.click();
+    await previous.waitFor({state: "visible", timeout: 10_000});
+    const observation = { app: "cattasks", viewport: { name, width, height }, status: response && response.status(), scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), clientWidth: await page.evaluate(() => document.documentElement.clientWidth), requiredContent: { descriptionLength: descriptionCount ? (await description.innerText()).trim().length : 0, editorVisible: await editor.isVisible(), previousVisible: await previous.isVisible(), nextVisible: await next.isVisible(), taskListInputCount: await taskListInput.count(), productControlInventory: controlInventory, restoreControl }, reachability: { description: await observeReachability(page, "pre[aria-label]", description), editor: await observeReachability(page, ".monaco-editor", editor), taskListInput: await observeReachability(page, "input[placeholder='Список задач...']", taskListInput), controls: controlReachability }, editorUsability: await observeEditorUsability(editor), consoleErrors, pageErrors, localRequestFailures, localHttpFailures, faviconExceptions };
     const screenshot = artifactPath(name, "png"); const json = artifactPath(name, "json");
     if (screenshot && json) { await page.screenshot({ path: screenshot, fullPage: true }); fs.writeFileSync(json, `${JSON.stringify(observation, null, 2)}\n`, { flag: "wx" }); }
     return observation;
@@ -74,6 +82,8 @@ for (const [name, width, height] of viewports) test(`CatTasks initial dashboard 
   assert.equal(observation.status, 200); assert.ok(observation.requiredContent.descriptionLength > 0); assert.equal(observation.requiredContent.editorVisible, true);
   assert.equal(observation.requiredContent.taskListInputCount, 1, "the current task selector has exactly one public input");
   for (const [name, inventory] of Object.entries(observation.requiredContent.productControlInventory)) assert.equal(inventory.count, 1, `${name} must have exactly one product control (${inventory.selector})`);
+  assert.equal(observation.requiredContent.restoreControl.count, 1, `Show task must expose one control (${observation.requiredContent.restoreControl.selector})`);
+  for (const [property, expected] of Object.entries({rendered: true, unclipped: true, receivesPointer: true})) assert.equal(observation.requiredContent.restoreControl.reachability[property], expected, `Show task must remain ${property} after Hide task`);
   for (const [name, result] of Object.entries({ description: observation.reachability.description, editor: observation.reachability.editor, taskListInput: observation.reachability.taskListInput, ...observation.reachability.controls })) { assert.equal(result.rendered, true, `${name} must render`); assert.equal(result.unclipped, true, `${name} must not be clipped`); assert.equal(result.receivesPointer, true, `${name} must receive pointer hits without another initial-screen layer occluding it`); }
   assert.ok(observation.editorUsability.box.height >= 240, "the initial editor must retain the approved 240px usable height"); assert.ok(observation.editorUsability.lineCount >= 1, "the editor must contain at least one rendered source line"); assert.equal(observation.editorUsability.line && observation.editorUsability.line.complete, true, "at least one complete editor line must fit inside the editor viewport");
   assert.deepEqual(observation.pageErrors, []); assert.deepEqual(observation.consoleErrors, []); assert.deepEqual(observation.localRequestFailures, []); assert.deepEqual(observation.localHttpFailures, []); assert.equal(observation.scrollWidth, observation.clientWidth);

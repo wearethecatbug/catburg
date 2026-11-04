@@ -14,11 +14,11 @@
     --radius: 24px; /* скругление */
     --border: 4px; /* толщина рамки */
     --stroke: 4px; /* толщина окантовки */
-    background: #FEDAA4; /* фон для текста */
-    border: var(--border) solid #dc7477; /* цвет рамки */
+    background: #fafbfb;
+    border: 1px solid #cedacf;
     border-radius: var(--radius);
-    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
-    color: #2C4C1E; /* цвет текста по желанию */
+    box-shadow: 0 6px 16px rgba(37, 69, 50, .10);
+    color: #254532;
     cursor: pointer;
     padding: 0 8px 0 16px; /* leave right space for clear button */
     position: relative; /* allow absolutely positioned children (clear button) */
@@ -36,8 +36,8 @@
     box-sizing: border-box;
     text-transform: none;
     letter-spacing: 1px;
-    -webkit-text-stroke: 1px #496897; /* толщина и цвет ободка */
-    color: rgba(151, 160, 204, 0.89);
+    -webkit-text-stroke: 0;
+    color: #254532;
     text-decoration: none;
     display: block;
     font-size: 17px;
@@ -66,11 +66,11 @@
     --border: 4px; /* толщина рамки */
     --stroke: 4px; /* толщина окантовки */
 
-    background: #FEDAA4; /* фон для текста */
-    border: var(--border) solid #dc7477; /* цвет рамки */
+    background: #fafbfb;
+    border: 1px solid #cedacf;
     border-radius: var(--radius);
-    box-shadow: 0 0 0 var(--stroke) #2C4C1E; /* окантовка вокруг рамки */
-    color: #2C4C1E; /* цвет текста по желанию */
+    box-shadow: 0 8px 18px rgba(37, 69, 50, .12);
+    color: #254532;
 
     overflow-x: hidden;
     overflow-y: auto; /* Добавляем вертикальную прокрутку */
@@ -79,12 +79,12 @@
 }
 
 .dropdownListItem {
-    color: #113519;
+    color: #254532;
     padding: 10px 16px;
     text-decoration: none;
     display: block;
     font-family: 'Orbitron', sans-serif;
-    text-shadow: 0 0 4px #00ff04, 0 0 5px #294c23;
+    text-shadow: none;
     text-transform: none;
     letter-spacing: 1px;
 }

@@ -100,7 +100,7 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
     await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), firstDraft, {timeout: 10_000});
     assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), firstDraft.replace(/\s/g, ""), "A→B→A restores the draft owned by the URI-unsafe stable ID");
 
-    await page.getByRole("button", {name: "Показать решение"}).click();
+    await page.getByRole("button", {name: "Give up: Показать решение"}).click();
     const solutionInput = page.locator("[class*='taskSolutionContainer'] .monaco-editor textarea");
     await solutionInput.waitFor({state: "visible"});
     const solutionBeforeEdit = catalog.tasks[0].solution;
@@ -108,7 +108,7 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
     await solutionInput.focus();
     await page.keyboard.type("// blocked");
     assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), solutionBeforeEdit), true, "typing cannot change the reference solution");
-    await page.getByRole("button", {name: "Показать описание"}).click();
+    await page.getByRole("button", {name: "Task: Показать описание"}).click();
 
     await page.getByRole("button", {name: "Select next task"}).click();
     await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Other task"));

@@ -1,17 +1,22 @@
 .mainBtnRunCode {
-    background-image: url("/headerBtnRunCodeDoggy1.png");
-    background-repeat: no-repeat;
-    background-size: contain;
-    /*cursor: pointer;*/
+    border: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #377050, #225437);
+    color: #fff;
+    cursor: pointer;
+    width: 144px;
+    min-height: 44px;
+    flex: 0 0 144px;
+    display: inline-flex;
     align-items: center;
-    width: 170px;
-    height: 65px;
-    flex: 0 0 150px;
-    background-position: center;
-    display: inline-block;
+    justify-content: center;
     box-sizing: border-box;
     transition: transform .15s ease, filter .15s ease, opacity .15s ease;
 }
+
+.mainBtnRunCode::after { content: 'Run'; font-size: 14px; font-weight: 700; }
+
+.mainBtnRunCode:disabled { cursor: not-allowed; opacity: .55; }
 
 .mainBtnRunCode:hover {
     filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .25));

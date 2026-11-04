@@ -90,19 +90,25 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     }, []);
 
     const value = selectedWorkspace?.draft ?? "";
+    const outputMessage = selectedWorkspace?.result?.result.message ?? 'Run code or tests to see output.';
     // Monaco decodes URI paths once, so task IDs are double-encoded for safe model paths.
     const modelPath = selectedTask
         ? `solution-${encodeURIComponent(encodeURIComponent(selectedTask.id))}.js`
         : 'solution.js';
 
     return (
-        <>
-            <div className={styles.codeEditorContainer}>
-
-                <div className={styles.buttonsRow}>
-                    <MainBtnTest className={styles.btnTest} execute={execute} isDisabled={!selectedTask}/>
-                    <MainBtnRunCode className={styles.btnRunCode} execute={execute}/>
-                </div>
+        <div className={styles.codeEditorContainer}>
+            <section className={styles.solutionCard} aria-labelledby="taskSolutionHeading">
+                <header className={styles.solutionHeader}>
+                    <div>
+                        <h2 id="taskSolutionHeading" className={styles.solutionHeading}>Your solution</h2>
+                        <p className={styles.languageLabel}>JavaScript</p>
+                    </div>
+                    <div className={styles.buttonsRow}>
+                        <MainBtnTest className={styles.btnTest} execute={execute} isDisabled={!selectedTask}/>
+                        <MainBtnRunCode className={styles.btnRunCode} execute={execute}/>
+                    </div>
+                </header>
 
                 <div className={`${styles.codeEditorFrame} ${className ?? ''}`}>
                     <Monaco
@@ -127,7 +133,12 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                         }}
                     />
                 </div>
-            </div>
-        </>
+
+                <section className={styles.outputPanel} aria-labelledby="taskOutputHeading">
+                    <h2 id="taskOutputHeading" className={styles.outputHeading}>Output</h2>
+                    <pre className={styles.outputMessage} aria-live="polite">{outputMessage}</pre>
+                </section>
+            </section>
+        </div>
     );
 }

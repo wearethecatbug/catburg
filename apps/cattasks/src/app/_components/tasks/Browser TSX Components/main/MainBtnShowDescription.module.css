@@ -1,28 +1,21 @@
 .mainBtnTask {
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #254532;
     cursor: pointer;
-    transition: transform .15s ease, filter .15s ease, opacity .15s ease;
-
-    display: inline-block;
-    box-sizing: border-box;
-
-
-    background-image: url("/mainTaskBtn.png");
-    background-repeat: no-repeat;
-    background-size: contain;
-    background-position: center;
+    font: 700 18px/1 system-ui, sans-serif;
+    padding: 22px 18px 18px;
 }
 
 .mainBtnTask:hover {
-    transform: scale(1.05);
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
+    background: rgba(214, 225, 212, .44);
 }
 
 .active {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .15)) brightness(.92) contrast(1.5);
+    border-bottom-color: #356b48;
 }
 
 .active:hover {
-    filter: brightness(.92) contrast(1.5) drop-shadow(0 4px 8px rgba(0, 0, 0, .15));
-    transition: none;
-    transform: none;
+    background: rgba(214, 225, 212, .44);
 }

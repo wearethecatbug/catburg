@@ -39,12 +39,14 @@ export default function MainBtnInfo({
         <button
             type="button"
             className={getBtnClassName}
-            aria-label={ariaLabel}
+            aria-label={`Info: ${ariaLabel}`}
             aria-pressed={isActive}
             disabled={isDisabled}
             aria-disabled={isDisabled}
             onClick={onClick}
-        />
+        >
+            <span>Info</span>
+        </button>
     );
 }
 

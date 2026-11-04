@@ -33,7 +33,7 @@ async function replaceEditor(page, code) {
 }
 
 async function readResult(page, expectedTerminal) {
-  const infoButton = page.getByLabel(/Показать информацию|Показана информация/);
+  const infoButton = page.getByLabel(/Info: Показать информацию|Info: Показана информация/);
   await infoButton.click();
   const result = page.locator("pre[aria-label='Информация о тесте']");
   await result.waitFor({state: "visible", timeout: 10_000});

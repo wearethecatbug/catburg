@@ -2,14 +2,14 @@
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
+    min-height: 152px;
 }
 
 /* кнопки-стрелки внутри контейнера */
 .taskListArrowButton {
-    width: 150px;
-    height: 100%;
-    min-height: 70px;
+    width: 112px;
+    min-width: 112px;
 }
 
 .taskSelectorButtonContainer {
@@ -26,15 +26,14 @@
         gap: 8px;
         width: 100%;
         min-width: 0;
-        padding-inline: 8px;
+        min-height: 78px;
+        padding-inline: 18px;
         box-sizing: border-box;
     }
 
     .taskListArrowButton {
-        width: 100%;
-        min-width: 48px;
-        height: 70px;
-        min-height: 70px;
+        width: 56px;
+        min-width: 56px;
     }
 
     .taskSelectorButtonContainer {
