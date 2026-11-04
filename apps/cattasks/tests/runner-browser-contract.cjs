@@ -8,7 +8,9 @@ const typescript = require("../node_modules/typescript");
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43814";
 const networkProbeUrl = "https://runner-network-probe.invalid/blocked";
 const runnerSource = fs.readFileSync(path.join(__dirname, "..", "src", "app", "_components", "tasks", "lib", "IsolatedTaskRunner.ts"), "utf8");
+const catalogSource = fs.readFileSync(path.join(__dirname, "..", "src", "app", "_components", "tasks", "catalog", "taskCatalog.ts"), "utf8");
 const runnerCommonJs = typescript.transpileModule(runnerSource, {compilerOptions: {module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022}}).outputText;
+const catalogCommonJs = typescript.transpileModule(catalogSource, {compilerOptions: {module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022}}).outputText;
 const helperSolution = `function catchUpSeconds(lead, speedGap) {
   return Math.floor((lead / speedGap) * 3600);
 }
@@ -77,10 +79,17 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
     await page.waitForTimeout(1_500);
 
-    const directBoundary = await page.evaluate(async source => {
-      const module = {exports: {}};
-      new Function("exports", "module", source)(module.exports, module);
-      const {runIsolatedTask} = module.exports;
+    const directBoundary = await page.evaluate(async ({runnerSource, catalogSource}) => {
+      const catalogModule = {exports: {}};
+      new Function("exports", "module", "require", catalogSource)(catalogModule.exports, catalogModule, request => {
+        throw new Error(`unexpected catalog dependency: ${request}`);
+      });
+      const runnerModule = {exports: {}};
+      new Function("exports", "module", "require", runnerSource)(runnerModule.exports, runnerModule, request => {
+        if (request === "../catalog/taskCatalog") return catalogModule.exports;
+        throw new Error(`unexpected runner dependency: ${request}`);
+      });
+      const {runIsolatedTask} = runnerModule.exports;
       const run = (request, signal) => runIsolatedTask(request, signal);
       const typed = await run({requestId: "typed-contract", mode: "test", code: "function echo(...values) { return values; }", entryPoint: "echo", tests: [{args: [], expected: []}, {args: [true, {nested: [0, false]}, "line\\n\\\"quote\\\"", null, 0], expected: [true, {nested: [0, false]}, "line\\n\\\"quote\\\"", null, 0]}]});
       const invalid = await Promise.all([
@@ -94,7 +103,7 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
       const controller = new AbortController(); controller.abort();
       const cancelled = await run({requestId: "pre-aborted", mode: "run", code: "console.log('must-not-run')"}, controller.signal);
       return {typed, invalid, cancelled, frames: document.querySelectorAll("iframe[sandbox]").length};
-    }, runnerCommonJs);
+    }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs});
     assert.equal(directBoundary.typed.status, "completed");
     assert.deepEqual(directBoundary.invalid.map(result => result.status), ["test-failed", "test-failed", "test-failed", "test-failed", "test-failed", "test-failed"], "worker equality and terminal transport must reject wrong values even after submitted code replaces worker globals");
     assert.equal(directBoundary.cancelled.status, "cancelled");
@@ -122,6 +131,11 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     assert.match(runOutput, /runner-safe-log/, "Run Code must expose its isolated console output distinctly");
     assert.equal(await page.evaluate(() => globalThis.__runnerLeakProbe), undefined, "submitted code must not mutate the application global");
     assert.equal(await page.evaluate(() => console.log === globalThis.__runnerParentConsole), true, "submitted code must not replace the parent console");
+
+    await replaceEditor(page, "return 42;");
+    await runButton.click();
+    const returnedValue = await readResult(page, /42/);
+    assert.match(returnedValue, /42/, "Run Code must expose a non-undefined isolated return value when there are no logs");
 
     await replaceEditor(page, `try { const request = new XMLHttpRequest(); request.open("GET", ${JSON.stringify(networkProbeUrl)}, false); request.send(); console.log("network-unexpected"); } catch (error) { console.log("network-denied", error.name); }`);
     await runButton.click();

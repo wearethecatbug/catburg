@@ -9,13 +9,11 @@ const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
 type MainTaskSolutionEditorProps = {
     readonly value: string;
-    readonly onChangeAction: (next: string) => void;
     readonly onMountAction?: OnMount;
 };
 
 export default function MainTaskSolutionEditor({
                                                    value,
-                                                   onChangeAction,
                                                    onMountAction,
                                                }: MainTaskSolutionEditorProps) {
     const handleBeforeMount = React.useCallback<BeforeMount>((monaco) => {
@@ -47,7 +45,6 @@ export default function MainTaskSolutionEditor({
         <div className={styles.taskSolutionContainer}>
             <Monaco
                 value={value}
-                onChange={(next) => onChangeAction(next ?? '')}
                 beforeMount={handleBeforeMount}
                 onMount={handleMount}
                 defaultLanguage="javascript"
@@ -63,6 +60,9 @@ export default function MainTaskSolutionEditor({
                     fontSize: 14,
                     lineHeight: 18,
                     minimap: {enabled: false},
+                    readOnly: true,
+                    domReadOnly: true,
+                    occurrencesHighlight: 'off',
                     scrollbar: {
                         vertical: 'visible',
                         horizontal: 'hidden',

@@ -70,13 +70,7 @@ function syntaxCheck(code, label) {
 }
 
 function hasEntryPoint(source, entryPoint) {
-    let found = false;
-    const visit = node => {
-        if (ts.isFunctionDeclaration(node) && node.name?.text === entryPoint) found = true;
-        ts.forEachChild(node, visit);
-    };
-    visit(source);
-    return found;
+    return source.statements.some(node => ts.isFunctionDeclaration(node) && node.name?.text === entryPoint);
 }
 
 function validateCatalog(catalog, provenance, report) {

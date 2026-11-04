@@ -146,7 +146,6 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                             <div className={styles.editorHost}>
                                 <MainTaskSolutionEditor
                                     value={sanitizeSolutionText(solutionText)}
-                                    onChangeAction={() => undefined}
                                     onMountAction={(editor) => {
                                         monacoEditorRef.current = editor;
                                     }}

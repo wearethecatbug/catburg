@@ -92,11 +92,23 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
     const firstDraft = "// draft: first\nfunction echo(value) { return value; }";
     const secondDraft = "// draft: second\nfunction echo(value) { return value + '!'; }";
     await setActiveDraft(page, catalog.tasks[0].starterCode, firstDraft);
+    const draftInput = page.getByLabel("User JavaScript code");
+    assert.equal(await draftInput.evaluate(element => element.readOnly), false, "the user draft editor remains editable");
     await selectTask(page, "Other task");
     await setActiveDraft(page, catalog.tasks[1].starterCode, secondDraft);
     await selectTask(page, "Unsafe ID task");
-    await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), firstDraft);
+    await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), firstDraft, {timeout: 10_000});
     assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), firstDraft.replace(/\s/g, ""), "A→B→A restores the draft owned by the URI-unsafe stable ID");
+
+    await page.getByRole("button", {name: "Показать решение"}).click();
+    const solutionInput = page.locator("[class*='taskSolutionContainer'] .monaco-editor textarea");
+    await solutionInput.waitFor({state: "visible"});
+    const solutionBeforeEdit = catalog.tasks[0].solution;
+    assert.equal(await solutionInput.evaluate(element => element.readOnly), true, "the reference solution editor exposes native read-only semantics");
+    await solutionInput.focus();
+    await page.keyboard.type("// blocked");
+    assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), solutionBeforeEdit), true, "typing cannot change the reference solution");
+    await page.getByRole("button", {name: "Показать описание"}).click();
 
     await page.getByRole("button", {name: "Select next task"}).click();
     await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Other task"));
@@ -114,6 +126,44 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
     assert.deepEqual(requestFailures, []);
   } finally {
     writeBrowserDiagnostics("draft-isolation", {catalogRequests, consoleErrors, pageErrors, requestFailures});
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks shows a retryable catalog failure without claiming that it is still loading", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  let catalogAttempts = 0;
+  await context.route("**/task-catalog.v1.json", async route => {
+    catalogAttempts += 1;
+    if (catalogAttempts === 1) {
+      await route.fulfill({status: 503, contentType: "application/json", body: "{}"});
+      return;
+    }
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200);
+    const selector = page.getByRole("combobox");
+    await selector.waitFor({state: "visible"});
+    const catalogError = page.getByRole("alert").filter({hasText: "Не удалось загрузить каталог задач."});
+    await catalogError.waitFor({state: "visible"});
+    await selector.press("ArrowDown");
+    const listbox = page.getByRole("listbox");
+    await listbox.waitFor({state: "visible"});
+    assert.equal(await listbox.textContent(), "Каталог недоступен.", "the empty open list describes the failed catalog request rather than an active load");
+
+    await page.getByRole("button", {name: "Повторить"}).click();
+    await catalogError.waitFor({state: "hidden"});
+    await selector.press("ArrowDown");
+    await page.getByRole("option").first().waitFor({state: "visible"});
+    assert.equal(await catalogError.count(), 0, "a successful retry clears the catalog failure alert");
+    assert.equal(catalogAttempts, 2, "retry makes one additional catalog request");
+  } finally {
     await context.close();
     await browser.close();
   }

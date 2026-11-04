@@ -69,7 +69,9 @@ test("catalog parser preserves JSON transport values, including zero-argument ca
 test("catalog parser rejects malformed fields, duplicate IDs, and non-JSON values while retaining a valid control", () => {
   assert.equal(parseTaskCatalog(validCatalog()).tasks.length, 1);
   expectCatalogError(() => parseTaskCatalog(validCatalog({title: "  "})), /catalog\.tasks\[0\]\.title: must be a non-empty string/);
-  expectCatalogError(() => parseTaskCatalog(validCatalog({entryPoint: "not-valid"})), /catalog\.tasks\[0\]\.entryPoint: must be a JavaScript identifier/);
+  expectCatalogError(() => parseTaskCatalog(validCatalog({entryPoint: "not-valid"})), /catalog\.tasks\[0\]\.entryPoint/);
+  expectCatalogError(() => parseTaskCatalog(validCatalog({entryPoint: "default"})), /catalog\.tasks\[0\]\.entryPoint/);
+  expectCatalogError(() => parseTaskCatalog(validCatalog({entryPoint: "let"})), /catalog\.tasks\[0\]\.entryPoint/);
   expectCatalogError(() => parseTaskCatalog(validCatalog({tests: [{args: "not-array", expected: null}]})), /args: must be an array/);
   expectCatalogError(() => parseTaskCatalog(validCatalog({tests: [{args: [Number.NaN], expected: null}]})), /args: must contain JSON values only/);
   expectCatalogError(() => parseTaskCatalog(validCatalog({tests: [{args: [], expected: undefined}]})), /expected: must be a JSON value/);

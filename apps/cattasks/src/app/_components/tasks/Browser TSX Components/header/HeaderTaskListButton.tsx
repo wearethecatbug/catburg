@@ -243,7 +243,7 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                     onKeyDown={handleTaskListKeyDown}
                 >
                     {tasks.length === 0 ? (
-                        <div className={styles.taskListEmptyState}>Loading…</div>
+                        <div className={styles.taskListEmptyState}>{catalogError ? "Каталог недоступен." : "Loading…"}</div>
                     ) : (
                         <ul>
                             {listSource.map((task: CatalogTask, index: number) => (

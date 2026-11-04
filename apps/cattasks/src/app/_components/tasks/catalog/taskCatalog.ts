@@ -31,6 +31,16 @@ export class CatalogValidationError extends Error {
 }
 
 const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+const reservedEntryPoints = new Set([
+    "arguments", "break", "case", "catch", "class", "const", "continue", "debugger", "default", "delete",
+    "do", "else", "enum", "eval", "export", "extends", "false", "finally", "for", "function", "if", "implements",
+    "import", "in", "instanceof", "interface", "let", "new", "null", "package", "private", "protected", "public",
+    "return", "static", "super", "switch", "this", "throw", "true", "try", "typeof", "var", "void", "while", "with", "yield",
+]);
+
+export function isTaskEntryPoint(value: string): boolean {
+    return identifierPattern.test(value) && !reservedEntryPoints.has(value);
+}
 
 function fail(path: string, message: string): never {
     throw new CatalogValidationError(`${path}: ${message}`);
@@ -64,7 +74,7 @@ function readTask(value: unknown, path: string): TaskDefinition {
     if (!isRecord(value)) fail(path, "must be an object");
     const id = readNonBlankString(value.id, `${path}.id`);
     const entryPoint = readNonBlankString(value.entryPoint, `${path}.entryPoint`);
-    if (!identifierPattern.test(entryPoint)) fail(`${path}.entryPoint`, "must be a JavaScript identifier");
+    if (!isTaskEntryPoint(entryPoint)) fail(`${path}.entryPoint`, "must be a JavaScript entry point");
     if (!Array.isArray(value.tests) || value.tests.length === 0) fail(`${path}.tests`, "must be a non-empty array");
     return {
         id,

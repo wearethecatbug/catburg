@@ -1,8 +1,7 @@
-import type {TaskTestCase} from "../catalog/taskCatalog";
+import {isTaskEntryPoint, type TaskTestCase} from "../catalog/taskCatalog";
 
 const RUN_TIMEOUT_MS = 1_500;
 const PARENT_GRACE_MS = 200;
-const identifierPattern = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 export type IsolatedTaskRequest = { readonly requestId: string; readonly mode: "run" | "test"; readonly code: string; readonly entryPoint?: string; readonly tests?: readonly TaskTestCase[]; };
 export type IsolatedTaskResult = { readonly requestId: string; readonly status: "completed" | "test-failed" | "runtime-error" | "timeout" | "cancelled"; readonly message: string; readonly logs: readonly string[]; readonly passedCount?: number; readonly totalTests?: number; };
@@ -66,7 +65,13 @@ self.onmessage = ({data}) => {
   };
   try {
     self.console = {log: capture, info: capture, warn: capture, error: capture, debug: capture};
-    if (mode === "run") { new Function('"use strict";\\n' + code)(); report("completed", logs.length ? reflectApply(arrayJoin, logs, ["\\n"]) : "Код выполнен"); return; }
+    if (mode === "run") {
+      const returnValue = new Function('"use strict";\\n' + code)();
+      const logsText = logs.length ? reflectApply(arrayJoin, logs, ["\\n"]) : "";
+      const returnText = returnValue === undefined ? "" : "Возвращаемое значение: " + text(returnValue);
+      report("completed", logsText && returnText ? logsText + "\\n" + returnText : logsText || returnText || "Код выполнен");
+      return;
+    }
     const entry = new Function('"use strict";\\n' + code + '\\nreturn typeof ' + entryPoint + ' === "function" ? ' + entryPoint + ' : undefined;')();
     if (typeof entry !== "function") throw new errorConstructor("Точка входа не найдена: " + entryPoint);
     let passedCount = 0;
@@ -103,7 +108,7 @@ parent.postMessage({type: 'ready', nonce: ${JSON.stringify(nonce)}, requestId: $
 
 export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSignal): Promise<IsolatedTaskResult> {
     if (!request.code.trim()) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Код пустой", logs: []});
-    if (request.mode === "test" && (!request.entryPoint || !identifierPattern.test(request.entryPoint) || !request.tests?.length)) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Некорректные данные задачи", logs: []});
+    if (request.mode === "test" && (!request.entryPoint || !isTaskEntryPoint(request.entryPoint) || !request.tests?.length)) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Некорректные данные задачи", logs: []});
     const nonce = newToken();
     const frame = document.createElement("iframe");
     frame.sandbox.add("allow-scripts");
