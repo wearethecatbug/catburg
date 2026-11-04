@@ -70,6 +70,12 @@
   outline-offset: 2px;
 }
 
+.gripIcon {
+  display: block;
+  height: 24px;
+  width: 24px;
+}
+
 .header {
   min-height: 44px;
   display: grid;

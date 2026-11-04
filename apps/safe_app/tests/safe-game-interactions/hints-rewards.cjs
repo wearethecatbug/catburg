@@ -5,6 +5,7 @@ const { fixedClockStart } = require("./shared/runtime-context.cjs");
 const { expectHintLamp } = require("./shared/sc08-contract.cjs");
 const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectRewardReplacement, expectOrdinaryReturn, gameControls, openHintDialog, solveVisibleQuestion, visibleQuestionAnswer } = require("./shared/game-controls.cjs");
 const { intersects } = require("./shared/artwork-geometry.cjs");
+const { waitForStableVisualGeometry } = require("./shared/readiness.cjs");
 
 
 
@@ -72,10 +73,18 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
     async ({ page }) => {
       await pauseClockAtCurrentTime(page);
       const hint = await openHintDialog(page);
+      const abandonedAnswer = solveVisibleQuestion(
+        await hint.dialog.locator("label[for='hint-answer']").innerText(),
+      );
       await hint.dialog
         .getByRole("button", { name: "Give up", exact: true })
         .click();
       assert.equal(await hint.answer.isDisabled(), true);
+      assert.equal(
+        await hint.answer.inputValue(),
+        String(abandonedAnswer),
+        "Give up replaces the former blank-input expectation with the visible equation answer",
+      );
       assert.equal(
         await page.getByText(/even|odd/i).count(),
         0,
@@ -84,6 +93,11 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
       await page
         .getByRole("button", { name: "New question", exact: true })
         .click();
+      assert.equal(
+        await hint.answer.inputValue(),
+        "",
+        "New question still starts the replacement challenge with a blank answer input",
+      );
       const solvedQuestion = await hint.dialog
         .locator("label[for='hint-answer']")
         .innerText();
@@ -1278,6 +1292,101 @@ test("SC05 provider: reduced-motion safe open and close never animate", async ()
 }
 
 function register03() {
+
+test("Stored hints follows Show hint through resize, internal scrolling, close, and reopen", async () => {
+  await withSession(
+    { width: 1440, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnCurrentRoundHints(page, 4);
+      const checkAlignment = async (width, label) => {
+        const card = await exact(
+          page.getByRole("region", { name: "Stored hints", exact: true }),
+          `${label} Stored hints card`,
+        );
+        const [cardBox, triggerBox, list] = await Promise.all([
+          card.boundingBox(),
+          controls.hint.boundingBox(),
+          exact(card.getByRole("list", { name: "Stored hint list", exact: true }), `${label} Stored hints list`),
+        ]);
+        assert.ok(cardBox && triggerBox, `${label} card and Show hint have measurable boxes`);
+        const canShareLeftEdge =
+          triggerBox.x >= 12 && triggerBox.x + cardBox.width <= width - 12;
+        if (canShareLeftEdge)
+          assert.ok(
+            Math.abs(cardBox.x - triggerBox.x) <= 2,
+            `${label} Stored hints shares Show hint's left edge (card=${cardBox.x}, trigger=${triggerBox.x})`,
+          );
+        else
+          assert.ok(
+            cardBox.x >= 12 && cardBox.x + cardBox.width <= width - 12,
+            `${label} Stored hints clamps only to the approved 12px gutters`,
+          );
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+          `${label} stored-card placement does not create horizontal overflow`,
+        );
+        return { card, list };
+      };
+
+      await refocusShowHint(controls);
+      let state = await checkAlignment(1440, "1440px initial");
+      await page.keyboard.press("Tab");
+      assert.equal(
+        await state.list.evaluate((element) => element === document.activeElement),
+        true,
+        "initial Tab enters the Stored hints internal list",
+      );
+      await page.keyboard.press("End");
+      assert.ok(
+        await state.list.evaluate((element) => element.scrollTop) > 0,
+        "End reveals the fourth stored fact through the internal list scrollport",
+      );
+
+      for (const [width, height] of [[1074, 1134], [390, 1134]]) {
+        await page.setViewportSize({ width, height });
+        await waitForStableVisualGeometry(page);
+        state = await checkAlignment(width, `${width}px after resize`);
+        assert.equal(
+          await state.list.evaluate((element) => element === document.activeElement),
+          true,
+          `${width}px resize keeps keyboard focus in the stored-fact scrollport`,
+        );
+        assert.ok(
+          await state.list.evaluate((element) => element.scrollTop) > 0,
+          `${width}px resize retains the already-revealed internal stored-fact row`,
+        );
+      }
+
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await page.getByRole("region", { name: "Stored hints", exact: true }).count(),
+        0,
+        "Escape closes the resized Stored hints card",
+      );
+      assert.equal(
+        await controls.hint.evaluate((element) => element === document.activeElement),
+        true,
+        "Escape restores focus to Show hint after resize",
+      );
+      await controls.newRound.focus();
+      await controls.hint.focus();
+      state = await checkAlignment(390, "390px reopened");
+      await page.keyboard.press("Tab");
+      assert.equal(
+        await state.list.evaluate((element) => element === document.activeElement),
+        true,
+        "reopened card still exposes its internal list as Show hint's next focus target",
+      );
+      await page.keyboard.press("End");
+      assert.ok(
+        await state.list.evaluate((element) => element.scrollTop) > 0,
+        "reopened card keeps genuine internal overflow available to keyboard users",
+      );
+    },
+  );
+});
 
 
 test("SC05 provider: a quick stored-hint hover then click opens only the math dialog and leaves no stale card", async () => {

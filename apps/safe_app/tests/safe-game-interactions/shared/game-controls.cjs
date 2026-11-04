@@ -1,10 +1,14 @@
 const assert = require("node:assert/strict");
 
 
-
+// shortcut: protocol stalls longer than 50ms can still overtake the pause target; replace when an atomic pause API exists or longer stalls recur.
 async function pauseClockAtCurrentTime(page) {
-  await page.clock.pauseAt(
-    new Date((await page.evaluate(() => Date.now())) + 1),
+  const target = (await page.evaluate(() => Date.now())) + 50;
+  await page.clock.pauseAt(new Date(target));
+  assert.equal(
+    await page.evaluate(() => Date.now()),
+    target,
+    "clock pauses at its bounded requested fake-time target",
   );
 }
 

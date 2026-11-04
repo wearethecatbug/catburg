@@ -54,6 +54,71 @@ async function waitForViewportResizeRender(page) {
   });
 }
 
+async function assertHistoryGrip(page, description) {
+  const panel = await exact(
+    page.getByRole("region", { name: "History", exact: true }),
+    `${description} History panel`,
+  );
+  const handle = await exact(
+    page.getByRole("button", { name: "Move History", exact: true }),
+    `${description} History grip keeps its accessible name`,
+  );
+  await exact(
+    page.getByRole("heading", { name: "History", exact: true }),
+    `${description} readable History identity`,
+  );
+  const visibleMoveHistoryText = await handle.evaluate((element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node;
+    let count = 0;
+    while ((node = walker.nextNode())) {
+      if (node.textContent?.trim() !== "Move History") continue;
+      const range = document.createRange();
+      range.selectNode(node);
+      if ([...range.getClientRects()].some((rect) => rect.width >= 20 && rect.height >= 8))
+        count += 1;
+    }
+    return count;
+  });
+  assert.equal(
+    visibleMoveHistoryText,
+    0,
+    `${description} does not expose a redundant visible Move History label`,
+  );
+  assert.equal(await handle.isVisible(), true, `${description} grip is visible`);
+  const grip = await handle.evaluate((element) => {
+    const pseudoContents = ["::before", "::after"].map((pseudo) =>
+      getComputedStyle(element, pseudo).content.replaceAll('"', "").replaceAll("'", "").trim(),
+    );
+    return {
+      text: element.innerText.trim(),
+      pseudoContents,
+      hasVisibleIcon: [...element.querySelectorAll("svg, img, [role='img']")].some(
+        (icon) =>
+          icon instanceof Element &&
+          getComputedStyle(icon).display !== "none" &&
+          getComputedStyle(icon).visibility !== "hidden" &&
+          Number.parseFloat(getComputedStyle(icon).opacity) > 0 &&
+          icon.getClientRects().length > 0,
+      ),
+    };
+  });
+  const hasSymbolGrip = [grip.text, ...grip.pseudoContents].some(
+    (content) => /^[^\p{L}\p{N}\s]+$/u.test(content),
+  );
+  assert.ok(
+    hasSymbolGrip || grip.hasVisibleIcon,
+    `${description} renders a non-text grip rather than another textual action label`,
+  );
+  await handle.focus();
+  assert.equal(
+    await handle.evaluate((element) => document.activeElement === element),
+    true,
+    `${description} grip remains keyboard focusable`,
+  );
+  return { panel, handle };
+}
+
 function register01() {
 
 
@@ -273,6 +338,57 @@ test("History mouse and touch dragging, bounds, internal scrolling, reopen, rese
 }
 
 function register02() {
+
+
+test("History uses a visible non-text grip without duplicating its readable identity", async () => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await withSession(viewport, {}, async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.history.click();
+      const { panel } = await assertHistoryGrip(
+        page,
+        `${viewport.width}px History`,
+      );
+      await panel.scrollIntoViewIfNeeded();
+    });
+  }
+});
+
+test("/safe smoke keeps the History grip reachable without horizontal overflow", async () => {
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 390, height: 844 },
+  ]) {
+    await withSession(viewport, { route: "/safe" }, async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.history.click();
+      const { handle } = await assertHistoryGrip(
+        page,
+        `/safe ${viewport.width}px History`,
+      );
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+        `/safe ${viewport.width}px History does not add horizontal overflow`,
+      );
+      await handle.focus();
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await page.getByRole("region", { name: "History", exact: true }).count(),
+        0,
+        `/safe ${viewport.width}px Escape closes History`,
+      );
+      assert.equal(
+        await controls.history.evaluate((element) => document.activeElement === element),
+        true,
+        `/safe ${viewport.width}px Escape returns focus to History`,
+      );
+    });
+  }
+});
 
 
 test("SC05 provider: desktop History pointer and keyboard movements visibly update position", async () => {

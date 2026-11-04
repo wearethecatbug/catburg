@@ -36,17 +36,14 @@ export function usePresentationMachine(roundEpoch: number) {
   const current = useRef(presentation);
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    current.current = presentation;
-  }, [presentation]);
-
   const send = useCallback((event: PresentationEvent) => {
+    // Rapid interaction events must reduce from the latest state, not a queued render snapshot.
     const at = now();
-    setPresentation((previous) => {
-      const next = reducePresentation(previous, event, at);
-      current.current = next;
-      return next;
-    });
+    const previous = current.current;
+    const next = reducePresentation(previous, event, at);
+    current.current = next;
+    setPresentation(next);
+    return next !== previous;
   }, []);
 
   useEffect(() => {

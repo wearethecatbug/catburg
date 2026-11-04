@@ -61,6 +61,11 @@
   transform: translate(-50%, -50%);
 }
 
+.safeRegion:has([data-visual-mode="SURRENDERED"]) {
+  /* Preserve painted paw contact while the uniformly scaled terminal art clears the header. */
+  transform: translate(-50%, -50%) translateY(20px);
+}
+
 .characterEffectZone {
   box-sizing: border-box;
   height: var(--character-zone);
@@ -190,7 +195,15 @@
     transform: translate(-50%, -79px);
   }
 }
-@media (min-width: 601px) and (max-width: 1279px) { .safeGameScreen, .stage { min-height: max(810px, 100svh); } }
+@media (min-width: 601px) and (max-width: 1279px) { .safeGameScreen, .stage { min-height: max(860px, 100svh); } }
+@media (min-width: 601px) and (max-width: 1279px) and (min-height: 861px) {
+  /* Center the complete landmark lane in tall tablet viewports; short viewports retain document scroll. */
+  .stage {
+    height: 860px;
+    margin: auto;
+    min-height: 860px;
+  }
+}
 @media (min-width: 601px) and (max-width: 1279px) {
   .characterEffectZone {
     /* The 224px source artwork needs its painted pixels below the tablet header, while the safe landmarks stay fixed. */
@@ -203,8 +216,8 @@
   .stage { height: 863px; min-height: 863px; }
   .instructions { font-size: 16px; }
   .characterEffectZone {
-    /* The source cat's transparent top is large; lift only the portrait artwork to the approved cat-on-safe spacing. */
-    transform: translate(-50%, clamp(-76px, calc(14.2857vw - 121.714px), -36px));
+    /* The safe starts narrowing below 524px; lift the painted paws by the measured contact drift. */
+    transform: translate(-50%, clamp(-76px, calc(21.3vw - 147.612px), -36px));
     width: min(460px, calc(100vw - 24px));
   }
 }

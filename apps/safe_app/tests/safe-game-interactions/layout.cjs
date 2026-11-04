@@ -20,6 +20,89 @@ async function settleViewportAtTop(page) {
   });
 }
 
+function rgbaAlpha(color) {
+  const channels = color.match(/rgba?\(([^)]+)\)/)?.[1].split(",").map(Number);
+  if (!channels || channels.length < 3) return color === "transparent" ? 0 : 1;
+  return channels.length === 4 ? channels[3] : 1;
+}
+
+function measuredArtworkWidth(layer, aspectRatio) {
+  const { size } = layer;
+  const [width, height] = size.split(" ");
+  const parsedWidth = Number.parseFloat(width);
+  if (Number.isFinite(parsedWidth) && width.endsWith("px")) {
+    if (height === "auto") return parsedWidth;
+    const parsedHeight = Number.parseFloat(height);
+    if (!Number.isFinite(parsedHeight) || !height.endsWith("px"))
+      throw new Error(`scene artwork needs an automatic or pixel height, received ${size}`);
+    approximatelyEqual(
+      parsedWidth / parsedHeight,
+      aspectRatio,
+      0.01,
+      `scene artwork preserves its source aspect ratio in ${size}`,
+    );
+    return parsedWidth;
+  }
+  // A separate art box may deliberately use `background-size: 100% 100%`.
+  // That is proportional only when the box itself preserves the source ratio.
+  if (size === "100% 100%") {
+    const boxWidth = Number.parseFloat(layer.width);
+    const boxHeight = Number.parseFloat(layer.height);
+    if (!Number.isFinite(boxWidth) || !Number.isFinite(boxHeight))
+      throw new Error(`scene artwork box needs resolved dimensions, received ${layer.width} by ${layer.height}`);
+    approximatelyEqual(
+      boxWidth / boxHeight,
+      aspectRatio,
+      0.01,
+      `scene artwork box preserves its source aspect ratio at ${boxWidth}x${boxHeight}`,
+    );
+    return boxWidth;
+  }
+  throw new Error(`scene artwork needs a resolved proportional size, received ${size}`);
+}
+
+// The decorative scene artwork may be a dedicated element or a route-owner
+// pseudo-element. The public oracle deliberately observes both without selecting an
+// implementation-specific class name.
+async function sceneBackground(page) {
+  return page.locator("main").evaluate((main) => {
+    const owner = main.parentElement;
+    if (!owner) throw new Error("Safe Cat route has no scene background owner");
+    const artPattern = /scene-background-(?:wide|tall)\.webp/;
+    const candidates = [owner, ...owner.querySelectorAll("*")];
+    const layers = [];
+    for (const element of candidates) {
+      for (const pseudo of [null, "::before", "::after"]) {
+        const style = getComputedStyle(element, pseudo || undefined);
+        if (!artPattern.test(style.backgroundImage)) continue;
+        const rect = element.getBoundingClientRect();
+        layers.push({
+          kind: pseudo || "element",
+          image: style.backgroundImage,
+          size: style.backgroundSize,
+          width: style.width,
+          height: style.height,
+          repeat: style.backgroundRepeat,
+          opacity: Number.parseFloat(style.opacity),
+          pointerEvents: style.pointerEvents,
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        });
+      }
+    }
+    const ownerStyle = getComputedStyle(owner);
+    const ownerRect = owner.getBoundingClientRect();
+    return {
+      layers,
+      base: {
+        color: ownerStyle.backgroundColor,
+        opacity: Number.parseFloat(ownerStyle.opacity),
+        rect: { x: ownerRect.x, y: ownerRect.y, width: ownerRect.width, height: ownerRect.height },
+      },
+      documentHeight: document.documentElement.scrollHeight,
+    };
+  });
+}
+
 
 
 function contrastRatio(foreground, background) {
@@ -871,11 +954,14 @@ test("SC05 D13 / SC06: selected scene, safe, dial, dialog, operator, and approve
                 : "",
           })),
         );
-      for (const filename of [
-        "scene-background-wide.webp",
-        "safe-closed-720.webp",
-        "safe-dial-256.webp",
-      ])
+      const initialScene = await sceneBackground(page);
+      assert.equal(initialScene.layers.length, 1, "D13 wide route exposes one decorative scene-art layer above its route base");
+      assert.match(
+        initialScene.layers[0].image,
+        /scene-background-wide\.webp/,
+        "D13 wide route selects the approved landscape scene artwork from its public scene layer",
+      );
+      for (const filename of ["safe-closed-720.webp", "safe-dial-256.webp"])
         assert.equal(
           renderedReferences.some(
             (reference) =>
@@ -951,16 +1037,12 @@ test("SC05 D13 / SC06: selected scene, safe, dial, dialog, operator, and approve
     },
   );
   await withSession({ width: 390, height: 844 }, {}, async ({ page }) => {
-    const backgroundOwner = await exact(
-      page.locator("main").locator("xpath=.."),
-      "D13 route background owner",
-    );
+    const background = await sceneBackground(page);
+    assert.equal(background.layers.length, 1, "D13 narrow route exposes one decorative scene-art layer above its route base");
     assert.match(
-      await backgroundOwner.evaluate(
-        (element) => getComputedStyle(element).backgroundImage,
-      ),
+      background.layers[0].image,
       /scene-background-tall\.webp/,
-      "D13 narrow route selects the portrait scene background from its actual route owner",
+      "D13 narrow route selects the portrait scene artwork from its public scene layer",
     );
     const controls = await gameControls(page);
     await controls.hint.click();
@@ -1338,45 +1420,19 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
             `${width}x${height} D24 short-wide preserves readable controls through intentional vertical scroll`,
           );
         if (width === 321) {
-          const background = await page.locator("main").evaluate((element) => {
-            const owner = [
-              element,
-              ...(element.parentElement
-                ? [
-                    element.parentElement,
-                    ...(element.parentElement.parentElement
-                      ? [element.parentElement.parentElement]
-                      : []),
-                  ]
-                : []),
-            ].find(
-              (candidate) =>
-                getComputedStyle(candidate).backgroundImage !== "none",
-            );
-            const rect = owner.getBoundingClientRect();
-            const style = getComputedStyle(owner);
-            return {
-              image: style.backgroundImage,
-              x: rect.x,
-              y: rect.y,
-              width: rect.width,
-              height: rect.height,
-              scrollHeight: document.documentElement.scrollHeight,
-            };
-          });
+          const background = await sceneBackground(page);
+          assert.equal(background.layers.length, 1, "D24 has one decorative compact scene-art layer");
           assert.match(
-            background.image,
+            background.layers[0].image,
             /scene-background-tall\.webp/,
-            "D24 selects the actual tall-scene background owner at 321px",
+            "D24 selects the actual tall scene artwork at 321px",
           );
           assert.ok(
-            background.x <= 0 && background.x + background.width >= width,
-            "D24 background owner covers the full compact document width",
-          );
-          assert.ok(
-            background.y <= 0 &&
-              background.y + background.height >= background.scrollHeight,
-            "D24 selected background owner covers legitimate compact scrolling through the document bottom",
+            background.base.rect.x <= 0 &&
+              background.base.rect.y <= 0 &&
+              background.base.rect.width >= width &&
+              background.base.rect.height >= background.documentHeight,
+            "D24 opaque compact scene base covers legitimate scrolling through the document bottom",
           );
         }
       },
@@ -1492,6 +1548,69 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
         }
       },
     );
+});
+
+test("Resting and surrendered painted cats retain safe contact, clearance, and the approved body footprint", async () => {
+  const surrenderedBodyRoi = { left: 180, top: 355, right: 710, bottom: 685 };
+  for (const [width, height] of [[1440, 900], [390, 844]])
+    await withSession({ width, height }, { random: 0.041 }, async ({ page }) => {
+      const controls = await gameControls(page);
+      const safe = page.getByLabel("Safe closed", { exact: true });
+      const formOwner = controls.code.locator("xpath=..");
+      const menu = controls.newRound.locator("xpath=..");
+      const assertScene = async (label, cat) => {
+        const [catAlpha, safeAlpha, title, subtitle, form, menuBox] = await Promise.all([
+          visibleAlphaBounds(page, cat),
+          visibleAlphaBounds(page, safe),
+          page.getByRole("heading", { name: "Guess the number", exact: true }).boundingBox(),
+          controls.instruction.boundingBox(),
+          formOwner.boundingBox(),
+          menu.boundingBox(),
+        ]);
+        const gap = paintedCatSafeGap(catAlpha, safeAlpha);
+        assert.ok(gap >= -8 && gap <= 8, `${width}x${height} ${label} painted cat-safe contact is ${gap}px`);
+        assertPaintedHeaderClearance({ catAlpha, title, subtitle, width, height, description: `${width}x${height} ${label}` });
+        assert.equal(intersects(catAlpha, form, 0), false, `${width}x${height} ${label} does not overlap code form`);
+        assert.equal(intersects(catAlpha, menuBox, 0), false, `${width}x${height} ${label} does not overlap menu`);
+        assert.ok(catAlpha.x >= 0 && catAlpha.y >= 0 && catAlpha.x + catAlpha.width <= width && catAlpha.y + catAlpha.height <= height, `${width}x${height} ${label} painted cat is not clipped`);
+        assert.deepEqual(await page.evaluate(() => [document.body.scrollWidth, document.documentElement.scrollWidth]), [width, width], `${width}x${height} ${label} has no horizontal overflow`);
+        return catAlpha;
+      };
+      const playing = await ordinaryOwner(page, "PLAYING", `${width}x${height} playing owner`);
+      const playingAlpha = await assertScene("resting", playing);
+      await controls.surrender.click();
+      const surrendered = await ordinaryOwner(page, "SURRENDERED", `${width}x${height} surrendered owner`);
+      const surrenderedImage = await exact(surrendered.locator("img"), `${width}x${height} surrendered artwork`);
+      const surrenderedBody = await visibleAlphaBounds(page, surrenderedImage, surrenderedBodyRoi);
+      assert.deepEqual(
+        [surrenderedBody.naturalWidth, surrenderedBody.naturalHeight],
+        [800, 800],
+        `${width}x${height} surrendered artwork keeps its approved natural 800x800 dimensions`,
+      );
+      const surrenderedAlpha = await assertScene("surrendered", surrendered);
+      const ratios = {
+        width: surrenderedBody.width / playingAlpha.width,
+        height: surrenderedBody.height / playingAlpha.height,
+        area: (surrenderedBody.width * surrenderedBody.height) / (playingAlpha.width * playingAlpha.height),
+      };
+      assert.ok(ratios.width >= .75 && ratios.width <= 1.3, `${width}x${height} surrendered body width ratio is ${ratios.width}`);
+      assert.ok(ratios.height >= .75 && ratios.height <= 1.3, `${width}x${height} surrendered body height ratio is ${ratios.height}`);
+      assert.ok(ratios.area >= .6 && ratios.area <= 1.65, `${width}x${height} surrendered body area ratio is ${ratios.area}`);
+      assert.ok(surrenderedAlpha.width > surrenderedBody.width, `${width}x${height} full surrendered alpha retains its flag decoration outside the body ROI`);
+    });
+});
+
+test("/safe smoke keeps a reachable scene owner after dialog close at both approved widths", async () => {
+  for (const [width, height] of [[1440, 900], [390, 844]])
+    await withSession({ width, height }, { route: "/safe", random: 0.041 }, async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const dialog = await exact(page.getByRole("dialog", { name: "Solve a quick math question", exact: true }), `${width}x${height} /safe hint dialog`);
+      await dialog.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+      await dialog.waitFor({ state: "hidden" });
+      await ordinaryOwner(page, "HINT_ATTENTION", `${width}x${height} /safe returned owner`);
+      assert.deepEqual(await page.evaluate(() => [document.body.scrollWidth, document.documentElement.scrollWidth]), [width, width], `${width}x${height} /safe has no horizontal overflow`);
+    });
 });
 
 test("SC05 D20/D21: menu never intersects or overflows and every control remains reachable at breakpoint edges", async () => {
@@ -2139,6 +2258,156 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
       await expectOrdinaryReturn(page, "PLAYING", true, "D25 invalid-edit recovery uses playing owner");
     },
   );
+});
+
+test("1074px gameplay group is visible and vertically balanced", async () => {
+  await withSession({ width: 1074, height: 1134 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    const safe = page.getByLabel("Safe closed", { exact: true });
+    const [catAlpha, safeAlpha, header, subtitle, entry, ...menu] = await Promise.all([
+      visibleAlphaBounds(page, controls.cat),
+      visibleAlphaBounds(page, safe),
+      page.getByRole("heading", { name: "Guess the number", exact: true }).boundingBox(),
+      controls.instruction.boundingBox(),
+      controls.code.locator("xpath=..").boundingBox(),
+      controls.newRound.boundingBox(),
+      controls.surrender.boundingBox(),
+      controls.hint.boundingBox(),
+      controls.history.boundingBox(),
+    ]);
+    const content = [catAlpha, safeAlpha, header, subtitle, entry, ...menu];
+    for (const box of content)
+      assert.ok(
+        box && box.x >= 0 && box.y >= 0 && box.x + box.width <= 1074 && box.y + box.height <= 1134,
+        `1074x1134 scene group remains visible without clipping: ${JSON.stringify(box)}`,
+      );
+    const topFreeSpace = Math.min(...content.map((box) => box.y));
+    const bottomFreeSpace = 1134 - Math.max(...content.map((box) => box.y + box.height));
+    assert.ok(
+      Math.abs(topFreeSpace - bottomFreeSpace) <= Math.max(24, 1134 * 0.08),
+      `1074x1134 top/bottom free space stays balanced (top=${topFreeSpace}, bottom=${bottomFreeSpace})`,
+    );
+  });
+});
+
+test("Responsive scene art is quiet, proportional, and never intercepts gameplay", async () => {
+  for (const [width, height, expectedAsset, expectedArtworkWidth, aspectRatio] of [
+    [1440, 900, "scene-background-wide.webp", 880, 1600 / 900],
+    [1074, 1134, "scene-background-wide.webp", 880, 1600 / 900],
+    [500, 1134, "scene-background-tall.webp", 500 * 0.82, 900 / 1600],
+    [390, 1134, "scene-background-tall.webp", 390 * 0.82, 900 / 1600],
+    [320, 844, "scene-background-tall.webp", 320 * 0.82, 900 / 1600],
+  ])
+    await withSession({ width, height }, {}, async ({ page }) => {
+      const scene = await sceneBackground(page);
+      assert.equal(scene.layers.length, 1, `${width}px exposes one independent scene-art layer`);
+      const artwork = scene.layers[0];
+      assert.match(artwork.image, new RegExp(expectedAsset.replace(".", "\\.")), `${width}px selects the approved responsive scene asset`);
+      approximatelyEqual(
+        measuredArtworkWidth(artwork, aspectRatio),
+        expectedArtworkWidth,
+        1.5,
+        `${width}px scene artwork uses its approved responsive width`,
+      );
+      assert.equal(artwork.repeat, "no-repeat", `${width}px scene artwork never tiles`);
+      assert.ok(
+        artwork.opacity >= 0.28 && artwork.opacity <= 0.38,
+        `${width}px scene artwork stays in the approved quiet opacity band: ${artwork.opacity}`,
+      );
+      assert.equal(artwork.pointerEvents, "none", `${width}px scene artwork cannot intercept gameplay input`);
+      assert.ok(
+        rgbaAlpha(scene.base.color) >= 0.999 && scene.base.opacity >= 0.999,
+        `${width}px opaque cream route base remains behind the decorative art`,
+      );
+      assert.ok(
+        scene.base.rect.x <= 0 && scene.base.rect.y <= 0 &&
+          scene.base.rect.width >= width && scene.base.rect.height >= scene.documentHeight,
+        `${width}px opaque route base covers the whole scrollable document without seams`,
+      );
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${width}px scene has no horizontal overflow`);
+    });
+
+  await withSession({ width: 768, height: 800 }, {}, async ({ page }) => {
+    const [scene, routeScroll] = await Promise.all([
+      sceneBackground(page),
+      page.locator("main").evaluate(async (main) => {
+        const route = main.parentElement;
+        if (!route) throw new Error("Safe Cat route has no background owner");
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const routeStyle = getComputedStyle(route);
+        return {
+          documentHeight: document.documentElement.scrollHeight,
+          viewportHeight: innerHeight,
+          documentScrollY: scrollY,
+          routeClientHeight: route.clientHeight,
+          routeScrollHeight: route.scrollHeight,
+          routeOverflowY: routeStyle.overflowY,
+        };
+      }),
+    ]);
+    assert.ok(
+      routeScroll.documentHeight > routeScroll.viewportHeight && routeScroll.documentScrollY > 0,
+      "768x800 keeps the intended short-scene document scroll path",
+    );
+    assert.ok(
+      scene.base.rect.height >= routeScroll.documentHeight,
+      `768x800 opaque cream route base reaches the document bottom (${scene.base.rect.height}/${routeScroll.documentHeight})`,
+    );
+    assert.equal(
+      routeScroll.routeScrollHeight <= routeScroll.routeClientHeight,
+      true,
+      "768x800 route background does not become a nested scroll container",
+    );
+    assert.equal(
+      ["auto", "scroll"].includes(routeScroll.routeOverflowY),
+      false,
+      "768x800 route background keeps scrolling owned by the document",
+    );
+  });
+
+  await withSession({ width: 390, height: 844 }, { route: "/safe" }, async ({ page }) => {
+    const surface = await page.locator("main").evaluate((main) => {
+      const owner = main.parentElement;
+      const style = getComputedStyle(owner);
+      return { color: style.backgroundColor, opacity: Number.parseFloat(style.opacity) };
+    });
+    assert.ok(
+      rgbaAlpha(surface.color) >= 0.999 && surface.opacity >= 0.999,
+      "/safe retains its opaque surface rather than inheriting the decorative route-art opacity",
+    );
+  });
+});
+
+test("Compact cat-safe contact has no resize bounce", async () => {
+  await withSession({ width: 601, height: 1134 }, {}, async ({ page }) => {
+    const controls = await gameControls(page);
+    const safe = page.getByLabel("Safe closed", { exact: true });
+    const settled = [];
+    for (const width of [601, 600, 599, 550, 500, 390]) {
+      if (width !== 601) await page.setViewportSize({ width, height: 1134 });
+      const first = {
+        cat: await visibleAlphaBounds(page, controls.cat),
+        safe: await visibleAlphaBounds(page, safe),
+      };
+      await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const afterFrames = {
+        cat: await visibleAlphaBounds(page, controls.cat),
+        safe: await visibleAlphaBounds(page, safe),
+      };
+      const firstGap = paintedCatSafeGap(first.cat, first.safe);
+      const settledGap = paintedCatSafeGap(afterFrames.cat, afterFrames.safe);
+      assert.ok(firstGap >= -8 && firstGap <= 8, `${width}px first post-resize painted cat-safe contact is ${firstGap}px`);
+      assert.ok(settledGap >= -8 && settledGap <= 8, `${width}px settled painted cat-safe contact is ${settledGap}px`);
+      assert.ok(Math.abs(firstGap - settledGap) <= 2, `${width}px contact does not bounce after the first post-resize frame`);
+      settled.push({ width, gap: settledGap });
+    }
+    for (let index = 1; index < settled.length; index += 1)
+      assert.ok(
+        Math.abs(settled[index].gap - settled[index - 1].gap) <= 2,
+        `${settled[index - 1].width}/${settled[index].width}px adjacent compact breakpoints keep cat-safe contact continuous`,
+      );
+  });
 });
 }
 

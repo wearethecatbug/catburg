@@ -56,10 +56,68 @@ async function waitForChallengeArtwork(page, dialog, asset, description) {
   );
 }
 
+async function installNextCommittedPresentationOwner(page) {
+  await page.evaluate(() => {
+    window.__safeCatNextPresentationOwner = new Promise((resolve, reject) => {
+      const dialog = document.querySelector('[role="dialog"]');
+      if (!dialog) {
+        reject(new Error("post-close presentation owner requires an open dialog"));
+        return;
+      }
+      const snapshot = () => ({
+        ordinary: [...document.querySelectorAll("[data-presentation-mode]")].filter((node) => {
+          for (let current = node; current; current = current.parentElement) {
+            const style = getComputedStyle(current);
+            if (style.display === "none" || style.visibility === "hidden" || Number.parseFloat(style.opacity) === 0) return false;
+          }
+          return node.getClientRects().length > 0;
+        }).length,
+        reward: document.querySelectorAll('[aria-label="New hint reward"]').length,
+      });
+      const closesDialog = (records) => records.some((record) => {
+        if (record.type === "childList")
+          return [...record.addedNodes, ...record.removedNodes].some((node) =>
+            node === dialog ||
+            (node instanceof Element && (node.contains(dialog) || dialog.contains(node))),
+          );
+        return record.type === "attributes" &&
+          (record.target === dialog || dialog.contains(record.target)) &&
+          ["class", "style", "open", "aria-hidden", "data-state"].includes(record.attributeName);
+      });
+      const observer = new MutationObserver((records) => {
+        if (!closesDialog(records)) return;
+        observer.disconnect();
+        requestAnimationFrame(() => resolve(snapshot()));
+      });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
+    });
+  });
+}
+
+async function nextCommittedPresentationOwner(page) {
+  let timeout;
+  try {
+    return await Promise.race([
+      page.evaluate(() => window.__safeCatNextPresentationOwner),
+      new Promise((_, reject) => { timeout = setTimeout(() => reject(new Error("post-close presentation owner did not commit within 5000ms")), 5_000); }),
+    ]);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function assertCommittedPresentationOwner(actual, expected, description) {
+  assert.deepEqual(actual, expected, description);
+}
+
 
 
 function register01() {
 
+test("Observer owner oracle rejects blank and wrong replacement cardinality", () => {
+  assert.throws(() => assertCommittedPresentationOwner({ ordinary: 0, reward: 0 }, { ordinary: 1, reward: 0 }, "blank close"));
+  assert.throws(() => assertCommittedPresentationOwner({ ordinary: 1, reward: 0 }, { ordinary: 0, reward: 1 }, "wrong successful close"));
+});
 
 test("SC06: ordinary Close and Escape restore Show hint focus and its nonpettable attention owner", async () => {
   for (const [viewport, exit] of [
@@ -70,6 +128,7 @@ test("SC06: ordinary Close and Escape restore Show hint focus and its nonpettabl
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
+      await installNextCommittedPresentationOwner(page);
       if (exit === "close") {
         await hint.dialog
           .getByRole("button", {
@@ -81,6 +140,11 @@ test("SC06: ordinary Close and Escape restore Show hint focus and its nonpettabl
         await page.keyboard.press("Escape");
       }
       await hint.dialog.waitFor({ state: "hidden" });
+      assertCommittedPresentationOwner(
+        await nextCommittedPresentationOwner(page),
+        { ordinary: 1, reward: 0 },
+        `${viewport.width}x${viewport.height} ordinary ${exit} first committed paint has one ordinary owner and no reward`,
+      );
       assert.equal(
         await controls.hint.evaluate((element) => element === document.activeElement),
         true,
@@ -128,20 +192,26 @@ async function assertNativeDraggingDisabled(images, description) {
 
 async function sc06SceneSnapshot(page) {
   return page.locator("main").evaluate((main) => {
-    const backgroundOwner = [
+    const sceneLayer = [
       main,
       main.parentElement,
       main.parentElement?.parentElement,
-    ].find(
-      (candidate) =>
-        candidate && getComputedStyle(candidate).backgroundImage !== "none",
-    );
+    ].map((candidate) => {
+      if (!candidate) return null;
+      const base = getComputedStyle(candidate);
+      const before = getComputedStyle(candidate, "::before");
+      return {
+        candidate,
+        style: before.backgroundImage !== "none" ? before : base,
+      };
+    }).find((layer) => layer?.style.backgroundImage !== "none");
     const stage = main.querySelector("div");
-    const ownerRect = backgroundOwner.getBoundingClientRect();
+    const ownerRect = sceneLayer.candidate.getBoundingClientRect();
     const stageRect = stage.getBoundingClientRect();
     return {
-      image: getComputedStyle(backgroundOwner).backgroundImage,
-      position: getComputedStyle(backgroundOwner).backgroundPosition,
+      image: sceneLayer.style.backgroundImage,
+      position: sceneLayer.style.backgroundPosition,
+      display: sceneLayer.style.display,
       scrollY,
       owner: {
         x: ownerRect.x,
@@ -256,6 +326,8 @@ async function sc06ResponsiveGeometry(hint) {
       return {
         background: before.backgroundImage,
         borderRadius: before.borderRadius,
+        content: before.content,
+        display: before.display,
         top: Number.parseFloat(before.top),
         right: Number.parseFloat(before.right),
         bottom: Number.parseFloat(before.bottom),
@@ -299,6 +371,8 @@ async function sc06ResponsiveGeometry(hint) {
     bottom: shellBacking.box.y + shellBacking.box.height - shellBacking.bottom,
   };
   if (
+    shellBacking.display !== "none" &&
+    shellBacking.content !== "none" &&
     [
       shellBacking.top,
       shellBacking.right,
@@ -400,6 +474,7 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
           ),
           `${width}x${height} retains the selected background variant`,
         );
+        assert.notEqual(during.display, "none", `${width}x${height} paints the selected scene layer`);
         assert.deepEqual(
           {
             image: during.image,
@@ -1397,6 +1472,33 @@ test("SC06: responsive clean frame keeps geometry stable, scales before 820px, a
           sample.shellBacking.bottom > 0 &&
           sample.shellBacking.left > 0,
         `${sample.width}px shell ::before is inset on every side so it cannot create a rectangular exterior slab`,
+      );
+    } else if (sample.width <= 600) {
+      const compactWidth = Math.min(468, sample.width - 32);
+      approximatelyEqual(
+        sample.shellBacking.box.x,
+        (sample.width - compactWidth) / 2,
+        1,
+        `${sample.width}px compact shell is centered inside its 16px viewport gutters`,
+      );
+      approximatelyEqual(
+        sample.shellBacking.box.width,
+        compactWidth,
+        1,
+        `${sample.width}px compact shell retains its bounded-card width`,
+      );
+      assert.equal(
+        sample.shellBacking.shellBackgroundImage,
+        "none",
+        `${sample.width}px compact shell removes the desktop frame image`,
+      );
+      assert.ok(
+        Number.parseFloat(sample.shellBacking.shellRadius) > 0,
+        `${sample.width}px compact shell keeps its rounded card boundary`,
+      );
+      assert.ok(
+        ["auto", "scroll"].includes(sample.overflowY),
+        `${sample.width}px compact dialog exposes bounded internal scrolling when its protected lane is exceeded`,
       );
     } else {
       approximatelyEqual(
@@ -3103,7 +3205,7 @@ test("SC06: responsive narrow challenge title and range-specific subtitle remain
     );
 });
 
-test("SC06: <=360px phones keep the exact challenge title on one centered line and lift only the fixed close paw", async () => {
+test("SC06: <=360px phones keep the exact challenge title and bounded-card Close control", async () => {
   let baselineCloseInsets;
   for (const [width, height, narrow] of [
     [361, 844, false],
@@ -3119,6 +3221,12 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
       async ({ page }) => {
         const controls = await gameControls(page);
         await controls.hint.click();
+        await page
+          .getByRole("dialog", {
+            name: "Solve a quick math question",
+            exact: true,
+          })
+          .waitFor({ state: "visible" });
         const hint = await sc06Dialog(page);
         const title = await exact(
           hint.dialog.getByRole("heading", {
@@ -3143,6 +3251,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           contentBox,
           vignetteBox,
           actionsBox,
+          shellBox,
           titleMetrics,
           closeMetrics,
         ] = await Promise.all([
@@ -3151,6 +3260,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           content.boundingBox(),
           vignette.boundingBox(),
           actions.boundingBox(),
+          hint.dialog.locator("xpath=..").boundingBox(),
           title.evaluate((element) => {
             const style = getComputedStyle(element);
             const box = element.getBoundingClientRect();
@@ -3172,7 +3282,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
           }),
         ]);
         assert.ok(
-          titleBox && closeBox && contentBox && vignetteBox && actionsBox,
+          titleBox && closeBox && contentBox && vignetteBox && actionsBox && shellBox,
           `${width}x${height} narrow-phone title, close, and established regions render`,
         );
         assert.equal(
@@ -3224,17 +3334,24 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
             closeBox.y >= 0 &&
             closeBox.x + closeBox.width <= width &&
             closeBox.y + closeBox.height <= height,
-          `${width}x${height} fixed close paw stays fully contained`,
+          `${width}x${height} Close paw stays fully contained`,
         );
         assert.equal(
           intersects(closeBox, titleBox, 0),
           false,
-          `${width}x${height} fixed close paw remains clear of the title`,
+          `${width}x${height} Close paw remains clear of the title`,
+        );
+        assert.ok(
+          closeBox.x >= shellBox.x &&
+            closeBox.y >= shellBox.y &&
+            closeBox.x + closeBox.width <= shellBox.x + shellBox.width &&
+            closeBox.y + closeBox.height <= shellBox.y + shellBox.height,
+          `${width}x${height} Close paw remains inside the bounded card`,
         );
 
         const closeInsets = {
-          right: width - (closeBox.x + closeBox.width),
-          top: closeBox.y,
+          right: shellBox.x + shellBox.width - (closeBox.x + closeBox.width),
+          top: closeBox.y - shellBox.y,
         };
         if (!narrow) {
           assert.ok(
@@ -3248,7 +3365,7 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
             "361px close-paw baseline is captured before narrow checks",
           );
           approximatelyEqual(closeInsets.right, 8, 1,
-            `${width}x${height} keeps the exact 8px viewport right gutter`);
+            `${width}x${height} keeps the exact 8px bounded-card right gutter`);
           assert.ok(
             titleBox.y >= closeBox.y,
             `${width}x${height} keeps the title in the protected header lane below the shell-relative Close control`,
@@ -3258,7 +3375,6 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
         for (const [name, box] of Object.entries({
           content: contentBox,
           vignette: vignetteBox,
-          actions: actionsBox,
         }))
           assert.ok(
             box.x >= 0 &&
@@ -3267,6 +3383,53 @@ test("SC06: <=360px phones keep the exact challenge title on one centered line a
               box.y + box.height <= height,
             `${width}x${height} established ${name} region remains contained`,
           );
+        const actionsFitViewport =
+          actionsBox.x >= 0 &&
+          actionsBox.y >= 0 &&
+          actionsBox.x + actionsBox.width <= width &&
+          actionsBox.y + actionsBox.height <= height;
+        const dialogOverflow = await hint.dialog.evaluate((element) => ({
+          max: element.scrollHeight - element.clientHeight,
+          overflowY: getComputedStyle(element).overflowY,
+        }));
+        const shortCompactFixture = width === 320 && height === 568;
+        if (!shortCompactFixture || dialogOverflow.max <= 0)
+          assert.equal(
+            actionsFitViewport,
+            true,
+            `${width}x${height} established actions region remains contained`,
+          );
+        else {
+          assert.ok(
+            ["auto", "scroll"].includes(dialogOverflow.overflowY),
+            `${width}x${height} short bounded card owns its local overflow`,
+          );
+          const pageScrollBeforeActions = await page.evaluate(() => scrollY);
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [actionsReach, dialogReach] = await Promise.all([
+            actions.boundingBox(),
+            hint.dialog.boundingBox(),
+          ]);
+          assert.ok(
+            actionsReach &&
+              dialogReach &&
+              actionsReach.x >= dialogReach.x &&
+              actionsReach.y >= dialogReach.y &&
+              actionsReach.x + actionsReach.width <= dialogReach.x + dialogReach.width &&
+              actionsReach.y + actionsReach.height <= dialogReach.y + dialogReach.height,
+            `${width}x${height} local scrolling reaches the full actions region`,
+          );
+          assert.equal(
+            await page.evaluate(() => scrollY),
+            pageScrollBeforeActions,
+            `${width}x${height} action reachability keeps page scrolling locked`,
+          );
+          await hint.dialog.evaluate((element) => {
+            element.scrollTop = 0;
+          });
+        }
         assert.equal(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
@@ -3423,8 +3586,9 @@ test("SC06: 600px mobile and 821px desktop retain their non-tablet geometry", as
           }),
           `${width}x${height} boundary close control`,
         );
-        const [dialogBox, closeBox, contentBox, vignetteBox, dialogScale] =
+        const [shellBox, dialogBox, closeBox, contentBox, vignetteBox, dialogScale] =
           await Promise.all([
+            hint.dialog.locator("xpath=..").boundingBox(),
             hint.dialog.boundingBox(),
             close.boundingBox(),
             hint.dialog.locator("section").boundingBox(),
@@ -3447,15 +3611,14 @@ test("SC06: 600px mobile and 821px desktop retain their non-tablet geometry", as
           `${width}x${height} boundary retains its approved close target size`,
         );
         assert.ok(
-          dialogBox && closeBox && contentBox && vignetteBox,
+          shellBox && dialogBox && closeBox && contentBox && vignetteBox,
           `${width}x${height} boundary keeps all public geometry rendered`,
         );
         if (composition === "stacked") {
-          approximatelyEqual(
-            dialogBox.width,
-            width,
-            1,
-            "600px mobile dialog remains fullscreen",
+          assert.ok(
+            shellBox.x >= 16 && shellBox.x + shellBox.width <= width - 16 &&
+              shellBox.width <= width - 32,
+            "600px mobile keeps its bounded-card horizontal gutters",
           );
           assert.ok(
             Math.abs(
@@ -3770,18 +3933,32 @@ test("SC06: narrow background remains the sole <=820px challenge surface while d
           const [backdropBox, gameSubtitleBox] = await Promise.all([
             hint.dialog.locator("xpath=../..").boundingBox(), controls.instruction.boundingBox(),
           ]);
-          approximatelyEqual(
-            surface.rect.width,
-            width,
-            1,
-            `${width}x${height} narrow surface spans the viewport width`,
-          );
+          if (width <= 600)
+            assert.ok(
+              surface.rect.x >= 16 && surface.rect.y >= 16 &&
+                surface.rect.x + surface.rect.width <= width - 16 &&
+                surface.rect.y + surface.rect.height <= height - 16,
+              `${width}x${height} narrow surface stays inside the compact card gutters`,
+            );
+          else
+            approximatelyEqual(
+              surface.rect.width,
+              width,
+              1,
+              `${width}x${height} narrow surface spans the retained tablet viewport width`,
+            );
           assert.ok(backdropBox && backdropBox.x <= 1 && backdropBox.y <= 1 &&
             backdropBox.x + backdropBox.width >= width - 1 && backdropBox.y + backdropBox.height >= height - 1,
             `${width}x${height} narrow backdrop intercepts the viewport`);
-          assert.ok(gameSubtitleBox && surface.rect.y >= gameSubtitleBox.y + gameSubtitleBox.height + 8 &&
-            Math.abs(surface.rect.height - (height - surface.rect.y)) <= 1,
-            `${width}x${height} narrow surface fills its protected remaining lane`);
+          if (width <= 600)
+            assert.ok(
+              surface.rect.width <= width - 32 && surface.rect.height <= height - 32,
+              `${width}x${height} compact surface is bounded rather than a protected-lane sheet`,
+            );
+          else
+            assert.ok(gameSubtitleBox && surface.rect.y >= gameSubtitleBox.y + gameSubtitleBox.height + 8 &&
+              Math.abs(surface.rect.height - (height - surface.rect.y)) <= 1,
+              `${width}x${height} narrow surface fills its retained tablet protected lane`);
           assert.equal(
             surface.alpha,
             1,
@@ -4178,6 +4355,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
           );
           const [
             vignetteDisplay,
+            scrolledVignetteBox,
             catBox,
             catAlpha,
             bubbleBox,
@@ -4185,6 +4363,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             bubbleDisplay,
           ] = await Promise.all([
             vignette.evaluate((element) => getComputedStyle(element).display),
+            vignette.boundingBox(),
             cat.boundingBox(),
             visibleAlphaBounds(page, cat),
             bubble.boundingBox(),
@@ -4202,7 +4381,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             `${width}x${height} compact vignette remains visible`,
           );
           assert.ok(
-            vignetteBox && catBox && noticeBox,
+            scrolledVignetteBox && catBox && noticeBox,
             `${width}x${height} compact state scene remains rendered`,
           );
           const contained = (inner, outer) =>
@@ -4211,7 +4390,7 @@ test("SC06: mobile portrait surface forms one readable no-scroll story and retai
             inner.x + inner.width <= outer.x + outer.width + 1 &&
             inner.y + inner.height <= outer.y + outer.height + 1;
           assert.equal(
-            contained(catAlpha, vignetteBox),
+            contained(catAlpha, scrolledVignetteBox),
             true,
             `${width}x${height} compact cat art remains inside the vignette`,
           );
@@ -7318,8 +7497,16 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           }),
           `${width}x${height} committed reward success presentation`,
         );
+        await installNextCommittedPresentationOwner(page);
         await page.keyboard.press("Escape");
         await hint.dialog.waitFor({ state: "hidden" });
+        const closeFrameMs = 17;
+        await page.clock.runFor(closeFrameMs);
+        assertCommittedPresentationOwner(
+          await nextCommittedPresentationOwner(page),
+          { ordinary: 0, reward: 1 },
+          `${width}x${height} successful close first committed paint has one reward owner and no ordinary owner`,
+        );
         const reward = await exact(
           page.getByLabel("New hint reward", { exact: true }),
           `${width}x${height} reward replacement`,
@@ -7398,6 +7585,29 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             comic.tailHeight > 0,
           `${width}x${height} reward fact uses a rounded comic dialog bubble with visible tail`,
         );
+        const horizontalGap = bubbleDocument.x - (rewardEnvelopeDocument.x + rewardEnvelopeDocument.width);
+        const verticalOverlap = Math.max(
+          0,
+          Math.min(bubbleDocument.y + bubbleDocument.height, rewardEnvelopeDocument.y + rewardEnvelopeDocument.height) -
+            Math.max(bubbleDocument.y, rewardEnvelopeDocument.y),
+        );
+        assert.equal(
+          intersects(bubbleDocument, rewardEnvelopeDocument, 0),
+          false,
+          `${width}x${height} reward bubble does not intersect its painted cat alpha`,
+        );
+        assert.ok(
+          horizontalGap >= 0,
+          `${width}x${height} reward bubble remains to the right of the painted cat alpha`,
+        );
+        assert.ok(
+          horizontalGap <= Math.max(32, rewardEnvelopeDocument.width * .25),
+          `${width}x${height} reward bubble horizontal gap ${horizontalGap}px remains adjacent to cat alpha`,
+        );
+        assert.ok(
+          verticalOverlap >= Math.min(bubbleDocument.height, rewardEnvelopeDocument.height) * .25,
+          `${width}x${height} reward bubble vertically overlaps cat alpha by ${verticalOverlap}px`,
+        );
         for (const [name, protectedBox] of Object.entries({
           title: titleAfterDocument,
           subtitle: subtitleAfterDocument,
@@ -7444,7 +7654,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           2,
           `${width}x${height} title does not jump between normal and reward states`,
         );
-        await page.clock.runFor(4999);
+        await page.clock.runFor(4999 - closeFrameMs);
         assert.equal(
           await reward.isVisible(),
           true,
@@ -7607,7 +7817,7 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
     );
 });
 
-test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does not create page scrolling", async () => {
+test("Short narrow modal keeps card-local overflow and does not create page scrolling", async () => {
   await withSession(
     { width: 320, height: 568 },
     { random: 0.041 },
@@ -7621,9 +7831,9 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
       ]);
       assert.ok(
         shellBox &&
-          shellBox.x <= 1 && shellBox.y <= 1 &&
-          shellBox.x + shellBox.width >= 319 && shellBox.y + shellBox.height >= 567,
-        "fullscreen narrow backdrop intercepts the complete visual viewport",
+          shellBox.x >= 16 && shellBox.y >= 16 &&
+          shellBox.x + shellBox.width <= 304 && shellBox.y + shellBox.height <= 552,
+        "short narrow dialog keeps the required bounded-card gutters",
       );
       const dialogBox = await hint.dialog.boundingBox();
       assert.ok(
@@ -7645,29 +7855,35 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
       assert.ok(
         internalScroll.scrollHeight >= internalScroll.clientHeight &&
           internalScroll.changed === internalScroll.scrollHeight - internalScroll.clientHeight,
-        "fullscreen narrow dialog reaches its bounded scroll maximum when needed and remains exact when fitting",
+        "short narrow dialog reaches its card-local scroll maximum when needed and remains exact when fitting",
       );
       await hint.dialog.evaluate((element) => {
         element.scrollTop = 0;
       });
-      const [checkBox, operatorBox, laneBox] = await Promise.all([
+      const [checkBox, operatorBox, closeBeforeScroll, laneBox] = await Promise.all([
         hint.check.boundingBox(),
         hint.dialog.getByLabel("Choose a math operation", { exact: true }).boundingBox(),
+        hint.dialog.getByRole("button", { name: "Close hint challenge", exact: true }).boundingBox(),
         hint.dialog.boundingBox(),
       ]);
       await hint.dialog.evaluate((element) => {
         element.scrollTop = element.scrollHeight;
       });
-      const [newQuestionBox, giveUpBox, closeBox] = await Promise.all([
+      const [newQuestionBox, giveUpBox, closeAfterScroll] = await Promise.all([
         hint.newQuestion.boundingBox(),
         hint.giveUp.boundingBox(),
         hint.dialog.getByRole("button", { name: "Close hint challenge", exact: true }).boundingBox(),
       ]);
       assert.ok(
-        [checkBox, operatorBox, newQuestionBox, giveUpBox, closeBox].every(
+        [checkBox, operatorBox, newQuestionBox, giveUpBox, closeAfterScroll].every(
           (box) => box && box.y >= laneBox.y && box.y + box.height <= laneBox.y + laneBox.height,
         ),
         "internal scrolling leaves Check, operators, New question, Give up, and Close reachable",
+      );
+      assert.ok(
+        closeBeforeScroll && closeBeforeScroll.y >= laneBox.y &&
+          closeBeforeScroll.y + closeBeforeScroll.height <= laneBox.y + laneBox.height,
+        "initial compact card keeps Close reachable before local scrolling",
       );
       const lockBefore = await page.evaluate(() => ({
         bodyOverflowY: getComputedStyle(document.body).overflowY,
@@ -7684,7 +7900,7 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
       assert.deepEqual(
         [lockBefore.bodyOverflowY, lockBefore.documentOverflowY],
         ["hidden", "hidden"],
-        "short fullscreen modal locks body and document scrolling even when DOM extent exceeds the viewport",
+        "short bounded modal locks body and document scrolling even when DOM extent exceeds the viewport",
       );
       assert.deepEqual(
         lockAfter,
@@ -7695,6 +7911,253 @@ test("SC06: fullscreen narrow modal keeps fallback overflow inactive and does no
         .getByRole("button", { name: "Close hint challenge", exact: true })
         .click();
       await hint.dialog.waitFor({ state: "hidden" });
+    },
+  );
+});
+
+test("Compact hint card is bounded, locally scrollable, and preserves its public keyboard outcome", async () => {
+  for (const [width, height] of [
+    [550, 1134],
+    [500, 1134],
+    [390, 740],
+    [320, 568],
+  ])
+    await withSession(
+      { width, height },
+      { random: 0.041 },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        const hint = await sc06Dialog(page);
+        await waitForStableVisualGeometry(page);
+        const shell = hint.dialog.locator("xpath=..");
+        const title = await exact(
+          hint.dialog.getByRole("heading", {
+            name: "Solve a quick math question",
+            exact: true,
+          }),
+          `${width}x${height} challenge title`,
+        );
+        const [shellBox, dialogBox, titleBox, initialFocus, scrollMetrics] =
+          await Promise.all([
+            shell.boundingBox(),
+            hint.dialog.boundingBox(),
+            title.boundingBox(),
+            page.evaluate(() => document.activeElement?.id),
+            Promise.all([shell, hint.dialog].map(async (candidate) => ({
+              isDialog: await candidate.evaluate((element) => element.getAttribute("role") === "dialog"),
+              metrics: await candidate.evaluate((element) => {
+                const style = getComputedStyle(element);
+                return {
+                  clientHeight: element.clientHeight,
+                  scrollHeight: element.scrollHeight,
+                  scrollTop: element.scrollTop,
+                  overflowY: style.overflowY,
+                };
+              }),
+              locator: candidate,
+            }))),
+          ]);
+        assert.ok(shellBox && dialogBox && titleBox, `${width}x${height} renders a bounded hint card`);
+        assert.ok(
+          shellBox.x >= 16 && shellBox.y >= 16 &&
+            shellBox.x + shellBox.width <= width - 16 &&
+            shellBox.y + shellBox.height <= height - 16,
+          `${width}x${height} card keeps the required 16px compact gutters`,
+        );
+        assert.ok(
+          shellBox.width <= width - 32 && shellBox.height <= height - 32,
+          `${width}x${height} hint card is not a viewport-filling sheet`,
+        );
+        assert.equal(initialFocus, "hint-answer", `${width}x${height} opens with focus in the calculation input`);
+        if (width === 500)
+          {
+            assert.ok(
+              shellBox.width <= 468 && shellBox.height <= 920,
+              "500x1134 card stays within its approved 468px by 920px bounds",
+            );
+            assert.ok(
+              titleBox.y - shellBox.y >= 24 && titleBox.y - shellBox.y <= 48,
+              "500x1134 title starts 24–48px below the bounded card top",
+            );
+          }
+
+        const localScroller = scrollMetrics.find(({ metrics }) =>
+          metrics.scrollHeight > metrics.clientHeight + 1,
+        );
+        assert.ok(
+          !localScroller || ["auto", "scroll"].includes(localScroller.metrics.overflowY),
+          `${width}x${height} any overflow is owned by the dialog card rather than the page`,
+        );
+        if (localScroller) {
+          await localScroller.locator.evaluate((element) => {
+            element.scrollTop = element.scrollHeight;
+          });
+          const [newQuestionBox, giveUpBox, scrollerBox] = await Promise.all([
+            hint.newQuestion.boundingBox(),
+            hint.giveUp.boundingBox(),
+            localScroller.locator.boundingBox(),
+          ]);
+          assert.ok(
+            newQuestionBox && giveUpBox && scrollerBox &&
+              [newQuestionBox, giveUpBox].every((box) =>
+                box.y >= scrollerBox.y && box.y + box.height <= scrollerBox.y + scrollerBox.height,
+              ),
+            `${width}x${height} local scrolling reaches both bottom actions`,
+          );
+          await localScroller.locator.evaluate((element) => { element.scrollTop = 0; });
+        }
+        assert.deepEqual(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+          `${width}x${height} compact dialog creates no horizontal page overflow`,
+        );
+        const lockBefore = await page.evaluate(() => ({
+          body: getComputedStyle(document.body).overflowY,
+          document: getComputedStyle(document.documentElement).overflowY,
+          scrollY,
+        }));
+        await page.keyboard.press("End");
+        await page.mouse.wheel(0, 1_000);
+        assert.deepEqual(
+          await page.evaluate(() => ({
+            body: getComputedStyle(document.body).overflowY,
+            document: getComputedStyle(document.documentElement).overflowY,
+            scrollY,
+          })),
+          lockBefore,
+          `${width}x${height} modal lock keeps background scrolling inactive`,
+        );
+        await hint.answer.focus();
+        for (let index = 0; index < 10; index += 1) {
+          await page.keyboard.press("Tab");
+          assert.equal(
+            await page.evaluate(() => Boolean(document.activeElement?.closest('[role="dialog"]'))),
+            true,
+            `${width}x${height} Tab ${index + 1} remains trapped in the dialog`,
+          );
+        }
+        await hint.answer.focus();
+        const expectedAnswer = solveVisibleQuestion(
+          await hint.dialog.locator("label[for='hint-answer']").innerText(),
+        );
+        await hint.giveUp.click();
+        assert.equal(await hint.answer.isDisabled(), true, `${width}x${height} Give up disables the retained answer input`);
+        assert.equal(await hint.answer.inputValue(), String(expectedAnswer), `${width}x${height} Give up renders the answer in that input`);
+        assert.equal(await hint.check.isDisabled(), true, `${width}x${height} Give up disables Check without removing it`);
+        assert.equal(await hint.check.isVisible(), true, `${width}x${height} disabled Check stays visible`);
+        await page.keyboard.press("Escape");
+        await hint.dialog.waitFor({ state: "hidden" });
+        assert.equal(
+          await controls.hint.evaluate((element) => element === document.activeElement),
+          true,
+          `${width}x${height} Escape restores Show hint focus`,
+        );
+      },
+    );
+});
+
+test("Wide Show hint card projects the answer input to the calculation eye anchor", async () => {
+  for (const [width, height] of [
+    [1440, 900],
+    [1800, 1230],
+    [1280, 1100],
+    [1074, 1134],
+  ])
+    await withSession(
+      { width, height },
+      { random: 0.041 },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        const hint = await sc06Dialog(page);
+        await waitForStableVisualGeometry(page);
+        const [shellBox, answerBox, initialFocus] = await Promise.all([
+          hint.dialog.locator("xpath=..").boundingBox(),
+          hint.answer.boundingBox(),
+          page.evaluate(() => document.activeElement?.id),
+        ]);
+        assert.ok(shellBox && answerBox, `${width}x${height} exposes shell and answer geometry`);
+        const gutter = 24;
+        const relativeInputX = answerBox.x + answerBox.width / 2 - shellBox.x;
+        const relativeInputY = answerBox.y + answerBox.height / 2 - shellBox.y;
+        const expectedX = Math.min(Math.max(width * 0.5 - relativeInputX, gutter), width - gutter - shellBox.width);
+        const expectedY = Math.min(Math.max(height * 0.45 - relativeInputY, gutter), height - gutter - shellBox.height);
+        assert.ok(
+          Math.abs(shellBox.x - expectedX) <= 3 && Math.abs(shellBox.y - expectedY) <= 3,
+          `${width}x${height} projects the actual answer-input center to the eye anchor`,
+        );
+        assert.ok(
+          shellBox.x >= gutter && shellBox.y >= gutter &&
+            shellBox.x + shellBox.width <= width - gutter &&
+            shellBox.y + shellBox.height <= height - gutter,
+          `${width}x${height} keeps the complete shell inside its 24px wide gutters`,
+        );
+        assert.equal(initialFocus, "hint-answer", `${width}x${height} retains initial calculation focus`);
+        assert.deepEqual(
+          await page.evaluate(() => ({
+            body: getComputedStyle(document.body).overflowY,
+            document: getComputedStyle(document.documentElement).overflowY,
+          })),
+          { body: "hidden", document: "hidden" },
+          `${width}x${height} opening the projected dialog does not unlock background scrolling`,
+        );
+      },
+    );
+});
+
+test("1280x600 retains card-local short-height scrolling without page escape", async () => {
+  await withSession(
+    { width: 1280, height: 600 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const hint = await sc06Dialog(page);
+      await waitForStableVisualGeometry(page);
+      const candidates = [hint.dialog, hint.dialog.locator("xpath=..")];
+      const scrollers = await Promise.all(candidates.map(async (locator) => ({
+        locator,
+        metrics: await locator.evaluate((element) => ({
+          clientHeight: element.clientHeight,
+          scrollHeight: element.scrollHeight,
+          overflowY: getComputedStyle(element).overflowY,
+        })),
+      })));
+      const scroller = scrollers.find(({ metrics }) =>
+        ["auto", "scroll"].includes(metrics.overflowY) &&
+        metrics.scrollHeight >= metrics.clientHeight,
+      );
+      assert.ok(scroller, "1280x600 retains a bounded dialog-local short-height scroll owner");
+      await scroller.locator.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+      const [newQuestionBox, giveUpBox, scrollBox] = await Promise.all([
+        hint.newQuestion.boundingBox(),
+        hint.giveUp.boundingBox(),
+        scroller.locator.boundingBox(),
+      ]);
+      assert.ok(
+        newQuestionBox && giveUpBox && scrollBox &&
+          [newQuestionBox, giveUpBox].every((box) =>
+            box.y >= scrollBox.y && box.y + box.height <= scrollBox.y + scrollBox.height,
+          ),
+        "1280x600 local scrolling reaches both bottom actions",
+      );
+      const lockBefore = await page.evaluate(() => ({
+        body: getComputedStyle(document.body).overflowY,
+        document: getComputedStyle(document.documentElement).overflowY,
+        scrollY,
+      }));
+      await page.keyboard.press("End");
+      await page.mouse.wheel(0, 1_000);
+      assert.deepEqual(
+        await page.evaluate(() => ({
+          body: getComputedStyle(document.body).overflowY,
+          document: getComputedStyle(document.documentElement).overflowY,
+          scrollY,
+        })),
+        lockBefore,
+        "1280x600 keeps background scrolling locked while the dialog is open",
+      );
     },
   );
 });
@@ -7783,6 +8246,170 @@ test("SC06: closing a short-tablet dialog restores its nonzero pre-open page scr
       );
     },
   );
+});
+
+test("Give up centers its actions and exposes only the public arithmetic result", async () => {
+  for (const [route, routeName] of [["/", "scene"], ["/safe", "safe"]])
+    for (const [width, height] of [[1440, 900], [390, 844]])
+      await withSession(
+        { width, height },
+        { random: 0.041, route },
+        async ({ page }) => {
+          const controls = await gameControls(page);
+          await controls.hint.click();
+          const hint = await sc06Dialog(page);
+          await waitForStableVisualGeometry(page);
+          const actions = [
+            ["New question", hint.newQuestion],
+            ["Give up", hint.giveUp],
+          ];
+          if (route === "/") {
+            for (const [name, action] of actions) {
+            const metrics = await action.evaluate((button) => {
+              const icon = button.querySelector("svg");
+              const label = button.querySelector("span");
+              const dialog = button.closest("[role='dialog']");
+              const box = button.getBoundingClientRect();
+              const iconBox = icon?.getBoundingClientRect();
+              const labelBox = label?.getBoundingClientRect();
+              const union = iconBox && labelBox && {
+                left: Math.min(iconBox.left, labelBox.left),
+                right: Math.max(iconBox.right, labelBox.right),
+                top: Math.min(iconBox.top, labelBox.top),
+                bottom: Math.max(iconBox.bottom, labelBox.bottom),
+              };
+              const labelStyle = label && getComputedStyle(label);
+              const dialogScale = dialog && getComputedStyle(dialog).scale;
+              return {
+                box: box.toJSON(),
+                icon: iconBox?.toJSON(),
+                label: labelBox?.toJSON(),
+                union,
+                fontSize: Number.parseFloat(labelStyle?.fontSize || "0"),
+                renderedScale:
+                  dialogScale === "none" ? 1 : Number(dialogScale?.split(/\s+/)[0]),
+                unclipped: Boolean(label) && label.scrollWidth <= label.clientWidth && label.scrollHeight <= label.clientHeight,
+              };
+            });
+            assert.ok(metrics.icon && metrics.label && metrics.union, `${routeName} ${width}x${height} ${name} has a visible SVG and text span`);
+            approximatelyEqual(
+              (metrics.union.left + metrics.union.right) / 2,
+              metrics.box.x + metrics.box.width / 2,
+              2,
+              `${routeName} ${width}x${height} ${name} SVG/text union is horizontally centered`,
+            );
+            approximatelyEqual(
+              (metrics.union.top + metrics.union.bottom) / 2,
+              metrics.box.y + metrics.box.height / 2,
+              2,
+              `${routeName} ${width}x${height} ${name} SVG/text union is vertically centered`,
+            );
+            approximatelyEqual(
+              metrics.icon.y + metrics.icon.height / 2,
+              metrics.label.y + metrics.label.height / 2,
+              2,
+              `${routeName} ${width}x${height} ${name} icon and label share a vertical center`,
+            );
+            assert.equal(metrics.unclipped, true, `${routeName} ${width}x${height} ${name} label is unclipped`);
+            assert.ok(
+              Number((metrics.fontSize * metrics.renderedScale).toFixed(3)) >= (width <= 600 ? 14 : 16),
+              `${routeName} ${width}x${height} ${name} has the approved rendered readable label size`,
+            );
+            assert.ok(metrics.box.height >= 44, `${routeName} ${width}x${height} ${name} retains its minimum action target`);
+            }
+          } else {
+            for (const [name, action] of actions) {
+              assert.equal(await action.isVisible(), true, `${routeName} ${width}x${height} ${name} remains visible`);
+              assert.equal(await action.isEnabled(), true, `${routeName} ${width}x${height} ${name} remains reachable`);
+            }
+          }
+
+          const expectedAnswer = solveVisibleQuestion(
+            await hint.dialog.locator("label[for='hint-answer']").innerText(),
+          );
+          const enabledCheckStyle = route === "/" ? await hint.check.evaluate((button) => {
+              const style = getComputedStyle(button);
+              return [style.backgroundColor, style.backgroundImage, style.color, style.opacity, style.filter].join("|");
+            }) : null;
+          await hint.giveUp.click();
+          const expectedMessage = `The answer is ${expectedAnswer}. No hint was earned.`;
+          assert.equal(await hint.answer.isDisabled(), true, `${routeName} ${width}x${height} Give up disables the input`);
+          assert.equal(await hint.answer.inputValue(), String(expectedAnswer), `${routeName} ${width}x${height} Give up renders the public equation answer in the input`);
+          assert.equal(await hint.check.isDisabled(), true, `${routeName} ${width}x${height} Give up programmatically disables Check`);
+          if (route === "/") {
+            assert.equal(await hint.check.isVisible(), true, `${routeName} ${width}x${height} disabled Check remains a visible control`);
+            const disabledCheck = await hint.check.evaluate((button) => {
+              const style = getComputedStyle(button);
+              const opaque = (color) => color !== "transparent" && !/rgba\([^)]*,\s*0\)$/.test(color);
+              return {
+                label: button.querySelector("span")?.textContent?.trim(),
+                paint: [style.backgroundColor, style.backgroundImage, style.color, style.opacity, style.filter].join("|"),
+                visiblyPainted:
+                  style.backgroundImage !== "none" ||
+                  opaque(style.backgroundColor) ||
+                  (Number.parseFloat(style.borderTopWidth) > 0 && opaque(style.borderTopColor)),
+              };
+            });
+            assert.equal(disabledCheck.label, "Check", `${routeName} ${width}x${height} disabled control retains its visible Check label`);
+            assert.equal(disabledCheck.visiblyPainted, true, `${routeName} ${width}x${height} disabled Check retains a visible background or border`);
+            assert.notEqual(
+              disabledCheck.paint,
+              enabledCheckStyle,
+              `${routeName} ${width}x${height} disabled Check is visibly muted rather than retaining its enabled paint`,
+            );
+          }
+          if (route === "/") {
+            const status = await exact(
+              hint.dialog.getByRole("status").getByText(expectedMessage, { exact: true }),
+              `${routeName} ${width}x${height} Give up result status`,
+            );
+            if (width <= 600)
+              assert.equal(await status.isVisible(), true, `${routeName} compact result status remains visible beside the retained answer`);
+            else {
+              const bubble = await exact(
+                hint.dialog.locator("aside[aria-hidden='true']").getByText(
+                  `The answer is ${expectedAnswer}. No worries — try another one!`,
+                  { exact: true },
+                ),
+                `${routeName} desktop Give up speech`,
+              );
+              assert.equal(await bubble.isVisible(), true, `${routeName} desktop Give up speech remains visible`);
+              const sadCatPicture = await exact(
+                hint.dialog.locator('picture:has(source[srcset*="hint-popup-cat-sad-640.png"])'),
+                "Desktop sad dialog cat picture",
+              );
+              const [bubbleBox, catAlpha, tail] = await Promise.all([
+                bubble.boundingBox(),
+                visibleAlphaBounds(page, sadCatPicture),
+                bubble.evaluate((element) => {
+                  const after = getComputedStyle(element, "::after");
+                  return { content: after.content, width: Number.parseFloat(after.width), height: Number.parseFloat(after.height), borderWidth: Number.parseFloat(after.borderTopWidth) };
+                }),
+              ]);
+              assert.ok(bubbleBox, "Desktop abandoned speech has rendered geometry");
+              assert.equal(intersects(bubbleBox, catAlpha), false, "Desktop abandoned speech and sad cat alpha do not overlap");
+              assert.ok(
+                (Math.min(bubbleBox.y + bubbleBox.height, catAlpha.y + catAlpha.height) - Math.max(bubbleBox.y, catAlpha.y)) / Math.min(bubbleBox.height, catAlpha.height) >= 0.25,
+                "Desktop abandoned speech and sad cat alpha overlap vertically by at least one quarter of the smaller height",
+              );
+              const horizontalGap = Math.max(bubbleBox.x, catAlpha.x) - Math.min(bubbleBox.x + bubbleBox.width, catAlpha.x + catAlpha.width);
+              assert.ok(horizontalGap <= Math.max(24, catAlpha.width * 0.2), "Desktop abandoned speech stays attached to the sad cat alpha");
+              assert.ok(tail.content !== "none" && (tail.width > 0 || tail.height > 0 || tail.borderWidth > 0), "Desktop abandoned speech retains a nonempty tail");
+            }
+          }
+          if (route === "/") {
+            assert.equal(await page.getByRole("status").getByText(/Earned hint:/).count(), 0, `${routeName} ${width}x${height} Give up awards no hint`);
+            assert.equal(/safe code is/i.test(await page.locator("body").innerText()), false, `${routeName} ${width}x${height} Give up does not disclose the safe code`);
+          }
+          await hint.newQuestion.click();
+          assert.equal(await hint.answer.inputValue(), "", `${routeName} ${width}x${height} New question retains the blank replacement-input contract`);
+          assert.equal(await hint.check.isEnabled(), true, `${routeName} ${width}x${height} New question restores Check`);
+          await hint.dialog.getByRole("button", { name: "Close hint challenge", exact: true }).click();
+          await hint.dialog.waitFor({ state: "hidden" });
+          assert.equal(await controls.hint.isVisible(), true, `${routeName} ${width}x${height} closes back to the visible Show hint owner`);
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${routeName} ${width}x${height} smoke keeps the page free of horizontal overflow`);
+        },
+      );
 });
 }
 
