@@ -15,30 +15,20 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
     const {
         selectedTask,
-        editorSolution,
-        showSolution,
-        setShowSolution,
-        testNotificationText,
+        activeContentTab,
+        selectContentTab,
+        selectedWorkspace,
     } = useTaskContext();
 
     const isTaskSelected = Boolean(selectedTask);
 
     const descriptionText = selectedTask?.description ?? 'No task selected.';
-    const solutionText =
-        editorSolution && editorSolution.trim().length > 0
-            ? editorSolution
-            : (selectedTask?.solution ?? '');
-
-    const [activeTab, setActiveTab] =
-        useState<'description' | 'solution' | 'info'>(showSolution ? 'solution' : 'description');
+    const solutionText = selectedTask?.solution ?? '';
 
     const monacoEditorRef =
         useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null);
     const taskAreaRef = useRef<HTMLDivElement | null>(null);
     const minimizeButtonRef = useRef<HTMLButtonElement | null>(null);
-
-    const [localSolutionText, setLocalSolutionText] =
-        useState<string>(() => sanitizeSolutionText(solutionText));
 
     const taskDescriptionPreElementRef =
         useRef<HTMLPreElement | null>(null);
@@ -52,9 +42,6 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
             return;
         }
 
-        // Всегда переключаемся на вкладку описания
-        setActiveTab('description');
-
         // После отрисовки переносим фокус на описание
         requestAnimationFrame(() => {
             const taskDescriptionElement = taskDescriptionPreElementRef.current;
@@ -65,15 +52,10 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     }, [selectedTask?.id]);
 
     useEffect(() => {
-        setShowSolution?.(activeTab === 'solution');
-        if (activeTab === 'solution') {
+        if (activeContentTab === 'solution') {
             requestAnimationFrame(() => monacoEditorRef.current?.layout());
         }
-    }, [activeTab, setShowSolution]);
-
-    useEffect(() => {
-        setLocalSolutionText(sanitizeSolutionText(solutionText));
-    }, [solutionText]);
+    }, [activeContentTab]);
 
     useEffect(() => {
         if (!taskAreaRef.current) return;
@@ -94,15 +76,15 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
     const handleShowDescription = () => {
         // if (!isTaskSelected) return;
-        setActiveTab('description');
+        selectContentTab('description');
     };
     const handleShowSolution = () => {
         if (!isTaskSelected) return;
-        setActiveTab('solution');
+        selectContentTab('solution');
     };
     const handleShowInfo = () => {
         // if (!isTaskSelected) return;
-        setActiveTab('info');
+        selectContentTab('info');
     };
 
     return (
@@ -128,23 +110,23 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
                         <div className={styles.toolsGroup}>
                             <MainBtnShowDescription
-                                isActive={activeTab === 'description'}
+                                isActive={activeContentTab === 'description'}
                                 onClick={handleShowDescription}
-                                ariaLabel={activeTab === 'description' ? 'Показано описание' : 'Показать описание'}
+                                ariaLabel={activeContentTab === 'description' ? 'Показано описание' : 'Показать описание'}
                                 className={styles.mainBtnTask}
                             />
                             <MainBtnShowSolution
-                                isActive={activeTab === 'solution'}
+                                isActive={activeContentTab === 'solution'}
                                 isDisabled={!isTaskSelected}
                                 onClick={handleShowSolution}
-                                ariaLabel={activeTab === 'solution' ? 'Показано решение' : 'Показать решение'}
+                                ariaLabel={activeContentTab === 'solution' ? 'Показано решение' : 'Показать решение'}
                                 className={styles.mainBtnSolution}
                             />
                             <MainBtnInfo
-                                isActive={activeTab === 'info'}
+                                isActive={activeContentTab === 'info'}
                                 isDisabled={!isTaskSelected}
                                 onClick={handleShowInfo}
-                                ariaLabel={activeTab === 'info' ? 'Показана информация' : 'Показать информацию'}
+                                ariaLabel={activeContentTab === 'info' ? 'Показана информация' : 'Показать информацию'}
                                 className={styles.mainBtnInfo}
                             />
                         </div>
@@ -159,22 +141,21 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                     aria-hidden={isMinimized}
                     inert={isMinimized}
                 >
-                    {activeTab === 'solution' && (
+                    {activeContentTab === 'solution' && (
                         <div className={combineClassNames(styles.contentContainerFrame, styles.taskSolutionContainer)}>
                             <div className={styles.editorHost}>
                                 <MainTaskSolutionEditor
-                                    value={localSolutionText}
-                                    onChangeAction={setLocalSolutionText}
+                                    value={sanitizeSolutionText(solutionText)}
+                                    onChangeAction={() => undefined}
                                     onMountAction={(editor) => {
                                         monacoEditorRef.current = editor;
-                                        editor.getAction('editor.action.formatDocument')?.run();
                                     }}
                                 />
                             </div>
                         </div>
                     )}
 
-                    {activeTab === 'description' && (
+                    {activeContentTab === 'description' && (
                         <div
                             className={combineClassNames(styles.contentContainerFrame, styles.taskDescriptionContainer)}>
               <pre
@@ -188,13 +169,13 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         </div>
                     )}
 
-                    {activeTab === 'info' && (
+                    {activeContentTab === 'info' && (
                         <div className={combineClassNames(styles.contentContainerFrame, styles.taskInfoContainer)}>
               <pre
                   className={styles.taskInfoPre}
                   aria-label={isTaskSelected ? 'Информация о тесте' : 'Нет тестов'}
               >
-                {testNotificationText}
+                {selectedWorkspace?.result?.result.message ?? 'No additional information.'}
               </pre>
                         </div>
                     )}

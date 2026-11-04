@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": "race",
+      "title": "Tortoise race",
+      "description": "Two tortoises A and B run a race. A starts with a lead g; B is faster. Given speeds v1 and v2 and lead g, return [hour, min, sec], rounded down to the nearest second, for B to catch A. When v1 >= v2, return null. Examples: race(720, 850, 70) => [0, 32, 18]; race(80, 91, 37) => [3, 21, 49].",
+      "entryPoint": "race",
+      "starterCode": "function race(v1, v2, g) {\n  // Return [hours, minutes, seconds] or null.\n}\n",
+      "solution": "function race(v1, v2, g) {\n  if (v1 >= v2) return null;\n  const totalSeconds = Math.floor((g / (v2 - v1)) * 3600);\n  return [\n    Math.floor(totalSeconds / 3600),\n    Math.floor((totalSeconds % 3600) / 60),\n    totalSeconds % 60,\n  ];\n}\n",
+      "tests": [{"args": [80, 91, 37], "expected": [3, 21, 49]}, {"args": [850, 720, 70], "expected": null}]
+    },
+    {
+      "id": "digitize",
+      "title": "Digits in reverse order",
+      "description": "Convert a non-negative number to an array of its digits in reverse order. For example, digitize(123) returns [3, 2, 1].",
+      "entryPoint": "digitize",
+      "starterCode": "function digitize(n) {\n  // Return the digits of n in reverse order.\n}\n",
+      "solution": "function digitize(n) {\n  return String(n).split(\"\").map(Number).reverse();\n}\n",
+      "tests": [{"args": [123], "expected": [3, 2, 1]}, {"args": [0], "expected": [0]}]
+    },
+    {
+      "id": "no-space",
+      "title": "Remove spaces",
+      "description": "Simple: remove the spaces from a string, then return the resultant string. For example, noSpace('8 j 8   mBliB8g  imjB8B8  jl  B') returns '8j8mBliB8gimjB8B8jlB'.",
+      "entryPoint": "noSpace",
+      "starterCode": "function noSpace(value) {\n  // Return value without spaces.\n}\n",
+      "solution": "function noSpace(value) {\n  return value.split(\" \").join(\"\");\n}\n",
+      "tests": [{"args": ["8 j 8   mBliB8g  imjB8B8  jl  B"], "expected": "8j8mBliB8gimjB8B8jlB"}]
+    }
+  ]
+}

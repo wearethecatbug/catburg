@@ -1,5 +1,5 @@
 'use client';
-import {type ParsedTask, parseTasksArr} from "@/app/_components/tasks/lib/ParseTasksArr";
+import {loadBuiltinTaskCatalog, type CatalogTask} from "@/app/_components/tasks/catalog/taskCatalog";
 import {useEffect, useState} from "react";
 
 // let tasksW = `
@@ -51,18 +51,10 @@ import {useEffect, useState} from "react";
 
 
 function useTasksArr() {
-    let cache: ParsedTask[] | null = null;
-    const [tasks, setTasks] = useState<ParsedTask[]>(cache ?? []); // ← не null
+    const [tasks, setTasks] = useState<readonly CatalogTask[]>([]);
 
     useEffect(() => {
-        if (cache) return setTasks(cache);
-
-        fetch('/tasks.txt').then(r => r.text()).then(text => {
-            const parsed = parseTasksArr(text);
-            cache = parsed;
-            setTasks(parsed); // всегда ParsedTask[]
-        });
-
+        loadBuiltinTaskCatalog().then(setTasks).catch(() => setTasks([]));
     }, []);
 
     return tasks;

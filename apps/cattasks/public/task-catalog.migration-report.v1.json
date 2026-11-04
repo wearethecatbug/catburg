@@ -1,0 +1,4525 @@
+{
+  "version": 1,
+  "catalog": "task-catalog.v1.json",
+  "sources": [
+    {
+      "source": "tasks.txt",
+      "sha256": "E7C6CFE712F004DDDE55A0D7F01B1A189454C40F6DBB4816E46CF7F162A51270",
+      "lineCount": 96,
+      "records": [
+        {
+          "locator": "L1-L45",
+          "status": "curated",
+          "catalogId": "race",
+          "issues": []
+        },
+        {
+          "locator": "L46-L47",
+          "status": "excluded",
+          "issues": [
+            "Blank separator outside a legacy task record."
+          ]
+        },
+        {
+          "locator": "L48-L74",
+          "status": "curated",
+          "catalogId": "digitize",
+          "issues": []
+        },
+        {
+          "locator": "L75-L75",
+          "status": "excluded",
+          "issues": [
+            "Blank separator outside a legacy task record."
+          ]
+        },
+        {
+          "locator": "L76-L96",
+          "status": "curated",
+          "catalogId": "no-space",
+          "issues": []
+        }
+      ]
+    },
+    {
+      "source": "tasks2",
+      "sha256": "C71E60B7C719D3259F11EF593A2D7CC3FB88728044457FA11C8325E3A90DA0A4",
+      "lineCount": 10737,
+      "records": [
+        {
+          "locator": "L1-L1",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2-L34",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L35-L81",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L82-L130",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L131-L157",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L158-L179",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L180-L201",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L202-L234",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L235-L262",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L263-L294",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L295-L357",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L358-L379",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L380-L418",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L419-L469",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L470-L485",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L486-L514",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L515-L547",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L548-L569",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L570-L588",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L589-L627",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L628-L655",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L656-L678",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L679-L706",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L707-L731",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L732-L760",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L761-L784",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L785-L809",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L810-L836",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L837-L863",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L864-L890",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L891-L931",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L932-L952",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L953-L990",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L991-L1016",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1017-L1033",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1034-L1051",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1052-L1082",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1083-L1109",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1110-L1155",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1156-L1190",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1191-L1218",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1219-L1238",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1239-L1258",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1259-L1297",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1298-L1335",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1336-L1360",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1361-L1380",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1381-L1425",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1426-L1455",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1456-L1486",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1487-L1516",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1517-L1549",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1550-L1571",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1572-L1592",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1593-L1632",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1633-L1663",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1664-L1686",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1687-L1709",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1710-L1760",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1761-L1823",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1824-L1847",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1848-L1871",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1872-L1893",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1894-L1944",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1945-L1966",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1967-L2001",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2002-L2023",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2024-L2063",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2064-L2099",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2100-L2124",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2125-L2161",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2162-L2198",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2199-L2218",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2219-L2262",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2263-L2315",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2316-L2348",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2349-L2380",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2381-L2411",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2412-L2453",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2454-L2480",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2481-L2510",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2511-L2540",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2541-L2584",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2585-L2610",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2611-L2644",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2645-L2685",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2686-L2711",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2712-L2738",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2739-L2772",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2773-L2802",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2803-L2835",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2836-L2866",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2867-L2913",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2914-L2971",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2972-L3000",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3001-L3026",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3027-L3080",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3081-L3106",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3107-L3152",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3153-L3187",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3188-L3210",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3211-L3322",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3323-L3351",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3352-L3378",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3379-L3429",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3430-L3452",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3453-L3493",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3494-L3517",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3518-L3547",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3548-L3596",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3597-L3615",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3616-L3664",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3665-L3686",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3687-L3715",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3716-L3770",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3771-L3806",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3807-L3834",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3835-L3855",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3856-L3885",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3886-L3907",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3908-L3938",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3939-L3961",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3962-L3984",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3985-L4012",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4013-L4044",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4045-L4066",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4067-L4098",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4099-L4129",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4130-L4152",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4153-L4189",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4190-L4240",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4241-L4293",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4294-L4342",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4343-L4370",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4371-L4407",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4408-L4432",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4433-L4491",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4492-L4525",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4526-L4558",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4559-L4610",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4611-L4638",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4639-L4668",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4669-L4704",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4705-L4756",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4757-L4775",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4776-L4827",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4828-L4869",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4870-L4892",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4893-L4918",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4919-L4955",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4956-L4979",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4980-L5019",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5020-L5040",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5041-L5083",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5084-L5138",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5139-L5187",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5188-L5234",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5235-L5269",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5270-L5316",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5317-L5373",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5374-L5399",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5400-L5426",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5427-L5474",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5475-L5492",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5493-L5533",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5534-L5557",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5558-L5577",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5578-L5609",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5610-L5629",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5630-L5682",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5683-L5707",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5708-L5730",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5731-L5757",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5758-L5797",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5798-L5826",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5827-L5848",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5849-L5884",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5885-L5917",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5918-L5950",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5951-L5968",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5969-L6012",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6013-L6044",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6045-L6067",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6068-L6138",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6139-L6166",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6167-L6193",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6194-L6220",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6221-L6248",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6249-L6292",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6293-L6317",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6318-L6381",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6382-L6412",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6413-L6437",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6438-L6466",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6467-L6502",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6503-L6545",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6546-L6570",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6571-L6600",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6601-L6640",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6641-L6663",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6664-L6704",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6705-L6747",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6748-L6774",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6775-L6794",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6795-L6827",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6828-L6859",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6860-L6923",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6924-L6945",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6946-L6999",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7000-L7030",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7031-L7071",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7072-L7101",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7102-L7133",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7134-L7203",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7204-L7230",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7231-L7305",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7306-L7362",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7363-L7404",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7405-L7442",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7443-L7483",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7484-L7509",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7510-L7532",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7533-L7575",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7576-L7621",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7622-L7654",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7655-L7683",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7684-L7708",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7709-L7739",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7740-L7776",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7777-L7803",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7804-L7825",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7826-L7849",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7850-L7869",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7870-L7899",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7900-L7919",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7920-L7973",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7974-L8005",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8006-L8029",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8030-L8047",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8048-L8068",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8069-L8099",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8100-L8127",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8128-L8176",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8177-L8204",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8205-L8233",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8234-L8256",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8257-L8279",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8280-L8312",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8313-L8345",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8346-L8388",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8389-L8410",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8411-L8437",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8438-L8457",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8458-L8510",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8511-L8536",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8537-L8584",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8585-L8619",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8620-L8651",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8652-L8709",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8710-L8733",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8734-L8751",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8752-L8772",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8773-L8896",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8897-L8929",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8930-L8962",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8963-L9006",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9007-L9044",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9045-L9077",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9078-L9099",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9100-L9123",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9124-L9156",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9157-L9179",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9180-L9197",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9198-L9233",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9234-L9254",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9255-L9332",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9333-L9357",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9358-L9377",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9378-L9395",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9396-L9427",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9428-L9453",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9454-L9480",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9481-L9498",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9499-L9521",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9522-L9536",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9537-L9581",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9582-L9627",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9628-L9654",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9655-L9690",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9691-L9707",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9708-L9741",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9742-L9766",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9767-L9790",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9791-L9814",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9815-L9862",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9863-L9890",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9891-L9909",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9910-L9941",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9942-L9996",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9997-L10027",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10028-L10049",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10050-L10062",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10063-L10172",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10173-L10207",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10208-L10259",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10260-L10295",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10296-L10312",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10313-L10350",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10351-L10377",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10378-L10395",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10396-L10435",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10436-L10463",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10464-L10483",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10484-L10506",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10507-L10529",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10530-L10558",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10559-L10626",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10627-L10672",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10673-L10736",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10737-L10737",
+          "status": "excluded",
+          "issues": [
+            "Excluded residual source text: no unambiguous legacy record boundary."
+          ]
+        }
+      ]
+    },
+    {
+      "source": "сodeWarsTasks.txt",
+      "sha256": "0289BB53579FD352B19E84A50F8853594461A4AF1F31DCD4D9765E332C7B4B57",
+      "lineCount": 10735,
+      "records": [
+        {
+          "locator": "L1-L1",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2-L28",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L29-L74",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L75-L123",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L124-L150",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L151-L172",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L173-L194",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L195-L227",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L228-L255",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L256-L287",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L288-L372",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L373-L411",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L412-L462",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L463-L478",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L479-L507",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L508-L540",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L541-L562",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L563-L581",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L582-L620",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L621-L648",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L649-L701",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L702-L726",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L727-L755",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L756-L779",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L780-L804",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L805-L831",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L832-L858",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L859-L885",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L886-L926",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L927-L947",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L948-L985",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L986-L1011",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1012-L1028",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1029-L1046",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1047-L1077",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1078-L1104",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1105-L1150",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1151-L1185",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1186-L1213",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1214-L1233",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1234-L1253",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1254-L1292",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1293-L1330",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1331-L1355",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1356-L1375",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1376-L1420",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1421-L1450",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1451-L1481",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1482-L1511",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1512-L1544",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1545-L1566",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1567-L1587",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1588-L1627",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1628-L1658",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1659-L1681",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1682-L1704",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1705-L1755",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1756-L1818",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1819-L1842",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1843-L1866",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1867-L1888",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1889-L1939",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1940-L1961",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1962-L1996",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L1997-L2018",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2019-L2058",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2059-L2094",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2095-L2119",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2120-L2156",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2157-L2193",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2194-L2213",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2214-L2258",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2259-L2311",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2312-L2344",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2345-L2376",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2377-L2407",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2408-L2449",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2450-L2476",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2477-L2506",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2507-L2536",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2537-L2580",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2581-L2606",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2607-L2640",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2641-L2681",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2682-L2707",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2708-L2734",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2735-L2768",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2769-L2798",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2799-L2831",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2832-L2862",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2863-L2909",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2910-L2967",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2968-L2996",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L2997-L3022",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3023-L3076",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3077-L3102",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3103-L3148",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3149-L3183",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3184-L3206",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3207-L3318",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3319-L3347",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3348-L3374",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3375-L3425",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3426-L3448",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3449-L3489",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3490-L3513",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3514-L3543",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3544-L3592",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3593-L3611",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3612-L3660",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3661-L3682",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3683-L3711",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3712-L3766",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3767-L3802",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3803-L3830",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3831-L3851",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3852-L3881",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3882-L3903",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3904-L3934",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3935-L3957",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3958-L3980",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L3981-L4008",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4009-L4040",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4041-L4062",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4063-L4094",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4095-L4125",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4126-L4148",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4149-L4185",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4186-L4236",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4237-L4289",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4290-L4338",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4339-L4366",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4367-L4403",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4404-L4428",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4429-L4487",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4488-L4521",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4522-L4554",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4555-L4606",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4607-L4634",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4635-L4664",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4665-L4700",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4701-L4752",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4753-L4771",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4772-L4823",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4824-L4865",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4866-L4888",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4889-L4914",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4915-L4951",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4952-L4975",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L4976-L5015",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5016-L5036",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5037-L5079",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5080-L5134",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5135-L5183",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5184-L5230",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5231-L5265",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5266-L5312",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5313-L5369",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5370-L5395",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5396-L5422",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5423-L5470",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5471-L5488",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5489-L5529",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5530-L5553",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5554-L5573",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5574-L5605",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5606-L5625",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5626-L5678",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5679-L5703",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5704-L5726",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5727-L5753",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5754-L5793",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5794-L5822",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5823-L5844",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5845-L5880",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5881-L5913",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5914-L5946",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5947-L5964",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L5965-L6008",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6009-L6040",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6041-L6063",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6064-L6134",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6135-L6162",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6163-L6189",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6190-L6216",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6217-L6244",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6245-L6288",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6289-L6313",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6314-L6377",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6378-L6408",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6409-L6433",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6434-L6462",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6463-L6498",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6499-L6541",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6542-L6566",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6567-L6596",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6597-L6636",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6637-L6659",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6660-L6700",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6701-L6743",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6744-L6770",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6771-L6790",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6791-L6823",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6824-L6855",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6856-L6919",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6920-L6941",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6942-L6995",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L6996-L7026",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7027-L7067",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7068-L7097",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7098-L7129",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7130-L7199",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7200-L7226",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7227-L7301",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7302-L7358",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7359-L7400",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7401-L7438",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7439-L7479",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7480-L7505",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7506-L7528",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7529-L7571",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7572-L7617",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7618-L7650",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7651-L7679",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7680-L7704",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7705-L7735",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7736-L7772",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7773-L7799",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7800-L7821",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7822-L7845",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7846-L7865",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7866-L7895",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7896-L7915",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7916-L7969",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L7970-L8001",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8002-L8025",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8026-L8043",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8044-L8064",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8065-L8095",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8096-L8123",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8124-L8172",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8173-L8200",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8201-L8229",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8230-L8252",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8253-L8275",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8276-L8308",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8309-L8341",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8342-L8384",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8385-L8406",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8407-L8433",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8434-L8453",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8454-L8506",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8507-L8532",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8533-L8580",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8581-L8615",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8616-L8647",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8648-L8705",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8706-L8729",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8730-L8747",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8748-L8768",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8769-L8892",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8893-L8925",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8926-L8958",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L8959-L9002",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9003-L9040",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9041-L9073",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9074-L9095",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9096-L9119",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9120-L9152",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9153-L9175",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9176-L9193",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9194-L9229",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9230-L9250",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9251-L9328",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9329-L9353",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9354-L9373",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9374-L9391",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9392-L9423",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9424-L9449",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9450-L9476",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9477-L9494",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9495-L9517",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9518-L9532",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9533-L9577",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9578-L9623",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9624-L9650",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9651-L9686",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9687-L9703",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9704-L9737",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9738-L9762",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9763-L9786",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9787-L9810",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9811-L9858",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9859-L9886",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9887-L9905",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9906-L9937",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9938-L9992",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L9993-L10023",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10024-L10045",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10046-L10058",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10059-L10168",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10169-L10203",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10204-L10255",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10256-L10291",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10292-L10308",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10309-L10346",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10347-L10373",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10374-L10391",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10392-L10431",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10432-L10459",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10460-L10479",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10480-L10502",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10503-L10525",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10526-L10554",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10555-L10622",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10623-L10670",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10671-L10734",
+          "status": "excluded",
+          "issues": [
+            "Excluded from runnable catalog: no source-backed curation decision."
+          ]
+        },
+        {
+          "locator": "L10735-L10735",
+          "status": "excluded",
+          "issues": [
+            "Excluded residual source text: no unambiguous legacy record boundary."
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -10,7 +10,7 @@ interface HeaderArrowButtonsProps {
 }
 
 
-export default function HeaderArrowButtons({className, name, onClick, disabled}: HeaderArrowButtonsProps) {
+export default function HeaderArrowButtons({className, name, onClick, disabled, ariaLabel}: HeaderArrowButtonsProps) {
     return (
         <button
             type="button"
@@ -18,6 +18,7 @@ export default function HeaderArrowButtons({className, name, onClick, disabled}:
             onClick={onClick}
             disabled={disabled}
             aria-disabled={disabled}
+            aria-label={ariaLabel}
         />
     );
 }
