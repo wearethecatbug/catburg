@@ -1216,14 +1216,18 @@ test("SC05 D06: controls retain actual game semantics, visible focus, and local 
       const horizontalPadding =
         Number.parseFloat(inputStyle.paddingLeft) +
         Number.parseFloat(inputStyle.paddingRight);
+      const horizontalBorder =
+        Number.parseFloat(inputStyle.borderLeftWidth) +
+        Number.parseFloat(inputStyle.borderRightWidth);
+      const inputBox = input.getBoundingClientRect().toJSON();
       return {
         shell: shell.getBoundingClientRect().toJSON(),
-        input: input.getBoundingClientRect().toJSON(),
+        input: inputBox,
         submit: submit.getBoundingClientRect().toJSON(),
         submitBoxSizing: submitStyle.boxSizing,
         placeholderWidth: context.measureText(input.placeholder).width,
         fourDigitWidth: context.measureText("1000").width,
-        inputContentWidth: input.clientWidth - horizontalPadding,
+        inputContentWidth: inputBox.width - horizontalBorder - horizontalPadding,
       };
     });
     assert.ok(
