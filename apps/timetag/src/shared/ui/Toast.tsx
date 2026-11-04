@@ -59,7 +59,11 @@ export function Toast({ message, action, duration = 5000, onClose, inStack = fal
         {isVisible && actionAvailable && action && (
           <button
             type="button"
-            onClick={() => { action.onClick(); onClose(); }}
+            onClick={() => {
+              if (action.isAvailable?.() === false) return;
+              action.onClick();
+              onClose();
+            }}
             className="text-sm font-medium text-blue-400 hover:text-blue-300"
           >
             {action.label}
