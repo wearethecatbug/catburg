@@ -40,7 +40,7 @@ interface TaskState {
   sort: SortState;
   searchQuery: string;
   selectedIds: Set<string>;
-  undoStack: Task[] | null;
+  undoGeneration: number;
 }
 
 // ============================================================================
@@ -69,7 +69,7 @@ type TaskAction =
   | { type: 'RESET_SELECTED'; payload: { nowIso: string } }
   | { type: 'MARK_DONE_SELECTED'; payload: { nowIso: string } }
   | { type: 'ARCHIVE_SELECTED'; payload: { nowIso: string } }
-  | { type: 'UNDO_DELETE' };
+  | { type: 'UNDO_DELETE'; payload: { tasks: Task[]; generation: number } };
 
 // ============================================================================
 // Defaults
@@ -92,7 +92,7 @@ const initialState: TaskState = {
   sort: initialSort,
   searchQuery: '',
   selectedIds: new Set(),
-  undoStack: null,
+  undoGeneration: 0,
 };
 
 const nonPersistentActionTypes = new Set<TaskAction['type']>([
@@ -209,7 +209,8 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         selectedIds: action.clearSelection
           ? new Set()
           : new Set([...state.selectedIds].filter((id) => visibleIds.has(id))),
-        undoStack: null,
+        // A confirmed peer/reload snapshot supersedes local deletion history.
+        undoGeneration: state.undoGeneration + 1,
       };
     }
 
@@ -248,21 +249,17 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
     }
 
     case 'DELETE_TASK': {
-      const toDelete = state.tasks.find((t) => t.id === action.payload);
       return {
         ...state,
         tasks: state.tasks.filter((t) => t.id !== action.payload),
-        undoStack: toDelete ? [toDelete] : null,
         selectedIds: new Set([...state.selectedIds].filter((id) => id !== action.payload)),
       };
     }
 
     case 'DELETE_SELECTED': {
-      const selected = state.tasks.filter((t) => state.selectedIds.has(t.id));
       return {
         ...state,
         tasks: state.tasks.filter((t) => !state.selectedIds.has(t.id)),
-        undoStack: selected.length > 0 ? selected : null,
         selectedIds: new Set(),
       };
     }
@@ -384,9 +381,16 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         selectedIds: new Set(),
       };
 
-    case 'UNDO_DELETE':
-      if (!state.undoStack) return state;
-      return { ...state, tasks: [...state.undoStack, ...state.tasks], undoStack: null };
+    case 'UNDO_DELETE': {
+      const { tasks, generation } = action.payload;
+      if (
+        generation !== state.undoGeneration ||
+        tasks.some((task) => state.tasks.some((current) => current.id === task.id))
+      ) {
+        return state;
+      }
+      return { ...state, tasks: [...tasks, ...state.tasks] };
+    }
 
     default:
       return state;
@@ -403,7 +407,7 @@ interface TaskContextValue {
   dispatch: React.Dispatch<TaskAction>;
   addTask: (input: CreateTaskInput) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
-  deleteTask: (id: string) => void;
+  deleteTask: (id: string) => UndoHandle | null;
   toggleTimer: (id: string) => void;
   resetTimer: (id: string) => void;
   setWorkspace: (workspace: WorkspaceType) => void;
@@ -413,15 +417,13 @@ interface TaskContextValue {
   toggleSelect: (id: string) => void;
   selectAll: () => void;
   clearSelection: () => void;
-  deleteSelected: () => void;
+  deleteSelected: () => UndoHandle | null;
   pauseSelected: () => void;
   playSelected: () => void;
   resetSelected: () => void;
   markDoneSelected: () => void;
   archiveSelected: () => void;
-  undoDelete: () => void;
   hasSelection: boolean;
-  canUndo: boolean;
   persistence: TaskPersistenceStatus;
   retryPersistence: () => void;
   reloadPersistedTasks: () => void;
@@ -429,6 +431,11 @@ interface TaskContextValue {
 }
 
 const TaskContext = createContext<TaskContextValue | null>(null);
+
+interface UndoHandle {
+  undo: () => void;
+  isAvailable: () => boolean;
+}
 
 // ============================================================================
 // Provider
@@ -514,7 +521,32 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   // Convenience dispatchers
   const addTask = useCallback((input: CreateTaskInput) => dispatchWithIntent({ type: 'ADD_TASK', payload: input }), [dispatchWithIntent]);
   const updateTask = useCallback((id: string, updates: Partial<Task>) => dispatchWithIntent({ type: 'UPDATE_TASK', payload: { id, updates, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
-  const deleteTask = useCallback((id: string) => dispatchWithIntent({ type: 'DELETE_TASK', payload: id }), [dispatchWithIntent]);
+  const createUndoHandle = useCallback((tasks: Task[]): UndoHandle => {
+    const generation = stateRef.current.undoGeneration;
+    let consumed = false;
+
+    const isAvailable = () => (
+      !consumed &&
+      stateRef.current.undoGeneration === generation &&
+      tasks.every((task) => !stateRef.current.tasks.some((current) => current.id === task.id))
+    );
+
+    return {
+      isAvailable,
+      undo: () => {
+        if (!isAvailable()) return;
+        consumed = true;
+        dispatchWithIntent({ type: 'UNDO_DELETE', payload: { tasks, generation } });
+      },
+    };
+  }, [dispatchWithIntent]);
+  const deleteTask = useCallback((id: string) => {
+    const task = stateRef.current.tasks.find((current) => current.id === id);
+    if (!task) return null;
+    const undo = createUndoHandle([task]);
+    dispatchWithIntent({ type: 'DELETE_TASK', payload: id });
+    return undo;
+  }, [createUndoHandle, dispatchWithIntent]);
   const toggleTimer = useCallback((id: string) => dispatchWithIntent({ type: 'TOGGLE_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const resetTimer = useCallback((id: string) => dispatchWithIntent({ type: 'RESET_TIMER', payload: { id, nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const setWorkspace = useCallback((ws: WorkspaceType) => dispatchWithIntent({ type: 'SET_WORKSPACE', payload: ws }), [dispatchWithIntent]);
@@ -524,13 +556,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const toggleSelect = useCallback((id: string) => dispatchWithIntent({ type: 'TOGGLE_SELECT', payload: id }), [dispatchWithIntent]);
   const selectAll = useCallback(() => dispatchWithIntent({ type: 'SELECT_ALL' }), [dispatchWithIntent]);
   const clearSelection = useCallback(() => dispatchWithIntent({ type: 'CLEAR_SELECTION' }), [dispatchWithIntent]);
-  const deleteSelected = useCallback(() => dispatchWithIntent({ type: 'DELETE_SELECTED' }), [dispatchWithIntent]);
+  const deleteSelected = useCallback(() => {
+    const selected = stateRef.current.tasks.filter((task) => stateRef.current.selectedIds.has(task.id));
+    if (selected.length === 0) return null;
+    const undo = createUndoHandle(selected);
+    dispatchWithIntent({ type: 'DELETE_SELECTED' });
+    return undo;
+  }, [createUndoHandle, dispatchWithIntent]);
   const pauseSelected = useCallback(() => dispatchWithIntent({ type: 'PAUSE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const playSelected = useCallback(() => dispatchWithIntent({ type: 'PLAY_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const resetSelected = useCallback(() => dispatchWithIntent({ type: 'RESET_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const markDoneSelected = useCallback(() => dispatchWithIntent({ type: 'MARK_DONE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
   const archiveSelected = useCallback(() => dispatchWithIntent({ type: 'ARCHIVE_SELECTED', payload: { nowIso: new Date().toISOString() } }), [dispatchWithIntent]);
-  const undoDelete = useCallback(() => dispatchWithIntent({ type: 'UNDO_DELETE' }), [dispatchWithIntent]);
 
   const value: TaskContextValue = {
     state,
@@ -554,9 +591,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     resetSelected,
     markDoneSelected,
     archiveSelected,
-    undoDelete,
     hasSelection: state.selectedIds.size > 0,
-    canUndo: state.undoStack !== null,
     persistence,
     retryPersistence,
     reloadPersistedTasks,
