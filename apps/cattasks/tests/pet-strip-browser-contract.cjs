@@ -57,6 +57,10 @@ async function petTimeline(page) {
   return page.evaluate(() => window.__petStripTimeline || []);
 }
 
+async function waitForClientHydration(page) {
+  await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
+}
+
 test("CatTasks pet strip is a shallow accessible footer without the retired game surface", {timeout: 30_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 390, height: 844}, reducedMotion: "reduce"});
@@ -66,6 +70,7 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
     assert.equal(response.status(), 200);
     const strip = page.getByLabel(stripName, {exact: true});
     await strip.waitFor({state: "visible", timeout: 10_000});
+    await waitForClientHydration(page);
     assert.equal(await strip.count(), 1, "the dashboard has one pet strip");
     assert.equal(await strip.locator("canvas").count(), 0, "the footer does not mount a canvas game");
     assert.equal(await page.getByRole("link", {name: /играть с п[её]сиком/i}).count(), 0, "the document does not expose the retired game link");
@@ -83,14 +88,17 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
     assert.equal(await feed.evaluate(element => element === document.activeElement), true, "Feed receives keyboard focus");
     await feed.press("Enter");
     await assert.doesNotReject(strip.locator("[data-pet='food']").first().waitFor({state: "attached", timeout: 2_000}));
+    assert.equal(await strip.locator("[data-pet='food']").count(), 1, "one keyboard feed creates exactly one food item");
+    assert.equal(await countAt(strip, "food", 50), 1, "native Enter places food at the normalized center");
     assert.match((await status.textContent()) || "", /food|feed|dog/i, "the accepted keyboard feed reports a meaningful live status");
     const reducedMotion = await strip.locator("[data-pet='dog']").evaluate(element => {
       const style = getComputedStyle(element);
-      return {enabled: matchMedia("(prefers-reduced-motion: reduce)").matches, duration: style.animationDuration, iterations: style.animationIterationCount, state: element.getAttribute("data-pet-state")};
+      return {enabled: matchMedia("(prefers-reduced-motion: reduce)").matches, duration: style.animationDuration, iterations: style.animationIterationCount, transitionDuration: style.transitionDuration, state: element.getAttribute("data-pet-state")};
     });
     assert.equal(reducedMotion.enabled, true, "the reduced-motion browser preference reaches the pet strip");
     assert.match(reducedMotion.state || "", /^(idle|running|eating)$/, "reduced motion preserves the dog’s interaction state");
     assert.ok(reducedMotion.duration === "0s" || reducedMotion.iterations === "1", "reduced motion does not leave a looping dog animation active");
+    assert.ok(reducedMotion.transitionDuration.split(",").every(duration => duration.trim() === "0s"), "reduced motion disables the dog's horizontal transition");
   } finally {
     await context.close();
     await browser.close();
@@ -112,6 +120,7 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
     const dog = strip.locator("[data-pet='dog']");
     await strip.waitFor({state: "visible", timeout: 10_000});
     await dog.waitFor({state: "visible", timeout: 10_000});
+    await waitForClientHydration(page);
     await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     await page.evaluate(() => {
       window.__petStripTimeline = [];

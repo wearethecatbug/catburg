@@ -41,8 +41,8 @@
     transition: inset-inline-start var(--pet-travel-duration) linear;
 }
 .dog[data-pet-direction='left'] { transform: translateX(-50%) scaleX(-1); }
-.dog[data-pet-state='running'] { animation: dog-run 600ms steps(8) infinite; background-position-y: 20%; }
-.dog[data-pet-state='eating'] { animation: dog-eat 700ms steps(8) infinite; background-position-y: 40%; }
+.dog[data-pet-state='running'] { animation: dog-run 600ms steps(8, jump-none) infinite; background-position-y: 20%; }
+.dog[data-pet-state='eating'] { animation: dog-eat 700ms steps(8, jump-none) infinite; background-position-y: 40%; }
 .dog[data-pet-state='sleeping'] { background-position: 0 80%; }
 .food {
     bottom: 11px; inline-size: 18px; block-size: 8px; border: 1px solid #9a4f1d; border-radius: 4px;
