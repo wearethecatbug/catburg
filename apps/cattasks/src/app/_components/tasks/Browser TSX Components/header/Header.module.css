@@ -4,10 +4,27 @@
     min-width: 0;
     background: transparent;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+}
+
+.allTasksButton {
+    min-height: 36px;
+    padding: 6px 16px;
+    border: 1px solid #a9bf9f;
+    border-radius: 999px;
+    background: rgba(250, 251, 247, .86);
+    box-shadow: 0 3px 8px rgba(37, 69, 50, .10);
+    color: #254532;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.allTasksButton:hover {
+    background: #f7fbf4;
 }
 
 .headerTaskContainer {
