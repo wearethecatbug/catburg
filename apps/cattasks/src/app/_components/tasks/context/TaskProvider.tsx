@@ -1,6 +1,7 @@
 'use client';
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import type {CatalogTask} from '../catalog/taskCatalog';
+import {getTaskCatalogueRows, type TaskCatalogueRow} from '../catalog/taskCatalogueRows';
 import {useTasksArr} from '../hooks/UseTasks';
 import {
     beginTaskRun,
@@ -19,6 +20,7 @@ import type {IsolatedTaskResult} from '../lib/IsolatedTaskRunner';
 
 type TaskContextValue = {
     tasks: readonly CatalogTask[];
+    catalogueRows: readonly TaskCatalogueRow[];
     catalogError: Error | null;
     retryCatalog: () => void;
     selectedId: string | null;
@@ -55,6 +57,10 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const selectedWorkspace = selectedTask
         ? workspaceState.workspaces.get(selectedTask.id) ?? {draft: selectedTask.starterCode, draftGeneration: 0, runGeneration: 0}
         : null;
+    const catalogueRows = useMemo(
+        () => getTaskCatalogueRows(tasks, workspaceState),
+        [tasks, workspaceState],
+    );
 
     const commitState = useCallback((nextState: TaskWorkspaceState) => {
         workspaceStateRef.current = nextState;
@@ -121,6 +127,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
 
     const value: TaskContextValue = {
         tasks,
+        catalogueRows,
         catalogError,
         retryCatalog,
         selectedId: workspaceState.selectedId,
