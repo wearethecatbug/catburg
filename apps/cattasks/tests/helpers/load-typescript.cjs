@@ -2,12 +2,19 @@ const fs = require("node:fs");
 const path = require("node:path");
 const typescript = require("../../node_modules/typescript");
 
+const trustedTasksRoot = path.resolve(__dirname, "..", "..", "src", "app", "_components", "tasks");
+
+function isTrustedTaskModule(filename) {
+  const relative = path.relative(trustedTasksRoot, path.resolve(filename));
+  return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
 function loadTypeScript(modulePath) {
   const resolvedPath = require.resolve(modulePath);
   const originalLoader = require.extensions[".ts"];
 
   require.extensions[".ts"] = (module, filename) => {
-    if (filename !== resolvedPath) {
+    if (!isTrustedTaskModule(filename)) {
       if (originalLoader) return originalLoader(module, filename);
       throw new Error(`unexpected TypeScript module: ${filename}`);
     }

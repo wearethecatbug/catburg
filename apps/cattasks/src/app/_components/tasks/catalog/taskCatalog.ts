@@ -70,7 +70,7 @@ function readTest(value: unknown, path: string): TaskTestCase {
     return {args: value.args, expected: value.expected};
 }
 
-function readTask(value: unknown, path: string): TaskDefinition {
+export function parseTaskDefinition(value: unknown, path = "task"): TaskDefinition {
     if (!isRecord(value)) fail(path, "must be an object");
     const id = readNonBlankString(value.id, `${path}.id`);
     const entryPoint = readNonBlankString(value.entryPoint, `${path}.entryPoint`);
@@ -93,7 +93,7 @@ export function parseTaskCatalog(value: unknown): TaskCatalog {
     if (!Array.isArray(value.tasks) || value.tasks.length === 0) fail("catalog.tasks", "must be a non-empty array");
     const ids = new Set<string>();
     const tasks = value.tasks.map((task, index) => {
-        const parsed = readTask(task, `catalog.tasks[${index}]`);
+        const parsed = parseTaskDefinition(task, `catalog.tasks[${index}]`);
         if (ids.has(parsed.id)) fail(`catalog.tasks[${index}].id`, `duplicate id '${parsed.id}'`);
         ids.add(parsed.id);
         return parsed;

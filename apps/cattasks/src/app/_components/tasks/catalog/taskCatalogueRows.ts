@@ -1,5 +1,6 @@
 import type {CatalogTask} from './taskCatalog';
 import type {TaskWorkspaceState} from '../context/taskWorkspaceState';
+import type {CustomTaskTopic} from '../customTasks/customTaskTypes';
 
 export const TASK_TOPICS = ['Arrays', 'Strings', 'Numbers', 'Logic'] as const;
 export type TaskTopic = (typeof TASK_TOPICS)[number] | 'Uncategorized';
@@ -31,12 +32,16 @@ function getTaskProgressStatus(state: TaskWorkspaceState, id: string): TaskProgr
     return 'In progress';
 }
 
-export function getTaskCatalogueRows(tasks: readonly CatalogTask[], state: TaskWorkspaceState): readonly TaskCatalogueRow[] {
+export function getTaskCatalogueRows(
+    tasks: readonly CatalogTask[],
+    state: TaskWorkspaceState,
+    customTopics: ReadonlyMap<string, CustomTaskTopic | undefined> = new Map(),
+): readonly TaskCatalogueRow[] {
     return tasks.map(task => ({
         id: task.id,
         title: task.title,
         description: task.description,
-        topic: getBuiltInTaskTopic(task.id),
+        topic: customTopics.has(task.id) ? customTopics.get(task.id) ?? 'Uncategorized' : getBuiltInTaskTopic(task.id),
         status: getTaskProgressStatus(state, task.id),
         isCurrent: task.id === state.selectedId,
     }));
