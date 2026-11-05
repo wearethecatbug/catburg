@@ -75,7 +75,7 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
     const strip = page.getByLabel(stripName, {exact: true});
     await strip.waitFor({state: "visible", timeout: 10_000});
     const feed = await waitForEnabledFeed(strip);
-    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 5_000);
     assert.equal(await strip.count(), 1, "the dashboard has one pet strip");
     assert.equal(await strip.locator("canvas").count(), 0, "the footer does not mount a canvas game");
     assert.equal(await page.getByRole("link", {name: /играть с п[её]сиком/i}).count(), 0, "the document does not expose the retired game link");
@@ -125,7 +125,7 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
     await strip.waitFor({state: "visible", timeout: 10_000});
     await dog.waitFor({state: "visible", timeout: 10_000});
     await waitForEnabledFeed(strip);
-    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 5_000);
     await page.evaluate(() => {
       window.__petStripTimeline = [];
       const strip = document.querySelector("[aria-label='Pet feeding strip']");
