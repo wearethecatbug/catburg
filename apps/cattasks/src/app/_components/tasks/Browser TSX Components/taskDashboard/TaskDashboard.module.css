@@ -141,6 +141,7 @@
 .headerContainer, .mainContainer, .footerContainer { position: relative; }
 .headerContainer { min-height: 137px; height: auto; }
 .mainContainer { flex: 1 1 auto; min-height: 0; }
+.taskDashboardRoot > .hiddenMain { display: none; }
 .footerContainer { min-height: 90px; height: auto; }
 
 @media (min-width: 1151px) {
