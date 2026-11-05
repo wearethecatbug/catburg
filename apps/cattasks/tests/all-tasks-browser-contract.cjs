@@ -42,6 +42,16 @@ async function setDraft(page, previous, next) {
   assert.equal(value, next, "the real Monaco draft must change through its model without executing fixture code");
 }
 
+async function assertActiveEditorDraft(page, expected, message) {
+  const editor = page.getByLabel("User JavaScript code");
+  await editor.waitFor({state: "visible"});
+  const viewLines = editor.locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' monaco-editor ')]").locator(".view-lines");
+  await viewLines.waitFor({state: "visible"});
+  await page.waitForFunction(expected => document.querySelector('textarea[aria-label="User JavaScript code"]')?.closest(".monaco-editor")?.querySelector(".view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), expected);
+  const actual = (await viewLines.innerText()).replace(/\s/g, "");
+  assert.equal(actual, expected.replace(/\s/g, ""), message);
+}
+
 function catalogueRows(page) {
   return page.locator("main ul > li");
 }
@@ -122,17 +132,17 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     await page.getByRole("button", {name: "All tasks"}).waitFor({state: "visible"});
     assert.match(await page.getByLabel(/Показана информация/).getAttribute("aria-label"), /Показана информация/, "Back preserves the active tab");
     await page.getByLabel(/Показать решение|Показано решение/).click();
-    await page.waitForFunction(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo(value) { return value + '!'; }");
+    await assertActiveEditorDraft(page, "function echo(value) { return value + '!'; }", "Open restores the Tortoise draft in the rendered active editor");
 
     await page.getByRole("button", {name: "All tasks"}).click();
     const arrayRow = catalogueRows(page).filter({hasText: "Array sum"});
     await arrayRow.getByRole("button", {name: /^Open(?: |$)/}).click();
     await page.getByText("Add all numbers in an array.", {exact: true}).waitFor({state: "visible"});
-    await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
+    await assertActiveEditorDraft(page, catalog.tasks[1].starterCode, "Open renders Array sum's own draft instead of a cached Tortoise model");
     await page.getByRole("button", {name: "All tasks"}).click();
     await catalogueRows(page).filter({hasText: "Tortoise race"}).getByRole("button", {name: /^Open(?: |$)/}).click();
     await page.getByText("Find when B catches A.", {exact: true}).waitFor({state: "visible"});
-    await page.waitForFunction(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo(value) { return value + '!'; }");
+    await assertActiveEditorDraft(page, "function echo(value) { return value + '!'; }", "returning from Array sum restores Tortoise's draft in the rendered active editor");
 
     await page.getByRole("button", {name: "All tasks"}).press("Enter");
     await page.getByRole("radio", {name: "Arrays"}).check();
