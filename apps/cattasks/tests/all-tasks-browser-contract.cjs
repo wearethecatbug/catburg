@@ -52,10 +52,34 @@ async function assertHorizontallyReachable(page, locator, label) {
   assert.ok(count > 0, `${label} must expose at least one actionable element`);
   for (let index = 0; index < count; index += 1) {
     const target = locator.nth(index);
-    await target.scrollIntoViewIfNeeded();
+    await target.evaluate(node => window.scrollTo({left: window.scrollX, top: Math.max(0, node.getBoundingClientRect().top + window.scrollY - 16)}));
     const box = await target.boundingBox();
     assert.ok(box, `${label} ${index + 1} must have a rendered box`);
     assert.ok(box.x >= 0 && box.x + box.width <= viewportWidth, `${label} ${index + 1} must fit inside the ${viewportWidth}px viewport`);
+    const reachability = await target.evaluate(node => {
+      const targetBox = node.getBoundingClientRect();
+      const clippingAncestors = [];
+      for (let ancestor = node.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        if (["hidden", "clip", "scroll", "auto"].includes(style.overflowX) || ["hidden", "clip", "scroll", "auto"].includes(style.overflowY)) {
+          const box = ancestor.getBoundingClientRect();
+          clippingAncestors.push({
+            bounds: [box.left, box.top, box.right, box.bottom],
+            containsTarget: targetBox.left >= box.left && targetBox.top >= box.top && targetBox.right <= box.right && targetBox.bottom <= box.bottom,
+          });
+        }
+      }
+      const y = targetBox.top + targetBox.height / 2;
+      const hitTested = [targetBox.left + 1, targetBox.left + targetBox.width / 2, targetBox.right - 1]
+        .map(x => ({x, hit: document.elementFromPoint(x, y)}));
+      return {
+        targetBounds: [targetBox.left, targetBox.top, targetBox.right, targetBox.bottom],
+        clippingAncestors,
+        hitTested: hitTested.map(({x, hit}) => ({x, reachable: Boolean(hit && node.contains(hit))})),
+      };
+    });
+    assert.ok(reachability.clippingAncestors.every(ancestor => ancestor.containsTarget), `${label} ${index + 1} must not be clipped by an ancestor: ${JSON.stringify(reachability)}`);
+    assert.ok(reachability.hitTested.every(point => point.reachable), `${label} ${index + 1} must be fully hit-testable: ${JSON.stringify(reachability)}`);
   }
 }
 
@@ -100,6 +124,16 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     await page.getByLabel(/Показать решение|Показано решение/).click();
     await page.waitForFunction(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo(value) { return value + '!'; }");
 
+    await page.getByRole("button", {name: "All tasks"}).click();
+    const arrayRow = catalogueRows(page).filter({hasText: "Array sum"});
+    await arrayRow.getByRole("button", {name: /^Open(?: |$)/}).click();
+    await page.getByText("Add all numbers in an array.", {exact: true}).waitFor({state: "visible"});
+    await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await catalogueRows(page).filter({hasText: "Tortoise race"}).getByRole("button", {name: /^Open(?: |$)/}).click();
+    await page.getByText("Find when B catches A.", {exact: true}).waitFor({state: "visible"});
+    await page.waitForFunction(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo(value) { return value + '!'; }");
+
     await page.getByRole("button", {name: "All tasks"}).press("Enter");
     await page.getByRole("radio", {name: "Arrays"}).check();
     assert.equal(await catalogueRows(page).count(), 1);
@@ -120,16 +154,19 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
 
     await page.getByRole("radio", {name: "All statuses"}).check();
     await search.fill("");
+    await page.setViewportSize({width: 1060, height: 900});
+    await assertHorizontallyReachable(page, catalogueRows(page).getByRole("button", {name: /^Open(?: |$)/}), "Open action at 1060px");
+
     await page.setViewportSize({width: 768, height: 900});
     await assertHorizontallyReachable(page, search, "Search");
     await assertHorizontallyReachable(page, page.getByRole("radio"), "filter radio");
-    await assertHorizontallyReachable(page, page.getByRole("button", {name: /^Open(?: |$)/}), "Open action");
+    await assertHorizontallyReachable(page, catalogueRows(page).getByRole("button", {name: /^Open(?: |$)/}), "Open action");
     await assertHorizontallyReachable(page, page.getByRole("button", {name: "Back to task"}), "Back action");
 
     await page.setViewportSize({width: 390, height: 844});
     await assertHorizontallyReachable(page, search, "Search");
     await assertHorizontallyReachable(page, page.getByRole("radio"), "filter radio");
-    await assertHorizontallyReachable(page, page.getByRole("button", {name: /^Open(?: |$)/}), "Open action");
+    await assertHorizontallyReachable(page, catalogueRows(page).getByRole("button", {name: /^Open(?: |$)/}), "Open action");
     await assertHorizontallyReachable(page, page.getByRole("button", {name: "Back to task"}), "Back action");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     assert.equal(overflow, 0, "390px catalogue has no actionable horizontal overflow");

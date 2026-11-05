@@ -44,6 +44,11 @@ test("All tasks reflects successful Test completion through Run and invalidates 
     const currentRow = page.locator('li[aria-current="true"]');
     await currentRow.getByText("Tortoise race", {exact: true}).waitFor({state: "visible"});
     await currentRow.getByText("Completed", {exact: true}).waitFor({state: "visible"});
+    await page.getByRole("radio", {name: "Completed"}).check();
+    await currentRow.getByText("Tortoise race", {exact: true}).waitFor({state: "visible"});
+    assert.equal(await page.getByText("Array sum", {exact: true}).count(), 0, "Completed excludes a not-started row");
+    await page.getByRole("radio", {name: "All statuses"}).check();
+    await page.getByText("Array sum", {exact: true}).waitFor({state: "visible"});
 
     await page.getByRole("button", {name: "Back to task"}).click();
     await page.getByRole("button", {name: "Run Code"}).click();

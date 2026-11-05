@@ -117,7 +117,7 @@
 .message p { margin: 0; }
 .message button { min-height: 40px; padding: 0 14px; border-radius: 10px; background: #24743f; color: #fff; }
 
-@media (max-width: 1050px) {
+@media (max-width: 1120px) {
     .catalogueHeader, .catalogueMain { width: min(100% - 48px, 960px); }
     .catalogueMain { grid-template-columns: 1fr; }
     .columnHeadings { display: none; }
