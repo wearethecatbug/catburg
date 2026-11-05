@@ -26,6 +26,7 @@ function getTravelDuration(from: number, to: number): number {
 }
 
 export default function PetStrip() {
+    const [isReady, setIsReady] = useState(false);
     const [petState, setPetState] = useState<PetState>('idle');
     const [dogPosition, setDogPosition] = useState(INITIAL_DOG_POSITION);
     const [dogDirection, setDogDirection] = useState<DogDirection>('right');
@@ -132,6 +133,7 @@ export default function PetStrip() {
     };
 
     useEffect(() => {
+        setIsReady(true);
         const timers = timersRef.current;
         sleepTimerRef.current = setTimeout(() => {
             sleepTimerRef.current = null;
@@ -175,7 +177,7 @@ export default function PetStrip() {
                     </span>
                 ))}
             </span>
-            <button aria-label="Feed pet" className={styles.feedButton} onClick={handleFeedClick} type="button">Feed pet</button>
+            <button aria-label="Feed pet" className={styles.feedButton} disabled={!isReady} onClick={handleFeedClick} type="button">Feed pet</button>
             <span className={styles.status} role="status">{status}</span>
         </section>
     );

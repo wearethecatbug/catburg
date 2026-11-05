@@ -57,8 +57,10 @@ async function petTimeline(page) {
   return page.evaluate(() => window.__petStripTimeline || []);
 }
 
-async function waitForClientHydration(page) {
-  await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
+async function waitForEnabledFeed(strip) {
+  const feed = strip.getByRole("button", {name: "Feed pet", exact: true});
+  await strip.locator("button[aria-label='Feed pet']:enabled").waitFor({state: "visible", timeout: 10_000});
+  return feed;
 }
 
 test("CatTasks pet strip is a shallow accessible footer without the retired game surface", {timeout: 30_000}, async () => {
@@ -66,11 +68,14 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
   const context = await browser.newContext({viewport: {width: 390, height: 844}, reducedMotion: "reduce"});
   const page = await context.newPage();
   try {
+    assert.equal(typeof page.clock?.install, "function", "the supplied Playwright must support deterministic browser clocks");
+    await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
     assert.equal(response.status(), 200);
     const strip = page.getByLabel(stripName, {exact: true});
     await strip.waitFor({state: "visible", timeout: 10_000});
-    await waitForClientHydration(page);
+    const feed = await waitForEnabledFeed(strip);
+    await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     assert.equal(await strip.count(), 1, "the dashboard has one pet strip");
     assert.equal(await strip.locator("canvas").count(), 0, "the footer does not mount a canvas game");
     assert.equal(await page.getByRole("link", {name: /играть с п[её]сиком/i}).count(), 0, "the document does not expose the retired game link");
@@ -80,7 +85,6 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
     assert.ok(bounds.height < page.viewportSize().height / 3, "the footer remains a shallow strip rather than a game panel");
     assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= page.viewportSize().width, "the mobile strip is horizontally reachable");
 
-    const feed = strip.getByRole("button", {name: "Feed pet", exact: true});
     const status = strip.getByRole("status");
     assert.equal(await feed.count(), 1, "one native Feed control is available");
     assert.equal(await status.count(), 1, "feeding changes have one live status channel");
@@ -120,7 +124,7 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
     const dog = strip.locator("[data-pet='dog']");
     await strip.waitFor({state: "visible", timeout: 10_000});
     await dog.waitFor({state: "visible", timeout: 10_000});
-    await waitForClientHydration(page);
+    await waitForEnabledFeed(strip);
     await page.clock.pauseAt(await page.evaluate(() => Date.now()));
     await page.evaluate(() => {
       window.__petStripTimeline = [];
