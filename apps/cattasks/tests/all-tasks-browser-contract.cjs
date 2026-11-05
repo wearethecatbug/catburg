@@ -7,7 +7,7 @@ const catalog = {
   version: 1,
   tasks: [
     {id: "race", title: "Tortoise race", description: "Find when B catches A.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["race"], expected: "race"}]},
-    {id: "digitize", title: "Array sum", description: "Add all numbers in an array.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["array"], expected: "array"}]},
+    {id: "digitize", title: "Array sum", description: "Add all numbers in an array.", entryPoint: "echo", starterCode: "function echo(value) { return String(value); }", solution: "function echo(value) { return value; }", tests: [{args: ["array"], expected: "array"}]},
     {id: "no-space", title: "Count vowels", description: "Count vowels in a string.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["string"], expected: "string"}]},
     {id: "legacy", title: "Legacy task", description: "A catalog task with no topic metadata.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["legacy"], expected: "legacy"}]},
   ],
@@ -47,9 +47,17 @@ async function assertActiveEditorDraft(page, expected, message) {
   await editor.waitFor({state: "visible"});
   const viewLines = editor.locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' monaco-editor ')]").locator(".view-lines");
   await viewLines.waitFor({state: "visible"});
-  await page.waitForFunction(expected => document.querySelector('textarea[aria-label="User JavaScript code"]')?.closest(".monaco-editor")?.querySelector(".view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), expected);
-  const actual = (await viewLines.innerText()).replace(/\s/g, "");
-  assert.equal(actual, expected.replace(/\s/g, ""), message);
+  await page.waitForFunction(expected => {
+    const textarea = document.querySelector('textarea[aria-label="User JavaScript code"]');
+    const activeEditor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getDomNode()?.contains(textarea));
+    return activeEditor?.getModel()?.getValue() === expected;
+  }, expected);
+  const actual = await page.evaluate(() => {
+    const textarea = document.querySelector('textarea[aria-label="User JavaScript code"]');
+    const activeEditor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getDomNode()?.contains(textarea));
+    return activeEditor?.getModel()?.getValue() ?? null;
+  });
+  assert.equal(actual, expected, message);
 }
 
 function catalogueRows(page) {
