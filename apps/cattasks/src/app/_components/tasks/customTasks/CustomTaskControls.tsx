@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
-import {exportCustomTasks, parseCustomTask, preflightCustomTaskImport} from './customTaskTransfer';
+import {parseCustomTask} from './customTaskTransfer';
 import {CUSTOM_TASK_TOPICS} from './customTaskTypes';
 import {useTaskContext} from '../context/TaskProvider';
 import styles from './CustomTaskControls.module.css';
@@ -20,13 +20,17 @@ function fieldFromMessage(message: string): keyof FormValues | null {
 }
 
 export function CustomTaskControls() {
-    const {tasks, customTasks, customStorageError, addCustomTasks, retryCustomStorage} = useTaskContext();
+    const {customStorageError, customStorageReady, addCustomTasks, prepareCustomTaskImport, exportCustomTasks, retryCustomStorage} = useTaskContext();
     const [isOpen, setIsOpen] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [values, setValues] = useState<FormValues>(emptyForm);
     const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
     const [transferError, setTransferError] = useState<string | null>(null);
     const mounted = useRef(true);
     const importVersion = useRef(0);
+    const exportVersion = useRef(0);
+    const importController = useRef<AbortController | null>(null);
     const newTaskButton = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
@@ -34,6 +38,8 @@ export function CustomTaskControls() {
         return () => {
             mounted.current = false;
             importVersion.current += 1;
+            exportVersion.current += 1;
+            importController.current?.abort();
         };
     }, []);
 
@@ -52,7 +58,8 @@ export function CustomTaskControls() {
         requestAnimationFrame(() => newTaskButton.current?.focus());
     };
 
-    const save = () => {
+    const save = async () => {
+        if (isSaving) return;
         let tests: unknown;
         try {
             tests = JSON.parse(values.tests);
@@ -64,7 +71,8 @@ export function CustomTaskControls() {
         try {
             const {topic, ...taskValues} = values;
             const record = parseCustomTask({...taskValues, tests, ...(topic === '' ? {} : {topic})});
-            if (addCustomTasks([record])) {
+            setIsSaving(true);
+            if (await addCustomTasks([record]) && mounted.current) {
                 setValues(emptyForm);
                 setTransferError(null);
                 closeForm();
@@ -77,39 +85,52 @@ export function CustomTaskControls() {
                 focusField(field);
             }
             else setTransferError(message);
+        } finally {
+            if (mounted.current) setIsSaving(false);
         }
     };
 
     const importTasks = async (file: File | undefined) => {
         if (!file) return;
+        importController.current?.abort();
+        const controller = new AbortController();
+        importController.current = controller;
         const request = ++importVersion.current;
         setTransferError(null);
         try {
             const text = await file.text();
-            if (!mounted.current || request !== importVersion.current) return;
-            const builtInIds = new Set(tasks.slice(0, tasks.length - customTasks.length).map(task => task.id));
-            const savedIds = new Set(customTasks.map(task => task.id));
-            const incoming = preflightCustomTaskImport(text, builtInIds, savedIds);
+            if (!mounted.current || controller.signal.aborted || request !== importVersion.current) return;
+            const incoming = prepareCustomTaskImport(text);
             if (!incoming.ok) {
                 setTransferError(incoming.message);
                 return;
             }
-            if (!addCustomTasks(incoming.tasks)) return;
+            await addCustomTasks(incoming.tasks, controller.signal);
         } catch (error) {
-            if (mounted.current && request === importVersion.current) {
+            if (mounted.current && !controller.signal.aborted && request === importVersion.current) {
                 setTransferError(error instanceof Error ? error.message : 'Import could not be read.');
             }
+        } finally {
+            if (importController.current === controller) importController.current = null;
         }
     };
 
-    const exportTasks = () => {
-        const blob = new Blob([exportCustomTasks(customTasks)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'cattasks-custom-tasks.json';
-        anchor.click();
-        URL.revokeObjectURL(url);
+    const exportTasks = async () => {
+        const request = ++exportVersion.current;
+        setIsExporting(true);
+        try {
+            const text = await exportCustomTasks();
+            if (!mounted.current || request !== exportVersion.current || !text) return;
+            const blob = new Blob([text], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = 'cattasks-custom-tasks.json';
+            anchor.click();
+            URL.revokeObjectURL(url);
+        } finally {
+            if (mounted.current && request === exportVersion.current) setIsExporting(false);
+        }
     };
 
     return (
@@ -124,12 +145,12 @@ export function CustomTaskControls() {
                         void importTasks(file);
                     }}/>
                 </label>
-                <button type="button" onClick={exportTasks}>Export tasks</button>
+                <button type="button" onClick={() => void exportTasks()} disabled={!customStorageReady || isExporting}>Export tasks</button>
             </div>
             {customStorageError && <div className={styles.storageError} role="alert"><p>{customStorageError}</p><button className={styles.retry} type="button" onClick={retryCustomStorage}>Retry storage</button></div>}
             {transferError && <p className={styles.notice} role="alert">{transferError}</p>}
             {isOpen && (
-                <form className={styles.form} onSubmit={event => { event.preventDefault(); save(); }}>
+                <form className={styles.form} onSubmit={event => { event.preventDefault(); void save(); }}>
                     {fields.map(([name, label, kind]) => {
                         const error = fieldErrors[name];
                         const id = `custom-task-${name}`;
@@ -148,8 +169,8 @@ export function CustomTaskControls() {
                         </select>
                     </label>
                     <div className={styles.formActions}>
-                        <button type="submit">Save task</button>
-                        <button type="button" onClick={closeForm}>Cancel</button>
+                        <button type="submit" disabled={isSaving}>Save task</button>
+                        <button type="button" onClick={closeForm} disabled={isSaving}>Cancel</button>
                     </div>
                 </form>
             )}

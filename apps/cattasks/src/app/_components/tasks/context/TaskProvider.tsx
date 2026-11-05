@@ -2,8 +2,9 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
 import type {CatalogTask} from '../catalog/taskCatalog';
 import {getTaskCatalogueRows, type TaskCatalogueRow} from '../catalog/taskCatalogueRows';
-import {appendCustomTasks, loadCustomTasks} from '../customTasks/customTaskStorage';
-import type {CustomTaskRecord} from '../customTasks/customTaskTypes';
+import {appendCustomTasks, getCustomTaskExport, loadCustomTasks} from '../customTasks/customTaskStorage';
+import {exportCustomTasks as serializeCustomTasks, preflightCustomTaskImport} from '../customTasks/customTaskTransfer';
+import type {CustomTaskRecord, CustomTaskResult} from '../customTasks/customTaskTypes';
 import {useTasksArr} from '../hooks/UseTasks';
 import {
     beginTaskRun,
@@ -41,7 +42,10 @@ type TaskContextValue = {
     completeRun: (token: TaskRunToken, result: IsolatedTaskResult) => void;
     customTasks: readonly CustomTaskRecord[];
     customStorageError: string | null;
-    addCustomTasks: (incoming: readonly CustomTaskRecord[]) => boolean;
+    customStorageReady: boolean;
+    addCustomTasks: (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => Promise<boolean>;
+    prepareCustomTaskImport: (text: string) => CustomTaskResult;
+    exportCustomTasks: () => Promise<string | null>;
     retryCustomStorage: () => void;
 };
 
@@ -56,6 +60,16 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [headerInput, setHeaderInput] = useState('');
     const [customTasks, setCustomTasks] = useState<readonly CustomTaskRecord[]>([]);
     const [customStorageError, setCustomStorageError] = useState<string | null>(null);
+    const [customStorageReady, setCustomStorageReady] = useState(false);
+    const tasksRef = useRef(tasks);
+    const customTasksRef = useRef(customTasks);
+    const catalogErrorRef = useRef(catalogError);
+    const customStorageReadyRef = useRef(customStorageReady);
+    const storageOperationTail = useRef<Promise<void>>(Promise.resolve());
+    tasksRef.current = tasks;
+    customTasksRef.current = customTasks;
+    catalogErrorRef.current = catalogError;
+    customStorageReadyRef.current = customStorageReady;
     const didInitializeSelection = useRef(false);
 
     const allTasks = useMemo<readonly CatalogTask[]>(() => [
@@ -79,20 +93,30 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         [allTasks, customTopics, workspaceState],
     );
 
+    const enqueueStorageOperation = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+        const queued = storageOperationTail.current.then(operation, operation);
+        storageOperationTail.current = queued.then(() => undefined, () => undefined);
+        return queued;
+    }, []);
+
     const readCustomStorage = useCallback(() => {
         if (tasks.length === 0 || catalogError) return;
-        try {
-            const saved = loadCustomTasks(window.localStorage, builtInIds);
+        void enqueueStorageOperation(() => loadCustomTasks(() => window.localStorage, builtInIds))
+            .then(saved => {
             if (saved.ok) {
+                customTasksRef.current = saved.tasks;
+                customStorageReadyRef.current = true;
                 setCustomTasks(saved.tasks);
+                setCustomStorageReady(true);
                 setCustomStorageError(null);
             } else {
                 setCustomStorageError(saved.message);
             }
-        } catch (error) {
-            setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
-        }
-    }, [builtInIds, catalogError, tasks.length]);
+        })
+            .catch(error => {
+                setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
+            });
+    }, [builtInIds, catalogError, enqueueStorageOperation, tasks.length]);
 
     useEffect(() => {
         readCustomStorage();
@@ -157,25 +181,58 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         return started.token;
     }, [allTasks, commitState]);
 
-    const addCustomTasks = useCallback((incoming: readonly CustomTaskRecord[]) => {
-        if (tasks.length === 0 || catalogError) {
+    const addCustomTasks = useCallback(async (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => {
+        if (signal?.aborted) return false;
+        if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
             setCustomStorageError('Tasks must finish loading before custom tasks can be saved.');
             return false;
         }
-        try {
-            const saved = appendCustomTasks(window.localStorage, incoming, builtInIds);
+        return enqueueStorageOperation(async () => {
+            const saved = await appendCustomTasks(
+                incoming,
+                new Set(tasksRef.current.map(task => task.id)),
+                signal,
+            );
+            if (signal?.aborted) return false;
             if (!saved.ok) {
                 setCustomStorageError(saved.message);
                 return false;
             }
+            customTasksRef.current = saved.tasks;
             setCustomTasks(saved.tasks);
             setCustomStorageError(null);
             return true;
-        } catch (error) {
+        }).catch(error => {
+            if (signal?.aborted) return false;
             setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
             return false;
+        });
+    }, [enqueueStorageOperation]);
+
+    const prepareCustomTaskImport = useCallback((text: string): CustomTaskResult => {
+        if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
+            return {ok: false, message: 'Tasks must finish loading before custom tasks can be imported.'};
         }
-    }, [builtInIds, catalogError, tasks.length]);
+        return preflightCustomTaskImport(
+            text,
+            new Set(tasksRef.current.map(task => task.id)),
+            new Set(customTasksRef.current.map(task => task.id)),
+        );
+    }, []);
+
+    const exportCustomTasks = useCallback(() => {
+        return enqueueStorageOperation(async () => {
+            const saved = await getCustomTaskExport(new Set(tasksRef.current.map(task => task.id)));
+            if (!saved.ok) {
+                setCustomStorageError(saved.message);
+                return null;
+            }
+            return serializeCustomTasks(saved.tasks);
+        }).catch(error => {
+            setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
+            return null;
+        });
+    }, [enqueueStorageOperation]);
 
     const completeRun = useCallback((token: TaskRunToken, result: IsolatedTaskResult) => {
         commitState(completeTaskRun(workspaceStateRef.current, token, result));
@@ -202,7 +259,10 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         completeRun,
         customTasks,
         customStorageError,
+        customStorageReady,
         addCustomTasks,
+        prepareCustomTaskImport,
+        exportCustomTasks,
         retryCustomStorage: readCustomStorage,
     };
 
