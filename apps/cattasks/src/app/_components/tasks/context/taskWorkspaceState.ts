@@ -6,6 +6,7 @@ export type TaskWorkspace = {
     readonly draft: string;
     readonly draftGeneration: number;
     readonly runGeneration: number;
+    readonly completedTestGeneration?: number;
     readonly result?: TaskRunRecord;
 };
 export type TaskWorkspaceState = {
@@ -51,7 +52,7 @@ export function clearTaskSelection(state: TaskWorkspaceState): TaskWorkspaceStat
 export function setTaskDraft(state: TaskWorkspaceState, id: string, draft: string, starterCode: string): TaskWorkspaceState {
     const workspace = workspaceFor(state, id, starterCode);
     if (workspace.draft === draft) return state;
-    return withWorkspace(state, id, {...workspace, draft, draftGeneration: workspace.draftGeneration + 1, result: undefined});
+    return withWorkspace(state, id, {...workspace, draft, draftGeneration: workspace.draftGeneration + 1, completedTestGeneration: undefined, result: undefined});
 }
 
 export function beginTaskRun(
@@ -74,5 +75,13 @@ export function completeTaskRun(state: TaskWorkspaceState, token: TaskRunToken, 
     if (state.selectedId !== token.taskId || state.selectionGeneration !== token.selectionGeneration) return state;
     const workspace = state.workspaces.get(token.taskId);
     if (!workspace || workspace.draftGeneration !== token.draftGeneration || workspace.runGeneration !== token.runGeneration) return state;
-    return withWorkspace(state, token.taskId, {...workspace, result: {mode: token.mode, result}});
+    const completedTestGeneration = token.mode === 'test' && result.status === 'completed' &&
+        typeof result.passedCount === 'number' && typeof result.totalTests === 'number' &&
+        Number.isInteger(result.passedCount) && Number.isInteger(result.totalTests) &&
+        result.totalTests > 0 && result.passedCount === result.totalTests
+        ? workspace.draftGeneration
+        : token.mode === 'test' && result.status !== 'cancelled'
+            ? undefined
+            : workspace.completedTestGeneration;
+    return withWorkspace(state, token.taskId, {...workspace, completedTestGeneration, result: {mode: token.mode, result}});
 }
