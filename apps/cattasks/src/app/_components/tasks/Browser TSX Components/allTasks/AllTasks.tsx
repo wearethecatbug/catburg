@@ -3,6 +3,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {TASK_TOPICS, type TaskProgressStatus, type TaskTopic} from '../../catalog/taskCatalogueRows';
 import {useTaskContext} from '../../context/TaskProvider';
+import {CustomTaskControls} from '../../customTasks/CustomTaskControls';
 import styles from './AllTasks.module.css';
 
 type AllTasksProps = {
@@ -10,7 +11,7 @@ type AllTasksProps = {
     readonly onBack: () => void;
 };
 
-type TopicFilter = 'All topics' | Exclude<TaskTopic, 'Uncategorized'>;
+type TopicFilter = 'All topics' | TaskTopic;
 type StatusFilter = 'All statuses' | Exclude<TaskProgressStatus, 'In progress'>;
 
 const topicFilters: readonly TopicFilter[] = ['All topics', ...TASK_TOPICS];
@@ -33,7 +34,7 @@ export function AllTasksHeader({className, onBack}: AllTasksProps) {
 }
 
 export default function AllTasks({className, onBack}: AllTasksProps) {
-    const {catalogueRows, catalogError, retryCatalog, selectTask} = useTaskContext();
+    const {catalogueRows, catalogError, retryCatalog, selectTask, customTasks} = useTaskContext();
     const [query, setQuery] = useState('');
     const [topic, setTopic] = useState<TopicFilter>('All topics');
     const [status, setStatus] = useState<StatusFilter>('All statuses');
@@ -42,6 +43,15 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     useEffect(() => {
         searchRef.current?.focus();
     }, []);
+
+    const availableTopicFilters = useMemo<readonly TopicFilter[]>(
+        () => customTasks.some(task => task.topic === undefined) ? [...topicFilters, 'Uncategorized'] : topicFilters,
+        [customTasks],
+    );
+
+    useEffect(() => {
+        if (!availableTopicFilters.includes(topic)) setTopic('All topics');
+    }, [availableTopicFilters, topic]);
 
     const visibleRows = useMemo(() => {
         const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -75,7 +85,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                 </label>
                 <fieldset className={styles.filterGroup}>
                     <legend>Topics</legend>
-                    {topicFilters.map(option => (
+                    {availableTopicFilters.map(option => (
                         <label className={styles.filterOption} key={option}>
                             <input
                                 type="radio"
@@ -87,6 +97,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                         </label>
                     ))}
                 </fieldset>
+                <CustomTaskControls/>
                 <fieldset className={styles.filterGroup}>
                     <legend>Status</legend>
                     {statusFilters.map(option => (
