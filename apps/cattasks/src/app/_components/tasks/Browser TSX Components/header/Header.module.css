@@ -1,45 +1,119 @@
 .headerContainer {
     width: 100%;
-    min-height: 90px;
     min-width: 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    min-height: 152px;
+    padding-inline: clamp(20px, 5.5vw, 84px);
     box-sizing: border-box;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr);
+    align-items: center;
+    background: transparent;
 }
 
 .allTasksButton {
-    min-height: 36px;
-    padding: 6px 16px;
-    border: 1px solid #a9bf9f;
-    border-radius: 999px;
-    background: rgba(250, 251, 247, .86);
-    box-shadow: 0 3px 8px rgba(37, 69, 50, .10);
-    color: #254532;
+    grid-column: 1;
+    position: relative;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #234b36;
     font: inherit;
-    font-weight: 700;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.1;
     cursor: pointer;
+    transition: color 140ms ease;
 }
 
-.allTasksButton:hover {
-    background: #f7fbf4;
+.allTasksButton::before {
+    width: 28px;
+    height: 24px;
+    flex: 0 0 auto;
+    content: '';
+    background: linear-gradient(currentColor, currentColor) center / 28px 3px no-repeat;
+}
+
+.allTasksButton::after {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 13px;
+    height: 13px;
+    border-bottom: 3px solid currentColor;
+    border-left: 3px solid currentColor;
+    content: '';
+    transform: translateY(-50%) rotate(45deg);
 }
 
 .headerTaskContainer {
-    width: min(720px, calc(100% - 48px));
+    grid-column: 2;
+    width: 100%;
     min-width: 150px;
     height: 100%;
-    min-height: 80px;
+    min-height: 152px;
 }
 
-@media (max-width: 600px) {
-    .headerTaskContainer {
-        width: 100%;
-        min-width: 0;
-        height: auto;
-        min-height: 90px;
+@media (hover: hover) {
+    .allTasksButton:hover {
+        color: #39724f;
     }
 }
 
+.allTasksButton:focus-visible {
+    outline: 3px solid #356b48;
+    outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .allTasksButton {
+        transition: none;
+    }
+}
+
+@media (max-width: 1200px) {
+    .headerContainer {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        justify-items: center;
+        gap: 4px;
+        min-height: 196px;
+        padding-block: 10px;
+    }
+
+    .allTasksButton,
+    .headerTaskContainer {
+        width: 100%;
+        grid-column: 1;
+    }
+
+    .allTasksButton {
+        justify-self: start;
+    }
+
+    .headerTaskContainer {
+        min-width: 0;
+        height: auto;
+        min-height: 152px;
+    }
+}
+
+@media (max-width: 600px) {
+    .headerContainer {
+        min-height: 150px;
+        padding-inline: 16px;
+    }
+
+    .allTasksButton {
+        min-height: 36px;
+        gap: 10px;
+    }
+
+    .headerTaskContainer {
+        min-height: 90px;
+    }
+}

@@ -11,7 +11,6 @@ interface TDHeaderProps {
 export default function Header({className, onShowAllTasks, allTasksButtonRef}: TDHeaderProps) {
     return (
         <div className={`${styles.headerContainer} ${className ?? ''}`}>
-            <HeaderTaskListContainer className={styles.headerTaskContainer}/>
             {onShowAllTasks && (
                 <button
                     ref={allTasksButtonRef}
@@ -22,6 +21,7 @@ export default function Header({className, onShowAllTasks, allTasksButtonRef}: T
                     All tasks
                 </button>
             )}
+            <HeaderTaskListContainer className={styles.headerTaskContainer}/>
         </div>
     )
 }
