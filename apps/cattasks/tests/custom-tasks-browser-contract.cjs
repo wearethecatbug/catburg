@@ -589,3 +589,89 @@ test("an unavailable initial IndexedDB open blocks export until Retry migrates t
     await browser.close();
   }
 });
+
+test("a committed import publishes its row after its controls unmount too late to roll back", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const committed = customTask("late-commit-import", {topic: "Logic"});
+  await context.addInitScript(({databaseName, storeName, documentKey}) => {
+    const nativePut = IDBObjectStore.prototype.put;
+    const nativeAbort = IDBTransaction.prototype.abort;
+    window.__lateCommitArmed = false;
+    window.__lateCommitPutSucceeded = false;
+    window.__lateCommitBackClicked = false;
+    window.__lateCommitAbortName = null;
+    window.__lateCommitTransaction = null;
+    IDBTransaction.prototype.abort = function() {
+      if (this !== window.__lateCommitTransaction) return nativeAbort.call(this);
+      try {
+        return nativeAbort.call(this);
+      } catch (error) {
+        window.__lateCommitAbortName = error instanceof DOMException ? error.name : String(error);
+        throw error;
+      }
+    };
+    IDBObjectStore.prototype.put = function(value, key) {
+      if (
+        window.__lateCommitArmed &&
+        this.name === storeName &&
+        key === documentKey &&
+        this.transaction.db.name === databaseName
+      ) {
+        window.__lateCommitArmed = false;
+        const transaction = this.transaction;
+        const request = nativePut.call(this, value, key);
+        request.addEventListener("success", () => {
+          window.__lateCommitPutSucceeded = true;
+          window.__lateCommitTransaction = transaction;
+          transaction.commit();
+          const back = Array.from(document.querySelectorAll("button")).find(button => button.textContent?.includes("Back to task"));
+          window.__lateCommitBackClicked = Boolean(back);
+          back?.click();
+        }, {once: true});
+        return request;
+      }
+      return nativePut.call(this, value, key);
+    };
+  }, {databaseName, storeName, documentKey});
+  const page = await context.newPage();
+  const seen = await diagnostics(page);
+
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await waitForTaskEditorReady(page);
+    const originalDraft = await activeDraft(page);
+    const preservedDraft = "function echo(value) { return `${value}`; }";
+    await setActiveDraft(page, originalDraft, preservedDraft);
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+
+    await page.evaluate(() => { window.__lateCommitArmed = true; });
+    await page.getByLabel("Import tasks JSON").setInputFiles({
+      name: "late-commit.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify({version: 1, tasks: [committed]})),
+    });
+    await page.waitForFunction(() => window.__lateCommitAbortName === "InvalidStateError");
+    assert.equal(await page.evaluate(() => window.__lateCommitPutSucceeded), true, "the native custom-task put succeeds before cancellation is requested");
+    assert.equal(await page.evaluate(() => window.__lateCommitBackClicked), true, "the actual Back control unmounts the import controls while the Provider remains mounted");
+    assert.equal(await page.evaluate(() => window.__lateCommitAbortName), "InvalidStateError", "the controls' AbortSignal reaches a committing native transaction too late to roll it back");
+    await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
+    await assertActiveDraft(page, preservedDraft, "the obsolete import leaves the current selection and draft untouched");
+    assert.deepEqual(await storedTasks(page), [committed], "the committed import is retained in the authoritative IndexedDB document");
+
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+    await rows(page).filter({hasText: committed.title}).waitFor({state: "visible"});
+    assert.equal(await rows(page).filter({hasText: committed.title}).count(), 1, "the mounted Provider publishes the committed row without reload or Retry");
+    assert.equal(await customAlerts(page).count(), 0, "the obsolete import caller does not revive a stale error after its controls unmount");
+    assert.deepEqual(seen.consoleErrors, []);
+    assert.deepEqual(seen.pageErrors, []);
+    assert.deepEqual(seen.failedRequests, []);
+    assert.deepEqual(seen.failedResponses, []);
+    assert.deepEqual(seen.catalogMethods, ["GET"]);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});

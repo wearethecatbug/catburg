@@ -193,15 +193,14 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
                 new Set(tasksRef.current.map(task => task.id)),
                 signal,
             );
-            if (signal?.aborted) return false;
             if (!saved.ok) {
-                setCustomStorageError(saved.message);
+                if (!signal?.aborted) setCustomStorageError(saved.message);
                 return false;
             }
             customTasksRef.current = saved.tasks;
             setCustomTasks(saved.tasks);
             setCustomStorageError(null);
-            return true;
+            return !signal?.aborted;
         }).catch(error => {
             if (signal?.aborted) return false;
             setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
