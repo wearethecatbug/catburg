@@ -198,6 +198,25 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     await page.keyboard.press("Tab");
     await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "combobox");
     assert.equal(await selector.evaluate(node => node === document.activeElement), true, "selector follows previous arrow in keyboard order");
+    assert.equal(await selector.getAttribute("aria-expanded"), "false", "keyboard focus leaves the selected selector popup closed");
+    assert.equal(await number.isVisible(), true, "focused selector keeps the task number visible");
+    assert.equal(await title.isVisible(), true, "focused selector keeps the task title visible");
+    const desktopCaret = await selector.evaluate(node => {
+      const style = getComputedStyle(node);
+      return {caretColor: style.caretColor, textColor: style.color};
+    });
+    assert.notEqual(desktopCaret.caretColor, "rgba(0, 0, 0, 0)", "focused selected selector has a nontransparent desktop caret");
+    assert.notEqual(desktopCaret.caretColor, desktopCaret.textColor, "desktop caret remains distinguishable from hidden input text");
+    const desktopValue = await selector.inputValue();
+    await selector.press("End");
+    assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [desktopValue.length, desktopValue.length], "End places the desktop caret at the selected value end");
+    await selector.press("ArrowLeft");
+    assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [desktopValue.length - 1, desktopValue.length - 1], "desktop ArrowLeft moves the collapsed caret one character");
+    await selector.press("ArrowRight");
+    assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [desktopValue.length, desktopValue.length], "desktop ArrowLeft/ArrowRight restores a collapsed caret");
+    await selector.click({position: {x: 12, y: 12}});
+    assert.equal(await selector.inputValue(), desktopValue, "desktop mouse caret placement preserves the selected query");
+    assert.equal(await selector.evaluate(node => node === document.activeElement && node.selectionStart === node.selectionEnd), true, "desktop mouse click leaves a collapsed focused caret");
     await page.keyboard.press("Tab");
     await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Очистить выбор задачи");
     assert.equal(await clear.evaluate(node => node === document.activeElement), true, "clear action stays in keyboard order");
@@ -296,6 +315,30 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
       await assertNotClippedByOverflowAncestor(longNumber, "task number", width);
       await assertNotClippedByOverflowAncestor(longTitle, "long title", width);
       if ([1250, 1201, 1200].includes(width)) await assertAllTasksEdgesReachable(allTasks, width);
+      if (width === 390) {
+        await allTasks.focus();
+        await page.keyboard.press("Tab");
+        await page.keyboard.press("Tab");
+        await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "combobox");
+        assert.equal(await selector.getAttribute("aria-expanded"), "false", "narrow keyboard focus leaves the selected selector popup closed");
+        assert.equal(await longNumber.isVisible(), true, "narrow focused selector keeps the task number visible");
+        assert.equal(await longTitle.isVisible(), true, "narrow focused selector keeps the task title visible");
+        const narrowCaret = await selector.evaluate(node => {
+          const style = getComputedStyle(node);
+          return {caretColor: style.caretColor, textColor: style.color};
+        });
+        assert.notEqual(narrowCaret.caretColor, "rgba(0, 0, 0, 0)", "focused selected selector has a nontransparent narrow caret");
+        assert.notEqual(narrowCaret.caretColor, narrowCaret.textColor, "narrow caret remains distinguishable from hidden input text");
+        const narrowValue = await selector.inputValue();
+        await selector.press("End");
+        await selector.press("ArrowLeft");
+        assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [narrowValue.length - 1, narrowValue.length - 1], "narrow ArrowLeft moves the collapsed caret one character");
+        await selector.press("ArrowRight");
+        assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [narrowValue.length, narrowValue.length], "narrow ArrowLeft/ArrowRight restores a collapsed caret");
+        await selector.click({position: {x: 12, y: 12}});
+        assert.equal(await selector.inputValue(), narrowValue, "narrow mouse caret placement preserves the selected query");
+        assert.equal(await selector.evaluate(node => node === document.activeElement && node.selectionStart === node.selectionEnd), true, "narrow mouse click leaves a collapsed focused caret");
+      }
       if (width === 1536) assert.ok(shelf.height > 10, "desktop shelf is thicker than 10px");
       assert.equal(shelf.overflow, 0, `no horizontal overflow at ${width}px`);
       for (const arrow of shelf.arrows) {

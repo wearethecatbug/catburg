@@ -72,7 +72,7 @@
 
 .taskIdentityInput {
     color: transparent;
-    caret-color: transparent;
+    caret-color: #234b36;
 }
 
 .dropdownInput::placeholder {
