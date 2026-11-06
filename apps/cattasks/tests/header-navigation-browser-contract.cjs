@@ -45,7 +45,7 @@ async function state(button) {
       filters.push(getComputedStyle(item).filter);
       if (item === node) break;
     }
-    return {button: {x: r.x, y: r.y, width: r.width, height: r.height}, mascot: {x: mascot.x, y: mascot.y, width: mascot.width, height: mascot.height}, paintFilter: paint.filter, shadow: `${paint.boxShadow} ${buttonStyle.boxShadow}`, transition: `${paint.transition} ${buttonStyle.transition}`, durations: [paint.transitionDuration, buttonStyle.transitionDuration], outline: buttonStyle.outlineColor, normalOpacity: getComputedStyle(normal).opacity, revealOpacity: getComputedStyle(reveal).opacity, filters, arrowColor: getComputedStyle(node.querySelector("span:last-child")).color};
+    return {button: {x: r.x, y: r.y, width: r.width, height: r.height}, mascot: {x: mascot.x, y: mascot.y, width: mascot.width, height: mascot.height}, paintFilter: paint.filter, shadow: `${paint.boxShadow} ${buttonStyle.boxShadow}`, transition: `${paint.transition} ${buttonStyle.transition}`, durations: [paint.transitionDuration, buttonStyle.transitionDuration], outline: buttonStyle.outlineColor, outlineStyle: buttonStyle.outlineStyle, outlineWidth: buttonStyle.outlineWidth, normalOpacity: getComputedStyle(normal).opacity, revealOpacity: getComputedStyle(reveal).opacity, filters, arrowColor: getComputedStyle(node.querySelector("span:last-child")).color};
   });
 }
 
@@ -149,7 +149,24 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     assert.deepEqual(type.title.slice(0, 3), ["36px", "650", "rgb(35, 75, 54)"]);
     assert.ok(type.number[4] <= type.title[3], "number is above title");
 
-    await selector.fill("Third");
+    await clear.click();
+    assert.equal(await selector.inputValue(), "", "clear starts real typing from an empty query");
+    assert.equal(await selector.evaluate(node => node === document.activeElement), true, "clear gives the editable input keyboard ownership");
+    // Sequential keys exercise the native input path; bulk fill cannot expose a first-key focus theft.
+    await selector.pressSequentially("T", {delay: 75});
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await selector.inputValue(), "T", "the first typed character is retained after queued effects");
+    assert.equal(await selector.evaluate(node => node === document.activeElement), true, "the input retains focus after the first typed character");
+    await selector.pressSequentially("hird", {delay: 75});
+    assert.equal(await selector.inputValue(), "Third", "ordinary subsequent characters extend the query");
+    await selector.press("ArrowLeft");
+    await selector.press("Backspace");
+    assert.equal(await selector.inputValue(), "Thid", "Backspace edits at the caret without losing the query");
+    await selector.pressSequentially("r", {delay: 75});
+    await selector.press("Shift+ArrowLeft");
+    await selector.press("ArrowRight");
+    assert.equal(await selector.inputValue(), "Third", "modifier/caret editing preserves the restored query");
+    assert.equal(await selector.evaluate(node => node === document.activeElement), true, "editing keeps focus in the query input");
     await page.getByRole("option", {name: /Third independent task/}).waitFor();
     await selector.press("Tab");
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -161,6 +178,7 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     await clear.click();
     assert.equal(await selector.inputValue(), "", "clear keeps selector behavior");
     assert.equal(await selector.evaluate(node => node === document.activeElement), true, "clear restores selector focus");
+    // Real keyboard input is covered above; this bulk value only selects the known task for later navigation checks.
     await selector.fill("Tortoise");
     await page.getByRole("option", {name: /Tortoise race/}).click();
     await page.getByText("Tortoise race", {exact: true}).waitFor();
@@ -171,7 +189,9 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     await page.keyboard.press("Tab");
     assert.equal(await previous.evaluate(node => node === document.activeElement), true, "previous arrow is one keyboard stop after All tasks");
     const keyboardPrevious = await state(previous);
-    assert.notEqual(keyboardPrevious.outline, "rgba(0, 0, 0, 0)", "Tab makes the sage focus outline visible");
+    assert.notEqual(keyboardPrevious.outline, "rgba(0, 0, 0, 0)", "Tab gives the arrow a nontransparent focus outline");
+    assert.notEqual(keyboardPrevious.outlineStyle, "none", "Tab gives the arrow a visible focus outline style");
+    assert.ok(Number.parseFloat(keyboardPrevious.outlineWidth) > 0, "Tab gives the arrow a positive focus outline width");
     assert.equal(keyboardPrevious.revealOpacity, "1", "keyboard focus reveals the cat");
     await page.keyboard.press("Tab");
     await page.waitForFunction(() => document.activeElement?.getAttribute("role") === "combobox");

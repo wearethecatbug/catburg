@@ -166,7 +166,8 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
             }, 0);
             return;
         }
-        if (!isOpen) {
+        // Keep native editing focused in the input; only explicit navigation opens and focuses the list.
+        if (!isOpen && (event.key === "Enter" || event.key === "ArrowDown" || event.key === "ArrowUp")) {
             setOpenedByTyping(false);
             setIsOpen(true);
             setTimeout(() => {
@@ -188,7 +189,7 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                 setHighlightIndex(0);
                 focusListItem(0);
             }
-        } else {
+        } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             if (listSource.length > 0 && highlightIndex === null) {
                 setHighlightIndex(0);
                 focusListItem(0);
