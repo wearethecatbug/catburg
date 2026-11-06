@@ -164,7 +164,9 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     assert.equal(await selector.inputValue(), "Thid", "Backspace edits at the caret without losing the query");
     await selector.pressSequentially("r", {delay: 75});
     await selector.press("Shift+ArrowLeft");
+    assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [3, 4], "Shift+ArrowLeft selects the preceding character");
     await selector.press("ArrowRight");
+    assert.deepEqual(await selector.evaluate(node => [node.selectionStart, node.selectionEnd]), [4, 4], "ArrowRight collapses the selection at its end");
     assert.equal(await selector.inputValue(), "Third", "modifier/caret editing preserves the restored query");
     assert.equal(await selector.evaluate(node => node === document.activeElement), true, "editing keeps focus in the query input");
     await page.getByRole("option", {name: /Third independent task/}).waitFor();
