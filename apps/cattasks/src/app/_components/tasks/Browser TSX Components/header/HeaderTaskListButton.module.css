@@ -1,36 +1,30 @@
 /* Враппер ограничивает размеры */
 .dropdownWrapper {
     position: relative;
-    display: flex;
-    align-items: center;
-    min-height: 50px;
+    display: block;
+    min-height: 64px;
 }
 
 .dropdownTrigger {
     width: 100%;
-    height: 100%;
-    display: flex; /* center children */
-    align-items: center; /* vertical center */
-    --radius: 24px; /* скругление */
-    --border: 4px; /* толщина рамки */
-    --stroke: 4px; /* толщина окантовки */
-    background: #fafbfb;
-    border: 1px solid #cedacf;
-    border-radius: var(--radius);
-    box-shadow: 0 6px 16px rgba(37, 69, 50, .10);
+    min-height: inherit;
+    display: block;
+    background: transparent;
+    border: 0;
     color: #254532;
     cursor: pointer;
-    padding: 0 8px 0 16px; /* leave right space for clear button */
+    padding: 0 48px 0 0;
     position: relative; /* allow absolutely positioned children (clear button) */
 }
 
 .dropdownInput {
-    flex: 1 1 auto;
-    width: auto;
+    position: absolute;
+    inset: 0;
+    width: 100%;
     height: 100%;
     border: none;
     min-width: 0; /* позволяет корректно сжиматься в flex-контейнере */
-    padding-right: 33px; /* совпадает с резервом в .dropButton */
+    padding-right: 48px;
     background-color: transparent;
     font-family: 'Orbitron', sans-serif;
     box-sizing: border-box;
@@ -50,6 +44,37 @@
     z-index: 2000;
 }
 
+.taskIdentity {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    color: #234b36;
+    pointer-events: none;
+}
+
+.taskNumber {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: .045em;
+}
+
+.taskTitle {
+    font-family: Inter, system-ui, sans-serif;
+    font-size: 36px;
+    font-weight: 650;
+    line-height: 1.04;
+    overflow-wrap: anywhere;
+}
+
+.taskIdentityInput {
+    color: transparent;
+    caret-color: transparent;
+}
+
 .dropdownInput::placeholder {
     opacity: .6;
 }
@@ -57,10 +82,10 @@
 .dropdownList {
     position: absolute;
     width: 100%;
-    height: 250%;
-    max-height: 250%; /* Ограничиваем высоту выпадающего списка */
+    height: 260px;
+    max-height: min(260px, 50dvh);
 
-    top: 140%; /* Place dropdown below the button */
+    top: calc(100% + 12px);
     left: 0;
     --radius: 24px; /* скругление */
     --border: 4px; /* толщина рамки */
@@ -94,10 +119,20 @@
 }
 
 .deleteButton {
-    background: #FEDAA4;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    color: #234b36;
     z-index: 3000;
-    height: 100%;
-    width: 30px;
+    width: auto;
+    height: auto;
+    padding: 6px;
+}
+
+@media (max-width: 600px) {
+    .dropdownWrapper {
+        min-height: 64px;
+    }
 }
 
 .taskListEmptyState {

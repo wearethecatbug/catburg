@@ -1,8 +1,11 @@
 .headerTaskListContainer {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 14px;
+    /* The center column grows with the title while every cell ends on the shelf baseline. */
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) 112px;
+    align-items: end;
+    gap: clamp(12px, 2vw, 26px);
+    width: 100%;
+    min-width: 0;
     min-height: 152px;
 }
 
@@ -14,15 +17,23 @@
 
 .taskSelectorButtonContainer {
     width: 100%;
-    min-width: 300px;
-    height: 70%;
-    min-height: 80px;
+    min-width: 0;
+    height: auto;
+    min-height: 64px;
+}
+
+@media (min-width: 1201px) {
+    .headerTaskListContainer {
+        /* Keep the full mascot interaction footprint inside the central navigation column. */
+        box-sizing: border-box;
+        padding-inline: 58.5px;
+    }
 }
 
 @media (max-width: 600px) {
     .headerTaskListContainer {
         display: grid;
-        grid-template-columns: minmax(48px, 60px) minmax(0, 1fr) minmax(48px, 60px);
+        grid-template-columns: 56px minmax(0, 1fr) 56px;
         gap: 8px;
         width: 100%;
         min-width: 0;
@@ -39,7 +50,7 @@
     .taskSelectorButtonContainer {
         width: 100%;
         min-width: 0;
-        height: 70px;
-        min-height: 70px;
+        height: auto;
+        min-height: 64px;
     }
 }

@@ -36,6 +36,11 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
     };
 
     const normalizedInput = (headerInput ?? "").trim().toLowerCase();
+    const selectedTask = tasks.find(task => task.id === selectedId);
+    const selectedTaskValue = selectedTask ? `${selectedTask.ordinal}. ${selectedTask.title}` : "";
+    // Keep the native input editable even while the composed task heading is visible.
+    // `clearSelection` focuses this input, so focus alone must not hide the heading.
+    const showTaskIdentity = Boolean(selectedTask && !isOpen && headerInput === selectedTaskValue);
     const filteredTasks = tasks.filter(task =>
         task.title.toLowerCase().includes(normalizedInput) ||
         task.ordinal.toString().includes(normalizedInput) ||
@@ -46,7 +51,7 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
 
     const closeDropdown = () => setIsOpen(false);
 
-    // После clearSelection() закрываем список и возвращаем фокус.
+    // The input remains the focus owner after clearing a selection.
     useEffect(() => {
         const cleared = (!selectedId) && ((headerInput ?? "").trim() === "");
         if (cleared) {
@@ -82,7 +87,6 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = event.target.value;
         setTaskFilter(newValue);
-
         const trimmed = newValue.trim();
         if (trimmed !== "") {
             const inputLower = trimmed.toLowerCase();
@@ -145,6 +149,9 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
             event.preventDefault();
             closeDropdown();
             inputRef.current?.focus();
+            return;
+        }
+        if (event.key === "Tab") {
             return;
         }
         if (event.key === "ArrowDown" && event.altKey) {
@@ -210,9 +217,15 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                 className={styles.dropdownTrigger}
                 onDoubleClick={toggleDropdown}
             >
+                {showTaskIdentity && selectedTask && (
+                    <span className={styles.taskIdentity} aria-hidden="true">
+                        <span className={styles.taskNumber}>TASK {String(selectedTask.ordinal).padStart(2, "0")}</span>
+                        <span className={styles.taskTitle}>{selectedTask.title}</span>
+                    </span>
+                )}
                 <input
                     ref={inputRef}
-                    className={styles.dropdownInput}
+                    className={`${styles.dropdownInput} ${showTaskIdentity ? styles.taskIdentityInput : ""}`.trim()}
                     placeholder="Список задач..."
                     value={headerInput}
                     onChange={handleInputChange}
