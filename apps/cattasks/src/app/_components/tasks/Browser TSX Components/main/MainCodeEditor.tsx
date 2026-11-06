@@ -101,7 +101,10 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
             <section className={styles.solutionCard} aria-labelledby="taskSolutionHeading">
                 <header className={styles.solutionHeader}>
                     <div>
-                        <h2 id="taskSolutionHeading" className={styles.solutionHeading}>Your solution</h2>
+                        <h2 id="taskSolutionHeading" className={styles.solutionHeading}>
+                            Your solution
+                            <span className={styles.codeMarker} aria-hidden="true" />
+                        </h2>
                         <p className={styles.languageLabel}>JavaScript</p>
                     </div>
                     <div className={styles.buttonsRow}>
