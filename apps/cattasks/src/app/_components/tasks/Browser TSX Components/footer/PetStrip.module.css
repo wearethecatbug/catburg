@@ -5,7 +5,7 @@
     inline-size: 100%;
     max-inline-size: 1428px;
     min-inline-size: 0;
-    min-block-size: clamp(58px, 6vw, 76px);
+    min-block-size: clamp(64px, 6vw, 76px);
     margin-inline: auto;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 247, 0.96);
@@ -31,6 +31,20 @@
     inset: 0 28px;
     pointer-events: none;
 }
+.grassOne, .grassTwo, .grassThree, .grassFour, .grassFive, .grassSix {
+    position: absolute;
+    z-index: 0;
+    inline-size: 36px;
+    block-size: 24px;
+    pointer-events: none;
+    background: center / contain no-repeat;
+}
+.grassOne { inset-inline-start: 8%; bottom: 8px; background-image: url('/cattasks/grass-01.png'); }
+.grassTwo { inset-inline-start: 23%; bottom: 17px; background-image: url('/cattasks/grass-02.png'); }
+.grassThree { inset-inline-start: 39%; bottom: 6px; background-image: url('/cattasks/grass-03.png'); }
+.grassFour { inset-inline-start: 57%; bottom: 15px; background-image: url('/cattasks/grass-01.png'); }
+.grassFive { inset-inline-start: 74%; bottom: 9px; background-image: url('/cattasks/grass-02.png'); }
+.grassSix { inset-inline-start: 90%; bottom: 18px; background-image: url('/cattasks/grass-03.png'); }
 .dog, .food, .pile {
     position: absolute; z-index: 1; inset-inline-start: var(--pet-position); pointer-events: none;
     transform: translateX(-50%); image-rendering: pixelated;

@@ -37,6 +37,16 @@
     user-select: none;
 }
 
+.viewportDecoration {
+    /* Foliage is viewport-bound while the dashboard-owned light remains local. */
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
 .windowLight {
     position: absolute;
     top: -68px;
@@ -72,32 +82,16 @@
 }
 
 
-.foliageTopRight, .foliageBottomLeft, .foliageBottomRight, .grassOne, .grassTwo, .grassThree {
+.foliageTopRight, .foliageBottomLeft, .foliageBottomRight {
     position: absolute;
     display: block;
     background: center / contain no-repeat;
 }
 
-.foliageTopRight { top: 0; right: 0; width: 231px; height: 161px; background-image: url('/cattasks/foliage-top-right.png'); }
-
-.deskEdgeDecoration {
-    position: absolute;
-    z-index: 2;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: min(100dvh, 1024px);
-    overflow: hidden;
-    pointer-events: none;
-    user-select: none;
-}
+.foliageTopRight { top: -20px; right: -20px; width: 231px; height: 161px; background-image: url('/cattasks/foliage-top-right.png'); }
 
 .foliageBottomLeft { bottom: 4px; left: 0; width: 96px; height: 246px; background-image: url('/cattasks/foliage-bottom-left.png'); }
 .foliageBottomRight { right: 0; bottom: 4px; width: 211px; height: 226px; background-image: url('/cattasks/foliage-bottom-right.png'); }
-.grassOne, .grassTwo, .grassThree { bottom: 26px; width: 36px; height: 24px; }
-.grassOne { left: 16%; background-image: url('/cattasks/grass-01.png'); }
-.grassTwo { left: 49%; background-image: url('/cattasks/grass-02.png'); }
-.grassThree { right: 18%; background-image: url('/cattasks/grass-03.png'); }
 
 .shelf {
     /* Responsive gutters keep both plaque centers supported as the header reflows. */
@@ -125,8 +119,7 @@
     }
 
     .shelf { width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px); }
-    .foliageTopRight { width: 154px; height: 107px; opacity: .72; }
-    .deskEdgeDecoration { display: none; }
+    .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
 }
 
 .taskDashboardRoot {
@@ -152,10 +145,6 @@
         min-height: 560px;
         flex: 0 0 auto;
     }
-}
-
-@media (max-width: 1150px) {
-    .deskEdgeDecoration { display: none; }
 }
 
 @media (max-width: 600px) {

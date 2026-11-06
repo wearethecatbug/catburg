@@ -169,6 +169,12 @@ export default function PetStrip() {
     return (
         <section aria-label="Pet feeding strip" className={styles.petStrip} data-pet-state={petState}>
             <span aria-hidden="true" className={styles.track} ref={trackRef}>
+                <span className={styles.grassOne}/>
+                <span className={styles.grassTwo}/>
+                <span className={styles.grassThree}/>
+                <span className={styles.grassFour}/>
+                <span className={styles.grassFive}/>
+                <span className={styles.grassSix}/>
                 <span className={styles.dog} data-pet="dog" data-pet-direction={dogDirection} data-pet-state={petState} data-pet-target={activeTargetRef.current?.position} style={dogStyle}/>
                 {foods.map((food) => <span className={styles.food} data-pet="food" data-pet-position={food.position} key={food.id} style={{'--pet-position': `${food.position}%`} as CSSProperties}/>)}
                 {piles.map((pile) => (
