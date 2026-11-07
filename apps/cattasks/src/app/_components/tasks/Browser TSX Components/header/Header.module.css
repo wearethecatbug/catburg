@@ -72,6 +72,12 @@
     outline-offset: 4px;
 }
 
+@media (min-width: 1221px) {
+    .headerContainer {
+        padding-inline: max(clamp(20px, 5.5vw, 84px), calc((100% - 1430px) / 2 + 31px));
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .allTasksButton {
         transition: none;
@@ -103,6 +109,12 @@
         height: auto;
         min-height: 152px;
         transform: none;
+    }
+}
+
+@media (min-width: 601px) and (max-width: 1150px) {
+    .headerContainer {
+        padding-inline: max(16px, calc((100% - 875px) / 2));
     }
 }
 

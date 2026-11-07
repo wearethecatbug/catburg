@@ -151,6 +151,7 @@
 @media (max-width: 600px) {
     .dropdownWrapper {
         min-height: 64px;
+        padding-inline: 7px 39px;
     }
 }
 

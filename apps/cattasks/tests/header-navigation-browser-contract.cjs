@@ -166,6 +166,73 @@ async function assertNotClippedByOverflowAncestor(locator, label, width) {
   assert.equal(clipped, false, `${label} is not clipped by an overflow ancestor at ${width}px`);
 }
 
+async function assertCompactQueryRemainsUsable(page, selector, clear) {
+  await clear.click();
+  assert.equal(await selector.evaluate(node => node === document.activeElement), true, "compact clear gives the editable query keyboard ownership");
+  await selector.pressSequentially("T", {delay: 75});
+  assert.equal(await selector.inputValue(), "T", "compact query retains its first typed character");
+  const queryArea = await selector.evaluate(node => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    const paddingLeft = Number.parseFloat(style.paddingLeft);
+    const paddingRight = Number.parseFloat(style.paddingRight);
+    const contentWidth = node.clientWidth - paddingLeft - paddingRight;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    context.font = style.font;
+    const characterWidth = context.measureText("W").width;
+    const contentCenter = {x: rect.left + node.clientLeft + paddingLeft + contentWidth / 2, y: rect.top + rect.height / 2};
+    return {
+      contentWidth,
+      characterWidth,
+      hit: node.contains(document.elementFromPoint(contentCenter.x, contentCenter.y)),
+      viewport: innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+    };
+  });
+  assert.ok(queryArea.contentWidth >= queryArea.characterWidth, "compact query retains enough editable content width for a character");
+  assert.equal(queryArea.hit, true, "compact query content area remains pointer reachable");
+  assert.ok(queryArea.documentWidth <= queryArea.viewport, "compact query does not introduce document horizontal overflow");
+  assert.ok(queryArea.bodyWidth <= queryArea.viewport, "compact query does not introduce body horizontal overflow");
+}
+
+async function assertAllTasksWithinVisibleWorkspace(page, width) {
+  const layout = await page.evaluate(() => {
+    const allTasks = [...document.querySelectorAll("button")].find(node => node.textContent?.trim() === "All tasks");
+    const taskPanelContent = document.getElementById("taskPanelContent");
+    const taskPanel = taskPanelContent?.parentElement;
+    const editor = document.getElementById("taskSolutionHeading")?.closest("section");
+    if (!allTasks || !taskPanelContent || !taskPanel || !editor) throw new Error("workspace panels or All tasks control unavailable");
+    const rect = node => {
+      const value = node.getBoundingClientRect();
+      return {left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height};
+    };
+    const visible = node => {
+      const style = getComputedStyle(node);
+      const box = rect(node);
+      return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+    };
+    const taskPanelBox = rect(taskPanel);
+    const editorBox = rect(editor);
+    return {
+      allTasks: rect(allTasks),
+      taskPanel: taskPanelBox,
+      editor: editorBox,
+      taskPanelVisible: visible(taskPanel),
+      editorVisible: visible(editor),
+      distinctPanels: taskPanel !== editor,
+      taskPanelContainsContent: taskPanel.contains(taskPanelContent),
+    };
+  });
+  assert.equal(layout.distinctPanels, true, `task and editor panels remain distinct at ${width}px`);
+  assert.equal(layout.taskPanelContainsContent, true, `task workspace anchor resolves through taskPanelContent at ${width}px`);
+  assert.equal(layout.taskPanelVisible, true, `task panel is visible and nonzero at ${width}px`);
+  assert.equal(layout.editorVisible, true, `editor panel is visible and nonzero at ${width}px`);
+  const workspace = {left: Math.min(layout.taskPanel.left, layout.editor.left), right: Math.max(layout.taskPanel.right, layout.editor.right)};
+  assert.ok(layout.allTasks.left >= workspace.left && layout.allTasks.right <= workspace.right, `All tasks [${layout.allTasks.left}, ${layout.allTasks.right}] stays horizontally inside visible task/editor workspace [${workspace.left}, ${workspace.right}] at ${width}px`);
+}
+
 test("header navigation preserves task heading, selector, mascot target, plaque states, and shelf support", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1536, height: 1024}});
@@ -328,7 +395,7 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     assert.equal(intersects(longBox, previousBox), false, "long title does not cover previous arrow");
     assert.equal(intersects(longBox, nextBox), false, "long title does not cover next arrow");
 
-    for (const width of [1536, 1250, 1201, 1200, 780, 390, 780, 1200, 1201, 1250, 1536]) {
+    for (const width of [2558, 1536, 1250, 1201, 1200, 1150, 1000, 780, 768, 390, 320, 390, 768, 780, 1000, 1150, 1200, 1201, 1250, 1536]) {
       await page.setViewportSize({width, height: 900});
       const [previousBoxAtWidth, selectorBox, nextBoxAtWidth, numberBoxAtWidth, titleBoxAtWidth, allTasksBox, clearBox] = await Promise.all([
         assertReachable(page, previous, width, "previous"),
@@ -336,12 +403,13 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
         assertReachable(page, next, width, "next"),
         longNumber.boundingBox(),
         longTitle.boundingBox(),
-        allTasks.boundingBox(),
+        assertReachable(page, allTasks, width, "All tasks"),
         clear.boundingBox(),
       ]);
       assert.ok(numberBoxAtWidth && titleBoxAtWidth && allTasksBox && clearBox, `long task identity and required controls render at ${width}px`);
       assert.equal(intersects(previousBoxAtWidth, selectorBox), false, `previous/selector do not overlap at ${width}px`);
       assert.equal(intersects(nextBoxAtWidth, selectorBox), false, `next/selector do not overlap at ${width}px`);
+      await assertAllTasksWithinVisibleWorkspace(page, width);
       const shelf = await page.evaluate(() => {
         const previousArrow = document.querySelector('[aria-label="Select previous task"]');
         const nextArrow = document.querySelector('[aria-label="Select next task"]');
@@ -393,6 +461,8 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
         assert.ok(Math.abs(arrow.bottom - shelf.top) <= 3, `plaque is seated on shelf at ${width}px`);
       }
     }
+    await page.setViewportSize({width: 320, height: 900});
+    await assertCompactQueryRemainsUsable(page, selector, clear);
     assert.deepEqual(diagnostics.console, []);
     assert.deepEqual(diagnostics.page, []);
     assert.deepEqual(diagnostics.request, []);

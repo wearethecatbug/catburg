@@ -167,7 +167,7 @@
     background: #b9f6c166;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 632px) {
     .codeEditorContainer,
     .codeEditorFrame {
         min-width: 0;
