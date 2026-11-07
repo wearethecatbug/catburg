@@ -1,6 +1,6 @@
 .arrowButton {
-    --plaque-width: 112px;
-    --plaque-height: 52px;
+    --plaque-width: 108px;
+    --plaque-height: 56px;
     --mascot-width: 168px;
     --mascot-height: 108px;
     --anchor-x: 53.5px;
@@ -10,7 +10,7 @@
     flex: 0 0 var(--plaque-width);
     width: var(--plaque-width);
     height: var(--plaque-height);
-    margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset));
+    margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset) - 8px);
     box-sizing: border-box;
     border: 0;
     border-radius: 18px;
@@ -44,7 +44,7 @@
     position: absolute;
     z-index: 0;
     left: calc(50% - var(--anchor-x));
-    bottom: calc(100% - var(--anchor-bottom-offset));
+    bottom: calc(100% - var(--anchor-bottom-offset) - 24px);
     width: var(--mascot-width);
     height: var(--mascot-height);
     transform-origin: center;
@@ -144,6 +144,7 @@
         --mirrored-anchor-x: 57.25px;
         --anchor-bottom-offset: 4px;
         border-radius: 10px;
+        margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset));
     }
 
     .arrowButton::before {

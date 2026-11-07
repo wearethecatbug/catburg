@@ -11,12 +11,15 @@ const catalog = {version: 1, tasks: [
 ]};
 
 async function prepare(page, source = catalog) {
-  const diagnostics = {console: [], page: [], request: [], response: []};
+  const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
   page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
   page.on("pageerror", error => diagnostics.page.push(error.message));
   page.on("requestfailed", request => diagnostics.request.push(request.url()));
   page.on("response", response => { if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`); });
-  await page.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(source)}));
+  await page.route("**/task-catalog.v1.json", route => {
+    diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(source)});
+  });
   assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"})).status(), 200);
   return diagnostics;
 }
@@ -25,6 +28,48 @@ const settle = page => page.waitForTimeout(180);
 const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
 const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 const hasOnlyZeroDurations = durations => durations.flatMap(value => value.split(",")).every(value => Number.parseFloat(value) === 0);
+const within = (actual, expected, tolerance, label) => assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: expected ${expected}±${tolerance}, received ${actual}`);
+
+async function assertApprovedDesktopComposition(page) {
+  const layout = await page.evaluate(() => {
+    const allTasks = [...document.querySelectorAll("button")].find(node => node.textContent?.trim() === "All tasks");
+    const previous = document.querySelector('[aria-label="Select previous task"]');
+    const next = document.querySelector('[aria-label="Select next task"]');
+    const clear = document.querySelector('[aria-label="Очистить выбор задачи"]');
+    const task = [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === "TASK 01" && !node.querySelector("*"));
+    const title = [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === "Tortoise race" && !node.querySelector("*"));
+    if (!allTasks || !previous || !next || !clear || !task || !title) throw new Error("approved header controls unavailable");
+    let header = previous.parentElement;
+    while (header && (!header.contains(next) || header.nextElementSibling?.getAttribute("aria-hidden") !== "true")) header = header.parentElement;
+    const shelf = header?.nextElementSibling;
+    if (!header || !shelf) throw new Error("common header workspace or shelf unavailable");
+    const rect = node => { const value = node.getBoundingClientRect(); return {left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height}; };
+    const foliage = [...document.querySelectorAll("*")].filter(node => /foliage-bottom-(left|right)\.png/.test(getComputedStyle(node).backgroundImage)).map(node => {
+      const value = rect(node);
+      const hiddenAncestor = node.closest('[aria-hidden="true"]');
+      return {...value, background: getComputedStyle(node).backgroundImage, pointerEvents: getComputedStyle(node).pointerEvents, hidden: hiddenAncestor?.getAttribute("aria-hidden")};
+    });
+    return {allTasks: rect(allTasks), previous: rect(previous), next: rect(next), previousMascot: rect(previous.querySelector("img")), nextMascot: rect(next.querySelector("img")), clear: rect(clear), task: rect(task), title: rect(title), shelf: rect(shelf), commonHeader: header.contains(allTasks), foliage, viewport: {width: innerWidth, height: innerHeight}};
+  });
+  assert.equal(layout.commonHeader, true, "All tasks belongs to the same semantic header workspace as task navigation");
+  within(layout.shelf.left, 129, 8, "desktop shelf left edge");
+  within(layout.shelf.right, 1410, 8, "desktop shelf right edge");
+  within(layout.shelf.top, 141, 8, "desktop shelf top edge");
+  within(layout.previous.left, 436, 8, "previous plaque left edge");
+  within(layout.previous.right, 542, 8, "previous plaque right edge");
+  within(layout.next.left, 972, 8, "next plaque left edge");
+  within(layout.next.right, 1080, 8, "next plaque right edge");
+  within(layout.title.left, 635, 10, "task title alignment");
+  assert.ok(layout.task.bottom <= layout.title.top + 2, "TASK ordinal remains above the title");
+  assert.ok(layout.clear.left > layout.title.right, "plain clear-selection control remains after the task title");
+  assert.ok(layout.previousMascot.top >= 16 && layout.nextMascot.top >= 16, "normal capybara canvas keeps at least 16px body-top clearance");
+  assert.equal(layout.foliage.length, 2, "exactly the two bottom foliage decorations are present");
+  for (const leaf of layout.foliage) {
+    assert.equal(leaf.hidden, "true", "bottom foliage is hidden from assistive technology");
+    assert.equal(leaf.pointerEvents, "none", "bottom foliage cannot intercept pointer input");
+    assert.ok(leaf.bottom >= layout.viewport.height - 8, "bottom foliage stays viewport-bound at the lower edge");
+  }
+}
 
 async function waitForDescriptionFocus(page) {
   // Selected-task setup owns this queued focus before the keyboard traversal takes ownership.
@@ -136,6 +181,8 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     const title = page.getByText("Tortoise race", {exact: true});
     await Promise.all([number.waitFor(), title.waitFor()]);
     await waitForDescriptionFocus(page);
+
+    await assertApprovedDesktopComposition(page);
 
     const type = await page.evaluate(() => {
       const leaf = text => [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === text && !node.querySelector("*"));
@@ -350,6 +397,7 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     assert.deepEqual(diagnostics.page, []);
     assert.deepEqual(diagnostics.request, []);
     assert.deepEqual(diagnostics.response, []);
+    assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the visual fixture makes one inert catalogue request");
   } finally {
     await context.close();
     await browser.close();
@@ -361,7 +409,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
   const context = await browser.newContext({viewport: {width: 780, height: 900}, reducedMotion: "reduce"});
   const page = await context.newPage();
   try {
-    const diagnostics = {console: [], page: [], request: [], response: []};
+    const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
     page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
     page.on("pageerror", error => diagnostics.page.push(error.message));
     page.on("requestfailed", request => diagnostics.request.push(request.url()));
@@ -371,6 +419,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
     const catalogRequestStarted = new Promise(resolve => { observeCatalogRequest = resolve; });
     const heldCatalog = new Promise(resolve => { releaseCatalog = resolve; });
     await page.route("**/task-catalog.v1.json", async route => {
+      diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
       observeCatalogRequest();
       await heldCatalog;
       await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
@@ -399,6 +448,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
     assert.deepEqual(diagnostics.page, []);
     assert.deepEqual(diagnostics.request, []);
     assert.deepEqual(diagnostics.response, []);
+    assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the loading fixture makes one inert catalogue request");
   } finally {
     await context.close();
     await browser.close();
