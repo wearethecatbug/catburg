@@ -28,7 +28,7 @@
 }
 .track {
     position: absolute;
-    inset: 0 28px;
+    inset: 0 57px;
     pointer-events: none;
 }
 .grassOne, .grassTwo, .grassThree, .grassFour, .grassFive, .grassSix {
@@ -59,16 +59,21 @@
 .dog[data-pet-state='eating'] { animation: dog-eat 700ms steps(8, jump-none) infinite; background-position-y: 40%; }
 .dog[data-pet-state='sleeping'] { background-position: 0 80%; }
 .food {
-    bottom: 11px; inline-size: 18px; block-size: 8px; border: 1px solid #9a4f1d; border-radius: 4px;
+    bottom: 11px; box-sizing: border-box; inline-size: 20px; block-size: 8px; border: 1px solid #9a4f1d; border-radius: 4px;
     background: #f1b94b; box-shadow: inset 0 -2px #ca7e27;
 }
 .food::before, .food::after {
-    position: absolute; top: -4px; inline-size: 7px; block-size: 7px; border: 1px solid #9a4f1d;
-    border-radius: 50%; background: #f1b94b; box-shadow: 0 7px #f1b94b; content: '';
+    position: absolute; top: -3px; inline-size: 10px; block-size: 14px;
+    background:
+        radial-gradient(ellipse 4px 3.5px at 50% 4.5px, #f1b94b 0 100%, transparent 100%),
+        radial-gradient(ellipse 4px 3.5px at 50% 9.5px, #f1b94b 0 100%, transparent 100%),
+        radial-gradient(ellipse 5px 4.5px at 50% 4.5px, #9a4f1d 0 100%, transparent 100%),
+        radial-gradient(ellipse 5px 4.5px at 50% 9.5px, #9a4f1d 0 100%, transparent 100%);
+    content: '';
 }
-.food::before { left: -4px; }
-.food::after { right: -4px; }
-.pile { bottom: 6px; inline-size: 34px; block-size: 29px; background: url('/cattasks/pet-strip/dog-poop-pile.png') center / 183% 143% no-repeat; }
+.food::before { left: -7px; }
+.food::after { right: -7px; }
+.pile { bottom: 6px; inline-size: 20px; block-size: 18px; background: url('/cattasks/pet-strip/dog-poop-pile.png') center / 183% 143% no-repeat; }
 .odor, .fly { position: absolute; pointer-events: none; background-repeat: no-repeat; image-rendering: pixelated; }
 .odor { bottom: 60%; left: 20%; inline-size: 25px; block-size: 30px; background-image: url('/cattasks/pet-strip/odor-wisps-sprite-sheet.png'); background-size: 300% 200%; animation: odor-wave 1.5s steps(1, end) infinite; }
 .fly { top: -13px; right: -8px; inline-size: 17px; block-size: 17px; background-image: url('/cattasks/pet-strip/fly-wingbeat-sprite-sheet.png'); background-size: 200% 200%; animation: fly-wingbeat 280ms steps(1, end) infinite; }
