@@ -22,7 +22,7 @@ export default function HeaderTaskListDeleteButton({className}: HeaderTaskListDe
             aria-label="Очистить выбор задачи"
             onClick={handleClick}
         >
-            X
+            ×
         </button>
     );
 }

@@ -38,6 +38,10 @@
     min-height: 70px;
 }
 
+.mainBtnInfo {
+    border-left: 1px solid #cedacf;
+}
+
 .buttonMinimizeBase {
     position: absolute;
     z-index: 1;

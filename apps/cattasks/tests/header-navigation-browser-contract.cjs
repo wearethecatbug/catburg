@@ -11,12 +11,15 @@ const catalog = {version: 1, tasks: [
 ]};
 
 async function prepare(page, source = catalog) {
-  const diagnostics = {console: [], page: [], request: [], response: []};
+  const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
   page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
   page.on("pageerror", error => diagnostics.page.push(error.message));
   page.on("requestfailed", request => diagnostics.request.push(request.url()));
   page.on("response", response => { if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`); });
-  await page.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(source)}));
+  await page.route("**/task-catalog.v1.json", route => {
+    diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(source)});
+  });
   assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"})).status(), 200);
   return diagnostics;
 }
@@ -25,6 +28,48 @@ const settle = page => page.waitForTimeout(180);
 const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
 const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 const hasOnlyZeroDurations = durations => durations.flatMap(value => value.split(",")).every(value => Number.parseFloat(value) === 0);
+const within = (actual, expected, tolerance, label) => assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: expected ${expected}±${tolerance}, received ${actual}`);
+
+async function assertApprovedDesktopComposition(page) {
+  const layout = await page.evaluate(() => {
+    const allTasks = [...document.querySelectorAll("button")].find(node => node.textContent?.trim() === "All tasks");
+    const previous = document.querySelector('[aria-label="Select previous task"]');
+    const next = document.querySelector('[aria-label="Select next task"]');
+    const clear = document.querySelector('[aria-label="Очистить выбор задачи"]');
+    const task = [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === "TASK 01" && !node.querySelector("*"));
+    const title = [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === "Tortoise race" && !node.querySelector("*"));
+    if (!allTasks || !previous || !next || !clear || !task || !title) throw new Error("approved header controls unavailable");
+    let header = previous.parentElement;
+    while (header && (!header.contains(next) || header.nextElementSibling?.getAttribute("aria-hidden") !== "true")) header = header.parentElement;
+    const shelf = header?.nextElementSibling;
+    if (!header || !shelf) throw new Error("common header workspace or shelf unavailable");
+    const rect = node => { const value = node.getBoundingClientRect(); return {left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height}; };
+    const foliage = [...document.querySelectorAll("*")].filter(node => /foliage-bottom-(left|right)\.png/.test(getComputedStyle(node).backgroundImage)).map(node => {
+      const value = rect(node);
+      const hiddenAncestor = node.closest('[aria-hidden="true"]');
+      return {...value, background: getComputedStyle(node).backgroundImage, pointerEvents: getComputedStyle(node).pointerEvents, hidden: hiddenAncestor?.getAttribute("aria-hidden")};
+    });
+    return {allTasks: rect(allTasks), previous: rect(previous), next: rect(next), previousMascot: rect(previous.querySelector("img")), nextMascot: rect(next.querySelector("img")), clear: rect(clear), task: rect(task), title: rect(title), shelf: rect(shelf), commonHeader: header.contains(allTasks), foliage, viewport: {width: innerWidth, height: innerHeight}};
+  });
+  assert.equal(layout.commonHeader, true, "All tasks belongs to the same semantic header workspace as task navigation");
+  within(layout.shelf.left, 129, 8, "desktop shelf left edge");
+  within(layout.shelf.right, 1410, 8, "desktop shelf right edge");
+  within(layout.shelf.top, 141, 8, "desktop shelf top edge");
+  within(layout.previous.left, 436, 8, "previous plaque left edge");
+  within(layout.previous.right, 542, 8, "previous plaque right edge");
+  within(layout.next.left, 972, 8, "next plaque left edge");
+  within(layout.next.right, 1080, 8, "next plaque right edge");
+  within(layout.title.left, 635, 10, "task title alignment");
+  assert.ok(layout.task.bottom <= layout.title.top + 2, "TASK ordinal remains above the title");
+  assert.ok(layout.clear.left > layout.title.right, "plain clear-selection control remains after the task title");
+  assert.ok(layout.previousMascot.top >= 16 && layout.nextMascot.top >= 16, "normal capybara canvas keeps at least 16px body-top clearance");
+  assert.equal(layout.foliage.length, 2, "exactly the two bottom foliage decorations are present");
+  for (const leaf of layout.foliage) {
+    assert.equal(leaf.hidden, "true", "bottom foliage is hidden from assistive technology");
+    assert.equal(leaf.pointerEvents, "none", "bottom foliage cannot intercept pointer input");
+    assert.ok(leaf.bottom >= layout.viewport.height - 8, "bottom foliage stays viewport-bound at the lower edge");
+  }
+}
 
 async function waitForDescriptionFocus(page) {
   // Selected-task setup owns this queued focus before the keyboard traversal takes ownership.
@@ -121,6 +166,73 @@ async function assertNotClippedByOverflowAncestor(locator, label, width) {
   assert.equal(clipped, false, `${label} is not clipped by an overflow ancestor at ${width}px`);
 }
 
+async function assertCompactQueryRemainsUsable(page, selector, clear) {
+  await clear.click();
+  assert.equal(await selector.evaluate(node => node === document.activeElement), true, "compact clear gives the editable query keyboard ownership");
+  await selector.pressSequentially("T", {delay: 75});
+  assert.equal(await selector.inputValue(), "T", "compact query retains its first typed character");
+  const queryArea = await selector.evaluate(node => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    const paddingLeft = Number.parseFloat(style.paddingLeft);
+    const paddingRight = Number.parseFloat(style.paddingRight);
+    const contentWidth = node.clientWidth - paddingLeft - paddingRight;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    context.font = style.font;
+    const characterWidth = context.measureText("W").width;
+    const contentCenter = {x: rect.left + node.clientLeft + paddingLeft + contentWidth / 2, y: rect.top + rect.height / 2};
+    return {
+      contentWidth,
+      characterWidth,
+      hit: node.contains(document.elementFromPoint(contentCenter.x, contentCenter.y)),
+      viewport: innerWidth,
+      documentWidth: document.documentElement.scrollWidth,
+      bodyWidth: document.body.scrollWidth,
+    };
+  });
+  assert.ok(queryArea.contentWidth >= queryArea.characterWidth, "compact query retains enough editable content width for a character");
+  assert.equal(queryArea.hit, true, "compact query content area remains pointer reachable");
+  assert.ok(queryArea.documentWidth <= queryArea.viewport, "compact query does not introduce document horizontal overflow");
+  assert.ok(queryArea.bodyWidth <= queryArea.viewport, "compact query does not introduce body horizontal overflow");
+}
+
+async function assertAllTasksWithinVisibleWorkspace(page, width) {
+  const layout = await page.evaluate(() => {
+    const allTasks = [...document.querySelectorAll("button")].find(node => node.textContent?.trim() === "All tasks");
+    const taskPanelContent = document.getElementById("taskPanelContent");
+    const taskPanel = taskPanelContent?.parentElement;
+    const editor = document.getElementById("taskSolutionHeading")?.closest("section");
+    if (!allTasks || !taskPanelContent || !taskPanel || !editor) throw new Error("workspace panels or All tasks control unavailable");
+    const rect = node => {
+      const value = node.getBoundingClientRect();
+      return {left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height};
+    };
+    const visible = node => {
+      const style = getComputedStyle(node);
+      const box = rect(node);
+      return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+    };
+    const taskPanelBox = rect(taskPanel);
+    const editorBox = rect(editor);
+    return {
+      allTasks: rect(allTasks),
+      taskPanel: taskPanelBox,
+      editor: editorBox,
+      taskPanelVisible: visible(taskPanel),
+      editorVisible: visible(editor),
+      distinctPanels: taskPanel !== editor,
+      taskPanelContainsContent: taskPanel.contains(taskPanelContent),
+    };
+  });
+  assert.equal(layout.distinctPanels, true, `task and editor panels remain distinct at ${width}px`);
+  assert.equal(layout.taskPanelContainsContent, true, `task workspace anchor resolves through taskPanelContent at ${width}px`);
+  assert.equal(layout.taskPanelVisible, true, `task panel is visible and nonzero at ${width}px`);
+  assert.equal(layout.editorVisible, true, `editor panel is visible and nonzero at ${width}px`);
+  const workspace = {left: Math.min(layout.taskPanel.left, layout.editor.left), right: Math.max(layout.taskPanel.right, layout.editor.right)};
+  assert.ok(layout.allTasks.left >= workspace.left && layout.allTasks.right <= workspace.right, `All tasks [${layout.allTasks.left}, ${layout.allTasks.right}] stays horizontally inside visible task/editor workspace [${workspace.left}, ${workspace.right}] at ${width}px`);
+}
+
 test("header navigation preserves task heading, selector, mascot target, plaque states, and shelf support", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1536, height: 1024}});
@@ -136,6 +248,8 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     const title = page.getByText("Tortoise race", {exact: true});
     await Promise.all([number.waitFor(), title.waitFor()]);
     await waitForDescriptionFocus(page);
+
+    await assertApprovedDesktopComposition(page);
 
     const type = await page.evaluate(() => {
       const leaf = text => [...document.querySelectorAll("*")].find(node => node.textContent?.trim() === text && !node.querySelector("*"));
@@ -281,7 +395,7 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
     assert.equal(intersects(longBox, previousBox), false, "long title does not cover previous arrow");
     assert.equal(intersects(longBox, nextBox), false, "long title does not cover next arrow");
 
-    for (const width of [1536, 1250, 1201, 1200, 780, 390, 780, 1200, 1201, 1250, 1536]) {
+    for (const width of [2558, 1536, 1250, 1201, 1200, 1150, 1000, 780, 768, 390, 320, 390, 768, 780, 1000, 1150, 1200, 1201, 1250, 1536]) {
       await page.setViewportSize({width, height: 900});
       const [previousBoxAtWidth, selectorBox, nextBoxAtWidth, numberBoxAtWidth, titleBoxAtWidth, allTasksBox, clearBox] = await Promise.all([
         assertReachable(page, previous, width, "previous"),
@@ -289,12 +403,13 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
         assertReachable(page, next, width, "next"),
         longNumber.boundingBox(),
         longTitle.boundingBox(),
-        allTasks.boundingBox(),
+        assertReachable(page, allTasks, width, "All tasks"),
         clear.boundingBox(),
       ]);
       assert.ok(numberBoxAtWidth && titleBoxAtWidth && allTasksBox && clearBox, `long task identity and required controls render at ${width}px`);
       assert.equal(intersects(previousBoxAtWidth, selectorBox), false, `previous/selector do not overlap at ${width}px`);
       assert.equal(intersects(nextBoxAtWidth, selectorBox), false, `next/selector do not overlap at ${width}px`);
+      await assertAllTasksWithinVisibleWorkspace(page, width);
       const shelf = await page.evaluate(() => {
         const previousArrow = document.querySelector('[aria-label="Select previous task"]');
         const nextArrow = document.querySelector('[aria-label="Select next task"]');
@@ -346,10 +461,13 @@ test("header navigation preserves task heading, selector, mascot target, plaque 
         assert.ok(Math.abs(arrow.bottom - shelf.top) <= 3, `plaque is seated on shelf at ${width}px`);
       }
     }
+    await page.setViewportSize({width: 320, height: 900});
+    await assertCompactQueryRemainsUsable(page, selector, clear);
     assert.deepEqual(diagnostics.console, []);
     assert.deepEqual(diagnostics.page, []);
     assert.deepEqual(diagnostics.request, []);
     assert.deepEqual(diagnostics.response, []);
+    assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the visual fixture makes one inert catalogue request");
   } finally {
     await context.close();
     await browser.close();
@@ -361,7 +479,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
   const context = await browser.newContext({viewport: {width: 780, height: 900}, reducedMotion: "reduce"});
   const page = await context.newPage();
   try {
-    const diagnostics = {console: [], page: [], request: [], response: []};
+    const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
     page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
     page.on("pageerror", error => diagnostics.page.push(error.message));
     page.on("requestfailed", request => diagnostics.request.push(request.url()));
@@ -371,6 +489,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
     const catalogRequestStarted = new Promise(resolve => { observeCatalogRequest = resolve; });
     const heldCatalog = new Promise(resolve => { releaseCatalog = resolve; });
     await page.route("**/task-catalog.v1.json", async route => {
+      diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
       observeCatalogRequest();
       await heldCatalog;
       await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
@@ -399,6 +518,7 @@ test("arrows are inert while a valid catalogue is loading and reduced motion rem
     assert.deepEqual(diagnostics.page, []);
     assert.deepEqual(diagnostics.request, []);
     assert.deepEqual(diagnostics.response, []);
+    assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the loading fixture makes one inert catalogue request");
   } finally {
     await context.close();
     await browser.close();

@@ -3,7 +3,23 @@
     position: relative;
     display: block;
     min-height: 64px;
+    padding-inline: 42px 52px;
+    box-sizing: border-box;
 }
+
+.dropdownWrapper::before,
+.dropdownWrapper::after {
+    position: absolute;
+    top: 50%;
+    height: 74px;
+    border-left: 1px solid #b8c8b8;
+    content: '';
+    pointer-events: none;
+    transform: translateY(-50%);
+}
+
+.dropdownWrapper::before { left: 0; }
+.dropdownWrapper::after { right: 0; }
 
 .dropdownTrigger {
     width: 100%;
@@ -13,7 +29,7 @@
     border: 0;
     color: #254532;
     cursor: pointer;
-    padding: 0 48px 0 0;
+    padding: 0;
     position: relative; /* allow absolutely positioned children (clear button) */
 }
 
@@ -50,6 +66,8 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
     color: #234b36;
     pointer-events: none;
 }
@@ -118,20 +136,22 @@
     background-color: #f1f1f1;
 }
 
-.deleteButton {
+.dropdownTrigger .deleteButton {
     top: 50%;
     transform: translateY(-50%);
     background: transparent;
     color: #234b36;
     z-index: 3000;
-    width: auto;
-    height: auto;
-    padding: 6px;
+    right: -39px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
 }
 
 @media (max-width: 600px) {
     .dropdownWrapper {
         min-height: 64px;
+        padding-inline: 7px 39px;
     }
 }
 

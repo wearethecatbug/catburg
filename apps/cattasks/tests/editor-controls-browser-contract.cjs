@@ -14,7 +14,7 @@ const catalog = {version: 1, tasks: [{
 }]};
 
 function diagnosticsFor(page) {
-  const diagnostics = {console: [], page: [], request: [], response: []};
+  const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
   page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
   page.on("pageerror", error => diagnostics.page.push(error.message));
   page.on("requestfailed", request => diagnostics.request.push(`${request.method()} ${request.url()}`));
@@ -26,7 +26,10 @@ function diagnosticsFor(page) {
 
 async function prepare(page) {
   const diagnostics = diagnosticsFor(page);
-  await page.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}));
+  await page.route("**/task-catalog.v1.json", route => {
+    diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
   const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
   assert.equal(response?.status(), 200, "the isolated dashboard route responds successfully");
   await page.getByRole("button", {name: "Test Code", exact: true}).waitFor();
@@ -70,8 +73,15 @@ async function measuredControls(page) {
       const own = {text: child.textContent ?? "", width: `${rect.width}px`, height: `${rect.height}px`, color: style.color, backgroundColor: style.backgroundColor, borderLeftColor: style.borderLeftColor, borderLeftWidth: style.borderLeftWidth, borderTopWidth: style.borderTopWidth, borderBottomWidth: style.borderBottomWidth, clipPath: style.clipPath};
       return [own, decoration(child, "::before"), decoration(child, "::after")];
     });
+    const solutionCard = heading.closest("section");
+    const headingGroup = heading.parentElement;
+    const header = heading.closest("header");
+    if (!solutionCard || !headingGroup || !header) throw new Error("solution card or semantic header unavailable");
+    const rect = node => { const value = node.getBoundingClientRect(); return {left: value.left, top: value.top, right: value.right, bottom: value.bottom, width: value.width, height: value.height}; };
     return {
       heading: read(heading), language: read(language), output: read(output), test: read(test), run: read(run),
+      solutionCard: rect(solutionCard), header: rect(header), headingGroup: rect(headingGroup), languageBox: rect(language), headingBox: rect(heading),
+      buttonPadding: {test: getComputedStyle(test).padding, run: getComputedStyle(run).padding},
       labels: {test: getComputedStyle(test, "::after").content, run: getComputedStyle(run, "::after").content},
       headingMarkers: [decoration(heading, "::before"), decoration(heading, "::after"), ...hiddenDecoration(heading)],
       triangles: [decoration(run, "::before"), decoration(run, "::after"), ...hiddenDecoration(run)],
@@ -87,6 +97,16 @@ async function assertToolbarFits(page, width) {
       document.querySelector("button[aria-label='Test Code']"),
       document.querySelector("button[aria-label='Run Code']"),
     ];
+    const heading = document.getElementById("taskSolutionHeading");
+    const language = heading?.parentElement?.querySelector("p");
+    const headingGroup = heading?.parentElement;
+    const header = heading?.closest("header");
+    const marker = heading?.querySelector("[aria-hidden='true']");
+    if (!heading || !language || !headingGroup || !header || controls.some(control => !control)) throw new Error("responsive editor header unavailable");
+    const rect = node => {
+      const value = node.getBoundingClientRect();
+      return {left: value.left, right: value.right, top: value.top, bottom: value.bottom, width: value.width, height: value.height};
+    };
     const docWidth = document.documentElement.scrollWidth;
     return {
       docWidth,
@@ -100,6 +120,12 @@ async function assertToolbarFits(page, width) {
         const rect = control.getBoundingClientRect();
         return rect.width > 0 && (rect.left < 0 || rect.right > window.innerWidth);
       }),
+      header: rect(header),
+      headingGroup: rect(headingGroup),
+      heading: rect(heading),
+      markerAnchor: rect(marker || heading),
+      language: rect(language),
+      semanticHeaderMembership: header.contains(heading) && header.contains(language),
     };
   });
   assert.ok(result.docWidth <= result.viewport, `document has no horizontal overflow at ${width}px`);
@@ -108,6 +134,17 @@ async function assertToolbarFits(page, width) {
   for (const control of result.controls) {
     assert.ok(control.left >= 0 && control.right <= width, `editor control fits at ${width}px`);
     assert.equal(control.hit, true, `editor control remains hit-testable at ${width}px`);
+  }
+  if ([600, 601].includes(width)) {
+    const contains = (outer, inner) => inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
+    const overlaps = (first, second) => first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
+    assert.equal(result.semanticHeaderMembership, true, `heading and JavaScript remain in the semantic editor header at ${width}px`);
+    for (const [label, box] of [["heading group", result.headingGroup], ["heading", result.heading], ["code marker anchor", result.markerAnchor], ["JavaScript", result.language]]) {
+      assert.equal(contains(result.header, box), true, `${label} stays within the semantic editor header at ${width}px`);
+      for (const [action, control] of [["Test", result.controls[0]], ["Run", result.controls[1]]]) {
+        assert.equal(overlaps(box, control), false, `${label} does not overlap ${action} at ${width}px`);
+      }
+    }
   }
 }
 
@@ -176,21 +213,26 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     assert.match(desktop.test.color, /rgb\(35, 75, 54\)/, "Test keeps the approved ink");
     assert.match(desktop.test.boxShadow, /rgba/, "Test keeps a visible soft shadow");
     assert.deepEqual([desktop.run.width >= 152, desktop.run.height >= 48], [true, true], "Run meets approved minimum geometry");
+    assert.equal(desktop.test.height, desktop.run.height, "Test and Run have equal outer height");
+    assert.deepEqual(desktop.buttonPadding, {test: "10px 24px", run: "10px 24px"}, "Test and Run have equal approved padding");
     assert.match(desktop.run.backgroundImage, /rgb\(66, 132, 97\).*rgb\(43, 105, 72\).*rgb\(28, 80, 53\)/, "Run uses the approved three-stop green gradient");
     assert.equal(desktop.triangles.some(decoration => isTriangleSize(decoration) && matchesCream(decoration)), true, "Run draws an opaque cream 13 by 16 decorative triangle through any valid CSS technique");
     assert.ok(desktop.output.height >= 46, "Output header meets its minimum height");
     assert.deepEqual([desktop.output.fontSize, desktop.output.color], ["26px", "rgb(35, 75, 54)"], "Output title matches approved type and ink");
+    assert.ok(desktop.languageBox.left > desktop.headingBox.right, "JavaScript stays inline after Your solution on desktop");
+    assert.ok(desktop.languageBox.top >= desktop.header.top && desktop.languageBox.bottom <= desktop.header.bottom, "JavaScript remains inside the desktop editor header");
+    assert.ok(Math.abs(desktop.solutionCard.left - 609) <= 8 && Math.abs(desktop.solutionCard.right - 1484) <= 8 && Math.abs(desktop.solutionCard.top - 181) <= 8, "solution panel matches approved 1536px desktop anchors");
 
     await assertVisibleFocusAndReducedMotion(testButton, "Test");
     await assertVisibleFocusAndReducedMotion(runButton, "Run");
 
-    for (const width of [1536, 780, 390, 780, 1536]) await assertToolbarFits(page, width);
+    for (const width of [1536, 780, 768, 601, 600, 390, 768, 780, 1536]) await assertToolbarFits(page, width);
     await page.getByRole("button", {name: "Очистить выбор задачи", exact: true}).click();
     assert.equal(await testButton.isDisabled(), true, "clearing selection retains Test disabled policy");
     assert.equal(await runButton.isDisabled(), true, "clearing selection retains Run disabled policy");
     assert.equal(await outputMessage.getAttribute("aria-live"), "polite", "Output retains its live result semantics after selection changes");
     assert.match(await outputMessage.evaluate(node => getComputedStyle(node).overflowY), /auto|scroll/, "Output retains vertical overflow handling");
-    assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: []}, "inert presentation checks finish without browser diagnostics");
+    assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: [], catalogRequests: [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`]}, "inert presentation checks finish without browser diagnostics and make one catalogue request");
   } finally {
     await context.close();
     await browser.close();
