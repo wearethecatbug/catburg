@@ -300,6 +300,21 @@ test("Task 32 published tests pass one number array to an array-based implementa
   }
 });
 
+test("Task 32 rejects a division-only solution with a zero-valued input", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  const task = catalogue.tasks.find(candidate => candidate.id === "ct-js-32");
+  assert.ok(task, "Task 32 must remain present in the published catalogue");
+
+  const zeroCase = task.tests.find(testCase => JSON.stringify(testCase.args) === JSON.stringify([[0, 2]]));
+  assert.deepEqual(zeroCase, {args: [[0, 2]], expected: [2, 0]}, "Task 32 publishes the zero-valued product case");
+
+  const divisionOnly = numbers => {
+    const total = numbers.reduce((product, number) => product * number, 1);
+    return numbers.map(number => total / number);
+  };
+  assert.notDeepEqual(divisionOnly(...zeroCase.args), zeroCase.expected, "the zero-valued case rejects division-only implementations");
+});
+
 test("every published JSON test tuple agrees with every ordered reference solution", () => {
   const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
   for (const task of catalogue.tasks) {
