@@ -283,6 +283,23 @@ test("Task 01 reverses UTF-16 code units rather than code points", () => {
   assert.deepEqual(observed.args, [input], "Task 01 must not mutate its JSON transport input");
 });
 
+test("Task 32 published tests pass one number array to an array-based implementation", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  const task = catalogue.tasks.find(candidate => candidate.id === "ct-js-32");
+  assert.ok(task, "Task 32 must remain present in the published catalogue");
+
+  const productExceptSelf = numbers => {
+    if (!Array.isArray(numbers)) throw new TypeError("numbers must be an array");
+    return numbers.map((_, index) => numbers.reduce((product, number, otherIndex) => otherIndex === index ? product : product * number, 1));
+  };
+  assert.throws(() => productExceptSelf(5), /numbers must be an array/, "a scalar cannot satisfy Task 32's array input contract");
+  for (const [index, testCase] of task.tests.entries()) {
+    assert.equal(testCase.args.length, 1, `Task 32 JSON test ${index + 1} invokes exactly one argument`);
+    assert.ok(Array.isArray(testCase.args[0]), `Task 32 JSON test ${index + 1} passes its number array as that argument`);
+    assert.deepEqual(productExceptSelf(...testCase.args), testCase.expected, `Task 32 JSON test ${index + 1} supports an array-based implementation`);
+  }
+});
+
 test("every published JSON test tuple agrees with every ordered reference solution", () => {
   const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
   for (const task of catalogue.tasks) {
