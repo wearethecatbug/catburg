@@ -723,10 +723,21 @@ test("a legacy custom document colliding with a loaded built-in is quarantined a
 test("ordinary malformed and duplicate storage documents remain errors without a recovery export", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   try {
-    for (const raw of ["{", JSON.stringify({version: 1, tasks: [customTask("duplicate"), customTask("duplicate")]})]) {
+    const duplicateSolutionId = customTask("duplicate-solution-id", {solutions: [
+      {id: "reference", label: "First reference", code: "function echo(value) { return String(value); }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "Returns one value."},
+      {id: "reference", label: "Second reference", code: "function echo(value) { return String(value); }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "Returns one value."},
+    ]});
+    for (const raw of ["{", JSON.stringify({version: 1, tasks: [customTask("duplicate"), customTask("duplicate")]}), JSON.stringify({version: 1, tasks: [duplicateSolutionId]})]) {
       const context = await browser.newContext();
       await context.addInitScript(({legacyStorageKey, raw}) => localStorage.setItem(legacyStorageKey, raw), {legacyStorageKey, raw});
       const page = await context.newPage();
+      await page.addInitScript(({databaseName, storeName, documentKey}) => {
+        const nativePut = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function(value, key) {
+          if (this.transaction.db.name === databaseName && this.name === storeName && key === documentKey) window.__ordinaryInvalidPutCalls = (window.__ordinaryInvalidPutCalls ?? 0) + 1;
+          return nativePut.call(this, value, key);
+        };
+      }, {databaseName, storeName, documentKey});
       await diagnostics(page);
       try {
         await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
@@ -735,6 +746,9 @@ test("ordinary malformed and duplicate storage documents remain errors without a
         assert.equal(await page.getByRole("button", {name: "Export recovery JSON"}).count(), 0, "only a structurally valid built-in collision gets a raw recovery export");
         assert.equal(await page.getByRole("button", {name: "Export tasks"}).isDisabled(), true, "ordinary invalid storage cannot be exported as a normal custom snapshot");
         assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "ordinary invalid storage also blocks mutation until a valid reread");
+        assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "ordinary invalid storage also blocks import until a valid reread");
+        assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyStorageKey), raw, "ordinary invalid storage bytes remain unchanged");
+        assert.equal(await page.evaluate(() => window.__ordinaryInvalidPutCalls ?? 0), 0, "ordinary invalid storage never initializes or mutates the document repository");
       } finally {
         await context.close();
       }

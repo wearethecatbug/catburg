@@ -40,6 +40,7 @@ export default function MainTaskSolutionEditor({
 
     return (
         <div className={styles.taskSolutionContainer}>
+            {solution && <h3 className={styles.label}>{solution.label}</h3>}
             <div className={styles.editor}>
                 <Monaco
                     height="100%"

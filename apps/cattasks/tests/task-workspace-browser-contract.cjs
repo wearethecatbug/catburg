@@ -64,8 +64,8 @@ async function selectTask(page, title) {
   await option.click();
 }
 
-async function waitForReferenceSolutionsLayout(page, expectedCodes) {
-  await page.waitForFunction(expectedCodes => {
+async function waitForReferenceSolutionsLayout(page, expectedCodes, finalLineMarker) {
+  await page.waitForFunction(({expectedCodes, finalLineMarker}) => {
     const editors = Array.from(document.querySelectorAll("[class*='editorHost'] .monaco-editor"));
     const monacoEditors = window.monaco?.editor.getEditors() ?? [];
     return editors.length === expectedCodes.length && editors.every((editor, index) => {
@@ -74,13 +74,21 @@ async function waitForReferenceSolutionsLayout(page, expectedCodes) {
         return domNode === editor || editor.contains(domNode);
       });
       const bounds = editor.getBoundingClientRect();
-      return monacoEditor?.getModel()?.getValue() === expectedCodes[index] && bounds.width > 0 && bounds.height > 100;
+      const model = monacoEditor?.getModel();
+      if (model?.getValue() !== expectedCodes[index] || bounds.width <= 0 || bounds.height <= 100) return false;
+      if (!expectedCodes[index].endsWith(finalLineMarker)) return true;
+      monacoEditor.revealLineInCenter(model.getLineCount());
+      return Array.from(editor.querySelectorAll(".view-line")).some(line => line.textContent?.includes(finalLineMarker));
     });
-  }, expectedCodes);
+  }, {expectedCodes, finalLineMarker});
 }
 
-async function assertReferenceSolutionsReachable(page, expectedCodes) {
-  const evidence = await page.evaluate(expectedCodes => {
+async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLabels, finalLineMarker, learnerDraft) {
+  const learnerScrollBefore = await page.evaluate(learnerDraft => {
+    const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+    return editor?.getScrollTop() ?? null;
+  }, learnerDraft);
+  const evidence = await page.evaluate(({expectedCodes, expectedLabels, finalLineMarker}) => {
     const scroller = document.querySelector("[class*='contentContainerFrame'][class*='taskSolutionContainer']");
     const host = scroller?.querySelector("[class*='editorHost']");
     const cards = host ? Array.from(host.children).filter(card => card.querySelector(".monaco-editor") && card.querySelector(":scope > dl")) : [];
@@ -96,6 +104,7 @@ async function assertReferenceSolutionsReachable(page, expectedCodes) {
         return domNode === editor || Boolean(domNode?.contains(textarea)) || Boolean(editor?.contains(domNode));
       });
       const analysis = card.querySelector(":scope > dl");
+      const label = Array.from(card.children).find(child => child.textContent?.trim() === expectedLabels[index]);
       const precedingElement = analysis?.previousElementSibling;
       const codeImmediatelyBeforeAnalysis = precedingElement === editor || Boolean(precedingElement?.contains(editor));
       scroller.scrollTop = 0;
@@ -108,6 +117,10 @@ async function assertReferenceSolutionsReachable(page, expectedCodes) {
         readonly: textarea?.readOnly ?? false,
         codeMatches: monacoEditor?.getModel()?.getValue() === expectedCodes[index],
         renderedLinesNonblank: Boolean(editor?.querySelector(".view-lines")?.textContent?.trim()),
+        label: label?.textContent?.trim() ?? null,
+        labelVisible: Boolean(label?.getBoundingClientRect().width && label.getBoundingClientRect().height),
+        labelPrecedesCode: Boolean(label && editor && label.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING),
+        finalSourceLineVisible: !expectedCodes[index].endsWith(finalLineMarker) || Array.from(editor?.querySelectorAll(".view-line") ?? []).some(line => line.textContent?.includes(finalLineMarker)),
         codeImmediatelyBeforeAnalysis,
         parentScrolled: scroller.scrollTop > 0,
         analysisVisibleWithinParent: Boolean(analysisBounds && analysisBounds.top >= scrollerBounds.top - verticalRoundingTolerance && analysisBounds.bottom <= scrollerBounds.bottom + verticalRoundingTolerance),
@@ -119,18 +132,28 @@ async function assertReferenceSolutionsReachable(page, expectedCodes) {
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       cards: cardsEvidence,
     };
-  }, expectedCodes);
+  }, {expectedCodes, expectedLabels, finalLineMarker});
+  const learnerScrollAfter = await page.evaluate(learnerDraft => {
+    const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+    return editor?.getScrollTop() ?? null;
+  }, learnerDraft);
 
   assert.equal(evidence.ready, true, "two rendered reference-solution cards must be present before geometry assertions");
   assert.equal(evidence.scrollable, true, "the reference viewer's actual parent must own vertical scrolling for multiple solutions");
   assert.equal(evidence.noHorizontalOverflow, true, "the reference viewer must not create horizontal page overflow");
   assert.deepEqual(evidence.cards.map(card => card.codeMatches), [true, true], "the ordered mounted Monaco editors retain their exact code payloads");
   assert.deepEqual(evidence.cards.map(card => card.renderedLinesNonblank), [true, true], "each mounted Monaco editor renders nonblank code lines");
+  assert.deepEqual(evidence.cards.map(card => card.label), expectedLabels, "each reference solution exposes its correct label in source order");
+  assert.deepEqual(evidence.cards.map(card => card.labelVisible), [true, true], "each reference solution label is visible");
+  assert.deepEqual(evidence.cards.map(card => card.labelPrecedesCode), [true, true], "each reference solution label precedes its own editor");
+  assert.deepEqual(evidence.cards.map(card => card.finalSourceLineVisible), [true, true], "the final long-reference source line is visible in its actual Monaco editor");
   assert.deepEqual(evidence.cards.map(card => card.readonly), [true, true], "both rendered reference editors retain native read-only semantics");
   assert.deepEqual(evidence.cards.map(card => card.editorHeight > 100), [true, true], "each rendered Monaco reference editor has meaningful visible height");
   assert.deepEqual(evidence.cards.map(card => card.codeImmediatelyBeforeAnalysis), [true, true], "each reference code block is immediately followed by its own analysis");
   assert.deepEqual(evidence.cards.map(card => card.analysisVisibleWithinParent), [true, true], "each reference analysis is reachable inside the viewer's actual scroll parent");
   assert.equal(evidence.cards[1].parentScrolled, true, "the second reference analysis cannot remain clipped outside an inert editor host");
+  assert.ok(learnerScrollBefore > 0, "the learner editor must have a meaningful nonzero scroll position before reference scrolling");
+  assert.equal(learnerScrollAfter, learnerScrollBefore, "reference scrolling does not change the learner editor scroll position");
 }
 
 test("CatTasks keeps drafts per catalog identity and disables execution after clearing selection", {timeout: 30_000}, async () => {
@@ -306,10 +329,24 @@ test("Hint uses independent native disclosures and tab changes preserve the sele
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.setViewportSize({width: 1536, height: 1024});
+  const finalLineMarker = "LONG_REFERENCE_FINAL_MARKER";
+  const longReferenceCode = [
+    "function echo(value) {",
+    ...Array.from({length: 70}, (_, index) => `  // reference line ${index + 1}`),
+    "  return value;",
+    "}",
+    `// ${finalLineMarker}`,
+  ].join("\n");
+  const longLearnerDraft = [
+    "function echo(value) {",
+    ...Array.from({length: 70}, (_, index) => `  // learner line ${index + 1}`),
+    "  return value;",
+    "}",
+  ].join("\n");
   const hintCatalog = {
     version: 1,
     tasks: [
-      {id: "ct-js-01", slug: "first-hint-task", title: "First hint task", description: "First fixture.", hints: ["Identify the input first.", "Then keep the return value deterministic.", "Finally check the empty case."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["first"], expected: "first"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return value; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "It returns one value."}, {id: "variant", label: "Variant", code: "function echo(value) { return String(value); }", timeComplexity: "O(n)", spaceComplexity: "O(n)", rationale: "String conversion copies the input representation."}], difficulty: "Easy"},
+      {id: "ct-js-01", slug: "first-hint-task", title: "First hint task", description: "First fixture.", hints: ["Identify the input first.", "Then keep the return value deterministic.", "Finally check the empty case."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["first"], expected: "first"}], solutions: [{id: "reference", label: "Reference", code: longReferenceCode, timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "It returns one value."}, {id: "variant", label: "Variant", code: "function echo(value) { return String(value); }", timeComplexity: "O(n)", spaceComplexity: "O(n)", rationale: "String conversion copies the input representation."}], difficulty: "Easy"},
       {id: "ct-js-02", slug: "second-hint-task", title: "Second hint task", description: "Second fixture.", hints: ["Read the input shape.", "Use a direct comparison."], entryPoint: "echo", starterCode: "function echo(value) { return `${value}!`; }", solution: "function echo(value) { return `${value}!`; }", tests: [{args: ["second"], expected: "second!"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return `${value}!`; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "It appends one character."}], difficulty: "Easy"},
     ],
   };
@@ -326,17 +363,26 @@ test("Hint uses independent native disclosures and tab changes preserve the sele
     const originalDraft = hintCatalog.tasks[0].starterCode;
     const editedDraft = "function echo(value) { return value; } // retained";
     await setActiveDraft(page, originalDraft, editedDraft);
+    await setActiveDraft(page, editedDraft, longLearnerDraft);
+    await page.waitForFunction(learnerDraft => {
+      const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+      if (!editor) return false;
+      editor.revealLineInCenter(editor.getModel().getLineCount());
+      return editor.getScrollTop() > 0;
+    }, longLearnerDraft);
 
     await page.getByRole("button", {name: /Give up: Показать решение|Give up: Показано решение/}).click();
     const referenceCodes = hintCatalog.tasks[0].solutions.map(solution => solution.code);
-    await waitForReferenceSolutionsLayout(page, referenceCodes);
-    await assertReferenceSolutionsReachable(page, referenceCodes);
+    const referenceLabels = hintCatalog.tasks[0].solutions.map(solution => solution.label);
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
     await page.setViewportSize({width: 390, height: 844});
-    await waitForReferenceSolutionsLayout(page, referenceCodes);
-    await assertReferenceSolutionsReachable(page, referenceCodes);
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
     await page.setViewportSize({width: 1536, height: 1024});
-    await waitForReferenceSolutionsLayout(page, referenceCodes);
-    await assertReferenceSolutionsReachable(page, referenceCodes);
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    await setActiveDraft(page, longLearnerDraft, editedDraft);
     assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), editedDraft), true, "desktop-to-compact-to-desktop resizing retains the selected draft model");
     const analyses = page.locator("dl").filter({hasText: "Time complexity"});
     assert.equal(await analyses.count(), 2, "each ordered solution has its own visible analysis block");

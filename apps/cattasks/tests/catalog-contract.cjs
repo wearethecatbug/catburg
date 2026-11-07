@@ -138,13 +138,18 @@ test("built-in catalogue metadata is strict while legacy scalar or omitted hints
     ["non-json expected value", {tests: [{args: [], expected: undefined}]}],
   ]) {
     const candidate = {...builtIn, ...overrides};
-    if (overrides.hints === undefined) delete candidate.hints;
-    if (overrides.solutions === undefined) delete candidate.solutions;
+    if (Object.hasOwn(overrides, "hints") && overrides.hints === undefined) delete candidate.hints;
+    if (Object.hasOwn(overrides, "solutions") && overrides.solutions === undefined) delete candidate.solutions;
     expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [candidate]}), /catalog\.tasks\[0\]/);
   }
 
   const duplicateSlug = validBuiltIn("ct-js-02", {slug: builtIn.slug});
   expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [builtIn, duplicateSlug]}), /duplicate slug/);
+  const duplicateSolutionIds = validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], id: "same"}, {...builtIn.solutions[0], id: "same"}]});
+  expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [duplicateSolutionIds]}), /duplicate solution id/i);
+  const distinctSolutionIds = validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], id: "first"}, {...builtIn.solutions[0], id: "second"}]});
+  assert.doesNotThrow(() => parseTaskCatalog({version: 1, tasks: [distinctSolutionIds]}), "distinct ordered solution IDs remain valid");
+  assert.doesNotThrow(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01"), validBuiltIn("ct-js-02", {slug: "second-task"})]}), "solution IDs are scoped to each task");
   assert.doesNotThrow(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], timeComplexity: "O(n * k log k)", spaceComplexity: "O(V + E); auxiliary space excludes output"}]})]}), "approved complexity grammar accepts declared variables, operators, log, and a plain-English qualifier");
   for (const invalidComplexity of ["O(nn)", "O(log)", "O(n +)", "O(n *** m)", "O(capacityjunk)"]) {
     expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], timeComplexity: invalidComplexity}]})]}), /timeComplexity|notation|catalog\.tasks/);
@@ -263,6 +268,19 @@ test("curated references meet the independent normal, edge, sentinel, ordering, 
     assert.deepEqual(observed.args, before, `${id} must not mutate its JSON transport input inside the isolated reference invocation`);
   }
   assert.equal(invokeCuratedReference(byId.get("ct-js-48"), [2, [[0, 0]]]).result, false, "self-cycle graph input is rejected");
+});
+
+test("Task 01 reverses UTF-16 code units rather than code points", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  const task = catalogue.tasks.find(candidate => candidate.id === "ct-js-01");
+  assert.ok(task, "Task 01 must remain present in the published catalogue");
+
+  // The published contract deliberately reverses UTF-16 code units, separating this surrogate pair.
+  const input = "A\uD83D\uDE00B";
+  const observed = invokeCuratedReference(task, [input]);
+  assert.notEqual(observed.result, "B\u{1F600}A", "Task 01 must reject code-point reversal");
+  assert.equal(observed.result, "B\uDE00\uD83DA", "Task 01 reverses each UTF-16 code unit in order");
+  assert.deepEqual(observed.args, [input], "Task 01 must not mutate its JSON transport input");
 });
 
 test("every published JSON test tuple agrees with every ordered reference solution", () => {

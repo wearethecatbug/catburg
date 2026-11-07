@@ -8,7 +8,7 @@
       "description": "Given string text, return its characters in reverse UTF-16 index order. Examples: reverseString('hello') returns 'olleh'; reverseString('') returns ''.",
       "entryPoint": "reverseString",
       "starterCode": "function reverseString(text) {\n  // Return text with its characters in reverse order.\n}\n",
-      "solution": "function reverseString(text) {\n  return Array.from(text).reverse().join('');\n}\n",
+      "solution": "function reverseString(text) {\n  return text.split('').reverse().join('');\n}\n",
       "tests": [
         {
           "args": [
@@ -21,6 +21,12 @@
             ""
           ],
           "expected": ""
+        },
+        {
+          "args": [
+            "A😀B"
+          ],
+          "expected": "B\ude00\ud83dA"
         }
       ],
       "hints": [
@@ -31,7 +37,7 @@
         {
           "id": "reference",
           "label": "Reference solution",
-          "code": "function reverseString(text) {\n  return Array.from(text).reverse().join('');\n}\n",
+          "code": "function reverseString(text) {\n  return text.split('').reverse().join('');\n}\n",
           "timeComplexity": "O(n)",
           "spaceComplexity": "O(n)",
           "rationale": "The array-based reversal avoids repeated string concatenation."

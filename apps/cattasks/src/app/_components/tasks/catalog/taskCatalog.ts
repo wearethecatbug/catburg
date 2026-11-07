@@ -113,10 +113,14 @@ function readHints(value: Record<string, unknown>, path: string): readonly strin
 function readSolutions(value: Record<string, unknown>, path: string): readonly TaskSolution[] {
     if (!('solutions' in value)) return [];
     if (!Array.isArray(value.solutions) || value.solutions.length === 0) fail(`${path}.solutions`, 'must be a non-empty array when present');
+    const ids = new Set<string>();
     return value.solutions.map((solution, index) => {
         const solutionPath = `${path}.solutions[${index}]`;
         if (!isRecord(solution)) fail(solutionPath, 'must be an object');
-        return {id: readNonBlankString(solution.id, `${solutionPath}.id`), label: readNonBlankString(solution.label, `${solutionPath}.label`), code: readNonBlankString(solution.code, `${solutionPath}.code`), timeComplexity: readComplexity(solution.timeComplexity, `${solutionPath}.timeComplexity`), spaceComplexity: readComplexity(solution.spaceComplexity, `${solutionPath}.spaceComplexity`), rationale: readNonBlankString(solution.rationale, `${solutionPath}.rationale`)};
+        const id = readNonBlankString(solution.id, `${solutionPath}.id`);
+        if (ids.has(id)) fail(`${solutionPath}.id`, `duplicate solution id '${id}'`);
+        ids.add(id);
+        return {id, label: readNonBlankString(solution.label, `${solutionPath}.label`), code: readNonBlankString(solution.code, `${solutionPath}.code`), timeComplexity: readComplexity(solution.timeComplexity, `${solutionPath}.timeComplexity`), spaceComplexity: readComplexity(solution.spaceComplexity, `${solutionPath}.spaceComplexity`), rationale: readNonBlankString(solution.rationale, `${solutionPath}.rationale`)};
     });
 }
 
