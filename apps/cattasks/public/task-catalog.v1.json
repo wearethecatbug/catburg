@@ -2,31 +2,2089 @@
   "version": 1,
   "tasks": [
     {
-      "id": "race",
-      "title": "Tortoise race",
-      "description": "Two tortoises A and B run a race. A starts with a lead g; B is faster. Given speeds v1 and v2 and lead g, return [hour, min, sec], rounded down to the nearest second, for B to catch A. When v1 >= v2, return null. Examples: race(720, 850, 70) => [0, 32, 18]; race(80, 91, 37) => [3, 21, 49].",
-      "entryPoint": "race",
-      "starterCode": "function race(v1, v2, g) {\n  // Return [hours, minutes, seconds] or null.\n}\n",
-      "solution": "function race(v1, v2, g) {\n  if (v1 >= v2) return null;\n  const totalSeconds = Math.floor((g / (v2 - v1)) * 3600);\n  return [\n    Math.floor(totalSeconds / 3600),\n    Math.floor((totalSeconds % 3600) / 60),\n    totalSeconds % 60,\n  ];\n}\n",
-      "tests": [{"args": [80, 91, 37], "expected": [3, 21, 49]}, {"args": [850, 720, 70], "expected": null}]
+      "id": "ct-js-01",
+      "slug": "reverse-a-string",
+      "title": "Reverse a String",
+      "description": "Given string text, return its characters in reverse UTF-16 index order. Examples: reverseString('hello') returns 'olleh'; reverseString('') returns ''.",
+      "entryPoint": "reverseString",
+      "starterCode": "function reverseString(text) {\n  // Return text with its characters in reverse order.\n}\n",
+      "solution": "function reverseString(text) {\n  return text.split('').reverse().join('');\n}\n",
+      "tests": [
+        {
+          "args": [
+            "hello"
+          ],
+          "expected": "olleh"
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "A😀B"
+          ],
+          "expected": "B\ude00\ud83dA"
+        }
+      ],
+      "hints": [
+        "Think about the last character first.",
+        "Collect characters before forming the final string."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function reverseString(text) {\n  return text.split('').reverse().join('');\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The array-based reversal avoids repeated string concatenation."
+        }
+      ],
+      "difficulty": "Easy"
     },
     {
-      "id": "digitize",
-      "title": "Digits in reverse order",
-      "description": "Convert a non-negative number to an array of its digits in reverse order. For example, digitize(123) returns [3, 2, 1].",
-      "entryPoint": "digitize",
-      "starterCode": "function digitize(n) {\n  // Return the digits of n in reverse order.\n}\n",
-      "solution": "function digitize(n) {\n  return String(n).split(\"\").map(Number).reverse();\n}\n",
-      "tests": [{"args": [123], "expected": [3, 2, 1]}, {"args": [0], "expected": [0]}]
+      "id": "ct-js-02",
+      "slug": "check-if-a-string-is-a-palindrome",
+      "title": "Check if a String Is a Palindrome",
+      "description": "Given string text, return true when it reads identically from both ends, otherwise false. Examples: isPalindrome('racecar') returns true; isPalindrome('cat') returns false.",
+      "entryPoint": "isPalindrome",
+      "starterCode": "function isPalindrome(text) {\n  // Return whether text is a palindrome.\n}\n",
+      "solution": "function isPalindrome(text) {\n  let left = 0; let right = text.length - 1;\n  while (left < right) { if (text[left++] !== text[right--]) return false; }\n  return true;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "racecar"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "cat"
+          ],
+          "expected": false
+        }
+      ],
+      "hints": [
+        "Compare matching positions from both ends.",
+        "Stop as soon as a pair differs."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function isPalindrome(text) {\n  let left = 0; let right = text.length - 1;\n  while (left < right) { if (text[left++] !== text[right--]) return false; }\n  return true;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Two indexes scan inward without allocating another string."
+        }
+      ],
+      "difficulty": "Easy"
     },
     {
-      "id": "no-space",
-      "title": "Remove spaces",
-      "description": "Simple: remove the spaces from a string, then return the resultant string. For example, noSpace('8 j 8   mBliB8g  imjB8B8  jl  B') returns '8j8mBliB8gimjB8B8jlB'.",
-      "entryPoint": "noSpace",
-      "starterCode": "function noSpace(value) {\n  // Return value without spaces.\n}\n",
-      "solution": "function noSpace(value) {\n  return value.split(\" \").join(\"\");\n}\n",
-      "tests": [{"args": ["8 j 8   mBliB8g  imjB8B8  jl  B"], "expected": "8j8mBliB8gimjB8B8jlB"}]
+      "id": "ct-js-03",
+      "slug": "find-the-maximum-number",
+      "title": "Find the Maximum Number",
+      "description": "Given number array numbers, return its largest value, or null when it is empty. Examples: findMax([3,1,9,2]) returns 9; findMax([]) returns null.",
+      "entryPoint": "findMax",
+      "starterCode": "function findMax(numbers) {\n  // Return the largest number or null for an empty array.\n}\n",
+      "solution": "function findMax(numbers) {\n  if (numbers.length === 0) return null;\n  let max = numbers[0];\n  for (let i = 1; i < numbers.length; i++) if (numbers[i] > max) max = numbers[i];\n  return max;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              3,
+              1,
+              9,
+              2
+            ]
+          ],
+          "expected": 9
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": null
+        }
+      ],
+      "hints": [
+        "Use the first value as the current best.",
+        "Update the best only when a larger value appears."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function findMax(numbers) {\n  if (numbers.length === 0) return null;\n  let max = numbers[0];\n  for (let i = 1; i < numbers.length; i++) if (numbers[i] > max) max = numbers[i];\n  return max;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "One pass retains only the current maximum."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-04",
+      "slug": "remove-duplicates-from-an-array",
+      "title": "Remove Duplicates from an Array",
+      "description": "Given array values, return each distinct value once in first-occurrence order. Examples: removeDuplicates([1,2,2,3,1]) returns [1,2,3]; removeDuplicates([]) returns [].",
+      "entryPoint": "removeDuplicates",
+      "starterCode": "function removeDuplicates(values) {\n  // Return distinct values in first-occurrence order.\n}\n",
+      "solution": "function removeDuplicates(values) {\n  return [...new Set(values)];\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              2,
+              3,
+              1
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "A Set stores only one copy of each value.",
+        "Converting the Set back preserves first-seen order."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function removeDuplicates(values) {\n  return [...new Set(values)];\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The Set tracks the distinct values in first-seen order."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-05",
+      "slug": "count-character-frequencies",
+      "title": "Count Character Frequencies",
+      "description": "Given string text, return an object mapping each character to its number of occurrences. Examples: charFrequency('aab!') returns {a:2,b:1,'!':1}; charFrequency('') returns {}.",
+      "entryPoint": "charFrequency",
+      "starterCode": "function charFrequency(text) {\n  // Return a character-to-count object.\n}\n",
+      "solution": "function charFrequency(text) {\n  const counts = {};\n  for (const char of text) counts[char] = (counts[char] ?? 0) + 1;\n  return counts;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "aab!"
+          ],
+          "expected": {
+            "a": 2,
+            "b": 1,
+            "!": 1
+          }
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": {}
+        }
+      ],
+      "hints": [
+        "Use each character as a key.",
+        "Start a missing key at zero before incrementing it."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function charFrequency(text) {\n  const counts = {};\n  for (const char of text) counts[char] = (counts[char] ?? 0) + 1;\n  return counts;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(k)",
+          "rationale": "The object stores one counter for each of k distinct characters."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-06",
+      "slug": "find-the-first-non-repeating-character",
+      "title": "Find the First Non-Repeating Character",
+      "description": "Given string text, return its first character that occurs exactly once, or null when none does. Examples: firstUniqueChar('swiss') returns 'w'; firstUniqueChar('aabb') returns null.",
+      "entryPoint": "firstUniqueChar",
+      "starterCode": "function firstUniqueChar(text) {\n  // Return the first non-repeating character or null.\n}\n",
+      "solution": "function firstUniqueChar(text) {\n  const counts = new Map();\n  for (const char of text) counts.set(char, (counts.get(char) ?? 0) + 1);\n  for (const char of text) if (counts.get(char) === 1) return char;\n  return null;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "swiss"
+          ],
+          "expected": "w"
+        },
+        {
+          "args": [
+            "aabb"
+          ],
+          "expected": null
+        }
+      ],
+      "hints": [
+        "Count every character before deciding.",
+        "Scan the original order again to find the first count of one."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function firstUniqueChar(text) {\n  const counts = new Map();\n  for (const char of text) counts.set(char, (counts.get(char) ?? 0) + 1);\n  for (const char of text) if (counts.get(char) === 1) return char;\n  return null;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(k)",
+          "rationale": "A frequency map and two linear scans preserve first occurrence order."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-07",
+      "slug": "two-sum",
+      "title": "Two Sum",
+      "description": "Given number array numbers and number target, return indexes of the first discovered pair whose values sum to target, or [] when no pair exists. Examples: twoSum([2,7,11,15],9) returns [0,1]; twoSum([1,2],9) returns [].",
+      "entryPoint": "twoSum",
+      "starterCode": "function twoSum(numbers, target) {\n  // Return matching indexes or an empty array.\n}\n",
+      "solution": "function twoSum(numbers, target) {\n  const seen = new Map();\n  for (let i = 0; i < numbers.length; i++) {\n    const need = target - numbers[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(numbers[i], i);\n  }\n  return [];\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              2,
+              7,
+              11,
+              15
+            ],
+            9
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            9
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "For each value, calculate the complement you need.",
+        "Remember indexes of values already visited."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function twoSum(numbers, target) {\n  const seen = new Map();\n  for (let i = 0; i < numbers.length; i++) {\n    const need = target - numbers[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(numbers[i], i);\n  }\n  return [];\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The map makes each complement lookup constant time on average."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-08",
+      "slug": "find-a-missing-number",
+      "title": "Find a Missing Number",
+      "description": "Given distinct integers from 0 through n with one value missing, return the missing value. Examples: missingNumber([3,0,1]) returns 2; missingNumber([0,1]) returns 2.",
+      "entryPoint": "missingNumber",
+      "starterCode": "function missingNumber(numbers) {\n  // Return the missing value from 0 through numbers.length.\n}\n",
+      "solution": "function missingNumber(numbers) {\n  const n = numbers.length;\n  let total = n * (n + 1) / 2;\n  for (const value of numbers) total -= value;\n  return total;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              3,
+              0,
+              1
+            ]
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            [
+              0,
+              1
+            ]
+          ],
+          "expected": 2
+        }
+      ],
+      "hints": [
+        "The complete range has a known arithmetic sum.",
+        "Subtract each observed value from that sum."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function missingNumber(numbers) {\n  const n = numbers.length;\n  let total = n * (n + 1) / 2;\n  for (const value of numbers) total -= value;\n  return total;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "It computes the range sum and subtracts each supplied value."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-09",
+      "slug": "move-zeros-to-the-end",
+      "title": "Move Zeros to the End",
+      "description": "Given number array numbers, return a new array with nonzero values in order followed by all zeros. Examples: moveZeros([0,1,0,3,12]) returns [1,3,12,0,0]; moveZeros([]) returns [].",
+      "entryPoint": "moveZeros",
+      "starterCode": "function moveZeros(numbers) {\n  // Return nonzero values followed by zeros.\n}\n",
+      "solution": "function moveZeros(numbers) {\n  const result = numbers.filter(value => value !== 0);\n  while (result.length < numbers.length) result.push(0);\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              0,
+              1,
+              0,
+              3,
+              12
+            ]
+          ],
+          "expected": [
+            1,
+            3,
+            12,
+            0,
+            0
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "Keep nonzero values in their original order.",
+        "Fill the remaining positions with zeros."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function moveZeros(numbers) {\n  const result = numbers.filter(value => value !== 0);\n  while (result.length < numbers.length) result.push(0);\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "A separate result preserves the input and holds every output value."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-10",
+      "slug": "find-the-intersection-of-two-arrays",
+      "title": "Find the Intersection of Two Arrays",
+      "description": "Given arrays first and second, return distinct shared values in the order they first appear in second. Examples: intersection([1,2,2,1],[2,2]) returns [2]; intersection([4,9,5],[9,4,9,8,4]) returns [9,4].",
+      "entryPoint": "intersection",
+      "starterCode": "function intersection(first, second) {\n  // Return distinct shared values in second-array order.\n}\n",
+      "solution": "function intersection(first, second) {\n  const available = new Set(first); const result = new Set();\n  for (const value of second) if (available.has(value)) result.add(value);\n  return [...result];\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              2,
+              1
+            ],
+            [
+              2,
+              2
+            ]
+          ],
+          "expected": [
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              4,
+              9,
+              5
+            ],
+            [
+              9,
+              4,
+              9,
+              8,
+              4
+            ]
+          ],
+          "expected": [
+            9,
+            4
+          ]
+        }
+      ],
+      "hints": [
+        "Put one array into a membership Set.",
+        "Use another Set so shared values appear once."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function intersection(first, second) {\n  const available = new Set(first); const result = new Set();\n  for (const value of second) if (available.has(value)) result.add(value);\n  return [...result];\n}\n",
+          "timeComplexity": "O(n + m)",
+          "spaceComplexity": "O(n + m)",
+          "rationale": "Two sets track membership and distinct output values."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-11",
+      "slug": "check-whether-two-strings-are-anagrams",
+      "title": "Check Whether Two Strings Are Anagrams",
+      "description": "Given strings a and b, return true when they contain the same characters with the same counts, otherwise false. Examples: isAnagram('listen','silent') returns true; isAnagram('rat','car') returns false.",
+      "entryPoint": "isAnagram",
+      "starterCode": "function isAnagram(a, b) {\n  // Return whether a and b are anagrams.\n}\n",
+      "solution": "function isAnagram(a, b) {\n  if (a.length !== b.length) return false;\n  const counts = new Map();\n  for (const char of a) counts.set(char, (counts.get(char) ?? 0) + 1);\n  for (const char of b) { const count = counts.get(char); if (!count) return false; counts.set(char, count - 1); }\n  return true;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "listen",
+            "silent"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "rat",
+            "car"
+          ],
+          "expected": false
+        }
+      ],
+      "hints": [
+        "Different lengths cannot be anagrams.",
+        "Increase counts for one string and decrease them for the other.",
+        "A missing or exhausted count proves the strings differ."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function isAnagram(a, b) {\n  if (a.length !== b.length) return false;\n  const counts = new Map();\n  for (const char of a) counts.set(char, (counts.get(char) ?? 0) + 1);\n  for (const char of b) { const count = counts.get(char); if (!count) return false; counts.set(char, count - 1); }\n  return true;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(k)",
+          "rationale": "A frequency map compares the two strings without sorting."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-12",
+      "slug": "find-the-most-frequent-element",
+      "title": "Find the Most Frequent Element",
+      "description": "Given array values, return the first value that reaches the highest frequency, or null when values is empty. Examples: mostFrequent([1,3,2,3,1,3]) returns 3; mostFrequent([]) returns null.",
+      "entryPoint": "mostFrequent",
+      "starterCode": "function mostFrequent(values) {\n  // Return the most frequent value or null.\n}\n",
+      "solution": "function mostFrequent(values) {\n  const counts = new Map(); let result = null; let best = 0;\n  for (const value of values) { const count = (counts.get(value) ?? 0) + 1; counts.set(value, count); if (count > best) { best = count; result = value; } }\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              3,
+              2,
+              3,
+              1,
+              3
+            ]
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": null
+        }
+      ],
+      "hints": [
+        "Keep a count for every distinct value.",
+        "Only replace the answer when a count becomes strictly larger."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function mostFrequent(values) {\n  const counts = new Map(); let result = null; let best = 0;\n  for (const value of values) { const count = (counts.get(value) ?? 0) + 1; counts.set(value, count); if (count > best) { best = count; result = value; } }\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(k)",
+          "rationale": "The map stores counts for k distinct values while one pass tracks the winner."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-13",
+      "slug": "chunk-an-array",
+      "title": "Chunk an Array",
+      "description": "Given array values and integer size, split values into consecutive arrays of at most size items; nonpositive size returns []. Examples: chunk([1,2,3,4,5],2) returns [[1,2],[3,4],[5]]; chunk([1],0) returns [].",
+      "entryPoint": "chunk",
+      "starterCode": "function chunk(values, size) {\n  // Return consecutive chunks or [] for a nonpositive size.\n}\n",
+      "solution": "function chunk(values, size) {\n  if (!Number.isInteger(size) || size <= 0) return [];\n  const result = [];\n  for (let i = 0; i < values.length; i += size) result.push(values.slice(i, i + size));\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            2
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1
+            ],
+            0
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "Advance the start index by size each time.",
+        "slice handles a shorter final group."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function chunk(values, size) {\n  if (!Number.isInteger(size) || size <= 0) return [];\n  const result = [];\n  for (let i = 0; i < values.length; i += size) result.push(values.slice(i, i + size));\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "Each input value is copied once into an output chunk."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-14",
+      "slug": "flatten-a-nested-array",
+      "title": "Flatten a Nested Array",
+      "description": "Given nested array values, return every scalar value in left-to-right traversal order. Examples: flatten([1,[2,[3]],4]) returns [1,2,3,4]; flatten([]) returns [].",
+      "entryPoint": "flatten",
+      "starterCode": "function flatten(values) {\n  // Return scalar values in left-to-right order.\n}\n",
+      "solution": "function flatten(values) {\n  const result = [];\n  function visit(items) { for (const item of items) Array.isArray(item) ? visit(item) : result.push(item); }\n  visit(values); return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              [
+                2,
+                [
+                  3
+                ]
+              ],
+              4
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "A nested array needs another traversal.",
+        "Append a value only after reaching a non-array item.",
+        "Call the same helper for every nested array."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function flatten(values) {\n  const result = [];\n  function visit(items) { for (const item of items) Array.isArray(item) ? visit(item) : result.push(item); }\n  visit(values); return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+      "rationale": "Recursion visits every nested-array position and scalar once; n covers all visited positions and stack depth follows nesting."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-15",
+      "slug": "binary-search",
+      "title": "Binary Search",
+      "description": "Given ascending sorted number array numbers and number target, return its index or -1 when absent. Examples: binarySearch([1,3,5,7],5) returns 2; binarySearch([1,3,5,7],2) returns -1.",
+      "entryPoint": "binarySearch",
+      "starterCode": "function binarySearch(numbers, target) {\n  // Return target's index or -1.\n}\n",
+      "solution": "function binarySearch(numbers, target) {\n  let left = 0; let right = numbers.length - 1;\n  while (left <= right) { const middle = left + Math.floor((right - left) / 2); if (numbers[middle] === target) return middle; if (numbers[middle] < target) left = middle + 1; else right = middle - 1; }\n  return -1;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              3,
+              5,
+              7
+            ],
+            5
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            [
+              1,
+              3,
+              5,
+              7
+            ],
+            2
+          ],
+          "expected": -1
+        }
+      ],
+      "hints": [
+        "The input must already be sorted.",
+        "Discard the half that cannot contain target."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function binarySearch(numbers, target) {\n  let left = 0; let right = numbers.length - 1;\n  while (left <= right) { const middle = left + Math.floor((right - left) / 2); if (numbers[middle] === target) return middle; if (numbers[middle] < target) left = middle + 1; else right = middle - 1; }\n  return -1;\n}\n",
+          "timeComplexity": "O(log n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Each comparison halves the remaining search interval."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-16",
+      "slug": "find-the-first-occurrence-using-binary-search",
+      "title": "Find the First Occurrence Using Binary Search",
+      "description": "Given ascending sorted number array numbers and number target, return target's first index or -1 when absent. Examples: firstOccurrence([1,2,2,2,3],2) returns 1; firstOccurrence([1,2],3) returns -1.",
+      "entryPoint": "firstOccurrence",
+      "starterCode": "function firstOccurrence(numbers, target) {\n  // Return the first target index or -1.\n}\n",
+      "solution": "function firstOccurrence(numbers, target) {\n  let left = 0; let right = numbers.length - 1; let result = -1;\n  while (left <= right) { const middle = left + Math.floor((right - left) / 2); if (numbers[middle] === target) { result = middle; right = middle - 1; } else if (numbers[middle] < target) left = middle + 1; else right = middle - 1; }\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              2,
+              2,
+              3
+            ],
+            2
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ],
+            3
+          ],
+          "expected": -1
+        }
+      ],
+      "hints": [
+        "Remember a matching index instead of returning immediately.",
+        "Keep searching the left half after a match."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function firstOccurrence(numbers, target) {\n  let left = 0; let right = numbers.length - 1; let result = -1;\n  while (left <= right) { const middle = left + Math.floor((right - left) / 2); if (numbers[middle] === target) { result = middle; right = middle - 1; } else if (numbers[middle] < target) left = middle + 1; else right = middle - 1; }\n  return result;\n}\n",
+          "timeComplexity": "O(log n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Binary search continues leftward only after finding target."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-17",
+      "slug": "merge-two-sorted-arrays",
+      "title": "Merge Two Sorted Arrays",
+      "description": "Given ascending sorted arrays first and second, return one merged ascending array. Examples: mergeSorted([1,3,5],[2,4,6]) returns [1,2,3,4,5,6]; mergeSorted([],[1]) returns [1].",
+      "entryPoint": "mergeSorted",
+      "starterCode": "function mergeSorted(first, second) {\n  // Return the merged ascending array.\n}\n",
+      "solution": "function mergeSorted(first, second) {\n  const result = []; let i = 0; let j = 0;\n  while (i < first.length && j < second.length) result.push(first[i] <= second[j] ? first[i++] : second[j++]);\n  return result.concat(first.slice(i), second.slice(j));\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              3,
+              5
+            ],
+            [
+              2,
+              4,
+              6
+            ]
+          ],
+          "expected": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "args": [
+            [],
+            [
+              1
+            ]
+          ],
+          "expected": [
+            1
+          ]
+        }
+      ],
+      "hints": [
+        "Compare the next unmerged value from each array.",
+        "When one array is exhausted, append the other remainder."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function mergeSorted(first, second) {\n  const result = []; let i = 0; let j = 0;\n  while (i < first.length && j < second.length) result.push(first[i] <= second[j] ? first[i++] : second[j++]);\n  return result.concat(first.slice(i), second.slice(j));\n}\n",
+          "timeComplexity": "O(n + m)",
+          "spaceComplexity": "O(n + m)",
+          "rationale": "The merge visits each input element once and creates the result."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-18",
+      "slug": "find-duplicates",
+      "title": "Find Duplicates",
+      "description": "Given array values, return each duplicated value once in the order its second occurrence is first encountered. Examples: findDuplicates([4,3,2,7,8,2,3,1]) returns [2,3]; findDuplicates([1,2]) returns [].",
+      "entryPoint": "findDuplicates",
+      "starterCode": "function findDuplicates(values) {\n  // Return duplicated values once in duplicate-discovery order.\n}\n",
+      "solution": "function findDuplicates(values) {\n  const seen = new Set(); const duplicates = new Set();\n  for (const value of values) { if (seen.has(value)) duplicates.add(value); else seen.add(value); }\n  return [...duplicates];\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              4,
+              3,
+              2,
+              7,
+              8,
+              2,
+              3,
+              1
+            ]
+          ],
+          "expected": [
+            2,
+            3
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2
+            ]
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "Track values seen for the first time.",
+        "Use a second Set to avoid repeating duplicates."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function findDuplicates(values) {\n  const seen = new Set(); const duplicates = new Set();\n  for (const value of values) { if (seen.has(value)) duplicates.add(value); else seen.add(value); }\n  return [...duplicates];\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "Two sets retain seen values and distinct duplicates."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-19",
+      "slug": "find-the-second-largest-unique-number",
+      "title": "Find the Second Largest Unique Number",
+      "description": "Given number array numbers, return its second largest distinct value, or null when fewer than two distinct values exist. Examples: secondLargest([4,1,4,3]) returns 3; secondLargest([7,7]) returns null.",
+      "entryPoint": "secondLargest",
+      "starterCode": "function secondLargest(numbers) {\n  // Return the second largest distinct value or null.\n}\n",
+      "solution": "function secondLargest(numbers) {\n  let largest = null; let second = null;\n  for (const value of numbers) { if (value === largest || value === second) continue; if (largest === null || value > largest) { second = largest; largest = value; } else if (second === null || value > second) second = value; }\n  return second;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              4,
+              1,
+              4,
+              3
+            ]
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            [
+              7,
+              7
+            ]
+          ],
+          "expected": null
+        }
+      ],
+      "hints": [
+        "Track two distinct best values.",
+        "Ignore a value that equals either stored value."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function secondLargest(numbers) {\n  let largest = null; let second = null;\n  for (const value of numbers) { if (value === largest || value === second) continue; if (largest === null || value > largest) { second = largest; largest = value; } else if (second === null || value > second) second = value; }\n  return second;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "One pass retains only the largest and second-largest distinct values."
+        }
+      ],
+      "difficulty": "Easy"
+    },
+    {
+      "id": "ct-js-20",
+      "slug": "rotate-an-array",
+      "title": "Rotate an Array",
+      "description": "Given array numbers and integer k, return a new array rotated right by k positions; an empty array returns []. Examples: rotate([1,2,3,4,5],2) returns [4,5,1,2,3]; rotate([],3) returns [].",
+      "entryPoint": "rotate",
+      "starterCode": "function rotate(numbers, k) {\n  // Return numbers rotated right by k positions.\n}\n",
+      "solution": "function rotate(numbers, k) {\n  if (numbers.length === 0) return [];\n  const offset = ((k % numbers.length) + numbers.length) % numbers.length;\n  return numbers.slice(-offset).concat(numbers.slice(0, -offset));\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            2
+          ],
+          "expected": [
+            4,
+            5,
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "args": [
+            [],
+            3
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "A rotation amount can be reduced by the array length.",
+        "Build the result from the final segment followed by the initial segment."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function rotate(numbers, k) {\n  if (numbers.length === 0) return [];\n  const offset = ((k % numbers.length) + numbers.length) % numbers.length;\n  return numbers.slice(-offset).concat(numbers.slice(0, -offset));\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "Slicing creates a new rotated array without mutating the input."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-21",
+      "slug": "valid-parentheses",
+      "title": "Valid Parentheses",
+      "description": "Given string text containing bracket characters, return true when (), [], and {} are balanced and nested, otherwise false. Examples: isValid('()[]{}') returns true; isValid('([)]') returns false.",
+      "entryPoint": "isValid",
+      "starterCode": "function isValid(text) {\n  // Return whether brackets are balanced and nested.\n}\n",
+      "solution": "function isValid(text) {\n  const stack = []; const pairs = {')':'(', ']':'[', '}':'{'};\n  for (const char of text) { if (char === '(' || char === '[' || char === '{') stack.push(char); else if (pairs[char] !== stack.pop()) return false; }\n  return stack.length === 0;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "()[]{}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "([)]"
+          ],
+          "expected": false
+        }
+      ],
+      "hints": [
+        "An opening bracket must be remembered until it closes.",
+        "The latest opening bracket must match the next closing bracket.",
+        "An empty stack is required after the final character."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function isValid(text) {\n  const stack = []; const pairs = {')':'(', ']':'[', '}':'{'};\n  for (const char of text) { if (char === '(' || char === '[' || char === '{') stack.push(char); else if (pairs[char] !== stack.pop()) return false; }\n  return stack.length === 0;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The stack holds unmatched opening brackets."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-22",
+      "slug": "implement-a-stack",
+      "title": "Implement a Stack",
+      "description": "Given operations as ['push',value], ['pop'], ['peek'], or ['isEmpty'] tuples, return one JSON result per tuple in order; push returns null and empty pop or peek returns null. Examples: stackTranscript([['push',1],['peek']]) returns [null,1]; stackTranscript([['pop'],['isEmpty']]) returns [null,true].",
+      "entryPoint": "stackTranscript",
+      "starterCode": "function stackTranscript(operations) {\n  // Return one result for each stack operation.\n}\n",
+      "solution": "function stackTranscript(operations) {\n  const items = [];\n  return operations.map(([operation, value]) => { if (operation === 'push') { items.push(value); return null; } if (operation === 'pop') return items.length ? items.pop() : null; if (operation === 'peek') return items.length ? items[items.length - 1] : null; return items.length === 0; });\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              [
+                "push",
+                1
+              ],
+              [
+                "push",
+                2
+              ],
+              [
+                "peek"
+              ],
+              [
+                "pop"
+              ],
+              [
+                "isEmpty"
+              ]
+            ]
+          ],
+          "expected": [
+            null,
+            null,
+            2,
+            2,
+            false
+          ]
+        }
+      ],
+      "hints": [
+        "The end of an array can act as the stack top.",
+        "Convert operations into JSON-safe result values."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function stackTranscript(operations) {\n  const items = [];\n  return operations.map(([operation, value]) => { if (operation === 'push') { items.push(value); return null; } if (operation === 'pop') return items.length ? items.pop() : null; if (operation === 'peek') return items.length ? items[items.length - 1] : null; return items.length === 0; });\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "n operations are processed once and the array stores pending stack values."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-23",
+      "slug": "implement-a-queue",
+      "title": "Implement a Queue",
+      "description": "Given operations as ['enqueue',value], ['dequeue'], ['peek'], or ['size'] tuples, return one JSON result per tuple in order; enqueue returns null and empty dequeue or peek returns null. Examples: queueTranscript([['enqueue','a'],['peek']]) returns [null,'a']; queueTranscript([['dequeue'],['size']]) returns [null,0].",
+      "entryPoint": "queueTranscript",
+      "starterCode": "function queueTranscript(operations) {\n  // Return one result for each queue operation.\n}\n",
+      "solution": "function queueTranscript(operations) {\n  const items = []; let head = 0;\n  return operations.map(([operation, value]) => { if (operation === 'enqueue') { items.push(value); return null; } if (operation === 'dequeue') return head < items.length ? items[head++] : null; if (operation === 'peek') return head < items.length ? items[head] : null; return items.length - head; });\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              [
+                "enqueue",
+                "a"
+              ],
+              [
+                "enqueue",
+                "b"
+              ],
+              [
+                "peek"
+              ],
+              [
+                "dequeue"
+              ],
+              [
+                "size"
+              ]
+            ]
+          ],
+          "expected": [
+            null,
+            null,
+            "a",
+            "a",
+            1
+          ]
+        }
+      ],
+      "hints": [
+        "Keep a head index instead of repeatedly shifting.",
+        "Each operation must return a JSON-safe value."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function queueTranscript(operations) {\n  const items = []; let head = 0;\n  return operations.map(([operation, value]) => { if (operation === 'enqueue') { items.push(value); return null; } if (operation === 'dequeue') return head < items.length ? items[head++] : null; if (operation === 'peek') return head < items.length ? items[head] : null; return items.length - head; });\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The transcript processes n operations and retains enqueued values."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-24",
+      "slug": "fibonacci",
+      "title": "Fibonacci",
+      "description": "Given nonnegative integer n, return the nth Fibonacci number with fibonacci(0) equal to 0 and fibonacci(1) equal to 1. Examples: fibonacci(0) returns 0; fibonacci(10) returns 55.",
+      "entryPoint": "fibonacci",
+      "starterCode": "function fibonacci(n) {\n  // Return the nth Fibonacci number.\n}\n",
+      "solution": "function fibonacci(n) {\n  if (n <= 1) return n;\n  let previous = 0; let current = 1;\n  for (let i = 2; i <= n; i++) [previous, current] = [current, previous + current];\n  return current;\n}\n",
+      "tests": [
+        {
+          "args": [
+            0
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            10
+          ],
+          "expected": 55
+        }
+      ],
+      "hints": [
+        "The next value needs only the two preceding values.",
+        "Iterate rather than recursively recomputing values."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function fibonacci(n) {\n  if (n <= 1) return n;\n  let previous = 0; let current = 1;\n  for (let i = 2; i <= n; i++) [previous, current] = [current, previous + current];\n  return current;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "The loop retains only the previous two Fibonacci values."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-25",
+      "slug": "sequences-and-factorial",
+      "title": "Sequences and factorial",
+      "description": "Given nonnegative integer n, return n factorial; 0 factorial is 1. Examples: factorial(0) returns 1; factorial(5) returns 120.",
+      "entryPoint": "factorial",
+      "starterCode": "function factorial(n) {\n  // Return n factorial.\n}\n",
+      "solution": "function factorial(n) {\n  let result = 1;\n  for (let i = 2; i <= n; i++) result *= i;\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            0
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            5
+          ],
+          "expected": 120
+        }
+      ],
+      "hints": [
+        "Factorial starts at one.",
+        "Multiply each integer from two through n."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function factorial(n) {\n  let result = 1;\n  for (let i = 2; i <= n; i++) result *= i;\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "The loop multiplies each factor once while retaining one accumulator."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-26",
+      "slug": "removing-adjacent-pairs-of-characters",
+      "title": "Removing adjacent pairs of characters",
+      "description": "Given string text, repeatedly remove adjacent equal-character pairs and return the remaining text. Examples: removeAdjacentPairs('abbaca') returns 'ca'; removeAdjacentPairs('azxxzy') returns 'ay'.",
+      "entryPoint": "removeAdjacentPairs",
+      "starterCode": "function removeAdjacentPairs(text) {\n  // Return text after removing adjacent equal pairs.\n}\n",
+      "solution": "function removeAdjacentPairs(text) {\n  const stack = [];\n  for (const char of text) { if (stack.length && stack[stack.length - 1] === char) stack.pop(); else stack.push(char); }\n  return stack.join('');\n}\n",
+      "tests": [
+        {
+          "args": [
+            "abbaca"
+          ],
+          "expected": "ca"
+        },
+        {
+          "args": [
+            "azxxzy"
+          ],
+          "expected": "ay"
+        }
+      ],
+      "hints": [
+        "The previous unmatched character is the only one that can pair next.",
+        "Use a stack to remove a pair immediately."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function removeAdjacentPairs(text) {\n  const stack = [];\n  for (const char of text) { if (stack.length && stack[stack.length - 1] === char) stack.pop(); else stack.push(char); }\n  return stack.join('');\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The stack stores unmatched characters before joining the result."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-27",
+      "slug": "longest-substring-without-repeating-characters",
+      "title": "Longest substring without repeating characters",
+      "description": "Given string text, return the length of its longest contiguous substring with no repeated character. Examples: longestUniqueSubstringLength('abcabcbb') returns 3; longestUniqueSubstringLength('') returns 0.",
+      "entryPoint": "longestUniqueSubstringLength",
+      "starterCode": "function longestUniqueSubstringLength(text) {\n  // Return the longest unique-substring length.\n}\n",
+      "solution": "function longestUniqueSubstringLength(text) {\n  const seen = new Map(); let left = 0; let best = 0;\n  for (let right = 0; right < text.length; right++) { const char = text[right]; if (seen.has(char) && seen.get(char) >= left) left = seen.get(char) + 1; seen.set(char, right); best = Math.max(best, right - left + 1); }\n  return best;\n}\n",
+      "tests": [
+        {
+          "args": [
+            "abcabcbb"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        }
+      ],
+      "hints": [
+        "Maintain a sliding window with no duplicates.",
+        "Remember the latest index of each character."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function longestUniqueSubstringLength(text) {\n  const seen = new Map(); let left = 0; let best = 0;\n  for (let right = 0; right < text.length; right++) { const char = text[right]; if (seen.has(char) && seen.get(char) >= left) left = seen.get(char) + 1; seen.set(char, right); best = Math.max(best, right - left + 1); }\n  return best;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(k)",
+          "rationale": "Each window boundary advances at most n times and the map holds k characters."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-28",
+      "slug": "maximum-subarray-sum",
+      "title": "Maximum subarray sum",
+      "description": "Given number array numbers, return the largest sum of any contiguous subarray, or null when numbers is empty. Examples: maxSubarraySum([-2,1,-3,4,-1,2,1,-5,4]) returns 6; maxSubarraySum([]) returns null.",
+      "entryPoint": "maxSubarraySum",
+      "starterCode": "function maxSubarraySum(numbers) {\n  // Return the largest contiguous-subarray sum or null.\n}\n",
+      "solution": "function maxSubarraySum(numbers) {\n  if (numbers.length === 0) return null;\n  let current = numbers[0]; let best = numbers[0];\n  for (let i = 1; i < numbers.length; i++) { current = Math.max(numbers[i], current + numbers[i]); best = Math.max(best, current); }\n  return best;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              -2,
+              1,
+              -3,
+              4,
+              -1,
+              2,
+              1,
+              -5,
+              4
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": null
+        }
+      ],
+      "hints": [
+        "At each value, choose between extending and restarting.",
+        "Track the best sum seen so far separately."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function maxSubarraySum(numbers) {\n  if (numbers.length === 0) return null;\n  let current = numbers[0]; let best = numbers[0];\n  for (let i = 1; i < numbers.length; i++) { current = Math.max(numbers[i], current + numbers[i]); best = Math.max(best, current); }\n  return best;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Kadane’s scan retains only the current and overall best sums."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-29",
+      "slug": "merging-intervals-while-preserving-the-original-array",
+      "title": "Merging intervals while preserving the original array",
+      "description": "Given interval pairs [start,end], return merged overlapping intervals sorted by start without mutating the input. Examples: mergeIntervals([[1,3],[2,6],[8,10],[15,18]]) returns [[1,6],[8,10],[15,18]]; mergeIntervals([]) returns [].",
+      "entryPoint": "mergeIntervals",
+      "starterCode": "function mergeIntervals(intervals) {\n  // Return merged sorted intervals without mutating input.\n}\n",
+      "solution": "function mergeIntervals(intervals) {\n  if (intervals.length === 0) return [];\n  const sorted = intervals.map(interval => [...interval]).sort((a, b) => a[0] - b[0]);\n  const result = [sorted[0]];\n  for (let i = 1; i < sorted.length; i++) { const current = sorted[i]; const last = result[result.length - 1]; if (current[0] <= last[1]) last[1] = Math.max(last[1], current[1]); else result.push(current); }\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              [
+                1,
+                3
+              ],
+              [
+                2,
+                6
+              ],
+              [
+                8,
+                10
+              ],
+              [
+                15,
+                18
+              ]
+            ]
+          ],
+          "expected": [
+            [
+              1,
+              6
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              15,
+              18
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "Copy intervals before sorting them.",
+        "Compare each interval with the last merged interval.",
+        "Extend the last merged end only when intervals overlap."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function mergeIntervals(intervals) {\n  if (intervals.length === 0) return [];\n  const sorted = intervals.map(interval => [...interval]).sort((a, b) => a[0] - b[0]);\n  const result = [sorted[0]];\n  for (let i = 1; i < sorted.length; i++) { const current = sorted[i]; const last = result[result.length - 1]; if (current[0] <= last[1]) last[1] = Math.max(last[1], current[1]); else result.push(current); }\n  return result;\n}\n",
+          "timeComplexity": "O(n log n)",
+          "spaceComplexity": "O(n)",
+          "rationale": "Sorting dominates time; copied and merged intervals preserve the original input."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-30",
+      "slug": "minimum-window-length-with-a-target-sum",
+      "title": "Minimum window length with a target sum",
+      "description": "Given nonnegative integer array numbers and positive integer target, return the shortest contiguous window whose sum is at least target, or 0 when none exists; invalid inputs also return 0. Examples: minWindowLength([2,3,1,2,4,3],7) returns 2; minWindowLength([],3) returns 0.",
+      "entryPoint": "minWindowLength",
+      "starterCode": "function minWindowLength(numbers, target) {\n  // Return the shortest qualifying window length or 0.\n}\n",
+      "solution": "function minWindowLength(numbers, target) {\n  if (!Number.isInteger(target) || target <= 0 || numbers.some(value => !Number.isInteger(value) || value < 0)) return 0;\n  let left = 0; let sum = 0; let best = Infinity;\n  for (let right = 0; right < numbers.length; right++) { sum += numbers[right]; while (sum >= target) { best = Math.min(best, right - left + 1); sum -= numbers[left++]; } }\n  return best === Infinity ? 0 : best;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              2,
+              3,
+              1,
+              2,
+              4,
+              3
+            ],
+            7
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            [],
+            3
+          ],
+          "expected": 0
+        }
+      ],
+      "hints": [
+        "All values must be nonnegative for a shrinking window.",
+        "Advance the left edge while the sum still reaches target."
+      ],
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function minWindowLength(numbers, target) {\n  if (!Number.isInteger(target) || target <= 0 || numbers.some(value => !Number.isInteger(value) || value < 0)) return 0;\n  let left = 0; let sum = 0; let best = Infinity;\n  for (let right = 0; right < numbers.length; right++) { sum += numbers[right]; while (sum >= target) { best = Math.min(best, right - left + 1); sum -= numbers[left++]; } }\n  return best === Infinity ? 0 : best;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Both window indexes advance at most n times."
+        }
+      ],
+      "difficulty": "Medium"
+    },
+    {
+      "id": "ct-js-31",
+      "slug": "group-anagrams",
+      "title": "Group Anagrams",
+      "description": "Given string array words, group anagrams by first-seen group order while preserving word order within every group; [] returns []. Examples: groupAnagrams(['eat','tea','tan','ate','nat','bat']) returns [['eat','tea','ate'],['tan','nat'],['bat']]; groupAnagrams([]) returns [].",
+      "entryPoint": "groupAnagrams",
+      "starterCode": "function groupAnagrams(words) {\n  // Return groups in first-seen order.\n}\n",
+      "solution": "function groupAnagrams(words) {\n  const groups = new Map();\n  for (const word of words) {\n    const key = [...word].sort().join('');\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(word);\n  }\n  return [...groups.values()];\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              "eat",
+              "tea",
+              "tan",
+              "ate",
+              "nat",
+              "bat"
+            ]
+          ],
+          "expected": [
+            [
+              "eat",
+              "tea",
+              "ate"
+            ],
+            [
+              "tan",
+              "nat"
+            ],
+            [
+              "bat"
+            ]
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        }
+      ],
+      "hints": [
+        "Use a representation that is identical for every rearrangement of a word.",
+        "A Map keeps insertion order, so create a group only when its key is first seen."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function groupAnagrams(words) {\n  const groups = new Map();\n  for (const word of words) {\n    const key = [...word].sort().join('');\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(word);\n  }\n  return [...groups.values()];\n}\n",
+          "timeComplexity": "O(n * k log k)",
+          "spaceComplexity": "O(n * k)",
+          "rationale": "Sorting each of n words of maximum length k forms a grouping key, while the map stores the grouped words."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-32",
+      "slug": "product-except-self",
+      "title": "Product Except Self",
+      "description": "Given number array numbers, return an array whose value at each index is the product of all other values without division; [] returns [] and a singleton returns [1]. Examples: productExceptSelf([1,2,3,4]) returns [24,12,8,6]; productExceptSelf([5]) returns [1].",
+      "entryPoint": "productExceptSelf",
+      "starterCode": "function productExceptSelf(numbers) {\n  // Return products without using division.\n}\n",
+      "solution": "function productExceptSelf(numbers) {\n  const result = Array(numbers.length).fill(1);\n  let prefix = 1;\n  for (let index = 0; index < numbers.length; index += 1) {\n    result[index] = prefix;\n    prefix *= numbers[index];\n  }\n  let suffix = 1;\n  for (let index = numbers.length - 1; index >= 0; index -= 1) {\n    result[index] *= suffix;\n    suffix *= numbers[index];\n  }\n  return result;\n}\n",
+      "tests": [
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4
+            ]
+          ],
+          "expected": [
+            24,
+            12,
+            8,
+            6
+          ]
+        },
+        {
+          "args": [
+            [
+              5
+            ]
+          ],
+          "expected": [
+            1
+          ]
+        },
+        {
+          "args": [
+            []
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              0,
+              2
+            ]
+          ],
+          "expected": [
+            2,
+            0
+          ]
+        },
+        {
+          "args": [
+            [
+              0,
+              0,
+              2
+            ]
+          ],
+          "expected": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "hints": [
+        "First put the product before each index into the output.",
+        "Walk from the right and multiply each saved prefix by the product after that index."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function productExceptSelf(numbers) {\n  const result = Array(numbers.length).fill(1);\n  let prefix = 1;\n  for (let index = 0; index < numbers.length; index += 1) {\n    result[index] = prefix;\n    prefix *= numbers[index];\n  }\n  let suffix = 1;\n  for (let index = numbers.length - 1; index >= 0; index -= 1) {\n    result[index] *= suffix;\n    suffix *= numbers[index];\n  }\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1); auxiliary space excludes the returned output",
+          "rationale": "Two linear passes use only prefix and suffix scalars besides the returned array."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-33",
+      "slug": "longest-common-prefix",
+      "title": "Longest Common Prefix",
+      "description": "Given string array words, return the longest prefix shared by every word; an empty list or empty word returns ''. Examples: longestCommonPrefix(['flower','flow','flight']) returns 'fl'; longestCommonPrefix(['dog','racecar','car']) returns ''.",
+      "entryPoint": "longestCommonPrefix",
+      "starterCode": "function longestCommonPrefix(words) {\n  // Return the shared starting text.\n}\n",
+      "solution": "function longestCommonPrefix(words) {\n  if (words.length === 0) return '';\n  for (let index = 0; index < words[0].length; index += 1) {\n    const character = words[0][index];\n    for (let wordIndex = 1; wordIndex < words.length; wordIndex += 1) {\n      if (words[wordIndex][index] !== character) return words[0].slice(0, index);\n    }\n  }\n  return words[0];\n}\n",
+      "tests": [
+        {"args":[["flower","flow","flight"]],"expected":"fl"},
+        {"args":[["dog","racecar","car"]],"expected":""}
+      ],
+      "hints": [
+        "Compare characters by index instead of repeatedly creating shorter candidate strings.",
+        "Use the first word as the only possible full prefix."
+      ],
+      "difficulty": "Easy",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function longestCommonPrefix(words) {\n  if (words.length === 0) return '';\n  for (let index = 0; index < words[0].length; index += 1) {\n    const character = words[0][index];\n    for (let wordIndex = 1; wordIndex < words.length; wordIndex += 1) {\n      if (words[wordIndex][index] !== character) return words[0].slice(0, index);\n    }\n  }\n  return words[0];\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1); auxiliary space excludes the returned string",
+          "rationale": "Each inspected character is compared until the first mismatch; n is the total number of inspected input characters."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-34",
+      "slug": "is-subsequence",
+      "title": "Is Subsequence",
+      "description": "Given strings needle and haystack, return whether needle's UTF-16 indexed characters appear in haystack in order without adjacency; empty needle returns true. Examples: isSubsequence('ace','abcde') returns true; isSubsequence('aec','abcde') returns false.",
+      "entryPoint": "isSubsequence",
+      "starterCode": "function isSubsequence(needle, haystack) {\n  // Return whether needle appears in order.\n}\n",
+      "solution": "function isSubsequence(needle, haystack) {\n  let needleIndex = 0;\n  for (let haystackIndex = 0; haystackIndex < haystack.length && needleIndex < needle.length; haystackIndex += 1) {\n    if (haystack[haystackIndex] === needle[needleIndex]) needleIndex += 1;\n  }\n  return needleIndex === needle.length;\n}\n",
+      "tests": [
+        {"args":["ace","abcde"],"expected":true},
+        {"args":["aec","abcde"],"expected":false}
+      ],
+      "hints": [
+        "Keep one position for the next needed character.",
+        "Only advance that position when the haystack character matches it."
+      ],
+      "difficulty": "Easy",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function isSubsequence(needle, haystack) {\n  let needleIndex = 0;\n  for (let haystackIndex = 0; haystackIndex < haystack.length && needleIndex < needle.length; haystackIndex += 1) {\n    if (haystack[haystackIndex] === needle[needleIndex]) needleIndex += 1;\n  }\n  return needleIndex === needle.length;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "A single scan of haystack of length n advances one scalar index."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-35",
+      "slug": "linked-list-cycle",
+      "title": "Linked List Cycle",
+      "description": "Given nodes as {value,next} records and head as null or an index, return whether the reachable indexed chain cycles; every next is null or a valid node index. Examples: hasCycle([{value:1,next:1},{value:2,next:0}],0) returns true; hasCycle([{value:1,next:null}],0) returns false.",
+      "entryPoint": "hasCycle",
+      "starterCode": "function hasCycle(nodes, head) {\n  // Return whether the indexed chain cycles.\n}\n",
+      "solution": "function hasCycle(nodes, head) {\n  const nextOf = (index) => {\n    if (!Number.isInteger(index) || index < 0 || index >= nodes.length) return null;\n    const next = nodes[index].next;\n    return next === null || (Number.isInteger(next) && next >= 0 && next < nodes.length) ? next : null;\n  };\n  let slow = nextOf(head);\n  let fast = nextOf(nextOf(head));\n  while (slow !== null && fast !== null) {\n    if (slow === fast) return true;\n    slow = nextOf(slow);\n    fast = nextOf(nextOf(fast));\n  }\n  return false;\n}\n",
+      "tests": [
+        {"args":[[{"value":1,"next":1},{"value":2,"next":0}],0],"expected":true},
+        {"args":[[{"value":1,"next":null}],0],"expected":false}
+      ],
+      "hints": [
+        "Use indices rather than object references so the input stays JSON-safe.",
+        "Move one cursor one link at a time and another two links at a time."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function hasCycle(nodes, head) {\n  const nextOf = (index) => {\n    if (!Number.isInteger(index) || index < 0 || index >= nodes.length) return null;\n    const next = nodes[index].next;\n    return next === null || (Number.isInteger(next) && next >= 0 && next < nodes.length) ? next : null;\n  };\n  let slow = nextOf(head);\n  let fast = nextOf(nextOf(head));\n  while (slow !== null && fast !== null) {\n    if (slow === fast) return true;\n    slow = nextOf(slow);\n    fast = nextOf(nextOf(fast));\n  }\n  return false;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Floyd’s two cursors inspect a bounded number of reachable indexed nodes."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-36",
+      "slug": "reverse-linked-list",
+      "title": "Reverse Linked List",
+      "description": "Given nodes as {value,next} records and head as null or an index, return a new descriptor with the reachable acyclic chain reversed without changing the input; an empty descriptor stays empty. Examples: reverseList([{value:1,next:1},{value:2,next:null}],0) returns {nodes:[{value:1,next:null},{value:2,next:0}],head:1}; reverseList([],null) returns {nodes:[],head:null}.",
+      "entryPoint": "reverseList",
+      "starterCode": "function reverseList(nodes, head) {\n  // Return a new reversed indexed descriptor.\n}\n",
+      "solution": "function reverseList(nodes, head) {\n  if (head === null) return {nodes: nodes.map((node) => ({...node})), head: null};\n  if (!Number.isInteger(head) || head < 0 || head >= nodes.length) return {nodes: nodes.map((node) => ({...node})), head: null};\n  const seen = new Set();\n  const chain = [];\n  let current = head;\n  while (current !== null) {\n    if (!Number.isInteger(current) || current < 0 || current >= nodes.length || seen.has(current)) return {nodes: nodes.map((node) => ({...node})), head: null};\n    seen.add(current);\n    chain.push(current);\n    const next = nodes[current].next;\n    if (next !== null && (!Number.isInteger(next) || next < 0 || next >= nodes.length)) return {nodes: nodes.map((node) => ({...node})), head: null};\n    current = next;\n  }\n  const result = nodes.map((node) => ({...node}));\n  for (let index = 0; index < chain.length; index += 1) result[chain[index]].next = index === 0 ? null : chain[index - 1];\n  return {nodes: result, head: chain[chain.length - 1]};\n}\n",
+      "tests": [
+        {"args":[[{"value":1,"next":1},{"value":2,"next":null}],0],"expected":{"nodes":[{"value":1,"next":null},{"value":2,"next":0}],"head":1}},
+        {"args":[[],null],"expected":{"nodes":[],"head":null}}
+      ],
+      "hints": [
+        "Validate and collect the reachable indices before changing a copied descriptor.",
+        "The previous reachable index becomes each node’s new next link."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function reverseList(nodes, head) {\n  if (head === null) return {nodes: nodes.map((node) => ({...node})), head: null};\n  if (!Number.isInteger(head) || head < 0 || head >= nodes.length) return {nodes: nodes.map((node) => ({...node})), head: null};\n  const seen = new Set();\n  const chain = [];\n  let current = head;\n  while (current !== null) {\n    if (!Number.isInteger(current) || current < 0 || current >= nodes.length || seen.has(current)) return {nodes: nodes.map((node) => ({...node})), head: null};\n    seen.add(current);\n    chain.push(current);\n    const next = nodes[current].next;\n    if (next !== null && (!Number.isInteger(next) || next < 0 || next >= nodes.length)) return {nodes: nodes.map((node) => ({...node})), head: null};\n    current = next;\n  }\n  const result = nodes.map((node) => ({...node}));\n  for (let index = 0; index < chain.length; index += 1) result[chain[index]].next = index === 0 ? null : chain[index - 1];\n  return {nodes: result, head: chain[chain.length - 1]};\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n); output encoding is included",
+          "rationale": "The reachable chain is validated once, then a copied descriptor and validation set are retained."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-37",
+      "slug": "tree-max-depth",
+      "title": "Tree Maximum Depth",
+      "description": "Given a valid level-order indexed number-or-null tree, where children are 2i+1 and 2i+2 and trailing nulls are ignored, return maximum depth; [] returns 0. Examples: maxDepth([3,9,20,null,null,15,7]) returns 3; maxDepth([]) returns 0.",
+      "entryPoint": "maxDepth",
+      "starterCode": "function maxDepth(tree) {\n  // Return the depth of the indexed tree.\n}\n",
+      "solution": "function maxDepth(tree) {\n  if (tree.length === 0 || tree[0] === null) return 0;\n  const visit = (index) => {\n    if (index >= tree.length || tree[index] === null) return 0;\n    return 1 + Math.max(visit(index * 2 + 1), visit(index * 2 + 2));\n  };\n  return visit(0);\n}\n",
+      "tests": [
+        {"args":[[3,9,20,null,null,15,7]],"expected":3},
+        {"args":[[]],"expected":0}
+      ],
+      "hints": [
+        "For index i, the children are at 2i + 1 and 2i + 2.",
+        "The depth of a node is one plus the larger child depth."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function maxDepth(tree) {\n  if (tree.length === 0 || tree[0] === null) return 0;\n  const visit = (index) => {\n    if (index >= tree.length || tree[index] === null) return 0;\n    return 1 + Math.max(visit(index * 2 + 1), visit(index * 2 + 2));\n  };\n  return visit(0);\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(h); auxiliary indexed DFS stack",
+          "rationale": "The indexed DFS visits each non-null tree position once; h is the tree height."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-38",
+      "slug": "level-order-traversal",
+      "title": "Level Order Traversal",
+      "description": "Given a valid level-order indexed number-or-null tree, where children are 2i+1 and 2i+2 and trailing nulls are ignored, return values grouped by depth; [] returns []. Examples: levelOrder([3,9,20,null,null,15,7]) returns [[3],[9,20],[15,7]]; levelOrder([]) returns [].",
+      "entryPoint": "levelOrder",
+      "starterCode": "function levelOrder(tree) {\n  // Return values grouped by depth.\n}\n",
+      "solution": "function levelOrder(tree) {\n  if (tree.length === 0 || tree[0] === null) return [];\n  const result = [];\n  let level = [0];\n  while (level.length > 0) {\n    result.push(level.map((index) => tree[index]));\n    const next = [];\n    for (const index of level) {\n      for (const child of [index * 2 + 1, index * 2 + 2]) {\n        if (child < tree.length && tree[child] !== null) next.push(child);\n      }\n    }\n    level = next;\n  }\n  return result;\n}\n",
+      "tests": [
+        {"args":[[3,9,20,null,null,15,7]],"expected":[[3],[9,20],[15,7]]},
+        {"args":[[]],"expected":[]}
+      ],
+      "hints": [
+        "Store indices for the current depth together.",
+        "Build the next depth from the two indexed children of each current node."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function levelOrder(tree) {\n  if (tree.length === 0 || tree[0] === null) return [];\n  const result = [];\n  let level = [0];\n  while (level.length > 0) {\n    result.push(level.map((index) => tree[index]));\n    const next = [];\n    for (const index of level) {\n      for (const child of [index * 2 + 1, index * 2 + 2]) {\n        if (child < tree.length && tree[child] !== null) next.push(child);\n      }\n    }\n    level = next;\n  }\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n); output encoding included",
+          "rationale": "Each reachable tree node enters one level queue, and the grouped result is returned."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-39",
+      "slug": "validate-bst",
+      "title": "Validate BST",
+      "description": "Given a valid level-order indexed number-or-null tree, where children are 2i+1 and 2i+2 and trailing nulls are ignored, return whether it is a strict BST; duplicates are invalid. Examples: isValidBST([2,1,3]) returns true; isValidBST([5,1,4,null,null,3,6]) returns false.",
+      "entryPoint": "isValidBST",
+      "starterCode": "function isValidBST(tree) {\n  // Return whether every node respects strict bounds.\n}\n",
+      "solution": "function isValidBST(tree) {\n  const visit = (index, lower, upper) => {\n    if (index >= tree.length || tree[index] === null) return true;\n    const value = tree[index];\n    if (value <= lower || value >= upper) return false;\n    return visit(index * 2 + 1, lower, value) && visit(index * 2 + 2, value, upper);\n  };\n  return visit(0, -Infinity, Infinity);\n}\n",
+      "tests": [
+        {"args":[[2,1,3]],"expected":true},
+        {"args":[[5,1,4,null,null,3,6]],"expected":false}
+      ],
+      "hints": [
+        "A node must satisfy bounds inherited from every ancestor, not only its parent.",
+        "Pass a stricter upper bound left and lower bound right."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function isValidBST(tree) {\n  const visit = (index, lower, upper) => {\n    if (index >= tree.length || tree[index] === null) return true;\n    const value = tree[index];\n    if (value <= lower || value >= upper) return false;\n    return visit(index * 2 + 1, lower, value) && visit(index * 2 + 2, value, upper);\n  };\n  return visit(0, -Infinity, Infinity);\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(h); auxiliary indexed DFS stack",
+          "rationale": "The bounds DFS visits each non-null node once and retains at most one root-to-leaf path."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-40",
+      "slug": "kth-largest",
+      "title": "Kth Largest Element",
+      "description": "Given number array numbers and integer k, return the kth largest number, or null when k is outside the array length. Examples: kthLargest([3,2,1,5,6,4],2) returns 5; kthLargest([1],2) returns null.",
+      "entryPoint": "kthLargest",
+      "starterCode": "function kthLargest(numbers, k) {\n  // Return the kth largest number or null.\n}\n",
+      "solution": "function kthLargest(numbers, k) {\n  if (!Number.isInteger(k) || k < 1 || k > numbers.length) return null;\n  const heap = [];\n  const up = (index) => { while (index > 0) { const parent = Math.floor((index - 1) / 2); if (heap[parent] <= heap[index]) break; [heap[parent], heap[index]] = [heap[index], heap[parent]]; index = parent; } };\n  const down = (index) => { while (true) { let child = index * 2 + 1; if (child >= heap.length) return; if (child + 1 < heap.length && heap[child + 1] < heap[child]) child += 1; if (heap[index] <= heap[child]) return; [heap[index], heap[child]] = [heap[child], heap[index]]; index = child; } };\n  for (const value of numbers) {\n    heap.push(value); up(heap.length - 1);\n    if (heap.length > k) { heap[0] = heap.pop(); down(0); }\n  }\n  return heap[0];\n}\n",
+      "tests": [
+        {"args":[[3,2,1,5,6,4],2],"expected":5},
+        {"args":[[1],2],"expected":null}
+      ],
+      "hints": [
+        "Keep only the best k candidates seen so far.",
+        "A min-heap makes the smallest retained candidate cheap to remove."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function kthLargest(numbers, k) {\n  if (!Number.isInteger(k) || k < 1 || k > numbers.length) return null;\n  const heap = [];\n  const up = (index) => { while (index > 0) { const parent = Math.floor((index - 1) / 2); if (heap[parent] <= heap[index]) break; [heap[parent], heap[index]] = [heap[index], heap[parent]]; index = parent; } };\n  const down = (index) => { while (true) { let child = index * 2 + 1; if (child >= heap.length) return; if (child + 1 < heap.length && heap[child + 1] < heap[child]) child += 1; if (heap[index] <= heap[child]) return; [heap[index], heap[child]] = [heap[child], heap[index]]; index = child; } };\n  for (const value of numbers) {\n    heap.push(value); up(heap.length - 1);\n    if (heap.length > k) { heap[0] = heap.pop(); down(0); }\n  }\n  return heap[0];\n}\n",
+          "timeComplexity": "O(n log k)",
+          "spaceComplexity": "O(k)",
+          "rationale": "Each of n values performs bounded heap work while the min-heap never exceeds k entries."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-41",
+      "slug": "top-k-frequent",
+      "title": "Top K Frequent",
+      "description": "Given number array values and integer k, return the k most frequent values by descending frequency and ascending numeric tie-breaker; invalid k returns null. Examples: topKFrequent([1,1,2,2,3],2) returns [1,2]; topKFrequent([4,4,5,5],3) returns null.",
+      "entryPoint": "topKFrequent",
+      "starterCode": "function topKFrequent(values, k) {\n  // Return deterministic top-frequency values or null.\n}\n",
+      "solution": "function topKFrequent(values, k) {\n  const counts = new Map();\n  for (const value of values) counts.set(value, (counts.get(value) || 0) + 1);\n  if (!Number.isInteger(k) || k < 1 || k > counts.size) return null;\n  return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0] - right[0]).slice(0, k).map(([value]) => value);\n}\n",
+      "tests": [
+        {"args":[[1,1,2,2,3],2],"expected":[1,2]},
+        {"args":[[4,4,5,5],3],"expected":null}
+      ],
+      "hints": [
+        "Count each value before deciding the ranking.",
+        "Sort equal counts by the value itself so the result is deterministic."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function topKFrequent(values, k) {\n  const counts = new Map();\n  for (const value of values) counts.set(value, (counts.get(value) || 0) + 1);\n  if (!Number.isInteger(k) || k < 1 || k > counts.size) return null;\n  return [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0] - right[0]).slice(0, k).map(([value]) => value);\n}\n",
+          "timeComplexity": "O(n + u log u)",
+          "spaceComplexity": "O(n)",
+          "rationale": "The map counts n values and sorting u unique entries establishes the documented tie order."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-42",
+      "slug": "search-rotated-array",
+      "title": "Search Rotated Array",
+      "description": "Given a rotation of an ascending array of distinct numbers and target, return target's index or -1 when absent. Examples: searchRotated([4,5,6,7,0,1,2],0) returns 4; searchRotated([],1) returns -1.",
+      "entryPoint": "searchRotated",
+      "starterCode": "function searchRotated(numbers, target) {\n  // Return the target index or -1.\n}\n",
+      "solution": "function searchRotated(numbers, target) {\n  let left = 0;\n  let right = numbers.length - 1;\n  while (left <= right) {\n    const middle = Math.floor((left + right) / 2);\n    if (numbers[middle] === target) return middle;\n    if (numbers[left] <= numbers[middle]) {\n      if (numbers[left] <= target && target < numbers[middle]) right = middle - 1;\n      else left = middle + 1;\n    } else if (numbers[middle] < target && target <= numbers[right]) left = middle + 1;\n    else right = middle - 1;\n  }\n  return -1;\n}\n",
+      "tests": [
+        {"args":[[4,5,6,7,0,1,2],0],"expected":4},
+        {"args":[[],1],"expected":-1}
+      ],
+      "hints": [
+        "At every midpoint, one half is still normally sorted.",
+        "Decide whether the target belongs to that sorted half before discarding the other."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function searchRotated(numbers, target) {\n  let left = 0;\n  let right = numbers.length - 1;\n  while (left <= right) {\n    const middle = Math.floor((left + right) / 2);\n    if (numbers[middle] === target) return middle;\n    if (numbers[left] <= numbers[middle]) {\n      if (numbers[left] <= target && target < numbers[middle]) right = middle - 1;\n      else left = middle + 1;\n    } else if (numbers[middle] < target && target <= numbers[right]) left = middle + 1;\n    else right = middle - 1;\n  }\n  return -1;\n}\n",
+          "timeComplexity": "O(log n)",
+          "spaceComplexity": "O(1)",
+          "rationale": "Each iteration discards half of the distinct rotated array."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-43",
+      "slug": "daily-temperatures",
+      "title": "Daily Temperatures",
+      "description": "Given temperature array temperatures, return for each position how many later days until a warmer temperature, or 0 when none exists. Examples: daysUntilWarmer([73,74,75,71,69,72,76,73]) returns [1,1,4,2,1,1,0,0]; daysUntilWarmer([30]) returns [0].",
+      "entryPoint": "daysUntilWarmer",
+      "starterCode": "function daysUntilWarmer(temperatures) {\n  // Return days until a warmer temperature.\n}\n",
+      "solution": "function daysUntilWarmer(temperatures) {\n  const result = Array(temperatures.length).fill(0);\n  const pending = [];\n  for (let index = 0; index < temperatures.length; index += 1) {\n    while (pending.length && temperatures[index] > temperatures[pending[pending.length - 1]]) {\n      const previous = pending.pop();\n      result[previous] = index - previous;\n    }\n    pending.push(index);\n  }\n  return result;\n}\n",
+      "tests": [
+        {"args":[[73,74,75,71,69,72,76,73]],"expected":[1,1,4,2,1,1,0,0]},
+        {"args":[[30]],"expected":[0]}
+      ],
+      "hints": [
+        "Keep indices whose warmer day has not been found.",
+        "The stack should keep temperatures in decreasing order from bottom to top."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function daysUntilWarmer(temperatures) {\n  const result = Array(temperatures.length).fill(0);\n  const pending = [];\n  for (let index = 0; index < temperatures.length; index += 1) {\n    while (pending.length && temperatures[index] > temperatures[pending[pending.length - 1]]) {\n      const previous = pending.pop();\n      result[previous] = index - previous;\n    }\n    pending.push(index);\n  }\n  return result;\n}\n",
+          "timeComplexity": "O(n)",
+          "spaceComplexity": "O(n); output encoding included",
+          "rationale": "Every index is pushed and popped at most once; the result and unresolved stack can each reach n."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-44",
+      "slug": "decode-bracketed-string",
+      "title": "Decode Bracketed String",
+      "description": "Given text in count[fragment] grammar with ASCII letters and decimal counts, decode nested fragments; 0[fragment] returns '' and invalid brackets, counts, or characters return null. Examples: decodeString('3[a2[c]]') returns 'accaccacc'; decodeString('2[ab') returns null.",
+      "entryPoint": "decodeString",
+      "starterCode": "function decodeString(text) {\n  // Return decoded text or null for invalid grammar.\n}\n",
+      "solution": "function decodeString(text) {\n  let index = 0;\n  const parse = (stop) => {\n    const parts = [];\n    while (index < text.length && text[index] !== ']') {\n      if (/[a-zA-Z]/.test(text[index])) {\n        const start = index;\n        while (index < text.length && /[a-zA-Z]/.test(text[index])) index += 1;\n        parts.push({count: 1, parts: [{literal: text.slice(start, index)}]});\n      } else if (/\\d/.test(text[index])) {\n        const start = index;\n        while (index < text.length && /\\d/.test(text[index])) index += 1;\n        if (text[index] !== '[') return null;\n        const count = Number(text.slice(start, index));\n        index += 1;\n        const inner = parse(true);\n        if (inner === null || text[index] !== ']') return null;\n        index += 1;\n        parts.push({count, parts: inner});\n      } else return null;\n    }\n    return stop || index === text.length ? parts : null;\n  };\n  const tree = parse(false);\n  if (tree === null || index !== text.length) return null;\n  const render = (parts) => parts.map((part) => {\n    if (part.count === 0) return '';\n    const fragment = part.parts.map((child) => child.literal === undefined ? render([child]) : child.literal).join('');\n    return fragment.repeat(part.count);\n  }).join('');\n  try { return render(tree); } catch { return null; }\n}\n",
+      "tests": [
+        {"args":["3[a2[c]]"],"expected":"accaccacc"},
+        {"args":["2[ab"],"expected":null}
+      ],
+      "hints": [
+        "Parse the bracket grammar before expanding any repeated fragment.",
+        "Represent zero-repeat fragments without rendering their children, while still validating their syntax.",
+        "Nested expansion must preserve the order of adjacent literals and repeated fragments."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function decodeString(text) {\n  let index = 0;\n  const parse = (stop) => {\n    const parts = [];\n    while (index < text.length && text[index] !== ']') {\n      if (/[a-zA-Z]/.test(text[index])) {\n        const start = index;\n        while (index < text.length && /[a-zA-Z]/.test(text[index])) index += 1;\n        parts.push({count: 1, parts: [{literal: text.slice(start, index)}]});\n      } else if (/\\d/.test(text[index])) {\n        const start = index;\n        while (index < text.length && /\\d/.test(text[index])) index += 1;\n        if (text[index] !== '[') return null;\n        const count = Number(text.slice(start, index));\n        index += 1;\n        const inner = parse(true);\n        if (inner === null || text[index] !== ']') return null;\n        index += 1;\n        parts.push({count, parts: inner});\n      } else return null;\n    }\n    return stop || index === text.length ? parts : null;\n  };\n  const tree = parse(false);\n  if (tree === null || index !== text.length) return null;\n  const render = (parts) => parts.map((part) => {\n    if (part.count === 0) return '';\n    const fragment = part.parts.map((child) => child.literal === undefined ? render([child]) : child.literal).join('');\n    return fragment.repeat(part.count);\n  }).join('');\n  try { return render(tree); } catch { return null; }\n}\n",
+          "timeComplexity": "O(n + output * depth)",
+          "spaceComplexity": "O(n + output * depth); includes AST, retained fragments, intermediate copies, and returned output",
+          "rationale": "The parser scans encoded input n and builds an AST. Zero-repeat nodes are parsed but skipped during rendering; for positive nesting, retained intermediate strings can be copied at each of depth levels while output is the decoded length."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-45",
+      "slug": "generate-parentheses",
+      "title": "Generate Parentheses",
+      "description": "Given integer n, return all balanced-parentheses strings for n pairs in lexicographic order; 0 returns [''] and negative n returns []. Examples: generateParentheses(2) returns ['(())','()()']; generateParentheses(0) returns [''].",
+      "entryPoint": "generateParentheses",
+      "starterCode": "function generateParentheses(n) {\n  // Return balanced strings in lexicographic order.\n}\n",
+      "solution": "function generateParentheses(n) {\n  if (n < 0) return [];\n  const result = [];\n  const path = [];\n  const visit = (open, close) => {\n    if (path.length === n * 2) { result.push(path.join('')); return; }\n    if (open < n) { path.push('('); visit(open + 1, close); path.pop(); }\n    if (close < open) { path.push(')'); visit(open, close + 1); path.pop(); }\n  };\n  visit(0, 0);\n  return result;\n}\n",
+      "tests": [
+        {"args":[2],"expected":["(())","()()"]},
+        {"args":[0],"expected":[""]}
+      ],
+      "hints": [
+        "Track how many opening and closing parentheses have been placed.",
+        "You may add a closing parenthesis only when it cannot exceed openings."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function generateParentheses(n) {\n  if (n < 0) return [];\n  const result = [];\n  const path = [];\n  const visit = (open, close) => {\n    if (path.length === n * 2) { result.push(path.join('')); return; }\n    if (open < n) { path.push('('); visit(open + 1, close); path.pop(); }\n    if (close < open) { path.push(')'); visit(open, close + 1); path.pop(); }\n  };\n  visit(0, 0);\n  return result;\n}\n",
+          "timeComplexity": "O(Cn * n)",
+          "spaceComplexity": "O(n); auxiliary space excludes the returned output",
+          "rationale": "There are Catalan Cn completed strings, and joining each length-2n path dominates output construction."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-46",
+      "slug": "word-break",
+      "title": "Word Break",
+      "description": "Given string text and dictionary string array, return whether text can be segmented into dictionary words; blank dictionary entries are ignored and empty text is segmentable. Examples: canSegment('leetcode',['leet','code']) returns true; canSegment('',['','a']) returns true.",
+      "entryPoint": "canSegment",
+      "starterCode": "function canSegment(text, dictionary) {\n  // Return whether text can be segmented.\n}\n",
+      "solution": "function canSegment(text, dictionary) {\n  const root = {};\n  let longest = 0;\n  for (const word of dictionary) {\n    if (word === '') continue;\n    let node = root;\n    for (let index = 0; index < word.length; index += 1) { const character = word[index]; node = node[character] || (node[character] = {}); }\n    node.end = true;\n    longest = Math.max(longest, word.length);\n  }\n  const reachable = Array(text.length + 1).fill(false);\n  reachable[0] = true;\n  for (let start = 0; start < text.length; start += 1) {\n    if (!reachable[start]) continue;\n    let node = root;\n    for (let end = start; end < text.length && end < start + longest; end += 1) {\n      node = node[text[end]];\n      if (!node) break;\n      if (node.end) reachable[end + 1] = true;\n    }\n  }\n  return reachable[text.length];\n}\n",
+      "tests": [
+        {"args":["leetcode",["leet","code"]],"expected":true},
+        {"args":["",["","a"]],"expected":true}
+      ],
+      "hints": [
+        "Build word prefixes once instead of creating a substring at every candidate boundary.",
+        "Let each reachable text index start a bounded walk through the trie."
+      ],
+      "difficulty": "Hard",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function canSegment(text, dictionary) {\n  const root = {};\n  let longest = 0;\n  for (const word of dictionary) {\n    if (word === '') continue;\n    let node = root;\n    for (let index = 0; index < word.length; index += 1) { const character = word[index]; node = node[character] || (node[character] = {}); }\n    node.end = true;\n    longest = Math.max(longest, word.length);\n  }\n  const reachable = Array(text.length + 1).fill(false);\n  reachable[0] = true;\n  for (let start = 0; start < text.length; start += 1) {\n    if (!reachable[start]) continue;\n    let node = root;\n    for (let end = start; end < text.length && end < start + longest; end += 1) {\n      node = node[text[end]];\n      if (!node) break;\n      if (node.end) reachable[end + 1] = true;\n    }\n  }\n  return reachable[text.length];\n}\n",
+          "timeComplexity": "O(n * L + d)",
+          "spaceComplexity": "O(n + d)",
+          "rationale": "The trie stores d total dictionary characters, and DP starts inspect at most L trie steps across n text positions."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-47",
+      "slug": "coin-change-minimum",
+      "title": "Coin Change Minimum",
+      "description": "Given positive integer coin values and integer amount, return the fewest coins needed; amount 0 returns 0 and impossible or negative amounts return -1. Examples: minCoins([1,2,5],11) returns 3; minCoins([2],3) returns -1.",
+      "entryPoint": "minCoins",
+      "starterCode": "function minCoins(coins, amount) {\n  // Return the fewest coins or -1.\n}\n",
+      "solution": "function minCoins(coins, amount) {\n  if (amount < 0) return -1;\n  const best = Array(amount + 1).fill(Infinity);\n  best[0] = 0;\n  for (let value = 1; value <= amount; value += 1) {\n    for (const coin of coins) if (Number.isInteger(coin) && coin > 0 && coin <= value) best[value] = Math.min(best[value], best[value - coin] + 1);\n  }\n  return best[amount] === Infinity ? -1 : best[amount];\n}\n",
+      "tests": [
+        {"args":[[1,2,5],11],"expected":3},
+        {"args":[[2],3],"expected":-1}
+      ],
+      "hints": [
+        "Let each amount remember the best answer found so far.",
+        "For a coin value, reuse the answer for amount minus that coin."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function minCoins(coins, amount) {\n  if (amount < 0) return -1;\n  const best = Array(amount + 1).fill(Infinity);\n  best[0] = 0;\n  for (let value = 1; value <= amount; value += 1) {\n    for (const coin of coins) if (Number.isInteger(coin) && coin > 0 && coin <= value) best[value] = Math.min(best[value], best[value - coin] + 1);\n  }\n  return best[amount] === Infinity ? -1 : best[amount];\n}\n",
+          "timeComplexity": "O(amount * coins)",
+          "spaceComplexity": "O(amount)",
+          "rationale": "The table considers each positive amount against every supplied coin."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-48",
+      "slug": "course-schedule",
+      "title": "Course Schedule",
+      "description": "Given nonnegative courseCount and [course,prerequisite] edges, return whether every course can finish; 0 returns true while invalid edges, self-cycles, and cycles return false. Examples: canFinish(2,[[1,0]]) returns true; canFinish(2,[[1,0],[0,1]]) returns false.",
+      "entryPoint": "canFinish",
+      "starterCode": "function canFinish(courseCount, prerequisites) {\n  // Return whether the directed prerequisite graph is acyclic.\n}\n",
+      "solution": "function canFinish(courseCount, prerequisites) {\n  if (!Number.isInteger(courseCount) || courseCount < 0) return false;\n  const edges = Array.from({length: courseCount}, () => []);\n  const indegree = Array(courseCount).fill(0);\n  for (const edge of prerequisites) {\n    if (!Array.isArray(edge) || edge.length !== 2 || !Number.isInteger(edge[0]) || !Number.isInteger(edge[1]) || edge[0] < 0 || edge[0] >= courseCount || edge[1] < 0 || edge[1] >= courseCount) return false;\n    edges[edge[1]].push(edge[0]);\n    indegree[edge[0]] += 1;\n  }\n  const queue = [];\n  for (let course = 0; course < courseCount; course += 1) if (indegree[course] === 0) queue.push(course);\n  for (let head = 0; head < queue.length; head += 1) for (const next of edges[queue[head]]) if (--indegree[next] === 0) queue.push(next);\n  return queue.length === courseCount;\n}\n",
+      "tests": [
+        {"args":[2,[[1,0]]],"expected":true},
+        {"args":[2,[[1,0],[0,1]]],"expected":false}
+      ],
+      "hints": [
+        "Count prerequisites for every course before choosing a starting course.",
+        "Repeatedly remove courses whose prerequisite count reaches zero."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function canFinish(courseCount, prerequisites) {\n  if (!Number.isInteger(courseCount) || courseCount < 0) return false;\n  const edges = Array.from({length: courseCount}, () => []);\n  const indegree = Array(courseCount).fill(0);\n  for (const edge of prerequisites) {\n    if (!Array.isArray(edge) || edge.length !== 2 || !Number.isInteger(edge[0]) || !Number.isInteger(edge[1]) || edge[0] < 0 || edge[0] >= courseCount || edge[1] < 0 || edge[1] >= courseCount) return false;\n    edges[edge[1]].push(edge[0]);\n    indegree[edge[0]] += 1;\n  }\n  const queue = [];\n  for (let course = 0; course < courseCount; course += 1) if (indegree[course] === 0) queue.push(course);\n  for (let head = 0; head < queue.length; head += 1) for (const next of edges[queue[head]]) if (--indegree[next] === 0) queue.push(next);\n  return queue.length === courseCount;\n}\n",
+          "timeComplexity": "O(V + E)",
+          "spaceComplexity": "O(V + E)",
+          "rationale": "The adjacency lists and indegrees cover V courses and E prerequisite edges once."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-49",
+      "slug": "number-of-islands",
+      "title": "Number of Islands",
+      "description": "Given rectangular string array grid of '0' and '1' rows, return its count of four-directionally connected '1' islands without changing input; [] returns 0. Examples: countIslands(['11000','11000','00100','00011']) returns 3; countIslands(['0']) returns 0.",
+      "entryPoint": "countIslands",
+      "starterCode": "function countIslands(grid) {\n  // Return the number of four-direction islands.\n}\n",
+      "solution": "function countIslands(grid) {\n  if (grid.length === 0) return 0;\n  const width = grid[0].length;\n  if (grid.some((row) => row.length !== width || /[^01]/.test(row))) return 0;\n  const seen = new Set();\n  let islands = 0;\n  for (let row = 0; row < grid.length; row += 1) for (let column = 0; column < width; column += 1) {\n    const key = row * width + column;\n    if (grid[row][column] !== '1' || seen.has(key)) continue;\n    islands += 1;\n    const queue = [[row, column]];\n    seen.add(key);\n    for (let head = 0; head < queue.length; head += 1) for (const [nextRow, nextColumn] of [[queue[head][0] - 1, queue[head][1]], [queue[head][0] + 1, queue[head][1]], [queue[head][0], queue[head][1] - 1], [queue[head][0], queue[head][1] + 1]]) {\n      const nextKey = nextRow * width + nextColumn;\n      if (nextRow >= 0 && nextRow < grid.length && nextColumn >= 0 && nextColumn < width && grid[nextRow][nextColumn] === '1' && !seen.has(nextKey)) { seen.add(nextKey); queue.push([nextRow, nextColumn]); }\n    }\n  }\n  return islands;\n}\n",
+      "tests": [
+        {"args":[["11000","11000","00100","00011"]],"expected":3},
+        {"args":[["0"]],"expected":0}
+      ],
+      "hints": [
+        "Keep visited coordinates separately so the input strings are not modified.",
+        "When you find unvisited land, traverse its four-direction neighbors before counting another island."
+      ],
+      "difficulty": "Medium",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function countIslands(grid) {\n  if (grid.length === 0) return 0;\n  const width = grid[0].length;\n  if (grid.some((row) => row.length !== width || /[^01]/.test(row))) return 0;\n  const seen = new Set();\n  let islands = 0;\n  for (let row = 0; row < grid.length; row += 1) for (let column = 0; column < width; column += 1) {\n    const key = row * width + column;\n    if (grid[row][column] !== '1' || seen.has(key)) continue;\n    islands += 1;\n    const queue = [[row, column]];\n    seen.add(key);\n    for (let head = 0; head < queue.length; head += 1) for (const [nextRow, nextColumn] of [[queue[head][0] - 1, queue[head][1]], [queue[head][0] + 1, queue[head][1]], [queue[head][0], queue[head][1] - 1], [queue[head][0], queue[head][1] + 1]]) {\n      const nextKey = nextRow * width + nextColumn;\n      if (nextRow >= 0 && nextRow < grid.length && nextColumn >= 0 && nextColumn < width && grid[nextRow][nextColumn] === '1' && !seen.has(nextKey)) { seen.add(nextKey); queue.push([nextRow, nextColumn]); }\n    }\n  }\n  return islands;\n}\n",
+          "timeComplexity": "O(rows * cols)",
+          "spaceComplexity": "O(rows * cols)",
+          "rationale": "The scan and visited traversal each touch at most every grid coordinate."
+        }
+      ]
+    },
+    {
+      "id": "ct-js-50",
+      "slug": "lru-cache",
+      "title": "LRU Cache",
+      "description": "Given integer capacity and ['put',key,value] or ['get',key] operation tuples, return one result per operation using least-recently-used eviction; put returns null, missing get returns -1, and negative capacity returns []. Examples: lruTranscript(2,[['put',1,1],['put',2,2],['get',1],['put',3,3],['get',2]]) returns [null,null,1,null,-1]; lruTranscript(0,[['put',1,1],['get',1]]) returns [null,-1].",
+      "entryPoint": "lruTranscript",
+      "starterCode": "function lruTranscript(capacity, ops) {\n  // Return one JSON result for each operation.\n}\n",
+      "solution": "function lruTranscript(capacity, ops) {\n  if (!Number.isInteger(capacity) || capacity < 0) return [];\n  const nodes = new Map();\n  const head = {key: null, value: null};\n  const tail = {key: null, value: null};\n  head.next = tail; tail.prev = head;\n  const remove = (node) => { node.prev.next = node.next; node.next.prev = node.prev; };\n  const append = (node) => { node.prev = tail.prev; node.next = tail; tail.prev.next = node; tail.prev = node; };\n  const results = [];\n  for (const operation of ops) {\n    if (operation[0] === 'get') {\n      const node = nodes.get(operation[1]);\n      if (!node) results.push(-1);\n      else { remove(node); append(node); results.push(node.value); }\n    } else if (operation[0] === 'put') {\n      if (capacity > 0) {\n        let node = nodes.get(operation[1]);\n        if (node) { node.value = operation[2]; remove(node); }\n        else { node = {key: operation[1], value: operation[2]}; nodes.set(node.key, node); }\n        append(node);\n        if (nodes.size > capacity) { const oldest = head.next; remove(oldest); nodes.delete(oldest.key); }\n      }\n      results.push(null);\n    } else results.push(null);\n  }\n  return results;\n}\n",
+      "tests": [
+        {"args":[2,[["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2]]],"expected":[null,null,1,null,-1]},
+        {"args":[0,[["put",1,1],["get",1]]],"expected":[null,-1]}
+      ],
+      "hints": [
+        "A Map can locate a key, but it cannot by itself express recency updates efficiently.",
+        "Keep most-recent entries next to one sentinel and move a node whenever it is read or written.",
+        "When capacity is zero, puts still report null but no entry is retained."
+      ],
+      "difficulty": "Hard",
+      "solutions": [
+        {
+          "id": "reference",
+          "label": "Reference solution",
+          "code": "function lruTranscript(capacity, ops) {\n  if (!Number.isInteger(capacity) || capacity < 0) return [];\n  const nodes = new Map();\n  const head = {key: null, value: null};\n  const tail = {key: null, value: null};\n  head.next = tail; tail.prev = head;\n  const remove = (node) => { node.prev.next = node.next; node.next.prev = node.prev; };\n  const append = (node) => { node.prev = tail.prev; node.next = tail; tail.prev.next = node; tail.prev = node; };\n  const results = [];\n  for (const operation of ops) {\n    if (operation[0] === 'get') {\n      const node = nodes.get(operation[1]);\n      if (!node) results.push(-1);\n      else { remove(node); append(node); results.push(node.value); }\n    } else if (operation[0] === 'put') {\n      if (capacity > 0) {\n        let node = nodes.get(operation[1]);\n        if (node) { node.value = operation[2]; remove(node); }\n        else { node = {key: operation[1], value: operation[2]}; nodes.set(node.key, node); }\n        append(node);\n        if (nodes.size > capacity) { const oldest = head.next; remove(oldest); nodes.delete(oldest.key); }\n      }\n      results.push(null);\n    } else results.push(null);\n  }\n  return results;\n}\n",
+          "timeComplexity": "O(1); average per operation",
+          "spaceComplexity": "O(capacity); auxiliary cache storage excludes the returned transcript",
+          "rationale": "The Map and doubly linked list update, move, and evict one node per operation; auxiliary stored nodes never exceed capacity."
+        }
+      ]
     }
   ]
 }

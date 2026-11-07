@@ -135,7 +135,7 @@ async function assertToolbarFits(page, width) {
     assert.ok(control.left >= 0 && control.right <= width, `editor control fits at ${width}px`);
     assert.equal(control.hit, true, `editor control remains hit-testable at ${width}px`);
   }
-  if ([600, 601].includes(width)) {
+  if ([1250, 1220, 1151, 600, 601].includes(width)) {
     const contains = (outer, inner) => inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
     const overlaps = (first, second) => first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
     assert.equal(result.semanticHeaderMembership, true, `heading and JavaScript remain in the semantic editor header at ${width}px`);
@@ -226,7 +226,7 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     await assertVisibleFocusAndReducedMotion(testButton, "Test");
     await assertVisibleFocusAndReducedMotion(runButton, "Run");
 
-    for (const width of [1536, 780, 768, 601, 600, 390, 768, 780, 1536]) await assertToolbarFits(page, width);
+    for (const width of [1536, 1250, 1220, 1151, 780, 768, 601, 600, 390, 768, 780, 1151, 1220, 1250, 1536]) await assertToolbarFits(page, width);
     await page.getByRole("button", {name: "Очистить выбор задачи", exact: true}).click();
     assert.equal(await testButton.isDisabled(), true, "clearing selection retains Test disabled policy");
     assert.equal(await runButton.isDisabled(), true, "clearing selection retains Run disabled policy");

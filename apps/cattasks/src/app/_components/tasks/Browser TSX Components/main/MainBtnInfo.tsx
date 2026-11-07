@@ -13,11 +13,6 @@ type MainBtnInfoProps = {
     ariaLabel: string;
 };
 
-// type TestResultDetail = {
-//     resultText: string;
-//     areAllTestsPassed: boolean;
-// };
-
 export default function MainBtnInfo({
                                         className,
                                         isActive,
@@ -39,13 +34,13 @@ export default function MainBtnInfo({
         <button
             type="button"
             className={getBtnClassName}
-            aria-label={`Info: ${ariaLabel}`}
+            aria-label={`Hint: ${ariaLabel}`}
             aria-pressed={isActive}
             disabled={isDisabled}
             aria-disabled={isDisabled}
             onClick={onClick}
         >
-            <span>Info</span>
+            <span>Hint</span>
         </button>
     );
 }

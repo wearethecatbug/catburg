@@ -271,11 +271,11 @@ test("custom task controls validate accessibly, persist only custom definitions,
     await page.getByRole("button", {name: "Test Code"}).click();
     const actualResult = await outputText(page, "Все тесты пройдены: 1/1");
     assert.match(actualResult, /1\/1/, "the inert custom task reaches a real Test result before catalogue navigation");
-    await page.getByLabel(/Показать информацию|Показана информация/).click();
+    await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
     await page.getByRole("button", {name: "Back to task"}).click();
-    assert.match(await page.getByLabel(/Показана информация/).getAttribute("aria-label"), /Показана информация/, "Back preserves the custom task's active tab");
+    assert.match(await page.getByLabel(/Hint: Показаны подсказки/).getAttribute("aria-label"), /Показаны подсказки/, "Back preserves the custom task's active tab");
     await assertActiveDraft(page, editedDraft, "Back preserves the custom draft without a second state owner");
     assert.equal(await outputText(page, actualResult), actualResult, "Back preserves the custom task's actual result");
 
@@ -671,6 +671,201 @@ test("a committed import publishes its row after its controls unmount too late t
     assert.deepEqual(seen.failedResponses, []);
     assert.deepEqual(seen.catalogMethods, ["GET"]);
   } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("a legacy custom document colliding with a loaded built-in is quarantined and exported byte-for-byte without migration", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const collision = customTask("ct-js-01");
+  const companion = customTask("collision-companion");
+  const raw = ` {\n  "version": 1,\n  "tasks": [${JSON.stringify(collision)},${JSON.stringify(companion)}]\n}\n`;
+  const collisionCatalog = {version: 1, tasks: [
+    {id: "ct-js-01", slug: "builtin-collision", title: "Built-in collision", description: "Inert built-in fixture.", hints: ["Read the input.", "Return a JSON value."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["built-in"], expected: "built-in"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return value; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "One return."}], difficulty: "Easy"},
+  ]};
+  await context.addInitScript(({legacyStorageKey, raw}) => localStorage.setItem(legacyStorageKey, raw), {legacyStorageKey, raw});
+  const page = await context.newPage();
+  const putCalls = [];
+  await page.addInitScript(({databaseName, storeName, documentKey}) => {
+    const nativePut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function(value, key) {
+      if (this.transaction.db.name === databaseName && this.name === storeName && key === documentKey) window.__collisionPutCalls = (window.__collisionPutCalls ?? 0) + 1;
+      return nativePut.call(this, value, key);
+    };
+  }, {databaseName, storeName, documentKey});
+  await page.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(collisionCatalog)}));
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    const alert = customAlerts(page);
+    await alert.waitFor({state: "visible"});
+    assert.match(await alert.innerText(), /collides with a built-in/i, "the failed reread quarantines the collision before publishing custom rows");
+    assert.equal(await rows(page).filter({hasText: companion.title}).count(), 0, "a companion is not activated from a collision document");
+    assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "mutating controls remain blocked during recovery");
+    assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "import remains blocked during recovery");
+    const recovery = page.getByRole("button", {name: "Export recovery JSON"});
+    assert.equal(await recovery.isDisabled(), false, "only the raw recovery export is enabled");
+    const download = page.waitForEvent("download");
+    await recovery.click();
+    const saved = await download;
+    assert.equal(await saved.createReadStream().then(async stream => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); return Buffer.concat(chunks).toString("utf8"); }), raw, "recovery export preserves the original DOM string exactly rather than parse/reserialize");
+    putCalls.push(await page.evaluate(() => window.__collisionPutCalls ?? 0));
+    assert.deepEqual(putCalls, [0], "collision recovery neither initializes nor migrates the stored document");
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyStorageKey), raw, "legacy bytes remain untouched");
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("ordinary malformed and duplicate storage documents remain errors without a recovery export", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  try {
+    const duplicateSolutionId = customTask("duplicate-solution-id", {solutions: [
+      {id: "reference", label: "First reference", code: "function echo(value) { return String(value); }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "Returns one value."},
+      {id: "reference", label: "Second reference", code: "function echo(value) { return String(value); }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "Returns one value."},
+    ]});
+    for (const raw of ["{", JSON.stringify({version: 1, tasks: [customTask("duplicate"), customTask("duplicate")]}), JSON.stringify({version: 1, tasks: [duplicateSolutionId]})]) {
+      const context = await browser.newContext();
+      await context.addInitScript(({legacyStorageKey, raw}) => localStorage.setItem(legacyStorageKey, raw), {legacyStorageKey, raw});
+      const page = await context.newPage();
+      await page.addInitScript(({databaseName, storeName, documentKey}) => {
+        const nativePut = IDBObjectStore.prototype.put;
+        IDBObjectStore.prototype.put = function(value, key) {
+          if (this.transaction.db.name === databaseName && this.name === storeName && key === documentKey) window.__ordinaryInvalidPutCalls = (window.__ordinaryInvalidPutCalls ?? 0) + 1;
+          return nativePut.call(this, value, key);
+        };
+      }, {databaseName, storeName, documentKey});
+      await diagnostics(page);
+      try {
+        await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+        await openCatalogue(page);
+        await customAlerts(page).waitFor({state: "visible"});
+        assert.equal(await page.getByRole("button", {name: "Export recovery JSON"}).count(), 0, "only a structurally valid built-in collision gets a raw recovery export");
+        assert.equal(await page.getByRole("button", {name: "Export tasks"}).isDisabled(), true, "ordinary invalid storage cannot be exported as a normal custom snapshot");
+        assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "ordinary invalid storage also blocks mutation until a valid reread");
+        assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "ordinary invalid storage also blocks import until a valid reread");
+        assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyStorageKey), raw, "ordinary invalid storage bytes remain unchanged");
+        assert.equal(await page.evaluate(() => window.__ordinaryInvalidPutCalls ?? 0), 0, "ordinary invalid storage never initializes or mutates the document repository");
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test("an external collision reread quarantines a previously selected custom workspace before recovery export", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const existing = customTask("selected-before-collision");
+  const collision = customTask("race");
+  const companion = customTask("companion-after-collision");
+  const collisionRaw = JSON.stringify({version: 1, tasks: [collision, companion]});
+  await context.addInitScript(({legacyStorageKey, existing}) => localStorage.setItem(legacyStorageKey, JSON.stringify({version: 1, tasks: [existing]})), {legacyStorageKey, existing});
+  const page = await context.newPage();
+  const seen = await diagnostics(page);
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    await rows(page).filter({hasText: existing.title}).waitFor({state: "visible"});
+    await rows(page).filter({hasText: existing.title}).getByRole("button", {name: /^Open(?: |$)/}).click();
+    const draft = "function echo(value) { return `${value}`; }";
+    await setActiveDraft(page, existing.starterCode, draft);
+    await page.getByRole("button", {name: "Test Code"}).click();
+    const resultBefore = await outputText(page, "Все тесты пройдены: 1/1");
+    await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+
+    await page.evaluate(({databaseName, storeName, documentKey, collisionRaw}) => new Promise((resolve, reject) => {
+      const open = indexedDB.open(databaseName);
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const database = open.result;
+        const transaction = database.transaction(storeName, "readwrite");
+        transaction.objectStore(storeName).put(collisionRaw, documentKey);
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onabort = () => reject(transaction.error);
+      };
+    }), {databaseName, storeName, documentKey, collisionRaw});
+
+    await fillTaskForm(page, customTask("trigger-reread"));
+    await page.getByRole("button", {name: "Save task"}).click();
+    const alert = customAlerts(page);
+    await alert.waitFor({state: "visible"});
+    assert.match(await alert.innerText(), /collides with a built-in/i, "the real append observes the externally replaced document and exposes a retry path");
+    assert.equal(await rows(page).filter({hasText: existing.title}).count(), 1, "a failed mutation alone retains the last validated projection until the actual reread");
+    await page.getByRole("button", {name: "Retry storage"}).click();
+    await page.waitForFunction(title => !Array.from(document.querySelectorAll("main li")).some(node => node.textContent?.includes(title)), existing.title);
+    assert.equal(await rows(page).filter({hasText: existing.title}).count(), 0, "the collision reread clears the old selected custom row before reporting recovery");
+    assert.equal(await rows(page).filter({hasText: companion.title}).count(), 0, "a companion in the collision document is not activated");
+    assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "reread recovery blocks fresh mutations");
+    assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "reread recovery blocks import");
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", {name: "Export recovery JSON"}).click();
+    const exported = await download;
+    const raw = await exported.createReadStream().then(async stream => { const chunks = []; for await (const chunk of stream) chunks.push(chunk); return Buffer.concat(chunks).toString("utf8"); });
+    assert.equal(raw, collisionRaw, "recovery retains the exact external raw document after the selected workspace is quarantined");
+    await page.getByRole("button", {name: "Back to task"}).click();
+    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "a stale custom workspace never rebinds after collision reread");
+    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "collision reread leaves execution unavailable without a selected valid task");
+    assert.equal(await page.getByRole("combobox").inputValue(), "", "collision reread clears the selected custom label rather than selecting a built-in by matching ID");
+    assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "collision reread clears stale custom output ownership while preserving the protected editor shell");
+    assert.equal(resultBefore, "Все тесты пройдены: 1/1", "the connected history establishes a real result before its custom workspace is quarantined");
+    assert.deepEqual(seen.consoleErrors, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("a pending valid reread blocks writes while retaining the last validated selected custom workspace", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const existing = customTask("pending-reread-selected");
+  const validRaw = JSON.stringify({version: 1, tasks: [existing]});
+  await context.addInitScript(({legacyStorageKey, validRaw}) => localStorage.setItem(legacyStorageKey, validRaw), {legacyStorageKey, validRaw});
+  const page = await context.newPage();
+  const seen = await diagnostics(page);
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    await rows(page).filter({hasText: existing.title}).getByRole("button", {name: /^Open(?: |$)/}).click();
+    const draft = "function echo(value) { return `${value}`; }";
+    await setActiveDraft(page, existing.starterCode, draft);
+    await page.getByRole("button", {name: "Test Code"}).click();
+    await outputText(page, "Все тесты пройдены: 1/1");
+    await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
+    await page.getByRole("button", {name: "All tasks"}).click();
+
+    await page.evaluate(({databaseName, storeName, documentKey}) => new Promise((resolve, reject) => {
+      const open = indexedDB.open(databaseName); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const tx = db.transaction(storeName, "readwrite"); tx.objectStore(storeName).put("{", documentKey); tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => reject(tx.error); };
+    }), {databaseName, storeName, documentKey});
+    await fillTaskForm(page, customTask("trigger-invalid-reread"));
+    await page.getByRole("button", {name: "Save task"}).click();
+    await customAlerts(page).waitFor({state: "visible"});
+    assert.equal(await rows(page).filter({hasText: existing.title}).count(), 1, "the append failure keeps the last validated projection until a normal reread begins");
+
+    await page.evaluate(({databaseName, storeName, documentKey, validRaw}) => new Promise((resolve, reject) => {
+      const open = indexedDB.open(databaseName); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const tx = db.transaction(storeName, "readwrite"); tx.objectStore(storeName).put(validRaw, documentKey); tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => reject(tx.error); };
+    }), {databaseName, storeName, documentKey, validRaw});
+    await holdDocumentTransaction(page);
+    await page.getByRole("button", {name: "Retry storage"}).click();
+    assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "pending reread marks custom storage not-ready before the held read resolves");
+    assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "pending reread blocks import without clearing validated rows");
+    assert.equal(await rows(page).filter({hasText: existing.title}).count(), 1, "pending reread retains the old projection rather than transiently clearing it");
+    await page.getByRole("button", {name: "Back to task"}).click();
+    await assertActiveDraft(page, draft, "pending reread retains the selected custom draft");
+    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "pending reread retains the selected custom result");
+    assert.match(await page.getByLabel(/Hint: Показаны подсказки/).getAttribute("aria-label"), /Показаны подсказки/, "pending reread retains the active Hint tab");
+    await releaseDocumentTransaction(page);
+    assert.deepEqual(seen.consoleErrors, []);
+  } finally {
+    await page.evaluate(() => window.__releaseCustomTaskTransaction?.()).catch(() => undefined);
     await context.close();
     await browser.close();
   }

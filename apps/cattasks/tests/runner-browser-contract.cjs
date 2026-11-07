@@ -19,6 +19,10 @@ function race(v1, v2, g) {
   const seconds = catchUpSeconds(g, v2 - v1);
   return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60];
 }`;
+const catalog = {version: 1, tasks: [{
+  id: "race", title: "Race", description: "Inert runner fixture.", entryPoint: "race", starterCode: helperSolution, solution: helperSolution,
+  tests: [{args: [720, 850, 70], expected: [0, 32, 18]}, {args: [80, 91, 37], expected: [3, 21, 49]}],
+}]};
 
 async function replaceEditor(page, code) {
   await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
@@ -33,13 +37,12 @@ async function replaceEditor(page, code) {
 }
 
 async function readResult(page, expectedTerminal) {
-  const infoButton = page.getByLabel(/Info: Показать информацию|Info: Показана информация/);
-  await infoButton.click();
-  const result = page.locator("pre[aria-label='Информация о тесте']");
+  const result = page.getByRole("heading", {name: "Output"}).locator("..").locator("pre");
   await result.waitFor({state: "visible", timeout: 10_000});
   await page.waitForFunction(
     ({source, flags}) => {
-      const node = document.querySelector("pre[aria-label='Информация о тесте']");
+      const heading = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).find(node => node.textContent?.trim() === "Output");
+      const node = heading?.parentElement?.querySelector("pre");
       return Boolean(node && new RegExp(source, flags).test(node.textContent?.trim() ?? ""));
     },
     {source: expectedTerminal.source, flags: expectedTerminal.flags},
@@ -57,6 +60,7 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
   const probeRequests = [];
   const probeFailures = [];
   const probeResponses = [];
+  const catalogRequests = [];
   page.on("console", message => {
     if (message.type() !== "error") return;
     const text = message.text();
@@ -68,6 +72,10 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
   });
   page.on("requestfailed", request => { if (request.url() === networkProbeUrl) probeFailures.push(request.failure()); });
   page.on("response", response => { if (response.url() === networkProbeUrl) probeResponses.push(response.status()); });
+  await context.route("**/task-catalog.v1.json", route => {
+    catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
 
   try {
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
@@ -78,6 +86,7 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     await assert.doesNotReject(runButton.waitFor({state: "visible", timeout: 10_000}));
     await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
     await page.waitForTimeout(1_500);
+    assert.deepEqual(catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the runner scenario receives one inert canonical catalogue GET");
 
     const directBoundary = await page.evaluate(async ({runnerSource, catalogSource}) => {
       const catalogModule = {exports: {}};
@@ -173,6 +182,59 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
 
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(consoleErrors, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks isolates Product Except Self grading across published zero cases", {timeout: 30_000}, async () => {
+  const publishedCatalog = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "public", "task-catalog.v1.json"), "utf8"));
+  const task = publishedCatalog.tasks.find(candidate => candidate.id === "ct-js-32");
+  assert.ok(task, "the published Product Except Self task must be available");
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const requestFailures = [];
+  const httpFailures = [];
+  const catalogRequests = [];
+  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("requestfailed", request => requestFailures.push({url: request.url(), error: request.failure()?.errorText ?? null}));
+  page.on("response", response => { if (response.status() >= 400) httpFailures.push({url: response.url(), status: response.status()}); });
+  page.on("request", request => { if (new URL(request.url()).pathname === "/task-catalog.v1.json") catalogRequests.push(request.method()); });
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200, "the public application route responds");
+    await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
+    const results = await page.evaluate(async ({runnerSource, catalogSource, task}) => {
+      const catalogModule = {exports: {}};
+      new Function("exports", "module", "require", catalogSource)(catalogModule.exports, catalogModule, request => {
+        throw new Error(`unexpected catalog dependency: ${request}`);
+      });
+      const runnerModule = {exports: {}};
+      new Function("exports", "module", "require", runnerSource)(runnerModule.exports, runnerModule, request => {
+        if (request === "../catalog/taskCatalog") return catalogModule.exports;
+        throw new Error(`unexpected runner dependency: ${request}`);
+      });
+      const {runIsolatedTask} = runnerModule.exports;
+      const run = (requestId, code) => runIsolatedTask({requestId, mode: "test", code, entryPoint: task.entryPoint, tests: task.tests});
+      const correct = await run("product-correct", "function productExceptSelf(numbers) { return numbers.map((_, index) => numbers.reduce((product, number, otherIndex) => otherIndex === index ? product : product * number, 1)); }");
+      const divisionOnly = await run("product-division", "function productExceptSelf(numbers) { const total = numbers.reduce((product, number) => product * number, 1); return numbers.map(number => total / number); }");
+      const singleZeroOnly = await run("product-single-zero", "function productExceptSelf(numbers) { const zeroCount = numbers.filter(number => number === 0).length; const total = numbers.reduce((product, number) => product * number, 1); const nonZeroProduct = numbers.reduce((product, number) => number === 0 ? product : product * number, 1); return numbers.map(number => zeroCount === 0 ? total / number : number === 0 ? nonZeroProduct : 0); }");
+      return {correct, divisionOnly, singleZeroOnly, frames: document.querySelectorAll("iframe[sandbox]").length};
+    }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs, task});
+
+    assert.equal(task.tests.length, 5, "the published task supplies all five grading cases");
+    assert.deepEqual(results.correct, {requestId: "product-correct", status: "completed", message: "Все тесты пройдены: 5/5", logs: [], passedCount: 5, totalTests: 5}, "a correct array implementation passes every published Product Except Self case");
+    assert.deepEqual(results.divisionOnly, {requestId: "product-division", status: "test-failed", message: "Тест 4: проверка не пройдена\nПройдено: 3/5", logs: [], passedCount: 3, totalTests: 5}, "the first zero case rejects division-only code");
+    assert.deepEqual(results.singleZeroOnly, {requestId: "product-single-zero", status: "test-failed", message: "Тест 5: проверка не пройдена\nПройдено: 4/5", logs: [], passedCount: 4, totalTests: 5}, "the multiple-zero case rejects code that only handles one zero");
+    assert.equal(results.frames, 0, "each direct isolated runner attempt removes its sandbox frame");
+    assert.deepEqual(catalogRequests, ["GET"], "the public page performs one catalogue request before the direct runner checks");
+    assert.deepEqual({consoleErrors, pageErrors, requestFailures, httpFailures}, {consoleErrors: [], pageErrors: [], requestFailures: [], httpFailures: []}, "the published runner regression has clean browser diagnostics");
   } finally {
     await context.close();
     await browser.close();

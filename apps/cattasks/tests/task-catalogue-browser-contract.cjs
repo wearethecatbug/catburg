@@ -80,22 +80,23 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     const editor = page.getByLabel("User JavaScript code");
     const testButton = page.getByRole("button", {name: "Test Code"});
     const runButton = page.getByRole("button", {name: "Run Code"});
-    const infoButton = page.getByLabel(/Info: Показать информацию|Info: Показана информация/);
+    const hintButton = page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/);
     await editor.waitFor({state: "visible"});
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
     await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Race"));
 
-    await infoButton.click();
+    await hintButton.click();
+    assert.equal(await page.getByText("No hint available for this task.", {exact: true}).count(), 1, "legacy records without plural hints render the exact no-hint fallback");
     await setActiveDraft(page, catalog.tasks[0].starterCode, "function echo(value) { return value; }");
     await assertVisibleDraft(page, "function echo(value) { return value; }", "the visible editor shows the exact successful Test draft");
     await testButton.click();
     assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1");
-    assert.match(await infoButton.getAttribute("aria-label"), /Показана информация/, "Test preserves the active content tab");
+    assert.match(await hintButton.getAttribute("aria-label"), /Показаны подсказки/, "Test preserves the active content tab");
     assert.equal(await testButton.evaluate(node => node === document.activeElement), true, "Test leaves keyboard focus on its activating control");
 
     await runButton.click();
     assert.equal(await outputText(page, "Код выполнен"), "Код выполнен", "Run produces its own visible output");
-    assert.match(await infoButton.getAttribute("aria-label"), /Показана информация/, "Run preserves the active tab");
+    assert.match(await hintButton.getAttribute("aria-label"), /Показаны подсказки/, "Run preserves the active tab");
     assert.equal(await runButton.evaluate(node => node === document.activeElement), true, "Run leaves focus on its activating control");
 
     await setActiveDraft(page, "function echo(value) { return value; }", "function echo() { return 'wrong'; }");
@@ -143,6 +144,67 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(failedRequests, []);
     assert.deepEqual(failedResponses, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("All tasks groups the already filtered collection by difficulty without changing provider navigation order", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const diagnostics = {consoleErrors: [], pageErrors: [], failedRequests: [], failedResponses: [], catalogRequests: []};
+  const groupedCatalog = {
+    version: 1,
+    tasks: [
+      {id: "ct-js-01", slug: "medium-first", title: "Medium first", description: "First provider row.", hints: ["Read the input.", "Keep state local."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["m"], expected: "m"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return value; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "One return."}], difficulty: "Medium"},
+      {id: "ct-js-02", slug: "easy-second", title: "Easy second", description: "Second provider row.", hints: ["Read the input.", "Return a value."], entryPoint: "echo", starterCode: "function echo(value) { return `${value}!`; }", solution: "function echo(value) { return `${value}!`; }", tests: [{args: ["e"], expected: "e!"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return `${value}!`; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "One append."}], difficulty: "Easy"},
+      {id: "ct-js-03", slug: "hard-third", title: "Hard third", description: "Third provider row.", hints: ["Read the input.", "Use an invariant."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["h"], expected: "h"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return value; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "One return."}], difficulty: "Hard"},
+    ],
+  };
+  page.on("console", message => { if (message.type() === "error") diagnostics.consoleErrors.push(message.text()); });
+  page.on("pageerror", error => diagnostics.pageErrors.push(error.message));
+  page.on("requestfailed", request => diagnostics.failedRequests.push({url: request.url(), error: request.failure()?.errorText ?? null}));
+  page.on("response", response => { if (response.status() >= 400) diagnostics.failedResponses.push({url: response.url(), method: response.request().method(), status: response.status()}); });
+  await context.route("**/task-catalog.v1.json", route => {
+    diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(groupedCatalog)});
+  });
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await page.getByRole("button", {name: "Test Code"}).click();
+    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "the inert selected fixture establishes the Completed status control");
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+    const rows = page.locator("section[aria-labelledby^='difficulty-'] li");
+    await Promise.all(["Medium first", "Easy second", "Hard third"].map(title => page.getByRole("heading", {name: title, exact: true}).waitFor({state: "visible"})));
+    assert.equal(await rows.count(), 3, "all three valid fixture tasks must render before grouping assertions");
+    assert.equal(await page.locator("section[aria-labelledby='taskListTitle']").getByRole("alert").count(), 0, "a valid grouped catalogue must not claim a catalogue error");
+    const headings = page.locator("section[aria-labelledby^='difficulty-'] > h3");
+    assert.deepEqual(await headings.allTextContents(), ["Easy", "Medium", "Hard"], "empty Unrated is omitted and groups follow the approved order after filtering");
+    assert.deepEqual(await page.locator("section[aria-labelledby='difficulty-Easy'] li h3").allTextContents(), ["Easy second"], "grouping retains the provider's row order rather than renumbering it");
+    await page.getByRole("radio", {name: "Not started"}).check();
+    assert.deepEqual(await headings.allTextContents(), ["Easy", "Hard"], "status filtering removes the completed Medium row before difficulty grouping");
+    await page.getByRole("radio", {name: "Completed"}).check();
+    assert.deepEqual(await headings.allTextContents(), ["Medium"], "Completed status filtering retains only the completed Medium row before grouping");
+    await page.getByRole("radio", {name: "All statuses"}).check();
+    await page.getByRole("radio", {name: "Strings"}).check();
+    assert.deepEqual(await headings.allTextContents(), ["Easy", "Medium"], "topic filtering preserves grouped Easy and Medium String rows while omitting Hard");
+    await page.getByRole("radio", {name: "All topics"}).check();
+    assert.deepEqual(await headings.allTextContents(), ["Easy", "Medium", "Hard"], "clearing the topic filter restores all nonempty difficulty groups");
+    const search = page.getByRole("searchbox", {name: "Search tasks"});
+    await search.fill("Hard third");
+    assert.deepEqual(await headings.allTextContents(), ["Hard"], "search runs before difficulty grouping and empty headings disappear");
+    await page.locator("section[aria-labelledby='difficulty-Hard']").getByRole("button", {name: /Open/}).click();
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Hard third"));
+    await page.getByRole("button", {name: "Select previous task"}).click();
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Easy second"), undefined, {timeout: 5_000});
+    assert.deepEqual(diagnostics.consoleErrors, []);
+    assert.deepEqual(diagnostics.pageErrors, []);
+    assert.deepEqual(diagnostics.failedRequests, []);
+    assert.deepEqual(diagnostics.failedResponses, []);
+    assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the grouped fixture makes one inert catalogue GET");
   } finally {
     await context.close();
     await browser.close();

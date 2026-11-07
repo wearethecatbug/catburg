@@ -113,7 +113,7 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
     await setDraft(page, catalog.tasks[0].starterCode, "function echo(value) { return value + '!'; }");
-    await page.getByLabel(/Показать информацию|Показана информация/).click();
+    await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
 
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
@@ -138,7 +138,7 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     assert.equal(await page.getByText("In progress", {exact: true}).count(), 1, "the current task status is derived from its edited real workspace");
     await currentRow.getByRole("button", {name: "Open", exact: true}).click();
     await page.getByRole("button", {name: "All tasks"}).waitFor({state: "visible"});
-    assert.match(await page.getByLabel(/Показана информация/).getAttribute("aria-label"), /Показана информация/, "Back preserves the active tab");
+    assert.equal(await page.getByLabel("Hint: Показаны подсказки").getAttribute("aria-label"), "Hint: Показаны подсказки", "Back preserves the active tab");
     await page.getByLabel(/Показать решение|Показано решение/).click();
     await assertActiveEditorDraft(page, "function echo(value) { return value + '!'; }", "Open restores the Tortoise draft in the rendered active editor");
 

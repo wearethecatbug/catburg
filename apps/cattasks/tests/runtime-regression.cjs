@@ -57,7 +57,7 @@ async function observe(name, width, height) {
       ["minimize", "button[aria-label='Hide task: Свернуть панель']", page.locator("button[aria-label='Hide task: Свернуть панель']")],
       ["description tab", "button[aria-label='Task: Показано описание']", previous],
       ["solution tab", "button[aria-label='Give up: Показать решение']", page.locator("button[aria-label='Give up: Показать решение']")],
-      ["information", "button[aria-label='Info: Показать информацию']", page.locator("button[aria-label='Info: Показать информацию']")],
+      ["hint", "button[aria-label='Hint: Показать подсказки']", page.locator("button[aria-label='Hint: Показать подсказки']")],
       ["Test Code", "button[aria-label='Test Code']", next],
       ["Run Code", "button[aria-label='Run Code']", page.locator("button[aria-label='Run Code']")]
     ];
