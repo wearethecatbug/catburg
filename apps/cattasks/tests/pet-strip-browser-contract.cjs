@@ -4,6 +4,34 @@ const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43814";
 const stripName = "Pet feeding strip";
+// Valid inert data only; this contract never invokes Test Code or Run Code.
+const catalog = {version: 1, tasks: [{
+  id: "pet-strip-fixture",
+  title: "Pet strip fixture",
+  description: "Inert browser fixture.",
+  entryPoint: "echo",
+  starterCode: "function echo(value) { return value; }",
+  solution: "function echo(value) { return value; }",
+  tests: [{args: ["fixture"], expected: "fixture"}],
+}]};
+
+async function prepare(context, page) {
+  const diagnostics = {console: [], page: [], request: [], response: []};
+  page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
+  page.on("pageerror", error => diagnostics.page.push(error.message));
+  page.on("requestfailed", request => diagnostics.request.push(`${request.method()} ${request.url()}`));
+  page.on("response", response => {
+    if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`);
+  });
+  await context.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}));
+  const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+  assert.equal(response?.status(), 200, "the isolated dashboard route responds with HTTP 200");
+  return diagnostics;
+}
+
+function assertCleanDiagnostics(diagnostics) {
+  assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: []}, "inert startup and pet interaction emit no browser diagnostics");
+}
 
 async function advanceUntil(page, predicate, description, limit = 15_000) {
   for (let elapsed = 0; elapsed <= limit; elapsed += 100) {
@@ -63,15 +91,65 @@ async function waitForEnabledFeed(strip) {
   return feed;
 }
 
+async function waitForDogState(dog, state, timeout = 10_000) {
+  await dog.evaluate((element, expected) => new Promise((resolve, reject) => {
+    const deadline = performance.now() + 5_000;
+    const check = () => {
+      if (element.getAttribute("data-pet-state") === expected) return resolve();
+      if (performance.now() >= deadline) return reject(new Error(`dog never reached ${expected}`));
+      requestAnimationFrame(check);
+    };
+    check();
+  }), state, {timeout});
+}
+
+async function sampleRenderedTravel(page, dog, start) {
+  await page.evaluate(() => { window.__petStripMotion = []; });
+  await dog.evaluate(element => {
+    const samples = window.__petStripMotion;
+    let collecting = false;
+    let ended = false;
+    const sample = () => {
+      if (!ended) {
+        const rect = element.getBoundingClientRect();
+        samples.push({type: "frame", at: performance.now(), left: rect.left, right: rect.right});
+        requestAnimationFrame(sample);
+      }
+    };
+    element.addEventListener("transitionrun", event => {
+      if (!['left', 'inset-inline-start'].includes(event.propertyName)) return;
+      collecting = true;
+      samples.push({type: "run", at: performance.now()});
+      requestAnimationFrame(sample);
+    }, {once: true});
+    element.addEventListener("transitionend", event => {
+      if (!['left', 'inset-inline-start'].includes(event.propertyName) || !collecting) return;
+      ended = true;
+      samples.push({type: "end", at: performance.now()});
+    }, {once: true});
+  });
+  await start();
+  await dog.evaluate(() => new Promise((resolve, reject) => {
+    const deadline = performance.now() + 5_000;
+    const check = () => {
+      const events = window.__petStripMotion || [];
+      if (events.some(event => event.type === "end")) return resolve();
+      if (performance.now() >= deadline) return reject(new Error("dog transition did not end"));
+      requestAnimationFrame(check);
+    };
+    check();
+  }));
+  return page.evaluate(() => window.__petStripMotion);
+}
+
 test("CatTasks pet strip is a shallow accessible footer without the retired game surface", {timeout: 30_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 390, height: 844}, reducedMotion: "reduce"});
   const page = await context.newPage();
   try {
+    const diagnostics = await prepare(context, page);
     assert.equal(typeof page.clock?.install, "function", "the supplied Playwright must support deterministic browser clocks");
     await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
-    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
-    assert.equal(response.status(), 200);
     const strip = page.getByLabel(stripName, {exact: true});
     await strip.waitFor({state: "visible", timeout: 10_000});
     const feed = await waitForEnabledFeed(strip);
@@ -103,6 +181,7 @@ test("CatTasks pet strip is a shallow accessible footer without the retired game
     assert.match(reducedMotion.state || "", /^(idle|running|eating)$/, "reduced motion preserves the dog’s interaction state");
     assert.ok(reducedMotion.duration === "0s" || reducedMotion.iterations === "1", "reduced motion does not leave a looping dog animation active");
     assert.ok(reducedMotion.transitionDuration.split(",").every(duration => duration.trim() === "0s"), "reduced motion disables the dog's horizontal transition");
+    assertCleanDiagnostics(diagnostics);
   } finally {
     await context.close();
     await browser.close();
@@ -113,13 +192,10 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1440, height: 900}});
   const page = await context.newPage();
-  const pageErrors = [];
-  page.on("pageerror", error => pageErrors.push(error.message));
   try {
+    const diagnostics = await prepare(context, page);
     assert.equal(typeof page.clock?.install, "function", "the supplied Playwright must support deterministic browser clocks");
     await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
-    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
-    assert.equal(response.status(), 200);
     const strip = page.getByLabel(stripName, {exact: true});
     const dog = strip.locator("[data-pet='dog']");
     await strip.waitFor({state: "visible", timeout: 10_000});
@@ -129,6 +205,8 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
     await page.evaluate(() => {
       window.__petStripTimeline = [];
       const strip = document.querySelector("[aria-label='Pet feeding strip']");
+      const pileIds = new WeakMap();
+      let nextPileId = 0;
       const clockProbe = document.createElement("span");
       clockProbe.dataset.petClockProbe = "pending";
       strip.append(clockProbe);
@@ -141,7 +219,23 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
             window.__petStripTimeline.push({type: "target", position: record.target.getAttribute("data-pet-target"), at: Date.now()});
           }
           for (const node of record.addedNodes) {
-            if (node.nodeType === Node.ELEMENT_NODE && node.matches("[data-pet='pile']")) window.__petStripTimeline.push({type: "pile", position: node.dataset.petPosition, at: Date.now()});
+            if (node.nodeType !== Node.ELEMENT_NODE || !node.matches("[data-pet='pile']")) continue;
+            const pile = node.getBoundingClientRect();
+            const dogNode = strip.querySelector("[data-pet='dog']");
+            const dog = dogNode.getBoundingClientRect();
+            const id = `pile-${++nextPileId}`;
+            pileIds.set(node, id);
+            window.__petStripTimeline.push({
+              type: "pile",
+              id,
+              at: Date.now(),
+              direction: dogNode.dataset.petDirection,
+              pile: {left: pile.left, right: pile.right, top: pile.top, bottom: pile.bottom, width: pile.width, height: pile.height},
+              dog: {left: dog.left, right: dog.right, top: dog.top, bottom: dog.bottom, width: dog.width, height: dog.height},
+            });
+          }
+          for (const node of record.removedNodes) {
+            if (node.nodeType === Node.ELEMENT_NODE && node.matches("[data-pet='pile']")) window.__petStripTimeline.push({type: "pile-removed", id: pileIds.get(node), at: Date.now()});
           }
         }
       }).observe(strip, {subtree: true, childList: true, attributes: true, attributeFilter: ["data-pet-target", "data-pet-clock-probe"]});
@@ -186,34 +280,223 @@ test("CatTasks pet strip processes its horizontal food queue deterministically a
     const untilFirstPile = mealFinishedAt + 2_999 - await page.evaluate(() => Date.now());
     assert.ok(untilFirstPile >= 0, "queue progression must not conceal the three-second pile boundary");
     await page.clock.runFor(untilFirstPile);
-    assert.equal(await countAt(strip, "pile", first), 0, "no pile appears before the exact three-second meal delay");
+    assert.equal((await petTimeline(page)).filter(event => event.type === "pile").length, 0, "no pile is inserted before the exact three-second meal delay");
     await page.clock.runFor(1);
-    assert.equal(await countAt(strip, "pile", first), 1, "the first pile appears exactly three seconds after eating finishes");
-    const firstPileEvent = (await petTimeline(page)).find(event => event.type === "pile" && Number(event.position) === first);
+    const firstPileEvent = (await petTimeline(page)).find(event => event.type === "pile");
     assert.ok(firstPileEvent, "the first pile insertion is observable");
     const pileAppearedAt = firstPileEvent.at;
     assert.equal(pileAppearedAt - mealFinishedAt, 3_000, "the pile clock is anchored to eating completion rather than eating start");
+    assert.ok(firstPileEvent.pile.width <= 20 && firstPileEvent.pile.height <= 18, "the inserted pile is no larger than the approved 20 by 18 CSS pixels");
+    assert.ok(firstPileEvent.pile.left >= stripBox.x && firstPileEvent.pile.right <= stripBox.x + stripBox.width, "the inserted pile remains inside the strip at birth");
+    const overlapsDogAtBirth = firstPileEvent.pile.left < firstPileEvent.dog.right && firstPileEvent.pile.right > firstPileEvent.dog.left && firstPileEvent.pile.top < firstPileEvent.dog.bottom && firstPileEvent.pile.bottom > firstPileEvent.dog.top;
+    assert.equal(overlapsDogAtBirth, false, "the rendered pile does not overlap the rendered dog at birth");
+    if (firstPileEvent.direction === "right") assert.ok(firstPileEvent.pile.right + 4 <= firstPileEvent.dog.left, "a right-facing dog leaves the pile behind its left rear with the required gap");
+    else assert.ok(firstPileEvent.pile.left >= firstPileEvent.dog.right + 4, "a left-facing dog leaves the pile behind its right rear with the required gap");
+    const firstPile = strip.locator("[data-pet='pile']").first();
+    const frozenFirstPile = await firstPile.boundingBox();
+    assert.ok(frozenFirstPile, "the inserted pile exposes a rendered rect");
 
     await advanceUntil(page, async () => (await petTimeline(page)).some(event => event.type === "target" && Number(event.position) === tieFirst), "the first equal-distance food becomes active", 10_000);
     await advanceUntil(page, async () => (await petTimeline(page)).some(event => event.type === "target" && Number(event.position) === tieSecond), "the second equal-distance food becomes active", 10_000);
     const targetOrder = (await petTimeline(page)).filter(event => event.type === "target").map(event => Number(event.position));
     assert.ok(targetOrder.indexOf(tieFirst) < targetOrder.indexOf(tieSecond), "distinct equal-distance foods retain FIFO order");
 
-    await advanceUntil(page, () => countAt(strip, "pile", near).then(count => count === 1), "second completed meal creates its own pile");
-    const nearPileEvent = (await petTimeline(page)).find(event => event.type === "pile" && Number(event.position) === near);
+    await advanceUntil(page, async () => (await petTimeline(page)).filter(event => event.type === "pile").length === 2, "second completed meal creates its own pile");
+    const pileEvents = (await petTimeline(page)).filter(event => event.type === "pile");
+    const nearPileEvent = pileEvents[1];
     assert.ok(nearPileEvent, "the second pile insertion is observable");
     const nearPileAppearedAt = nearPileEvent.at;
     assert.ok(nearPileAppearedAt > pileAppearedAt, "the later meal owns a distinct later pile clock");
-    assert.equal(await countAt(strip, "pile", first), 1, "the first pile remains while the later meal pile is visible");
+    assert.equal(await strip.locator("[data-pet='pile']").count(), 2, "the first pile remains while the later meal pile is visible");
+    const afterLaterMovement = await firstPile.boundingBox();
+    assert.ok(afterLaterMovement, "the original pile remains rendered while later meals run");
+    assert.ok(Math.abs(afterLaterMovement.x - frozenFirstPile.x) <= 1 && Math.abs(afterLaterMovement.y - frozenFirstPile.y) <= 1, "the original pile stays at its frozen birth anchor while the dog later moves");
 
     const remainingBeforeExpiry = pileAppearedAt + 6_999 - await page.evaluate(() => Date.now());
     assert.ok(remainingBeforeExpiry >= 0, "queue progression must not conceal the first pile expiry boundary");
     await page.clock.runFor(remainingBeforeExpiry);
-    assert.equal(await countAt(strip, "pile", first), 1, "the pile survives until its own seven-second lifetime has elapsed");
+    assert.equal((await petTimeline(page)).filter(event => event.type === "pile-removed" && event.id === firstPileEvent.id).length, 0, "the first pile survives until its own seven-second lifetime has elapsed");
     await page.clock.runFor(1);
-    assert.equal(await countAt(strip, "pile", first), 0, "the first pile and its effects are removed exactly seven seconds after appearance");
-    assert.equal(await countAt(strip, "pile", near), 1, "first-pile cleanup does not remove the overlapping later pile");
-    assert.deepEqual(pageErrors, []);
+    assert.equal((await petTimeline(page)).filter(event => event.type === "pile-removed" && event.id === firstPileEvent.id).length, 1, "the same first pile node is removed exactly seven seconds after appearance");
+    assert.equal((await petTimeline(page)).filter(event => event.type === "pile-removed" && event.id === nearPileEvent.id).length, 0, "the later pile node retains its independent lifetime");
+    assert.ok(await strip.locator("[data-pet='pile']").count() >= 1, "first-pile cleanup does not remove later meal piles");
+    assertCleanDiagnostics(diagnostics);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks renders unified near and far pet travel on the measured safe track", {timeout: 75_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  try {
+    for (const viewport of [{width: 390, height: 844}, {width: 780, height: 900}, {width: 1536, height: 1024}]) {
+      const context = await browser.newContext({viewport});
+      const page = await context.newPage();
+      try {
+        const diagnostics = await prepare(context, page);
+        const strip = page.getByLabel(stripName, {exact: true});
+        const dog = strip.locator("[data-pet='dog']");
+        await strip.waitFor({state: "visible", timeout: 10_000});
+        await dog.waitFor({state: "visible", timeout: 10_000});
+        await waitForEnabledFeed(strip);
+        const box = await strip.boundingBox();
+        const track = strip.locator(":scope > span[aria-hidden='true']").first();
+        const trackBox = await track.boundingBox();
+        assert.ok(trackBox && trackBox.width > 114 && box && box.width >= trackBox.width + 114, `${viewport.width}px track is wider than 114px and reserves the required 57px inset at both strip edges`);
+        const clickAtLogical = async (logical, roundCoordinate = Math.round) => {
+          await strip.scrollIntoViewIfNeeded();
+          const currentTrack = await track.boundingBox();
+          const currentStrip = await strip.boundingBox();
+          assert.ok(currentTrack && currentStrip, "the visible strip exposes current safe-track coordinates");
+          return {x: roundCoordinate(currentTrack.x + (currentTrack.width * logical / 100)), y: currentStrip.y + currentStrip.height / 2};
+        };
+        const dropAtLogical = async (logical, roundCoordinate = Math.round) => {
+          const point = await clickAtLogical(logical, roundCoordinate);
+          return dropAtX(page, strip, point.x, point.y);
+        };
+        const startPosition = await dropAtLogical(10, Math.floor);
+        await waitForDogState(dog, "eating");
+        await page.waitForTimeout(650);
+        await waitForDogState(dog, "idle");
+
+        let nearPosition;
+        const near = await sampleRenderedTravel(page, dog, async () => { nearPosition = await dropAtLogical(20); });
+        const nearCssDuration = await dog.evaluate(element => getComputedStyle(element).transitionDuration);
+        await waitForDogState(dog, "eating");
+        await page.waitForTimeout(650);
+        await waitForDogState(dog, "idle");
+        const resetPosition = await dropAtLogical(10, Math.floor);
+        assert.equal(resetPosition, startPosition, `${viewport.width}px reset reuses the same physical start pixel`);
+        await waitForDogState(dog, "eating");
+        await page.waitForTimeout(650);
+        await waitForDogState(dog, "idle");
+        let farPosition;
+        const far = await sampleRenderedTravel(page, dog, async () => { farPosition = await dropAtLogical(90, Math.ceil); });
+        const summarize = (events, label) => {
+          const run = events.find(event => event.type === "run");
+          const end = events.find(event => event.type === "end");
+          const frames = events.filter(event => event.type === "frame");
+          assert.ok(run && end && frames.length >= 2, `${label} reaches a real transition and rAF rect samples`);
+          const moved = Math.abs(frames.at(-1).left - frames[0].left);
+          assert.ok(moved > 1, `${label} changes the rendered dog rect`);
+          return {duration: end.at - run.at, distance: moved};
+        };
+        const nearResult = summarize(near, `${viewport.width}px near route`);
+        const farResult = summarize(far, `${viewport.width}px far route`);
+        const durations = await dog.evaluate(element => getComputedStyle(element).transitionDuration.split(",").map(value => value.trim()));
+        const cssDuration = value => value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1_000;
+        const farCssDuration = cssDuration(durations[0]);
+        assert.ok(cssDuration(nearCssDuration) >= 480, `${viewport.width}px near CSS duration honors the 480ms floor`);
+        assert.ok(nearResult.duration >= 400, `${viewport.width}px near route honors the 480ms floor within 80ms observation tolerance`);
+        const expectedFar = Math.max(1400, Math.round(farResult.distance / 0.28));
+        const pointerPrecision = (2 * 100) / trackBox.width;
+        assert.ok(Math.abs(startPosition - 10) <= pointerPrecision, `${viewport.width}px start pointer position remains within one physical pixel of logical 10`);
+        assert.ok(Math.abs(nearPosition - 20) <= pointerPrecision, `${viewport.width}px near pointer position remains within one physical pixel of logical 20`);
+        assert.ok(Math.abs(farPosition - 90) <= pointerPrecision, `${viewport.width}px far pointer position remains within one physical pixel of logical 90`);
+        assert.ok(Math.abs(farPosition - startPosition) >= 80, `${viewport.width}px outward pixel rounding preserves the required nominal 10-to-90 logical distance`);
+        assert.ok(Math.abs(nearPosition - startPosition) > 0, `${viewport.width}px near pointer action produces a distinct normalized position`);
+        assert.ok(farCssDuration >= expectedFar, `${viewport.width}px far CSS duration uses the published unified formula (expected at least ${expectedFar}ms, observed ${farCssDuration}ms)`);
+        assert.ok(farResult.duration >= expectedFar - 80, `${viewport.width}px far route honors the unified rendered-distance pace within 80ms tolerance`);
+        assert.ok(farResult.duration > nearResult.duration, `${viewport.width}px far route lasts longer than the near route`);
+        await waitForDogState(dog, "eating");
+        await page.waitForTimeout(650);
+        await waitForDogState(dog, "idle");
+        await page.evaluate(() => { window.__petStripZeroTransition = false; document.querySelector("[data-pet='dog']").addEventListener("transitionrun", () => { window.__petStripZeroTransition = true; }, {once: true}); });
+        const zeroPoint = await clickAtLogical(90, Math.ceil);
+        await page.mouse.click(zeroPoint.x, zeroPoint.y);
+        await page.waitForTimeout(40);
+        assert.equal(await page.evaluate(() => window.__petStripZeroTransition), false, `${viewport.width}px zero-distance route does not start a transition`);
+        assertCleanDiagnostics(diagnostics);
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+});
+
+test("CatTasks keeps viewport foliage separate from six local pet-strip grasses through responsive scroll and resize", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1536, height: 1024}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(context, page);
+    const strip = page.getByLabel(stripName, {exact: true});
+    await strip.waitFor({state: "visible", timeout: 10_000});
+
+    await page.evaluate(() => {
+      const spacer = document.createElement("div");
+      spacer.setAttribute("data-pet-test-spacer", "true");
+      spacer.style.height = "1500px";
+      document.body.append(spacer);
+    });
+
+    const inspect = () => page.evaluate(() => {
+      const strip = document.querySelector("[aria-label='Pet feeding strip']");
+      if (!strip) throw new Error("pet strip unavailable");
+      const findAsset = name => [...document.querySelectorAll("*")].filter(node => getComputedStyle(node).backgroundImage.includes(name));
+      const rectangle = node => {
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        return {left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height, position: style.position, pointerEvents: style.pointerEvents, zIndex: style.zIndex};
+      };
+      const hasFixedAncestor = node => {
+        for (let current = node.parentElement; current; current = current.parentElement) {
+          if (getComputedStyle(current).position === "fixed") return true;
+        }
+        return false;
+      };
+      const parentStyle = getComputedStyle(strip.parentElement);
+      return {
+        viewport: {width: innerWidth, height: innerHeight, scrollX, scrollY, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth},
+        strip: {...rectangle(strip), availableWidth: (strip.parentElement?.getBoundingClientRect().width ?? 0) - parseFloat(parentStyle.paddingInlineStart) - parseFloat(parentStyle.paddingInlineEnd), minBlockSize: getComputedStyle(strip).minBlockSize, maxInlineSize: getComputedStyle(strip).maxInlineSize, borderRadius: getComputedStyle(strip).borderTopLeftRadius},
+        grasses: findAsset("grass-").map(node => ({...rectangle(node), inStrip: strip.contains(node)})),
+        foliage: ["foliage-top-right.png", "foliage-bottom-left.png", "foliage-bottom-right.png"].map(asset => ({asset, nodes: findAsset(asset).map(node => ({...rectangle(node), fixedAncestor: hasFixedAncestor(node)}))})),
+      };
+    });
+
+    let previousFoliage = null;
+    for (const [width, height] of [[1536, 1024], [780, 900], [390, 844], [780, 900], [1536, 1024]]) {
+      await page.setViewportSize({width, height});
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await strip.scrollIntoViewIfNeeded();
+      const beforeScroll = await inspect();
+      assert.equal(beforeScroll.viewport.scrollWidth, beforeScroll.viewport.clientWidth, `${width}px has no horizontal document overflow`);
+      assert.equal(beforeScroll.grasses.length, 6, `${width}px renders exactly six grass assets`);
+      assert.ok(beforeScroll.grasses.every(grass => grass.inStrip), `${width}px keeps every grass element inside PetStrip`);
+      assert.equal(new Set(beforeScroll.grasses.map(grass => Math.round(grass.left))).size, 6, `${width}px keeps each grass at a distinct inline position`);
+      assert.ok(new Set(beforeScroll.grasses.map(grass => Math.round(grass.top))).size > 1, `${width}px keeps grass vertically staggered`);
+      assert.ok(beforeScroll.grasses.every(grass => grass.pointerEvents === "none"), `${width}px grass is pointer inert`);
+      assert.ok(parseFloat(beforeScroll.strip.minBlockSize) >= 64, `${width}px retains at least the approved 64px frame height minimum`);
+      assert.equal(beforeScroll.strip.maxInlineSize, "1428px", `${width}px retains the 1428px frame maximum`);
+      assert.equal(beforeScroll.strip.borderRadius, "32px", `${width}px retains the 32px frame radius`);
+      assert.ok(beforeScroll.strip.height >= 64, `${width}px frame height honors its minimum`);
+      assert.ok(Math.abs(beforeScroll.strip.width - Math.min(1428, beforeScroll.strip.availableWidth)) <= 1, `${width}px frame fills its available inline width within its maximum`);
+      assert.equal(beforeScroll.foliage.length, 3, `${width}px reads all three foliage asset kinds`);
+      assert.ok(beforeScroll.foliage.every(({nodes}) => nodes.length === 1 && nodes[0].pointerEvents === "none" && nodes[0].fixedAncestor), `${width}px foliage stays in one fixed pointer-inert viewport decoration per corner`);
+      const topBranch = beforeScroll.foliage[0].nodes[0];
+      assert.ok(topBranch.top < 0 || topBranch.right > width, `${width}px top branch extends beyond a viewport edge to hide its source endpoint`);
+
+      for (const grass of beforeScroll.grasses) {
+        const hit = await page.evaluate(({x, y}) => {
+          const target = document.elementFromPoint(x, y);
+          return target?.getAttribute("aria-label");
+        }, {x: grass.left + grass.width / 2, y: grass.top + grass.height / 2});
+        assert.equal(hit, "Feed pet", `${width}px grass cannot intercept the feed control`);
+      }
+
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
+      const afterScroll = await inspect();
+      assert.ok(afterScroll.viewport.scrollY > 0, `${width}px scenario reaches a real scroll position`);
+      assert.deepEqual(afterScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), beforeScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), `${width}px foliage remains viewport-anchored while the document scrolls`);
+      if (previousFoliage) assert.equal(afterScroll.foliage.length, previousFoliage.length, `${width}px reverse resize retains every foliage asset kind`);
+      previousFoliage = afterScroll.foliage;
+      await page.evaluate(() => window.scrollTo(0, 0));
+    }
+    assertCleanDiagnostics(diagnostics);
   } finally {
     await context.close();
     await browser.close();

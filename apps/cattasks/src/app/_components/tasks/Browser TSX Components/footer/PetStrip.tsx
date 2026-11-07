@@ -15,14 +15,17 @@ type PetState = 'idle' | 'running' | 'eating' | 'sleeping';
 type DogDirection = 'left' | 'right';
 
 type Food = { id: number; position: number };
-type Pile = { id: number; position: number };
+type Pile = { id: number; anchor: number; direction: DogDirection; offset: number };
 
 function clampPosition(position: number): number {
     return Math.min(100, Math.max(0, position));
 }
 
-function getTravelDuration(from: number, to: number): number {
-    return Math.min(1_100, Math.max(320, Math.round(Math.abs(to - from) * 14)));
+function getTravelDuration(from: number, to: number, trackWidth: number): number {
+    const logicalDistance = Math.abs(to - from);
+    if (logicalDistance <= DISTANCE_EPSILON) return 0;
+    const visualDistance = (trackWidth * logicalDistance) / 100;
+    return Math.max(480, Math.round(visualDistance / 0.28), Math.round(logicalDistance * 17.5));
 }
 
 export default function PetStrip() {
@@ -35,7 +38,9 @@ export default function PetStrip() {
     const [piles, setPiles] = useState<Pile[]>([]);
     const [status, setStatus] = useState('Pet is waiting for food');
     const trackRef = useRef<HTMLSpanElement | null>(null);
+    const dogRef = useRef<HTMLSpanElement | null>(null);
     const dogPositionRef = useRef(INITIAL_DOG_POSITION);
+    const dogDirectionRef = useRef<DogDirection>('right');
     const foodsRef = useRef<Food[]>([]);
     const activeTargetRef = useRef<Food | null>(null);
     const nextIdRef = useRef(0);
@@ -89,9 +94,12 @@ export default function PetStrip() {
         }
 
         activeTargetRef.current = target;
-        const travelDuration = getTravelDuration(dogPositionRef.current, target.position);
+        const trackWidth = trackRef.current?.getBoundingClientRect().width ?? 0;
+        const travelDuration = getTravelDuration(dogPositionRef.current, target.position, trackWidth);
         cancelSleep();
-        setDogDirection(target.position < dogPositionRef.current ? 'left' : 'right');
+        const direction = target.position < dogPositionRef.current ? 'left' : 'right';
+        dogDirectionRef.current = direction;
+        setDogDirection(direction);
         setTravelDuration(travelDuration);
         setPetState('running');
         setStatus('Pet is running to food');
@@ -110,7 +118,15 @@ export default function PetStrip() {
                 setPetState('idle');
                 setStatus('Pet finished eating');
                 schedule(() => {
-                    const pile = {id: target.id, position: target.position};
+                    const trackBounds = trackRef.current?.getBoundingClientRect();
+                    const dog = dogRef.current;
+                    const dogBounds = dog?.getBoundingClientRect();
+                    if (!trackBounds || !dog || !dogBounds || trackBounds.width <= 0) return;
+                    const directionAtBirth = dog.dataset.petDirection === 'left' ? 'left' : dogDirectionRef.current;
+                    const rear = directionAtBirth === 'right' ? dogBounds.left - trackBounds.left : dogBounds.right - trackBounds.left;
+                    const offset = ((dogBounds.width / 2) + 4 + 10) / trackBounds.width * 100;
+                    const anchor = (rear + (directionAtBirth === 'right' ? -14 : 14)) / trackBounds.width * 100;
+                    const pile = {id: target.id, anchor, direction: directionAtBirth, offset};
                     setPiles((currentPiles) => [...currentPiles, pile]);
                     setStatus('Pet left a little pile');
                     schedule(() => setPiles((currentPiles) => currentPiles.filter((currentPile) => currentPile.id !== pile.id)), PILE_VISIBLE_MS);
@@ -169,10 +185,16 @@ export default function PetStrip() {
     return (
         <section aria-label="Pet feeding strip" className={styles.petStrip} data-pet-state={petState}>
             <span aria-hidden="true" className={styles.track} ref={trackRef}>
-                <span className={styles.dog} data-pet="dog" data-pet-direction={dogDirection} data-pet-state={petState} data-pet-target={activeTargetRef.current?.position} style={dogStyle}/>
+                <span className={styles.grassOne}/>
+                <span className={styles.grassTwo}/>
+                <span className={styles.grassThree}/>
+                <span className={styles.grassFour}/>
+                <span className={styles.grassFive}/>
+                <span className={styles.grassSix}/>
+                <span className={styles.dog} data-pet="dog" data-pet-direction={dogDirection} data-pet-state={petState} data-pet-target={activeTargetRef.current?.position} ref={dogRef} style={dogStyle}/>
                 {foods.map((food) => <span className={styles.food} data-pet="food" data-pet-position={food.position} key={food.id} style={{'--pet-position': `${food.position}%`} as CSSProperties}/>)}
                 {piles.map((pile) => (
-                    <span className={styles.pile} data-pet="pile" data-pet-position={pile.position} key={pile.id} style={{'--pet-position': `${pile.position}%`} as CSSProperties}>
+                    <span className={styles.pile} data-pet="pile" data-pet-anchor={pile.anchor} data-pet-direction={pile.direction} data-pet-rear-offset={pile.offset} key={pile.id} style={{'--pet-position': `${pile.anchor}%`} as CSSProperties}>
                         <span className={styles.odor}/><span className={styles.fly}/>
                     </span>
                 ))}

@@ -24,7 +24,11 @@ export default function TaskDashboard() {
                     <span className={styles.windowLight}>
                         <span/><span/><span/><span/><span/><span/>
                     </span>
+                </div>
+                <div className={styles.viewportDecoration} aria-hidden="true">
                     <span className={styles.foliageTopRight}/>
+                    <span className={styles.foliageBottomLeft}/>
+                    <span className={styles.foliageBottomRight}/>
                 </div>
                 {isAllTasksOpen ? (
                     <AllTasksHeader className={styles.headerContainer} onBack={returnToTask}/>
@@ -40,13 +44,6 @@ export default function TaskDashboard() {
                 <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
                 {isAllTasksOpen && <AllTasks className={styles.mainContainer} onBack={returnToTask}/>}
                 <Footer className={styles.footerContainer}></Footer>
-                <div className={styles.deskEdgeDecoration} aria-hidden="true">
-                    <span className={styles.foliageBottomLeft}/>
-                    <span className={styles.foliageBottomRight}/>
-                    <span className={styles.grassOne}/>
-                    <span className={styles.grassTwo}/>
-                    <span className={styles.grassThree}/>
-                </div>
             </div>
         </TaskProvider>
     );
