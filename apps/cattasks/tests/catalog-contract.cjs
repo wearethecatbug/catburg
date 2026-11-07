@@ -315,6 +315,26 @@ test("Task 32 rejects a division-only solution with a zero-valued input", () => 
   assert.notDeepEqual(divisionOnly(...zeroCase.args), zeroCase.expected, "the zero-valued case rejects division-only implementations");
 });
 
+test("Task 32 rejects a single-zero-only solution with multiple zeroes", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  const task = catalogue.tasks.find(candidate => candidate.id === "ct-js-32");
+  assert.ok(task, "Task 32 must remain present in the published catalogue");
+
+  const multipleZeroCase = task.tests.find(testCase => JSON.stringify(testCase.args) === JSON.stringify([[0, 0, 2]]));
+
+  const singleZeroOnly = numbers => {
+    const zeroCount = numbers.filter(number => number === 0).length;
+    const total = numbers.reduce((product, number) => product * number, 1);
+    const nonZeroProduct = numbers.reduce((product, number) => number === 0 ? product : product * number, 1);
+    return numbers.map(number => zeroCount === 0 ? total / number : number === 0 ? nonZeroProduct : 0);
+  };
+  for (const [index, testCase] of task.tests.slice(0, 4).entries()) {
+    assert.deepEqual(singleZeroOnly(...testCase.args), testCase.expected, `the single-zero-only candidate passes prior Task 32 JSON test ${index + 1}`);
+  }
+  assert.deepEqual(multipleZeroCase, {args: [[0, 0, 2]], expected: [0, 0, 0]}, "Task 32 publishes the multiple-zero product case");
+  assert.notDeepEqual(singleZeroOnly(...multipleZeroCase.args), multipleZeroCase.expected, "the multiple-zero case rejects single-zero-only implementations");
+});
+
 test("every published JSON test tuple agrees with every ordered reference solution", () => {
   const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
   for (const task of catalogue.tasks) {
