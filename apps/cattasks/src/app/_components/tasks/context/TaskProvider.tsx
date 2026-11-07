@@ -47,6 +47,7 @@ type TaskContextValue = {
     prepareCustomTaskImport: (text: string) => CustomTaskResult;
     exportCustomTasks: () => Promise<string | null>;
     retryCustomStorage: () => void;
+    recoveryCustomTaskExport: string | null;
 };
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
@@ -61,6 +62,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [customTasks, setCustomTasks] = useState<readonly CustomTaskRecord[]>([]);
     const [customStorageError, setCustomStorageError] = useState<string | null>(null);
     const [customStorageReady, setCustomStorageReady] = useState(false);
+    const [recoveryCustomTaskExport, setRecoveryCustomTaskExport] = useState<string | null>(null);
     const tasksRef = useRef(tasks);
     const customTasksRef = useRef(customTasks);
     const catalogErrorRef = useRef(catalogError);
@@ -74,7 +76,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
 
     const allTasks = useMemo<readonly CatalogTask[]>(() => [
         ...tasks,
-        ...customTasks.map((task, index) => ({...task, ordinal: tasks.length + index + 1})),
+        ...customTasks.filter(task => !tasks.some(builtIn => builtIn.id === task.id)).map((task, index) => ({...task, ordinal: tasks.length + index + 1})),
     ], [customTasks, tasks]);
     const builtInIds = useMemo(() => new Set(tasks.map(task => task.id)), [tasks]);
     const customTopics = useMemo(
@@ -99,8 +101,33 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         return queued;
     }, []);
 
+    const commitState = useCallback((nextState: TaskWorkspaceState) => {
+        workspaceStateRef.current = nextState;
+        setWorkspaceState(nextState);
+    }, []);
+
+    // Failed storage reads invalidate the projection, but workspace history stays inert until the normal session reset.
+    const quarantineCustomTasks = useCallback((message: string, recoveryRaw: string | null) => {
+        const removedCustomIds = new Set(customTasksRef.current.map(task => task.id));
+        const selectedId = workspaceStateRef.current.selectedId;
+        customTasksRef.current = [];
+        customStorageReadyRef.current = false;
+        setCustomTasks([]);
+        setCustomStorageReady(false);
+        // Only validated collision reads provide raw recovery bytes; other failures remain non-exportable.
+        setRecoveryCustomTaskExport(recoveryRaw);
+        if (selectedId && removedCustomIds.has(selectedId)) {
+            commitState(clearTaskSelection(workspaceStateRef.current));
+            setHeaderInput('');
+        }
+        setCustomStorageError(message);
+    }, [commitState]);
+
     const readCustomStorage = useCallback(() => {
         if (tasks.length === 0 || catalogError) return;
+        customStorageReadyRef.current = false;
+        // A pending reread blocks writes without discarding the last validated projection.
+        setCustomStorageReady(false);
         void enqueueStorageOperation(() => loadCustomTasks(() => window.localStorage, builtInIds))
             .then(saved => {
             if (saved.ok) {
@@ -109,23 +136,19 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
                 setCustomTasks(saved.tasks);
                 setCustomStorageReady(true);
                 setCustomStorageError(null);
+                setRecoveryCustomTaskExport(null);
             } else {
-                setCustomStorageError(saved.message);
+                quarantineCustomTasks(saved.message, saved.recoveryRaw ?? null);
             }
         })
             .catch(error => {
-                setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
+                quarantineCustomTasks(error instanceof Error ? error.message : 'Custom task storage is unavailable', null);
             });
-    }, [builtInIds, catalogError, enqueueStorageOperation, tasks.length]);
+    }, [builtInIds, catalogError, enqueueStorageOperation, quarantineCustomTasks, tasks.length]);
 
     useEffect(() => {
         readCustomStorage();
     }, [readCustomStorage]);
-
-    const commitState = useCallback((nextState: TaskWorkspaceState) => {
-        workspaceStateRef.current = nextState;
-        setWorkspaceState(nextState);
-    }, []);
 
     const selectTask = useCallback((id: string) => {
         const task = allTasks.find(candidate => candidate.id === id);
@@ -188,6 +211,11 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
             return false;
         }
         return enqueueStorageOperation(async () => {
+            if (signal?.aborted) return false;
+            if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
+                setCustomStorageError('Tasks must finish loading before custom tasks can be saved.');
+                return false;
+            }
             const saved = await appendCustomTasks(
                 incoming,
                 new Set(tasksRef.current.map(task => task.id)),
@@ -223,15 +251,15 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         return enqueueStorageOperation(async () => {
             const saved = await getCustomTaskExport(new Set(tasksRef.current.map(task => task.id)));
             if (!saved.ok) {
-                setCustomStorageError(saved.message);
+                quarantineCustomTasks(saved.message, saved.recoveryRaw ?? null);
                 return null;
             }
             return serializeCustomTasks(saved.tasks);
         }).catch(error => {
-            setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
+            quarantineCustomTasks(error instanceof Error ? error.message : 'Custom task storage is unavailable', null);
             return null;
         });
-    }, [enqueueStorageOperation]);
+    }, [enqueueStorageOperation, quarantineCustomTasks]);
 
     const completeRun = useCallback((token: TaskRunToken, result: IsolatedTaskResult) => {
         commitState(completeTaskRun(workspaceStateRef.current, token, result));
@@ -263,6 +291,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         prepareCustomTaskImport,
         exportCustomTasks,
         retryCustomStorage: readCustomStorage,
+        recoveryCustomTaskExport,
     };
 
     return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;

@@ -69,6 +69,10 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
         selectTask(id);
         onBack();
     };
+    const groupedRows = useMemo(() => {
+        const groups = ['Easy', 'Medium', 'Hard', 'Unrated'] as const;
+        return groups.map(difficulty => ({difficulty, rows: visibleRows.filter(row => row.difficulty === difficulty)})).filter(group => group.rows.length);
+    }, [visibleRows]);
 
     return (
         <main className={`${styles.catalogueMain} ${className ?? ''}`}>
@@ -128,8 +132,11 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                 ) : visibleRows.length === 0 ? (
                     <div className={styles.message} role="status">No tasks match these filters.</div>
                 ) : (
-                    <ul className={styles.rows}>
-                        {visibleRows.map(row => (
+                    <div className={styles.rows}>
+                        {groupedRows.map(group => <section className={styles.difficultyGroup} key={group.difficulty} aria-labelledby={`difficulty-${group.difficulty}`}>
+                            <h3 id={`difficulty-${group.difficulty}`} className={styles.difficultyHeading}>{group.difficulty}</h3>
+                            <ul className={styles.rows}>
+                        {group.rows.map(row => (
                             <li
                                 className={`${styles.row} ${row.isCurrent ? styles.currentRow : ''}`}
                                 key={row.id}
@@ -154,8 +161,8 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                                     </button>
                                 )}
                             </li>
-                        ))}
-                    </ul>
+                        ))}</ul></section>)}
+                    </div>
                 )}
             </section>
         </main>

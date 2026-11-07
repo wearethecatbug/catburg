@@ -6,7 +6,7 @@ const {loadTypeScript} = require("./helpers/load-typescript.cjs");
 const appRoot = path.join(__dirname, "..", "src", "app", "_components", "tasks");
 const catalog = loadTypeScript(path.join(appRoot, "catalog", "taskCatalog.ts"));
 const transfer = loadTypeScript(path.join(appRoot, "customTasks", "customTaskTransfer.ts"));
-const builtInIds = new Set(["race", "digitize", "no-space"]);
+const builtInIds = new Set(["ct-js-01", "ct-js-02"]);
 
 function task(id = "valid-task", overrides = {}) {
   return {
@@ -29,6 +29,9 @@ test("custom records use the canonical definition validator and retain legacy om
   const legacy = task("legacy");
   assert.deepEqual(transfer.parseCustomTask(legacy), legacy);
   assert.deepEqual(catalog.parseTaskDefinition(legacy, "control"), legacy);
+  assert.deepEqual(transfer.parseCustomTask(task("legacy-hints", {hints: []})).hints, [], "legacy explicit empty hints remain a no-hint record");
+  assert.deepEqual(transfer.parseCustomTask(task("legacy-scalar", {hint: "Read the input shape."})).hints, ["Read the input shape."], "legacy scalar hints remain parseable when plural hints is absent");
+  assert.equal(transfer.parseCustomTask(legacy).difficulty, undefined, "omitted legacy difficulty is not invented or persisted");
   assert.throws(() => transfer.parseCustomTask(task("bad-topic", {topic: "Geometry"})), /topic/i);
   assert.throws(() => transfer.parseCustomTask(task("null-topic", {topic: null})), /topic/i);
   assert.throws(() => transfer.parseCustomTask(task("bad-tests", {tests: []})), /tests/i);
@@ -72,10 +75,10 @@ test("preflight rejects complete invalid documents without yielding an appendabl
     ["wrong schema", JSON.stringify({version: 2, tasks: []})],
     ["unknown topic", document([task("unknown", {topic: "Geometry"})])],
     ["duplicate file IDs", document([task("twice"), task("twice")])],
-    ["built-in collision", document([task("race")])],
+    ["built-in collision", document([task("ct-js-01")])],
     ["saved collision", document([task("saved")])],
     ["valid prefix then invalid topic", document([task("valid-prefix"), task("invalid-suffix", {topic: "Geometry"})])],
-    ["valid prefix then built-in collision", document([task("valid-prefix-two"), task("race")])],
+    ["valid prefix then built-in collision", document([task("valid-prefix-two"), task("ct-js-01")])],
   ];
   for (const [label, input] of cases) {
     const result = transfer.preflightCustomTaskImport(input, builtInIds, savedIds);

@@ -19,7 +19,10 @@ function cancelled(): CustomTaskResult {
 
 function readDocument(raw: unknown, builtInIds: ReadonlySet<string>): CustomTaskResult {
     if (typeof raw !== 'string') return {ok: false, message: 'Custom task storage document is invalid'};
-    return preflightCustomTaskImport(raw, builtInIds, new Set());
+    const parsed = preflightCustomTaskImport(raw, new Set(), new Set());
+    if (!parsed.ok) return parsed;
+    const collision = parsed.tasks.find(task => builtInIds.has(task.id));
+    return collision ? {ok: false, message: `custom tasks: id '${collision.id}' collides with a built-in task`, recoveryRaw: raw} : parsed;
 }
 
 function openDatabase(): Promise<IDBDatabase> {

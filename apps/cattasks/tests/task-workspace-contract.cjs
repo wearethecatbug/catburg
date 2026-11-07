@@ -81,3 +81,18 @@ test("same draft is a no-op and runs require the selected task", () => {
   assert.equal(unchanged, state, "same text must not discard a current result or advance generations");
   assert.equal(workspace.beginTaskRun(state, "task-b", "starter", "test"), null, "a non-selected task cannot start a visible run");
 });
+
+test("selection and clear reset the content pane to its description baseline without touching per-task work", () => {
+  let state = workspace.createTaskWorkspaceState();
+  state = workspace.selectTask(state, "task-a", "starter A");
+  state = workspace.setTaskDraft(state, "task-a", "draft A", "starter A");
+  state = {...state, activeContentTab: "hint"};
+  state = workspace.selectTask(state, "task-b", "starter B");
+  assert.equal(state.activeContentTab, "description", "a selected task starts with the task description rather than leaked Hint state");
+  assert.equal(state.workspaces.get("task-a").draft, "draft A", "tab reset does not discard the prior task draft");
+
+  state = {...state, activeContentTab: "solution"};
+  state = workspace.clearTaskSelection(state);
+  assert.equal(state.activeContentTab, "description", "clear selection cannot retain a hint or solution panel");
+  assert.equal(state.workspaces.get("task-a").draft, "draft A", "clearing selection leaves inert workspace data intact");
+});

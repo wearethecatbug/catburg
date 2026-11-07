@@ -167,6 +167,20 @@
     background: #b9f6c166;
 }
 
+@media (min-width: 633px) {
+    .solutionHeader {
+        flex-wrap: wrap;
+    }
+
+    .solutionHeader > div:first-child {
+        min-width: max-content;
+    }
+
+    .buttonsRow {
+        margin-left: auto;
+    }
+}
+
 @media (max-width: 632px) {
     .codeEditorContainer,
     .codeEditorFrame {

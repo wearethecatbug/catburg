@@ -3,6 +3,7 @@ const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 const {loadTypeScript} = require("./helpers/load-typescript.cjs");
 
 const appRoot = path.resolve(__dirname, "..");
@@ -23,6 +24,31 @@ function validCatalog(overrides = {}) {
       tests: [{args: [], expected: null}],
       ...overrides,
     }],
+  };
+}
+
+function validBuiltIn(id = "ct-js-01", overrides = {}) {
+  const solution = "function exampleTask() { return null; }";
+  return {
+    id,
+    slug: "example-task",
+    title: "Example task",
+    description: "A valid independent control.",
+    hints: ["Start by naming the input and expected output.", "Keep the return value JSON-safe."],
+    entryPoint: "exampleTask",
+    starterCode: solution,
+    solution,
+    tests: [{args: [], expected: null}],
+    solutions: [{
+      id: "reference",
+      label: "Reference solution",
+      code: solution,
+      timeComplexity: "O(1)",
+      spaceComplexity: "O(1)",
+      rationale: "The reference returns a constant value.",
+    }],
+    difficulty: "Easy",
+    ...overrides,
   };
 }
 
@@ -59,6 +85,14 @@ function parseLocator(locator, source, lineCount) {
   return {start, end};
 }
 
+function invokeCuratedReference(task, args) {
+  const context = vm.createContext(Object.create(null));
+  context.__args = structuredClone(args);
+  new vm.Script(`"use strict";\n${task.solution}\nglobalThis.__result = ${task.entryPoint}(...globalThis.__args);`, {filename: `${task.id}.reference.js`})
+    .runInContext(context, {timeout: 100});
+  return JSON.parse(JSON.stringify({result: context.__result, args: context.__args}));
+}
+
 test("catalog parser preserves JSON transport values, including zero-argument cases", () => {
   const values = ["quoted text", true, false, null, [0, {nested: ["value", null]}], {deep: {zero: 0}}];
   const parsed = parseTaskCatalog(validCatalog({tests: [{args: [], expected: null}, {args: values, expected: {ok: true, values}}]}));
@@ -79,6 +113,44 @@ test("catalog parser rejects malformed fields, duplicate IDs, and non-JSON value
   const duplicate = validCatalog();
   duplicate.tasks.push({...duplicate.tasks[0]});
   expectCatalogError(() => parseTaskCatalog(duplicate), /duplicate id 'example-task'/);
+});
+
+test("built-in catalogue metadata is strict while legacy scalar or omitted hints remain compatible", () => {
+  const builtIn = validBuiltIn();
+  const parsed = parseTaskCatalog({version: 1, tasks: [builtIn]}).tasks[0];
+  assert.deepEqual(parsed.hints, builtIn.hints);
+  assert.equal(parsed.solution, builtIn.solutions[0].code, "the legacy primary solution projects from the first ordered solution");
+
+  const legacyScalar = parseTaskCatalog(validCatalog({hint: "Read the function signature first."})).tasks[0];
+  assert.deepEqual(legacyScalar.hints, ["Read the function signature first."], "scalar hint is used only when plural hints is absent");
+  assert.deepEqual(parseTaskCatalog(validCatalog({hints: []})).tasks[0].hints, [], "an explicit empty legacy hints list is not replaced by scalar fallback");
+
+  for (const [label, overrides] of [
+    ["missing plural hints", {hints: undefined}],
+    ["one built-in hint", {hints: ["Only one meaningful hint."]}],
+    ["blank hint", {hints: ["First meaningful hint.", "  "]}],
+    ["malformed present hints", {hints: "not-an-array"}],
+    ["missing solutions", {solutions: undefined}],
+    ["malformed solution", {solutions: [{...builtIn.solutions[0], timeComplexity: "linear"}]}],
+    ["unapproved complexity token", {solutions: [{...builtIn.solutions[0], spaceComplexity: "O(z)"}]}],
+    ["invalid difficulty", {difficulty: "Unrated"}],
+    ["invalid built-in entry point", {entryPoint: "not-valid"}],
+    ["non-json expected value", {tests: [{args: [], expected: undefined}]}],
+  ]) {
+    const candidate = {...builtIn, ...overrides};
+    if (overrides.hints === undefined) delete candidate.hints;
+    if (overrides.solutions === undefined) delete candidate.solutions;
+    expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [candidate]}), /catalog\.tasks\[0\]/);
+  }
+
+  const duplicateSlug = validBuiltIn("ct-js-02", {slug: builtIn.slug});
+  expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [builtIn, duplicateSlug]}), /duplicate slug/);
+  assert.doesNotThrow(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], timeComplexity: "O(n * k log k)", spaceComplexity: "O(V + E); auxiliary space excludes output"}]})]}), "approved complexity grammar accepts declared variables, operators, log, and a plain-English qualifier");
+  for (const invalidComplexity of ["O(nn)", "O(log)", "O(n +)", "O(n *** m)", "O(capacityjunk)"]) {
+    expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01", {solutions: [{...builtIn.solutions[0], timeComplexity: invalidComplexity}]})]}), /timeComplexity|notation|catalog\.tasks/);
+  }
+  expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-02")]}), /ordinal|ct-js-01|catalog\.tasks/);
+  expectCatalogError(() => parseTaskCatalog({version: 1, tasks: [validBuiltIn("ct-js-01", {ordinal: 1})]}), /ordinal|catalog\.tasks/);
 });
 
 test("built-in loader requests the canonical asset, derives ordinals, and rejects HTTP, JSON, and schema failures", async () => {
@@ -106,17 +178,102 @@ test("built-in loader requests the canonical asset, derives ordinals, and reject
   });
 });
 
-test("published catalog is exactly the curated, syntactically valid three-task contract", () => {
+test("published catalogue is the complete ordered 50-task learning contract", async () => {
   const catalog = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
   const parsed = parseTaskCatalog(catalog);
 
-  assert.equal(parsed.tasks.length, 3);
-  assert.deepEqual(parsed.tasks.map(task => task.entryPoint), ["race", "digitize", "noSpace"]);
-  assert.deepEqual(parsed.tasks.map(task => task.id), ["race", "digitize", "no-space"]);
+  assert.equal(parsed.tasks.length, 50);
+  assert.deepEqual(parsed.tasks.map(task => task.id), Array.from({length: 50}, (_, index) => `ct-js-${String(index + 1).padStart(2, "0")}`));
+  assert.equal(parsed.tasks.some(task => "ordinal" in task), false, "the parser returns definitions rather than persisting derived ordinals");
+  await withFetch(async () => ({ok: true, json: async () => catalog}), async () => {
+    const loaded = await loadBuiltinTaskCatalog();
+    assert.deepEqual(loaded.map(task => task.ordinal), Array.from({length: 50}, (_, index) => index + 1), "the loader derives ordinals from canonical source order");
+  });
+  assert.equal(new Set(parsed.tasks.map(task => task.slug)).size, 50, "slugs are unique even where function signatures intentionally repeat");
+  const easy = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 15, 17, 19, 33, 34].map(value => `ct-js-${String(value).padStart(2, "0")}`));
+  const hard = new Set(["ct-js-46", "ct-js-50"]);
+  assert.deepEqual(parsed.tasks.map(task => [task.id, task.difficulty]), parsed.tasks.map(task => [task.id, easy.has(task.id) ? "Easy" : hard.has(task.id) ? "Hard" : "Medium"]), "every ID has the approved relative-learning difficulty, not merely a matching aggregate count");
+
+  const expectedTitles = [
+    "Reverse a String", "Check if a String Is a Palindrome", "Find the Maximum Number", "Remove Duplicates from an Array", "Count Character Frequencies",
+    "Find the First Non-Repeating Character", "Two Sum", "Find a Missing Number", "Move Zeros to the End", "Find the Intersection of Two Arrays",
+    "Check Whether Two Strings Are Anagrams", "Find the Most Frequent Element", "Chunk an Array", "Flatten a Nested Array", "Binary Search",
+    "Find the First Occurrence Using Binary Search", "Merge Two Sorted Arrays", "Find Duplicates", "Find the Second Largest Unique Number", "Rotate an Array",
+    "Valid Parentheses", "Implement a Stack", "Implement a Queue", "Fibonacci", "Sequences and factorial", "Removing adjacent pairs of characters",
+    "Longest substring without repeating characters", "Maximum subarray sum", "Merging intervals while preserving the original array", "Minimum window length with a target sum",
+    "Group Anagrams", "Product Except Self", "Longest Common Prefix", "Is Subsequence", "Linked List Cycle", "Reverse Linked List", "Tree Maximum Depth",
+    "Level Order Traversal", "Validate BST", "Kth Largest Element", "Top K Frequent", "Search Rotated Array", "Daily Temperatures", "Decode Bracketed String",
+    "Generate Parentheses", "Word Break", "Coin Change Minimum", "Course Schedule", "Number of Islands", "LRU Cache",
+  ];
+  assert.deepEqual(parsed.tasks.map(task => task.title), expectedTitles, "the source and additional-task mapping is complete and ordered");
+
+  const hintCounts = new Set();
   for (const task of parsed.tasks) {
     assert.ok(task.tests.length > 0, `${task.id} has at least one typed test`);
+    assert.ok(task.hints.length >= 2 && task.hints.every(hint => /[A-Za-z]/.test(hint) && hint.trim() === hint), `${task.id} has meaningful normalized English hints`);
+    hintCounts.add(task.hints.length);
+    assert.equal(task.solution, task.solutions[0].code, `${task.id} preserves the first solution as the legacy primary solution`);
+    for (const solution of task.solutions) {
+      assert.match(solution.timeComplexity, /^O\(.+\)(?:;\s+\S.+)?$/, `${task.id}/${solution.id} has approved time notation`);
+      assert.match(solution.spaceComplexity, /^O\(.+\)(?:;\s+\S.+)?$/, `${task.id}/${solution.id} has approved space notation`);
+      assert.match(solution.rationale, /\S/, `${task.id}/${solution.id} explains its declared bounds`);
+    }
     assert.doesNotThrow(() => new Function(task.starterCode), `${task.id} starter code has valid syntax without execution`);
     assert.doesNotThrow(() => new Function(task.solution), `${task.id} reference code has valid syntax without execution`);
+  }
+  assert.ok(hintCounts.size > 1, "hint counts vary with educational need rather than being padded to a shared count");
+  assert.deepEqual(parsed.tasks.slice(30).map(task => task.entryPoint), ["groupAnagrams", "productExceptSelf", "longestCommonPrefix", "isSubsequence", "hasCycle", "reverseList", "maxDepth", "levelOrder", "isValidBST", "kthLargest", "topKFrequent", "searchRotated", "daysUntilWarmer", "decodeString", "generateParentheses", "canSegment", "minCoins", "canFinish", "countIslands", "lruTranscript"]);
+});
+
+test("curated references meet the independent normal, edge, sentinel, ordering, and non-mutation examples", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  const byId = new Map(catalogue.tasks.map(task => [task.id, task]));
+  const cases = [
+    ["ct-js-01", ["cat"], "tac"], ["ct-js-02", ["level"], true], ["ct-js-03", [[-4, 9, 2]], 9], ["ct-js-03", [[]], null],
+    ["ct-js-04", [[1, 2, 1, 3]], [1, 2, 3]], ["ct-js-05", ["aab"], {a: 2, b: 1}], ["ct-js-06", ["aabbcdde"], "c"],
+    ["ct-js-07", [[2, 7, 11, 15], 9], [0, 1]], ["ct-js-08", [[3, 0, 1]], 2], ["ct-js-09", [[0, 1, 0, 3, 12]], [1, 3, 12, 0, 0]],
+    ["ct-js-10", [[1, 2, 2, 1], [2, 2]], [2]], ["ct-js-11", ["listen", "silent"], true], ["ct-js-12", [[1, 3, 2, 3, 2, 3]], 3],
+    ["ct-js-13", [[1, 2, 3, 4, 5], 2], [[1, 2], [3, 4], [5]]], ["ct-js-14", [[1, [2, [3]], 4]], [1, 2, 3, 4]], ["ct-js-15", [[1, 3, 5, 7], 5], 2],
+    ["ct-js-16", [[1, 2, 2, 2, 3], 2], 1], ["ct-js-17", [[1, 3, 5], [2, 4, 6]], [1, 2, 3, 4, 5, 6]], ["ct-js-18", [[1, 2, 2, 3, 3, 3]], [2, 3]],
+    ["ct-js-19", [[4, 4, 3, 2]], 3], ["ct-js-19", [[4, 4]], null], ["ct-js-20", [[1, 2, 3, 4, 5], 2], [4, 5, 1, 2, 3]],
+    ["ct-js-21", ["([{}])"], true], ["ct-js-22", [[["push", 1], ["peek"], ["pop"], ["pop"], ["isEmpty"]]], [null, 1, 1, null, true]],
+    ["ct-js-23", [[["enqueue", 1], ["enqueue", 2], ["dequeue"], ["peek"], ["size"]]], [null, null, 1, 2, 1]], ["ct-js-24", [7], 13],
+    ["ct-js-25", [5], 120], ["ct-js-26", ["abbaca"], "ca"], ["ct-js-27", ["abcabcbb"], 3], ["ct-js-28", [[-2, 1, -3, 4, -1, 2, 1, -5, 4]], 6],
+    ["ct-js-29", [[[1, 3], [2, 6], [8, 10]]], [[1, 6], [8, 10]]], ["ct-js-30", [[2, 3, 1, 2, 4, 3], 7], 2],
+    ["ct-js-31", [["eat", "tea", "tan", "ate", "nat", "bat"]], [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]]], ["ct-js-32", [[1, 2, 3, 4]], [24, 12, 8, 6]],
+    ["ct-js-33", [["flower", "flow", "flight"]], "fl"], ["ct-js-34", ["ace", "abcde"], true], ["ct-js-35", [[{value: 1, next: 1}, {value: 2, next: 0}], 0], true],
+    ["ct-js-36", [[{value: 1, next: 1}, {value: 2, next: null}], 0], {nodes: [{value: 1, next: null}, {value: 2, next: 0}], head: 1}],
+    ["ct-js-37", [[3, 9, 20, null, null, 15, 7]], 3], ["ct-js-38", [[3, 9, 20, null, null, 15, 7]], [[3], [9, 20], [15, 7]]],
+    ["ct-js-39", [[2, 1, 3]], true], ["ct-js-40", [[3, 2, 1, 5, 6, 4], 2], 5], ["ct-js-41", [[1, 1, 2, 2, 3], 2], [1, 2]],
+    ["ct-js-42", [[4, 5, 6, 7, 0, 1, 2], 0], 4], ["ct-js-43", [[73, 74, 75, 71, 69, 72, 76, 73]], [1, 1, 4, 2, 1, 1, 0, 0]],
+    ["ct-js-44", ["3[a2[c]]"], "accaccacc"], ["ct-js-44", ["0[a]"], ""], ["ct-js-44", ["2[a"], null], ["ct-js-45", [2], ["(())", "()()"]],
+    ["ct-js-46", ["leetcode", ["leet", "code"]], true], ["ct-js-47", [[1, 2, 5], 11], 3], ["ct-js-48", [2, [[1, 0], [0, 1]]], false],
+    ["ct-js-49", [["11000", "11000", "00100", "00011"]], 3], ["ct-js-50", [2, [["put", 1, 1], ["put", 2, 2], ["get", 1], ["put", 3, 3], ["get", 2]]], [null, null, 1, null, -1]],
+  ];
+  for (const [id, args, expected] of cases) {
+    const task = byId.get(id);
+    assert.ok(task, `${id} must have a curated reference fixture`);
+    assert.deepEqual(invokeCuratedReference(task, args).result, expected, `${id} reference result matches its independent fixture`);
+  }
+
+  for (const [id, args] of [["ct-js-29", [[[1, 3], [2, 6], [8, 10]]]], ["ct-js-36", [[{value: 1, next: 1}, {value: 2, next: null}], 0]], ["ct-js-49", [["110", "010"]]]]) {
+    const task = byId.get(id);
+    const before = structuredClone(args);
+    const observed = invokeCuratedReference(task, args);
+    assert.deepEqual(observed.args, before, `${id} must not mutate its JSON transport input inside the isolated reference invocation`);
+  }
+  assert.equal(invokeCuratedReference(byId.get("ct-js-48"), [2, [[0, 0]]]).result, false, "self-cycle graph input is rejected");
+});
+
+test("every published JSON test tuple agrees with every ordered reference solution", () => {
+  const catalogue = JSON.parse(fs.readFileSync(path.join(publicRoot, "task-catalog.v1.json"), "utf8"));
+  for (const task of catalogue.tasks) {
+    for (const solution of task.solutions) {
+      const referenceTask = {...task, solution: solution.code};
+      for (const [index, testCase] of task.tests.entries()) {
+        assert.deepEqual(invokeCuratedReference(referenceTask, testCase.args).result, testCase.expected, `${task.id}/${solution.id} agrees with declared JSON test ${index + 1}`);
+      }
+    }
   }
 });
 

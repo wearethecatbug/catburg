@@ -19,6 +19,10 @@ function race(v1, v2, g) {
   const seconds = catchUpSeconds(g, v2 - v1);
   return [Math.floor(seconds / 3600), Math.floor((seconds % 3600) / 60), seconds % 60];
 }`;
+const catalog = {version: 1, tasks: [{
+  id: "race", title: "Race", description: "Inert runner fixture.", entryPoint: "race", starterCode: helperSolution, solution: helperSolution,
+  tests: [{args: [720, 850, 70], expected: [0, 32, 18]}, {args: [80, 91, 37], expected: [3, 21, 49]}],
+}]};
 
 async function replaceEditor(page, code) {
   await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
@@ -33,13 +37,12 @@ async function replaceEditor(page, code) {
 }
 
 async function readResult(page, expectedTerminal) {
-  const infoButton = page.getByLabel(/Info: Показать информацию|Info: Показана информация/);
-  await infoButton.click();
-  const result = page.locator("pre[aria-label='Информация о тесте']");
+  const result = page.getByRole("heading", {name: "Output"}).locator("..").locator("pre");
   await result.waitFor({state: "visible", timeout: 10_000});
   await page.waitForFunction(
     ({source, flags}) => {
-      const node = document.querySelector("pre[aria-label='Информация о тесте']");
+      const heading = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).find(node => node.textContent?.trim() === "Output");
+      const node = heading?.parentElement?.querySelector("pre");
       return Boolean(node && new RegExp(source, flags).test(node.textContent?.trim() ?? ""));
     },
     {source: expectedTerminal.source, flags: expectedTerminal.flags},
@@ -57,6 +60,7 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
   const probeRequests = [];
   const probeFailures = [];
   const probeResponses = [];
+  const catalogRequests = [];
   page.on("console", message => {
     if (message.type() !== "error") return;
     const text = message.text();
@@ -68,6 +72,10 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
   });
   page.on("requestfailed", request => { if (request.url() === networkProbeUrl) probeFailures.push(request.failure()); });
   page.on("response", response => { if (response.url() === networkProbeUrl) probeResponses.push(response.status()); });
+  await context.route("**/task-catalog.v1.json", route => {
+    catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
 
   try {
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
@@ -78,6 +86,7 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     await assert.doesNotReject(runButton.waitFor({state: "visible", timeout: 10_000}));
     await page.getByLabel("User JavaScript code").waitFor({state: "visible", timeout: 10_000});
     await page.waitForTimeout(1_500);
+    assert.deepEqual(catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`], "the runner scenario receives one inert canonical catalogue GET");
 
     const directBoundary = await page.evaluate(async ({runnerSource, catalogSource}) => {
       const catalogModule = {exports: {}};

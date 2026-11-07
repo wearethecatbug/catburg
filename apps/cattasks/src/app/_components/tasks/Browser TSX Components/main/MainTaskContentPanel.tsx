@@ -17,17 +17,14 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
         selectedTask,
         activeContentTab,
         selectContentTab,
-        selectedWorkspace,
     } = useTaskContext();
 
     const isTaskSelected = Boolean(selectedTask);
 
     const descriptionText = selectedTask?.description ?? 'No task selected.';
-    const solutionText = selectedTask?.solution ?? '';
+    const solutions = selectedTask?.solutions ?? [];
+    const hints = selectedTask?.hints ?? [];
 
-    const monacoEditorRef =
-        useRef<import('monaco-editor').editor.IStandaloneCodeEditor | null>(null);
-    const taskAreaRef = useRef<HTMLDivElement | null>(null);
     const minimizeButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const taskDescriptionPreElementRef =
@@ -52,30 +49,14 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     }, [selectedTask?.id]);
 
     useEffect(() => {
-        if (activeContentTab === 'solution') {
-            requestAnimationFrame(() => monacoEditorRef.current?.layout());
-        }
-    }, [activeContentTab]);
-
-    useEffect(() => {
-        if (!taskAreaRef.current) return;
-        const ro = new ResizeObserver(() => monacoEditorRef.current?.layout());
-        ro.observe(taskAreaRef.current);
-        return () => ro.disconnect();
-    }, []);
-
-    useEffect(() => {
         if (isMinimized) minimizeButtonRef.current?.focus();
-        else requestAnimationFrame(() => monacoEditorRef.current?.layout());
     }, [isMinimized]);
 
     const handleToggleMinimize = () => {
-        // if (!isTaskSelected) return;
         setIsMinimized(prev => !prev);
     };
 
     const handleShowDescription = () => {
-        // if (!isTaskSelected) return;
         selectContentTab('description');
     };
     const handleShowSolution = () => {
@@ -83,8 +64,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
         selectContentTab('solution');
     };
     const handleShowInfo = () => {
-        // if (!isTaskSelected) return;
-        selectContentTab('info');
+        selectContentTab('hint');
     };
 
     return (
@@ -112,10 +92,10 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                             className={styles.mainBtnTask}
                         />
                         <MainBtnInfo
-                            isActive={activeContentTab === 'info'}
+                            isActive={activeContentTab === 'hint'}
                             isDisabled={!isTaskSelected}
                             onClick={handleShowInfo}
-                            ariaLabel={activeContentTab === 'info' ? 'Показана информация' : 'Показать информацию'}
+                            ariaLabel={activeContentTab === 'hint' ? 'Показаны подсказки' : 'Показать подсказки'}
                             className={styles.mainBtnInfo}
                         />
                     </div>
@@ -124,7 +104,6 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                 {/* контент — остаётся в DOM, но убирается из потока в .min */}
                 <div
                     id="taskPanelContent"
-                    ref={taskAreaRef}
                     className={styles.contentContainerBase}
                     aria-hidden={isMinimized}
                     inert={isMinimized}
@@ -132,12 +111,11 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                     {activeContentTab === 'solution' && (
                         <div className={combineClassNames(styles.contentContainerFrame, styles.taskSolutionContainer)}>
                             <div className={styles.editorHost}>
-                                <MainTaskSolutionEditor
-                                    value={sanitizeSolutionText(solutionText)}
-                                    onMountAction={(editor) => {
-                                        monacoEditorRef.current = editor;
-                                    }}
-                                />
+                                {solutions.length ? (
+                                    solutions.map(solution => <MainTaskSolutionEditor key={solution.id} value={sanitizeSolutionText(solution.code)} solution={solution}/>)
+                                ) : (
+                                    <MainTaskSolutionEditor value={sanitizeSolutionText(selectedTask?.solution ?? '')}/>
+                                )}
                             </div>
                         </div>
                     )}
@@ -159,14 +137,9 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         </div>
                     )}
 
-                    {activeContentTab === 'info' && (
+                    {activeContentTab === 'hint' && (
                         <div className={combineClassNames(styles.contentContainerFrame, styles.taskInfoContainer)}>
-              <pre
-                  className={styles.taskInfoPre}
-                  aria-label={isTaskSelected ? 'Информация о тесте' : 'Нет тестов'}
-              >
-                {selectedWorkspace?.result?.result.message ?? 'No additional information.'}
-              </pre>
+                            <div key={selectedTask?.id}>{hints.length ? hints.map((hint, index) => <details key={index} className={styles.hint}><summary>Hint {index + 1}</summary><p>{hint}</p></details>) : <p>No hint available for this task.</p>}</div>
                         </div>
                     )}
                 </div>

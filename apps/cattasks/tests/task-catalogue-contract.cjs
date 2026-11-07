@@ -30,8 +30,24 @@ function start(state, id, mode) {
   return started;
 }
 
-test("catalogue projects only the supported stable topics and leaves absent metadata uncategorized", () => {
+test("catalogue projects the curated built-in topic map and leaves legacy metadata uncategorized", () => {
   assert.deepEqual(catalogue.TASK_TOPICS, ["Arrays", "Strings", "Numbers", "Logic"]);
+  const expectedBuiltInTopics = new Map([
+    ["ct-js-01", "Strings"], ["ct-js-02", "Strings"], ["ct-js-03", "Numbers"], ["ct-js-04", "Arrays"], ["ct-js-05", "Strings"],
+    ["ct-js-06", "Strings"], ["ct-js-07", "Arrays"], ["ct-js-08", "Numbers"], ["ct-js-09", "Arrays"], ["ct-js-10", "Arrays"],
+    ["ct-js-11", "Strings"], ["ct-js-12", "Arrays"], ["ct-js-13", "Arrays"], ["ct-js-14", "Arrays"], ["ct-js-15", "Arrays"],
+    ["ct-js-16", "Arrays"], ["ct-js-17", "Arrays"], ["ct-js-18", "Arrays"], ["ct-js-19", "Numbers"], ["ct-js-20", "Arrays"],
+    ["ct-js-21", "Strings"], ["ct-js-22", "Logic"], ["ct-js-23", "Logic"], ["ct-js-24", "Numbers"], ["ct-js-25", "Numbers"],
+    ["ct-js-26", "Strings"], ["ct-js-27", "Strings"], ["ct-js-28", "Arrays"], ["ct-js-29", "Arrays"], ["ct-js-30", "Arrays"],
+    ["ct-js-31", "Strings"], ["ct-js-32", "Arrays"], ["ct-js-33", "Strings"], ["ct-js-34", "Strings"], ["ct-js-35", "Logic"],
+    ["ct-js-36", "Logic"], ["ct-js-37", "Logic"], ["ct-js-38", "Logic"], ["ct-js-39", "Logic"], ["ct-js-40", "Arrays"],
+    ["ct-js-41", "Arrays"], ["ct-js-42", "Arrays"], ["ct-js-43", "Arrays"], ["ct-js-44", "Strings"], ["ct-js-45", "Logic"],
+    ["ct-js-46", "Strings"], ["ct-js-47", "Logic"], ["ct-js-48", "Logic"], ["ct-js-49", "Logic"], ["ct-js-50", "Logic"],
+  ]);
+  assert.deepEqual([...expectedBuiltInTopics], Array.from({length: 50}, (_, index) => {
+    const id = `ct-js-${String(index + 1).padStart(2, "0")}`;
+    return [id, catalogue.getBuiltInTaskTopic(id)];
+  }), "every curated built-in ID has its independently specified topic");
   assert.equal(catalogue.getBuiltInTaskTopic("race"), "Numbers");
   assert.equal(catalogue.getBuiltInTaskTopic("digitize"), "Arrays");
   assert.equal(catalogue.getBuiltInTaskTopic("no-space"), "Strings");
@@ -48,6 +64,19 @@ test("catalogue projects only the supported stable topics and leaves absent meta
     ["missing", "Uncategorized", "Not started", false],
   ]);
   assert.deepEqual(projected.map(row => [row.title, row.description]), tasks.map(task => [task.title, task.description]));
+});
+
+test("catalogue rows project validated difficulty without reordering, and omitted custom metadata is Unrated", () => {
+  const difficultyTasks = [
+    {id: "ct-js-01", title: "Easy first", description: "", starterCode: "", ordinal: 1, difficulty: "Easy"},
+    {id: "ct-js-46", title: "Hard second", description: "", starterCode: "", ordinal: 46, difficulty: "Hard"},
+    {id: "legacy-custom", title: "Unrated third", description: "", starterCode: "", ordinal: 51},
+    {id: "ct-js-11", title: "Medium fourth", description: "", starterCode: "", ordinal: 11, difficulty: "Medium"},
+  ];
+  const projected = catalogue.getTaskCatalogueRows(difficultyTasks, workspace.createTaskWorkspaceState());
+  assert.deepEqual(projected.map(row => [row.id, row.difficulty]), [
+    ["ct-js-01", "Easy"], ["ct-js-46", "Hard"], ["legacy-custom", "Unrated"], ["ct-js-11", "Medium"],
+  ], "projection retains provider order and does not rewrite omitted legacy/custom metadata");
 });
 
 test("selection is current-only; a full current-draft Test pass completes and a later Run retains completion", () => {

@@ -20,7 +20,7 @@ function fieldFromMessage(message: string): keyof FormValues | null {
 }
 
 export function CustomTaskControls() {
-    const {customStorageError, customStorageReady, addCustomTasks, prepareCustomTaskImport, exportCustomTasks, retryCustomStorage} = useTaskContext();
+    const {customStorageError, customStorageReady, recoveryCustomTaskExport, addCustomTasks, prepareCustomTaskImport, exportCustomTasks, retryCustomStorage} = useTaskContext();
     const [isOpen, setIsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -119,7 +119,7 @@ export function CustomTaskControls() {
         const request = ++exportVersion.current;
         setIsExporting(true);
         try {
-            const text = await exportCustomTasks();
+            const text = recoveryCustomTaskExport ?? await exportCustomTasks();
             if (!mounted.current || request !== exportVersion.current || !text) return;
             const blob = new Blob([text], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
@@ -136,16 +136,16 @@ export function CustomTaskControls() {
     return (
         <section className={styles.controls} aria-label="Custom tasks">
             <div className={styles.actions}>
-                <button ref={newTaskButton} type="button" onClick={() => setIsOpen(true)}>New task</button>
+                <button ref={newTaskButton} type="button" onClick={() => setIsOpen(true)} disabled={!customStorageReady}>New task</button>
                 <label className={styles.fileInput}>
                     <span>Import tasks JSON</span>
-                    <input type="file" accept="application/json" onChange={event => {
+                    <input type="file" accept="application/json" disabled={!customStorageReady} onChange={event => {
                         const file = event.currentTarget.files?.[0];
                         event.currentTarget.value = '';
                         void importTasks(file);
                     }}/>
                 </label>
-                <button type="button" onClick={() => void exportTasks()} disabled={!customStorageReady || isExporting}>Export tasks</button>
+                <button type="button" onClick={() => void exportTasks()} disabled={(!customStorageReady && !recoveryCustomTaskExport) || isExporting}>{recoveryCustomTaskExport ? 'Export recovery JSON' : 'Export tasks'}</button>
             </div>
             {customStorageError && <div className={styles.storageError} role="alert"><p>{customStorageError}</p><button className={styles.retry} type="button" onClick={retryCustomStorage}>Retry storage</button></div>}
             {transferError && <p className={styles.notice} role="alert">{transferError}</p>}
