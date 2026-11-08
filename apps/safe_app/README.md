@@ -1,6 +1,6 @@
 # Safe Cat
 
-A browser game built with Next.js, React and TypeScript. Guess a whole safe code from 1 to 1000. Wrong guesses receive neutral feedback. Solve an addition, subtraction, multiplication or division challenge to earn the code's parity hint. Giving up a challenge reveals only its arithmetic answer. History records guesses and earned hints; surrender reveals the safe code and New Game starts a fresh round. Session state stays in memory and is lost on reload.
+A browser game built with Next.js, React and TypeScript. Guess a whole safe code from 1 to 1000. Wrong guesses receive neutral feedback. Solve an addition, subtraction, multiplication or division challenge to earn parity, divisibility or range facts about the code. Giving up a challenge reveals only its arithmetic answer. History records valid guesses; Stored hints lets you reread earned facts. Surrender reveals the safe code and New Game starts a fresh round. Session state stays in memory and is lost on reload.
 
 ## Development
 
