@@ -41,19 +41,27 @@ function pasv(host, port = 2121) {
   return `227 Entering Passive Mode (${host.replaceAll(".", ",")},${high},${low})`;
 }
 
-function fakeFtp({ controlHost, pasvMessage }) {
+function epsv(port = 2121) {
+  return `229 Entering Extended Passive Mode (|||${port}|)`;
+}
+
+function fakeFtp({ controlHost, pasvMessage, epsvMessage, ipFamily = 4 }) {
   const commands = [];
   const connections = [];
   let socketCount = 0;
   const ftp = {
     socket: { remoteAddress: controlHost },
     timeout: 0,
-    ipFamily: 4,
+    ipFamily,
     tlsOptions: {},
     log() {},
     request(command) {
       commands.push(command);
-      if (command === "EPSV") return Promise.reject(new Error("EPSV unavailable"));
+      if (command === "EPSV") {
+        return epsvMessage
+          ? Promise.resolve({ message: epsvMessage })
+          : Promise.reject(new Error("EPSV unavailable"));
+      }
       if (command === "PASV") return Promise.resolve({ message: pasvMessage });
       throw new Error(`Unexpected FTP command: ${command}`);
     },
@@ -120,6 +128,21 @@ test("default strategy tries EPSV then PASV and caches the successful secure str
   });
 });
 
+test("successful EPSV uses the control peer and never issues PASV", async () => {
+  for (const [controlHost, ipFamily] of [["203.0.113.10", 4], ["fd00::1", 6]]) {
+    await withClient(async (client) => {
+      const probe = await transfer(client, {
+        controlHost,
+        epsvMessage: epsv(6446),
+        ipFamily,
+      });
+      assert.deepEqual(probe.commands, ["EPSV"]);
+      assert.equal(probe.socketCount(), 1);
+      assert.deepEqual(probe.connections, [{ host: controlHost, port: 6446, family: ipFamily }]);
+    });
+  }
+});
+
 for (const advertisedHost of [
   "10.0.0.0",
   "10.255.255.255",
@@ -156,6 +179,42 @@ test("retains loopback and IPv4-mapped control-peer compatibility", async () => 
     });
     assert.deepEqual(mapped.connections, [{ host: "203.0.113.10", port: 2121, family: 4 }]);
   });
+});
+
+test("public control dials itself for loopback PASV and rejects link-local PASV", async () => {
+  await withClient(async (client) => {
+    const loopback = await transfer(client, {
+      controlHost: "203.0.113.10",
+      pasvMessage: pasv("127.0.0.1"),
+    });
+    assert.deepEqual(loopback.commands, ["EPSV", "PASV"]);
+    assert.equal(loopback.socketCount(), 1);
+    assert.deepEqual(loopback.connections, [{ host: "203.0.113.10", port: 2121, family: 4 }]);
+  });
+  await withClient((client) => rejectedTransfer(client, {
+    controlHost: "203.0.113.10",
+    pasvMessage: pasv("169.254.1.1"),
+  }, /PASV returned another host/));
+});
+
+test("IPv4-mapped public control accepts private PASV using its normalized peer", async () => {
+  await withClient(async (client) => {
+    const probe = await transfer(client, {
+      controlHost: "::ffff:203.0.113.10",
+      pasvMessage: pasv("10.0.0.5"),
+    });
+    assert.deepEqual(probe.commands, ["EPSV", "PASV"]);
+    assert.equal(probe.socketCount(), 1);
+    assert.deepEqual(probe.connections, [{ host: "203.0.113.10", port: 2121, family: 4 }]);
+  });
+});
+
+test("rejects an IPv6 control peer paired with a private IPv4 PASV host", async () => {
+  await withClient((client) => rejectedTransfer(client, {
+    controlHost: "fd00::1",
+    pasvMessage: pasv("10.0.0.5"),
+    ipFamily: 6,
+  }, /PASV returned another host/));
 });
 
 for (const advertisedHost of ["203.0.113.11", "172.15.0.1", "172.32.0.1"]) {

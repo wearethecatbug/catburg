@@ -16,7 +16,7 @@ overrides:
 
 patchedDependencies:
   basic-ftp@6.2.6:
-    hash: s7c4prxucaqloxbycjg2az4bxa
+    hash: w3rsmcliyfvowezpxbvsdvfe6u
     path: patches/basic-ftp@6.2.6.patch
 
 importers:
@@ -3739,7 +3739,7 @@ snapshots:
 
   base64-js@1.5.1: {}
 
-  basic-ftp@6.2.6(patch_hash=s7c4prxucaqloxbycjg2az4bxa): {}
+  basic-ftp@6.2.6(patch_hash=w3rsmcliyfvowezpxbvsdvfe6u): {}
 
   binary-extensions@2.3.0: {}
 
@@ -4673,7 +4673,7 @@ snapshots:
 
   get-uri@6.0.5:
     dependencies:
-      basic-ftp: 6.2.6(patch_hash=s7c4prxucaqloxbycjg2az4bxa)
+      basic-ftp: 6.2.6(patch_hash=w3rsmcliyfvowezpxbvsdvfe6u)
       data-uri-to-buffer: 6.0.2
       debug: 4.4.1
     transitivePeerDependencies:
