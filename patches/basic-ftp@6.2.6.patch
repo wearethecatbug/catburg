@@ -1,0 +1,17 @@
+diff --git a/dist/transfer.js b/dist/transfer.js
+index e1305877903955a172106fe892b8fc5e7871729f..d7ed469ff6fd39be9581b4ce850018c8801c3649 100644
+--- a/dist/transfer.js
++++ b/dist/transfer.js
+@@ -85,8 +85,11 @@ async function enterPassiveModeIPv4_forceControlHostIP(ftp) {
+     // Strip IPv4-mapped IPv6 prefix (e.g. "::ffff:1.2.3.4" → "1.2.3.4") so the
+     // comparison works regardless of whether the OS uses a dual-stack socket.
+     const normalizedControlHost = controlHost.replace(/^::ffff:/i, "");
++    // A public control peer with a private PASV host is a common NAT response.
++    // Accept it only because this secure strategy still dials the control peer below.
+     const hostsAreCompatible = normalizedControlHost === target.host
+-        || ((0, netUtils_1.isLoopback)(normalizedControlHost) && (0, netUtils_1.isLoopback)(target.host));
++        || ((0, netUtils_1.isLoopback)(normalizedControlHost) && (0, netUtils_1.isLoopback)(target.host))
++        || ((0, netUtils_1.ipIsPrivateV4Address)(target.host) && !(0, netUtils_1.ipIsPrivateV4Address)(normalizedControlHost));
+     if (!hostsAreCompatible) {
+         throw new Error(`PASV returned another host (${target.host}) for data transfer that you have connected to (${controlHost}). Even though the FTP protocol allows this, basic-ftp disables this feature by default for security reasons. If you do need this feature, instantiate the Client with the optional paramter "allowSeparateTransferHost: true". See the README documentation for more information.`);
+     }
