@@ -2,31 +2,30 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-let nextLocalStorageListenerId = 0;
-const localStorageListeners = new Map<string, Map<number, () => void>>();
+const localStorageListeners = new Map<string, Set<() => void>>();
 
-function subscribeToLocalStorageKey(key: string, id: number, listener: () => void) {
-  const listenersForKey = localStorageListeners.get(key) ?? new Map<number, () => void>();
-  listenersForKey.set(id, listener);
+function subscribeToLocalStorageKey(key: string, listener: () => void) {
+  const listenersForKey = localStorageListeners.get(key) ?? new Set<() => void>();
+  listenersForKey.add(listener);
   localStorageListeners.set(key, listenersForKey);
 
   return () => {
     const currentListeners = localStorageListeners.get(key);
     if (!currentListeners) return;
 
-    currentListeners.delete(id);
+    currentListeners.delete(listener);
     if (currentListeners.size === 0) {
       localStorageListeners.delete(key);
     }
   };
 }
 
-function notifyLocalStorageKeyListeners(key: string, sourceId?: number) {
+function notifyLocalStorageKeyListeners(key: string, sourceListener?: () => void) {
   const listenersForKey = localStorageListeners.get(key);
   if (!listenersForKey) return;
 
-  listenersForKey.forEach((listener, id) => {
-    if (id !== sourceId) {
+  listenersForKey.forEach((listener) => {
+    if (listener !== sourceListener) {
       listener();
     }
   });
@@ -43,17 +42,12 @@ export function useLocalStorage<T>(
   const [storedValue, setStoredValue] = useState<T>(initialValue);
   const [isHydrated, setIsHydrated] = useState(false);
   const initialValueRef = useRef(initialValue);
-  const storedValueRef = useRef(storedValue);
-  const listenerIdRef = useRef<number | null>(null);
-  initialValueRef.current = initialValue;
-  storedValueRef.current = storedValue;
+  const storedValueRef = useRef(initialValue);
+  const listenerRef = useRef<(() => void) | null>(null);
 
-  if (typeof window !== 'undefined' && listenerIdRef.current === null) {
-    nextLocalStorageListenerId += 1;
-    listenerIdRef.current = nextLocalStorageListenerId;
-  }
-
-  const listenerId = listenerIdRef.current;
+  useEffect(() => {
+    initialValueRef.current = initialValue;
+  }, [initialValue]);
 
   const readStoredValue = useCallback((initializeMissing = true) => {
     if (typeof window === 'undefined') return initialValueRef.current;
@@ -77,10 +71,14 @@ export function useLocalStorage<T>(
     setIsHydrated(false);
 
     try {
-      setStoredValue(readStoredValue());
+      const nextValue = readStoredValue();
+      storedValueRef.current = nextValue;
+      setStoredValue(nextValue);
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
-      setStoredValue(initialValueRef.current);
+      const fallback = initialValueRef.current;
+      storedValueRef.current = fallback;
+      setStoredValue(fallback);
     } finally {
       setIsHydrated(true);
     }
@@ -88,7 +86,6 @@ export function useLocalStorage<T>(
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (listenerId === null) return;
 
     const syncFromStorage = () => {
       try {
@@ -107,15 +104,19 @@ export function useLocalStorage<T>(
       syncFromStorage();
     };
 
-    const unsubscribe = subscribeToLocalStorageKey(key, listenerId, syncFromStorage);
+    listenerRef.current = syncFromStorage;
+    const unsubscribe = subscribeToLocalStorageKey(key, syncFromStorage);
 
     window.addEventListener('storage', handleStorage);
 
     return () => {
       unsubscribe();
+      if (listenerRef.current === syncFromStorage) {
+        listenerRef.current = null;
+      }
       window.removeEventListener('storage', handleStorage);
     };
-  }, [key, listenerId, readStoredValue]);
+  }, [key, readStoredValue]);
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
@@ -127,15 +128,13 @@ export function useLocalStorage<T>(
       try {
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(key, JSON.stringify(valueToStore));
-          if (listenerId !== null) {
-            notifyLocalStorageKeyListeners(key, listenerId);
-          }
+          notifyLocalStorageKeyListeners(key, listenerRef.current ?? undefined);
         }
       } catch (error) {
         console.error(`Error setting localStorage key "${key}":`, error);
       }
     },
-    [key, listenerId],
+    [key],
   );
 
   return [storedValue, setValue, isHydrated];
