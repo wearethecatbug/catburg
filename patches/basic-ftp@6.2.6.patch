@@ -1,0 +1,25 @@
+diff --git a/dist/transfer.js b/dist/transfer.js
+index e1305877903955a172106fe892b8fc5e7871729f..52b1c8a9d99214d797a7594ce73a14982194fe99 100644
+--- a/dist/transfer.js
++++ b/dist/transfer.js
+@@ -10,6 +10,7 @@ exports.uploadFrom = uploadFrom;
+ exports.downloadTo = downloadTo;
+ const stream_1 = require("stream");
+ const tls_1 = require("tls");
++const net_1 = require("net");
+ const TransferWatchdog_1 = require("./TransferWatchdog");
+ const netUtils_1 = require("./netUtils");
+ const parseControlResponse_1 = require("./parseControlResponse");
+@@ -85,8 +86,11 @@ async function enterPassiveModeIPv4_forceControlHostIP(ftp) {
+     // Strip IPv4-mapped IPv6 prefix (e.g. "::ffff:1.2.3.4" → "1.2.3.4") so the
+     // comparison works regardless of whether the OS uses a dual-stack socket.
+     const normalizedControlHost = controlHost.replace(/^::ffff:/i, "");
++    // A public IPv4 control peer with a private PASV host is a common NAT response.
++    // Accept it only because this secure strategy still dials the control peer below.
+     const hostsAreCompatible = normalizedControlHost === target.host
+-        || ((0, netUtils_1.isLoopback)(normalizedControlHost) && (0, netUtils_1.isLoopback)(target.host));
++        || ((0, netUtils_1.isLoopback)(normalizedControlHost) && (0, netUtils_1.isLoopback)(target.host))
++        || ((0, net_1.isIPv4)(normalizedControlHost) && (0, netUtils_1.ipIsPrivateV4Address)(target.host) && !(0, netUtils_1.ipIsPrivateV4Address)(normalizedControlHost));
+     if (!hostsAreCompatible) {
+         throw new Error(`PASV returned another host (${target.host}) for data transfer that you have connected to (${controlHost}). Even though the FTP protocol allows this, basic-ftp disables this feature by default for security reasons. If you do need this feature, instantiate the Client with the optional paramter "allowSeparateTransferHost: true". See the README documentation for more information.`);
+     }

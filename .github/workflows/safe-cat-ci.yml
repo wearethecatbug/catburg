@@ -48,7 +48,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          corepack pnpm --filter safe_app... install --frozen-lockfile --ignore-scripts --ignore-pnpmfile 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/install.log"
+          corepack pnpm --filter safe_app... --filter @repo/ui... install --frozen-lockfile --ignore-scripts --ignore-pnpmfile 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/install.log"
+
+      - name: Verify FTP dependency compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test tests/dependency-ftp.test.cjs 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/dependency-ftp.log"
 
       - name: Run unit, boundary, and static checks
         working-directory: apps/safe_app
