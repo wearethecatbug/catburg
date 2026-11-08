@@ -107,15 +107,25 @@ async function withBrowser(options, run) {
     },
   };
 
+  let result;
+  let callbackError;
+  let callbackFailed = false;
+  let cleanupError;
+  let cleanupFailed = false;
   try {
-    return await run(browser);
+    result = await run(browser);
+  } catch (error) {
+    callbackFailed = true;
+    callbackError = error;
   } finally {
-    let cleanupError;
     for (const entry of mounted.reverse()) {
       try {
         entry.unmount();
       } catch (error) {
-        cleanupError ??= error;
+        if (!cleanupFailed) {
+          cleanupFailed = true;
+          cleanupError = error;
+        }
       }
     }
     console.error = originalError;
@@ -123,8 +133,11 @@ async function withBrowser(options, run) {
     else delete globalThis.window;
     if (actDescriptor) Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", actDescriptor);
     else delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-    if (cleanupError) throw cleanupError;
   }
+  if (callbackFailed && cleanupFailed) throw new AggregateError([callbackError, cleanupError], "withBrowser callback and cleanup failed");
+  if (callbackFailed) throw callbackError;
+  if (cleanupFailed) throw cleanupError;
+  return result;
 }
 
 test("SSR observes only the supplied initial value", () => {
@@ -232,6 +245,14 @@ test("updates one same-document peer exactly once and excludes the writer", asyn
     assert.deepEqual(storage.reads, ["shared"], "same-document notification must read once for the peer and never reread the writer");
     assert.strictEqual(writer.latest[1], writerSetter);
     assert.strictEqual(peer.latest[1], peerSetter);
+    act(() => writer.latest[1](0));
+    act(() => {
+      writer.latest[1]((value) => value + 1);
+      peer.latest[1]((value) => value + 1);
+    });
+    assert.deepEqual([writer.latest[0], peer.latest[0], storage.getItem("shared")], [2, 2, JSON.stringify(2)]);
+    assert.strictEqual(writer.latest[1], writerSetter);
+    assert.strictEqual(peer.latest[1], peerSetter);
   });
 });
 
@@ -281,4 +302,66 @@ test("unmount removes listeners and stale same-document callbacks", async () => 
     assert.deepEqual(storage.reads, [], "no storage callback may survive the final unmount");
     assert.equal(writerHistory.length, writerRenders, "unmounted writer must not receive stale updates");
   });
+});
+
+test("withBrowser preserves callback and cleanup failures while restoring its environment", async () => {
+  const windowDescriptor = Object.getOwnPropertyDescriptor(globalThis, "window");
+  const actDescriptor = Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT");
+  const originalError = console.error;
+
+  const callbackOnly = new Error("callback only");
+  let callbackOnlyListeners;
+  await assert.rejects(withBrowser(null, async ({ mount, storageListenerCount }) => {
+    mount("callback-only", "callback-only", 0, []);
+    callbackOnlyListeners = storageListenerCount;
+    throw callbackOnly;
+  }), (error) => error === callbackOnly);
+  assert.equal(callbackOnlyListeners(), 0);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "window"), windowDescriptor);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT"), actDescriptor);
+  assert.strictEqual(console.error, originalError);
+
+  const cleanupOnly = new Error("cleanup only");
+  let cleanupOnlyEntry;
+  let cleanupOnlyListeners;
+  await assert.rejects(withBrowser(null, async ({ mount, storageListenerCount }) => {
+    cleanupOnlyEntry = mount("cleanup-only", "cleanup-only", 0, []);
+    const unmount = cleanupOnlyEntry.unmount;
+    cleanupOnlyEntry.unmount = () => {
+      unmount();
+      throw cleanupOnly;
+    };
+    cleanupOnlyListeners = storageListenerCount;
+  }), (error) => error === cleanupOnly);
+  assert.equal(cleanupOnlyEntry.unmounted, true);
+  assert.equal(cleanupOnlyListeners(), 0);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "window"), windowDescriptor);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT"), actDescriptor);
+  assert.strictEqual(console.error, originalError);
+
+  const callbackAndCleanup = new Error("callback and cleanup");
+  const cleanupAndCallback = new Error("cleanup and callback");
+  let bothEntry;
+  let bothListeners;
+  await assert.rejects(withBrowser(null, async ({ mount, storageListenerCount }) => {
+    bothEntry = mount("both", "both", 0, []);
+    const unmount = bothEntry.unmount;
+    bothEntry.unmount = () => {
+      unmount();
+      throw cleanupAndCallback;
+    };
+    bothListeners = storageListenerCount;
+    throw callbackAndCleanup;
+  }), (error) => {
+    assert.ok(error instanceof AggregateError);
+    assert.deepEqual(error.errors, [callbackAndCleanup, cleanupAndCallback]);
+    assert.strictEqual(error.errors[0], callbackAndCleanup);
+    assert.strictEqual(error.errors[1], cleanupAndCallback);
+    return true;
+  });
+  assert.equal(bothEntry.unmounted, true);
+  assert.equal(bothListeners(), 0);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "window"), windowDescriptor);
+  assert.deepEqual(Object.getOwnPropertyDescriptor(globalThis, "IS_REACT_ACT_ENVIRONMENT"), actDescriptor);
+  assert.strictEqual(console.error, originalError);
 });
