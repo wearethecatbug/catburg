@@ -1,20 +1,60 @@
 .headerTaskListContainer {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 20px;
+    /* The center column grows with the title while every cell ends on the shelf baseline. */
+    display: grid;
+    grid-template-columns: 108px minmax(0, 1fr) 108px;
+    align-items: end;
+    gap: clamp(12px, 3.2vw, 50px);
+    width: 100%;
+    min-width: 0;
+    min-height: 148px;
 }
 
 /* кнопки-стрелки внутри контейнера */
 .taskListArrowButton {
-    width: 150px;
-    height: 100%;
-    min-height: 70px;
+    width: 108px;
+    min-width: 108px;
 }
 
 .taskSelectorButtonContainer {
     width: 100%;
-    min-width: 300px;
-    height: 70%;
-    min-height: 80px;
+    min-width: 0;
+    height: auto;
+    min-height: 64px;
+}
+
+@media (min-width: 1201px) {
+    .headerTaskListContainer {
+        /* Keep the full mascot interaction footprint inside the central navigation column. */
+        box-sizing: border-box;
+        padding-inline: 58.5px;
+    }
+
+    .taskSelectorButtonContainer {
+        padding-block-end: 42px;
+    }
+}
+
+@media (max-width: 600px) {
+    .headerTaskListContainer {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr) 56px;
+        gap: 8px;
+        width: 100%;
+        min-width: 0;
+        min-height: 78px;
+        padding-inline: 18px;
+        box-sizing: border-box;
+    }
+
+    .taskListArrowButton {
+        width: 56px;
+        min-width: 56px;
+    }
+
+    .taskSelectorButtonContainer {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        min-height: 64px;
+    }
 }

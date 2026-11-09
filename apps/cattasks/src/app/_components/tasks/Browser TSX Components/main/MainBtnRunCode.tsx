@@ -2,39 +2,18 @@
 import React from "react";
 import styles from "./MainBtnRunCode.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
+import type {IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 
 interface MainBtnRunCodeProps {
     readonly className?: string;
+    readonly execute: (request: IsolatedTaskRequest) => Promise<void>;
 }
 
-export default function MainBtnRunCode({className}: MainBtnRunCodeProps) {
-    const {editorUserCode} = useTaskContext();
+export default function MainBtnRunCode({className, execute}: MainBtnRunCodeProps) {
+    const {selectedWorkspace} = useTaskContext();
 
-    const handleClick = () => {
-        const userCode = editorUserCode ?? "";
-        if (!userCode.trim()) {
-            alert("Пользовательский код пустой");
-            return;
-        }
-
-        try {
-            // Выполняем код как есть. Если в нём есть alert/console.log — они сработают.
-            const runUserScript = new Function('"use strict";\n' + userCode);
-            const returnValue = runUserScript();
-
-            // Дополнительно покажем возвращаемое значение, если оно есть.
-            if (typeof returnValue !== "undefined") {
-                console.log("[RunCode] Возвращаемое значение:", returnValue);
-                try {
-                    alert(String(returnValue));
-                } catch {
-                    // alert may be unavailable even when the user code completed.
-                }
-            }
-        } catch (error) {
-            console.error("[RunCode] Ошибка выполнения:", error);
-            alert(`Ошибка выполнения: ${error instanceof Error ? error.message : String(error)}`);
-        }
+    const handleClick = async () => {
+        await execute({requestId: crypto.randomUUID(), mode: "run", code: selectedWorkspace?.draft ?? ""});
     };
 
     return (
@@ -43,6 +22,7 @@ export default function MainBtnRunCode({className}: MainBtnRunCodeProps) {
             className={`${styles.mainBtnRunCode} ${className ?? ""}`}
             aria-label="Run Code"
             onClick={handleClick}
+            disabled={!selectedWorkspace}
         />
     );
 }

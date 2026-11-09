@@ -2,55 +2,37 @@
 import React from "react";
 import styles from "./MainBtnTest.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
-import {runUserTests} from "../../lib/RunUserTests";
 import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
+import type {IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 
 
 type HeaderBtnTestProps = {
     readonly className?: string;
     readonly isDisabled?: boolean;
+    readonly execute: (request: IsolatedTaskRequest) => Promise<void>;
 }
 
-export default function MainBtnTest({className, isDisabled}: HeaderBtnTestProps) {
+export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnTestProps) {
     const {
         selectedTask,
-        editorUserCode,
-        setRunTest,
-        setValidSolution,
-        validSolution,
-        runTest,
-        setTestNotificationText,
+        selectedWorkspace,
     } = useTaskContext();
 
-    const handleRunTestsClick = () => {
-        const tests = Array.isArray(selectedTask?.tests) ? selectedTask.tests : [];
-        const taskMetadata: Record<string, unknown> = {...selectedTask};
-
-        const expectedFunctionName =
-            (typeof taskMetadata.exportName === "string" ? taskMetadata.exportName : undefined) ??
-            (typeof taskMetadata.functionName === "string" ? taskMetadata.functionName : undefined) ??
-            (typeof taskMetadata.expectedExport === "string" ? taskMetadata.expectedExport : undefined) ??
-            (typeof taskMetadata.expectedFunctionName === "string" ? taskMetadata.expectedFunctionName : undefined) ??
-            undefined;
-
-
-        const {areAllTestsPassed, resultText} = runUserTests(
-            editorUserCode ?? "",
-            tests,
-            expectedFunctionName,
-            {suppressConsoleOutput: true},
-        );
-
-        setRunTest?.(true);
-        setValidSolution?.(areAllTestsPassed);
-        setTestNotificationText?.(resultText);
+    const handleRunTestsClick = async () => {
+        await execute({
+            requestId: crypto.randomUUID(),
+            mode: "test",
+            code: selectedWorkspace?.draft ?? "",
+            entryPoint: selectedTask?.entryPoint,
+            tests: selectedTask?.tests,
+        });
     };
 
     const getBtnClassName = combineClassNames(
         styles.btnTest,
         !selectedTask ? styles.disabled :
-            !runTest ? styles.default :
-                validSolution ? styles.success : styles.fail,
+            selectedWorkspace?.result?.mode !== 'test' ? styles.default :
+                selectedWorkspace.result.result.status === 'completed' ? styles.success : styles.fail,
         className,
     );
 
@@ -60,7 +42,7 @@ export default function MainBtnTest({className, isDisabled}: HeaderBtnTestProps)
             className={getBtnClassName}
             aria-label="Test Code"
             onClick={handleRunTestsClick}
-            disabled={isDisabled}
+            disabled={isDisabled || !selectedTask}
 
         />
     );

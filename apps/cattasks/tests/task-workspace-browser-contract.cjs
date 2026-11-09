@@ -1,0 +1,499 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+
+const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43814";
+
+function writeBrowserDiagnostics(name, diagnostics) {
+  const outputDirectory = process.env.CATTASKS_BROWSER_DIAGNOSTICS_DIR;
+  if (!outputDirectory) return;
+  fs.mkdirSync(outputDirectory, {recursive: true});
+  fs.writeFileSync(path.join(outputDirectory, `${name}.json`), `${JSON.stringify(diagnostics, null, 2)}\n`);
+}
+
+const catalog = {
+  version: 1,
+  tasks: [
+    {
+      id: "foo/../../solution-other",
+      title: "Unsafe ID task",
+      description: "First task.",
+      entryPoint: "echo",
+      starterCode: "function echo(value) { return value; }",
+      solution: "function echo(value) { return value; }",
+      tests: [{args: ["first"], expected: "first"}],
+    },
+    {
+      id: "other",
+      title: "Other task",
+      description: "Second task.",
+      entryPoint: "echo",
+      starterCode: "function echo(value) { return value + '!'; }",
+      solution: "function echo(value) { return value + '!'; }",
+      tests: [{args: ["second"], expected: "second!"}],
+    },
+  ],
+};
+
+async function visibleEditorText(page) {
+  return page.locator(".monaco-editor .view-lines").innerText();
+}
+
+async function setActiveDraft(page, starterCode, value) {
+  const changed = await page.evaluate(({starterCode, value}) => {
+    const models = window.monaco?.editor.getModels() ?? [];
+    const current = models.find(model => model.getValue() === starterCode);
+    if (!current) return false;
+    current.setValue(value);
+    return true;
+  }, {starterCode, value});
+  assert.equal(changed, true, "the visible Monaco editor model must be available through its public API");
+  await page.waitForFunction(expected => {
+    const models = window.monaco?.editor.getModels() ?? [];
+    return models.some(model => model.getValue() === expected);
+  }, value);
+}
+
+async function selectTask(page, title) {
+  const selector = page.getByRole("combobox");
+  await selector.fill(title);
+  const option = page.getByRole("option", {name: new RegExp(title)});
+  await option.waitFor({state: "visible"});
+  await option.click();
+}
+
+async function waitForReferenceSolutionsLayout(page, expectedCodes, finalLineMarker) {
+  await page.waitForFunction(({expectedCodes, finalLineMarker}) => {
+    const editors = Array.from(document.querySelectorAll("[class*='editorHost'] .monaco-editor"));
+    const monacoEditors = window.monaco?.editor.getEditors() ?? [];
+    return editors.length === expectedCodes.length && editors.every((editor, index) => {
+      const monacoEditor = monacoEditors.find(candidate => {
+        const domNode = candidate.getDomNode();
+        return domNode === editor || editor.contains(domNode);
+      });
+      const bounds = editor.getBoundingClientRect();
+      const model = monacoEditor?.getModel();
+      if (model?.getValue() !== expectedCodes[index] || bounds.width <= 0 || bounds.height <= 100) return false;
+      if (!expectedCodes[index].endsWith(finalLineMarker)) return true;
+      monacoEditor.revealLineInCenter(model.getLineCount());
+      return Array.from(editor.querySelectorAll(".view-line")).some(line => line.textContent?.includes(finalLineMarker));
+    });
+  }, {expectedCodes, finalLineMarker});
+}
+
+async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLabels, finalLineMarker, learnerDraft) {
+  const learnerScrollBefore = await page.evaluate(learnerDraft => {
+    const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+    return editor?.getScrollTop() ?? null;
+  }, learnerDraft);
+  const evidence = await page.evaluate(({expectedCodes, expectedLabels, finalLineMarker}) => {
+    const scroller = document.querySelector("[class*='contentContainerFrame'][class*='taskSolutionContainer']");
+    const host = scroller?.querySelector("[class*='editorHost']");
+    const cards = host ? Array.from(host.children).filter(card => card.querySelector(".monaco-editor") && card.querySelector(":scope > dl")) : [];
+    if (!scroller || !host || cards.length !== expectedCodes.length) return {ready: false};
+
+    const verticalRoundingTolerance = 0.5;
+    const monacoEditors = window.monaco?.editor.getEditors() ?? [];
+    const cardsEvidence = cards.map((card, index) => {
+      const editor = card.querySelector(".monaco-editor");
+      const textarea = editor?.querySelector("textarea");
+      const monacoEditor = monacoEditors.find(candidate => {
+        const domNode = candidate.getDomNode();
+        return domNode === editor || Boolean(domNode?.contains(textarea)) || Boolean(editor?.contains(domNode));
+      });
+      const analysis = card.querySelector(":scope > dl");
+      const label = Array.from(card.children).find(child => child.textContent?.trim() === expectedLabels[index]);
+      const precedingElement = analysis?.previousElementSibling;
+      const codeImmediatelyBeforeAnalysis = precedingElement === editor || Boolean(precedingElement?.contains(editor));
+      scroller.scrollTop = 0;
+      analysis?.scrollIntoView({block: "nearest"});
+      let analysisBounds = analysis?.getBoundingClientRect();
+      let scrollerBounds = scroller.getBoundingClientRect();
+      if (index === cards.length - 1 && analysisBounds && analysisBounds.bottom > scrollerBounds.bottom + verticalRoundingTolerance) {
+        const maximumScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+        const requestedScrollTop = scroller.scrollTop + Math.ceil(analysisBounds.bottom - scrollerBounds.bottom);
+        scroller.scrollTop = Math.min(maximumScrollTop, Math.max(0, requestedScrollTop));
+        analysisBounds = analysis.getBoundingClientRect();
+        scrollerBounds = scroller.getBoundingClientRect();
+      }
+      const editorBounds = editor?.getBoundingClientRect();
+      return {
+        editorHeight: editorBounds?.height ?? 0,
+        readonly: textarea?.readOnly ?? false,
+        codeMatches: monacoEditor?.getModel()?.getValue() === expectedCodes[index],
+        renderedLinesNonblank: Boolean(editor?.querySelector(".view-lines")?.textContent?.trim()),
+        label: label?.textContent?.trim() ?? null,
+        labelVisible: Boolean(label?.getBoundingClientRect().width && label.getBoundingClientRect().height),
+        labelPrecedesCode: Boolean(label && editor && label.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING),
+        finalSourceLineVisible: !expectedCodes[index].endsWith(finalLineMarker) || Array.from(editor?.querySelectorAll(".view-line") ?? []).some(line => line.textContent?.includes(finalLineMarker)),
+        codeImmediatelyBeforeAnalysis,
+        parentScrolled: scroller.scrollTop > 0,
+        analysisVisibleWithinParent: Boolean(analysisBounds && analysisBounds.top >= scrollerBounds.top - verticalRoundingTolerance && analysisBounds.bottom <= scrollerBounds.bottom + verticalRoundingTolerance),
+      };
+    });
+    return {
+      ready: true,
+      scrollable: scroller.scrollHeight > scroller.clientHeight,
+      noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+      noBodyHorizontalOverflow: document.body.scrollWidth <= window.innerWidth,
+      horizontallyClippedActionables: Array.from(document.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex='-1']), [contenteditable='true']"))
+        .filter(element => {
+          const style = getComputedStyle(element);
+          const bounds = element.getBoundingClientRect();
+          if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0" || bounds.width <= 0 || bounds.height <= 0) return false;
+          let clipLeft = 0;
+          let clipRight = window.innerWidth;
+          for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+            const ancestorStyle = getComputedStyle(ancestor);
+            if (ancestorStyle.overflowX === "visible") continue;
+            const ancestorBounds = ancestor.getBoundingClientRect();
+            clipLeft = Math.max(clipLeft, ancestorBounds.left);
+            clipRight = Math.min(clipRight, ancestorBounds.right);
+          }
+          return bounds.top < window.innerHeight && bounds.bottom > 0 && bounds.right > clipLeft && bounds.left < clipRight && (bounds.left < -verticalRoundingTolerance || bounds.right > window.innerWidth + verticalRoundingTolerance);
+        })
+        .map(element => ({tagName: element.tagName, label: element.getAttribute("aria-label"), text: element.textContent?.trim().slice(0, 80) ?? null})),
+      cards: cardsEvidence,
+    };
+  }, {expectedCodes, expectedLabels, finalLineMarker});
+  const learnerScrollAfter = await page.evaluate(learnerDraft => {
+    const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+    return editor?.getScrollTop() ?? null;
+  }, learnerDraft);
+
+  assert.equal(evidence.ready, true, "two rendered reference-solution cards must be present before geometry assertions");
+  assert.equal(evidence.scrollable, true, "the reference viewer's actual parent must own vertical scrolling for multiple solutions");
+  assert.equal(evidence.noHorizontalOverflow, true, "the reference viewer must not create horizontal page overflow");
+  assert.equal(evidence.noBodyHorizontalOverflow, true, "the reference viewer must not create horizontal body overflow");
+  assert.deepEqual(evidence.horizontallyClippedActionables, [], "visible actionable controls must remain horizontally reachable");
+  assert.deepEqual(evidence.cards.map(card => card.codeMatches), [true, true], "the ordered mounted Monaco editors retain their exact code payloads");
+  assert.deepEqual(evidence.cards.map(card => card.renderedLinesNonblank), [true, true], "each mounted Monaco editor renders nonblank code lines");
+  assert.deepEqual(evidence.cards.map(card => card.label), expectedLabels, "each reference solution exposes its correct label in source order");
+  assert.deepEqual(evidence.cards.map(card => card.labelVisible), [true, true], "each reference solution label is visible");
+  assert.deepEqual(evidence.cards.map(card => card.labelPrecedesCode), [true, true], "each reference solution label precedes its own editor");
+  assert.deepEqual(evidence.cards.map(card => card.finalSourceLineVisible), [true, true], "the final long-reference source line is visible in its actual Monaco editor");
+  assert.deepEqual(evidence.cards.map(card => card.readonly), [true, true], "both rendered reference editors retain native read-only semantics");
+  assert.deepEqual(evidence.cards.map(card => card.editorHeight > 100), [true, true], "each rendered Monaco reference editor has meaningful visible height");
+  assert.deepEqual(evidence.cards.map(card => card.codeImmediatelyBeforeAnalysis), [true, true], "each reference code block is immediately followed by its own analysis");
+  assert.deepEqual(evidence.cards.map(card => card.analysisVisibleWithinParent), [true, true], "each reference analysis is reachable inside the viewer's actual scroll parent");
+  assert.equal(evidence.cards[1].parentScrolled, true, "the second reference analysis cannot remain clipped outside an inert editor host");
+  assert.ok(learnerScrollBefore > 0, "the learner editor must have a meaningful nonzero scroll position before reference scrolling");
+  assert.equal(learnerScrollAfter, learnerScrollBefore, "reference scrolling does not change the learner editor scroll position");
+}
+
+test("CatTasks keeps drafts per catalog identity and disables execution after clearing selection", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const requestFailures = [];
+  const catalogRequests = [];
+  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("requestfailed", request => requestFailures.push({url: request.url(), method: request.method(), error: request.failure()?.errorText ?? null}));
+  await context.route("**/task-catalog.v1.json", async route => {
+    catalogRequests.push(route.request().url());
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200);
+    const selector = page.getByRole("combobox");
+    await selector.waitFor({state: "visible"});
+    await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
+    await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Unsafe ID task"));
+
+    const firstDraft = "// draft: first\nfunction echo(value) { return value; }";
+    const secondDraft = "// draft: second\nfunction echo(value) { return value + '!'; }";
+    await setActiveDraft(page, catalog.tasks[0].starterCode, firstDraft);
+    const draftInput = page.getByLabel("User JavaScript code");
+    assert.equal(await draftInput.evaluate(element => element.readOnly), false, "the user draft editor remains editable");
+    await selectTask(page, "Other task");
+    await setActiveDraft(page, catalog.tasks[1].starterCode, secondDraft);
+    await selectTask(page, "Unsafe ID task");
+    await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), firstDraft, {timeout: 10_000});
+    assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), firstDraft.replace(/\s/g, ""), "A→B→A restores the draft owned by the URI-unsafe stable ID");
+
+    await page.getByRole("button", {name: "Give up: Показать решение"}).click();
+    const solutionInput = page.locator("[class*='taskSolutionContainer'] .monaco-editor textarea");
+    await solutionInput.waitFor({state: "visible"});
+    const solutionBeforeEdit = catalog.tasks[0].solution;
+    assert.equal(await solutionInput.evaluate(element => element.readOnly), true, "the reference solution editor exposes native read-only semantics");
+    await solutionInput.focus();
+    await page.keyboard.type("// blocked");
+    assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), solutionBeforeEdit), true, "typing cannot change the reference solution");
+    await page.getByRole("button", {name: "Task: Показать описание"}).click();
+
+    await page.getByRole("button", {name: "Select next task"}).click();
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Other task"));
+    await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), secondDraft);
+    assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), secondDraft.replace(/\s/g, ""), "arrow navigation uses the same selection state and preserves B draft");
+
+    await page.getByRole("button", {name: "Очистить выбор задачи", exact: true}).click();
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value === "");
+    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "Test is unavailable with no selected task");
+    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "Run is unavailable with no selected task");
+    assert.equal(await selector.evaluate(element => element === document.activeElement), true, "clear returns focus to the task selector");
+    assert.deepEqual(catalogRequests, [new URL("/task-catalog.v1.json", baseUrl).href], "the dashboard issues one catalog request in this isolated scenario");
+    assert.deepEqual(consoleErrors, []);
+    assert.deepEqual(pageErrors, []);
+    assert.deepEqual(requestFailures, []);
+  } finally {
+    writeBrowserDiagnostics("draft-isolation", {catalogRequests, consoleErrors, pageErrors, requestFailures});
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks shows a retryable catalog failure without claiming that it is still loading", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  let catalogAttempts = 0;
+  await context.route("**/task-catalog.v1.json", async route => {
+    catalogAttempts += 1;
+    if (catalogAttempts === 1) {
+      await route.fulfill({status: 503, contentType: "application/json", body: "{}"});
+      return;
+    }
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200);
+    const selector = page.getByRole("combobox");
+    await selector.waitFor({state: "visible"});
+    const catalogError = page.getByRole("alert").filter({hasText: "Не удалось загрузить каталог задач."});
+    await catalogError.waitFor({state: "visible"});
+    await selector.press("ArrowDown");
+    const listbox = page.getByRole("listbox");
+    await listbox.waitFor({state: "visible"});
+    assert.equal(await listbox.textContent(), "Каталог недоступен.", "the empty open list describes the failed catalog request rather than an active load");
+
+    await page.getByRole("button", {name: "Повторить"}).click();
+    await catalogError.waitFor({state: "hidden"});
+    await selector.press("ArrowDown");
+    await page.getByRole("option").first().waitFor({state: "visible"});
+    assert.equal(await catalogError.count(), 0, "a successful retry clears the catalog failure alert");
+    assert.equal(catalogAttempts, 2, "retry makes one additional catalog request");
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks retains an explicit clear made while the catalog request is pending", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const consoleErrors = [];
+  const pageErrors = [];
+  const requestFailures = [];
+  const catalogRequests = [];
+  let releaseCatalog;
+  const catalogRelease = new Promise(resolve => { releaseCatalog = resolve; });
+  const catalogUrl = new URL("/task-catalog.v1.json", baseUrl).href;
+  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
+  page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("requestfailed", request => requestFailures.push({url: request.url(), method: request.method(), error: request.failure()?.errorText ?? null}));
+  await context.route("**/task-catalog.v1.json", async route => {
+    catalogRequests.push(route.request().url());
+    await catalogRelease;
+    await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
+  });
+
+  try {
+    const catalogRequest = page.waitForRequest(request => request.url() === catalogUrl, {timeout: 5_000});
+    const response = await page.goto(baseUrl, {waitUntil: "commit", timeout: 5_000});
+    assert.equal(response.status(), 200);
+    const selector = page.getByRole("combobox");
+    const clear = page.getByLabel("Очистить выбор задачи", {exact: true});
+    await selector.waitFor({state: "visible", timeout: 5_000});
+    await clear.waitFor({state: "visible", timeout: 5_000});
+    await catalogRequest;
+
+    await clear.click({timeout: 5_000});
+    releaseCatalog();
+
+    const nextTask = page.getByRole("button", {name: "Select next task"});
+    await nextTask.waitFor({state: "visible", timeout: 5_000});
+    await page.waitForFunction(() => !document.querySelector("button[aria-label='Select next task']")?.hasAttribute("disabled"), undefined, {timeout: 5_000});
+    await selector.press("ArrowDown", {timeout: 5_000});
+    await page.getByRole("option").first().waitFor({state: "visible", timeout: 5_000});
+    assert.equal(await page.getByRole("option").count(), 2, "the fulfilled catalog exposes both known tasks");
+    assert.equal(await page.getByRole("option").first().getAttribute("aria-selected"), "false", "an unselected task option exposes its selection state to assistive technology");
+    await page.keyboard.press("Escape");
+
+    assert.equal(await selector.inputValue(), "", "the fulfilled catalog does not overwrite a pending explicit clear");
+    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "Test remains unavailable until the user selects a task");
+    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "Run remains unavailable until the user selects a task");
+    assert.equal(await selector.evaluate(element => element === document.activeElement), true, "catalog rendering retains selector focus after clear");
+    assert.deepEqual(catalogRequests, [catalogUrl], "the delayed-catalog scenario makes one request");
+
+    await selectTask(page, "Unsafe ID task");
+    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Unsafe ID task"), undefined, {timeout: 5_000});
+    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), false, "a manual valid selection restores Test");
+    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), false, "a manual valid selection restores Run");
+    assert.deepEqual(consoleErrors, []);
+    assert.deepEqual(pageErrors, []);
+    assert.deepEqual(requestFailures, []);
+  } finally {
+    releaseCatalog();
+    writeBrowserDiagnostics("pending-clear", {catalogRequests, consoleErrors, pageErrors, requestFailures});
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("Hint uses independent native disclosures and tab changes preserve the selected draft without producing Output", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  await page.setViewportSize({width: 1536, height: 1024});
+  const finalLineMarker = "LONG_REFERENCE_FINAL_MARKER";
+  const longReferenceCode = [
+    "function echo(value) {",
+    ...Array.from({length: 70}, (_, index) => `  // reference line ${index + 1}`),
+    "  return value;",
+    "}",
+    `// ${finalLineMarker}`,
+  ].join("\n");
+  const longLearnerDraft = [
+    "function echo(value) {",
+    ...Array.from({length: 70}, (_, index) => `  // learner line ${index + 1}`),
+    "  return value;",
+    "}",
+  ].join("\n");
+  const hintCatalog = {
+    version: 1,
+    tasks: [
+      {id: "ct-js-01", slug: "first-hint-task", title: "First hint task", description: "First fixture.", hints: ["Identify the input first.", "Then keep the return value deterministic.", "Finally check the empty case."], entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["first"], expected: "first"}], solutions: [{id: "reference", label: "Reference", code: longReferenceCode, timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "It returns one value."}, {id: "variant", label: "Variant", code: "function echo(value) { return String(value); }", timeComplexity: "O(n)", spaceComplexity: "O(n)", rationale: "String conversion copies the input representation."}], difficulty: "Easy"},
+      {id: "ct-js-02", slug: "second-hint-task", title: "Second hint task", description: "Second fixture.", hints: ["Read the input shape.", "Use a direct comparison."], entryPoint: "echo", starterCode: "function echo(value) { return `${value}!`; }", solution: "function echo(value) { return `${value}!`; }", tests: [{args: ["second"], expected: "second!"}], solutions: [{id: "reference", label: "Reference", code: "function echo(value) { return `${value}!`; }", timeComplexity: "O(1)", spaceComplexity: "O(1)", rationale: "It appends one character."}], difficulty: "Easy"},
+    ],
+  };
+  const catalogRequests = [];
+  await context.route("**/task-catalog.v1.json", route => {
+    catalogRequests.push(route.request().method());
+    return route.fulfill({contentType: "application/json", body: JSON.stringify(hintCatalog)});
+  });
+
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
+    await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
+    const originalDraft = hintCatalog.tasks[0].starterCode;
+    const editedDraft = "function echo(value) { return value; } // retained";
+    await setActiveDraft(page, originalDraft, editedDraft);
+    await setActiveDraft(page, editedDraft, longLearnerDraft);
+    await page.waitForFunction(learnerDraft => {
+      const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+      if (!editor) return false;
+      editor.revealLineInCenter(editor.getModel().getLineCount());
+      return editor.getScrollTop() > 0;
+    }, longLearnerDraft);
+
+    await page.getByRole("button", {name: /Give up: Показать решение|Give up: Показано решение/}).click();
+    const referenceCodes = hintCatalog.tasks[0].solutions.map(solution => solution.code);
+    const referenceLabels = hintCatalog.tasks[0].solutions.map(solution => solution.label);
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    await page.setViewportSize({width: 390, height: 844});
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    await page.setViewportSize({width: 2558, height: 1024});
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    await page.setViewportSize({width: 1440, height: 900});
+    await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
+    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    assert.equal(await page.evaluate(() => matchMedia("(max-width: 1150px)").matches), false, "the 1440 desktop control retains its desktop media query");
+    const effectiveZoomContext = await browser.newContext({viewport: {width: 720, height: 450}, deviceScaleFactor: 2});
+    const effectiveZoomPage = await effectiveZoomContext.newPage();
+    const effectiveZoomCatalogRequests = [];
+    const effectiveZoomConsoleErrors = [];
+    const effectiveZoomPageErrors = [];
+    const effectiveZoomRequestFailures = [];
+    effectiveZoomPage.on("console", message => { if (message.type() === "error") effectiveZoomConsoleErrors.push(message.text()); });
+    effectiveZoomPage.on("pageerror", error => effectiveZoomPageErrors.push(error.message));
+    effectiveZoomPage.on("requestfailed", request => effectiveZoomRequestFailures.push({url: request.url(), method: request.method(), error: request.failure()?.errorText ?? null}));
+    await effectiveZoomContext.route("**/task-catalog.v1.json", route => {
+      effectiveZoomCatalogRequests.push(route.request().method());
+      return route.fulfill({contentType: "application/json", body: JSON.stringify(hintCatalog)});
+    });
+    try {
+      await effectiveZoomPage.goto(baseUrl, {waitUntil: "domcontentloaded"});
+      await effectiveZoomPage.getByLabel("User JavaScript code").waitFor({state: "visible"});
+      assert.deepEqual(await effectiveZoomPage.evaluate(() => ({innerWidth, innerHeight, devicePixelRatio, compact: matchMedia("(max-width: 1150px)").matches})), {innerWidth: 720, innerHeight: 450, devicePixelRatio: 2, compact: true}, "the effective-200 proxy uses the compact CSS viewport and DPR calibration");
+      await setActiveDraft(effectiveZoomPage, hintCatalog.tasks[0].starterCode, longLearnerDraft);
+      await effectiveZoomPage.waitForFunction(learnerDraft => {
+        const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getModel()?.getValue() === learnerDraft);
+        if (!editor) return false;
+        editor.revealLineInCenter(editor.getModel().getLineCount());
+        return editor.getScrollTop() > 0;
+      }, longLearnerDraft);
+      await effectiveZoomPage.getByRole("button", {name: /Give up: Показать решение|Give up: Показано решение/}).click();
+      await waitForReferenceSolutionsLayout(effectiveZoomPage, referenceCodes, finalLineMarker);
+      await assertReferenceSolutionsReachable(effectiveZoomPage, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+      await effectiveZoomPage.getByLabel(/Task: Показано описание|Task: Показать описание/).click();
+      await effectiveZoomPage.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
+      const effectiveZoomHint = effectiveZoomPage.locator("details").filter({has: effectiveZoomPage.getByText("Identify the input first.")}).locator("summary");
+      await effectiveZoomHint.focus();
+      assert.equal(await effectiveZoomHint.evaluate(node => node === document.activeElement), true, "the effective-200 proxy retains native Hint keyboard focus");
+      assert.equal(await effectiveZoomPage.getByRole("heading", {name: "Output"}).locator("..").locator("pre").innerText(), "Run code or tests to see output.", "the effective-200 proxy retains Output ownership");
+      assert.deepEqual(effectiveZoomCatalogRequests, ["GET"], "the effective-200 proxy makes one inert catalogue request");
+      assert.deepEqual(effectiveZoomConsoleErrors, [], "the effective-200 proxy has no console diagnostics");
+      assert.deepEqual(effectiveZoomPageErrors, [], "the effective-200 proxy has no page diagnostics");
+      assert.deepEqual(effectiveZoomRequestFailures, [], "the effective-200 proxy has no failed requests");
+    } finally {
+      writeBrowserDiagnostics("effective-200-proxy", {effectiveZoomCatalogRequests, effectiveZoomConsoleErrors, effectiveZoomPageErrors, effectiveZoomRequestFailures});
+      await effectiveZoomContext.close();
+    }
+    await page.setViewportSize({width: 1536, height: 1024});
+    await setActiveDraft(page, longLearnerDraft, editedDraft);
+    assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), editedDraft), true, "desktop-to-compact-to-desktop resizing retains the selected draft model");
+    const analyses = page.locator("dl").filter({hasText: "Time complexity"});
+    assert.equal(await analyses.count(), 2, "each ordered solution has its own visible analysis block");
+    assert.deepEqual(await analyses.allInnerTexts(), ["Time complexity\nO(1)\nSpace complexity\nO(1)\nRationale\nIt returns one value.", "Time complexity\nO(n)\nSpace complexity\nO(n)\nRationale\nString conversion copies the input representation."], "each code block is followed by its own time, space, and rationale in source order");
+    assert.equal(await page.getByRole("tab", {name: /Big\s*O/i}).count(), 0, "reference complexity is not moved behind a separate Big O tab");
+    await page.getByLabel(/Task: Показано описание|Task: Показать описание/).click();
+
+    const hintButton = page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/);
+    await hintButton.click();
+    const summaries = page.getByRole("group").getByText(/^Hint [1-3]$/, {exact: true});
+    assert.equal(await summaries.count(), 3, "each normalized hint gets its own native disclosure summary");
+    const first = page.locator("details").filter({has: page.getByText("Identify the input first.")});
+    const second = page.locator("details").filter({has: page.getByText("Then keep the return value deterministic.")});
+    assert.equal(await first.getAttribute("open"), null, "Hint pane mounts closed");
+    await first.locator("summary").click();
+    assert.equal(await first.getAttribute("open"), "", "opening one hint is a native details interaction");
+    assert.equal(await second.getAttribute("open"), null, "opening one hint does not reveal another");
+    await second.locator("summary").focus();
+    assert.equal(await second.locator("summary").evaluate(node => node === document.activeElement), true, "the native summary receives keyboard focus without focus theft");
+    await page.keyboard.press("Enter");
+    assert.equal(await second.getAttribute("open"), "", "Enter independently opens a second native hint disclosure");
+    await page.keyboard.press("Space");
+    assert.equal(await second.getAttribute("open"), null, "Space independently closes the focused native disclosure");
+    assert.equal(await first.getAttribute("open"), "", "keyboard operation does not close an already opened sibling hint");
+
+    await page.getByLabel(/Task: Показано описание|Task: Показать описание/).click();
+    await hintButton.click();
+    assert.equal(await first.getAttribute("open"), null, "remounting Hint resets disclosure state without a React/storage open-state owner");
+    await selectTask(page, "Second hint task");
+    await selectTask(page, "First hint task");
+    await hintButton.click();
+    assert.equal(await first.getAttribute("open"), null, "A→B→A cannot leak an old disclosure state");
+    await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), editedDraft);
+    assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), editedDraft.replace(/\s/g, ""), "Hint interactions and task switches retain the independently owned Monaco draft");
+    assert.equal(await page.getByRole("heading", {name: "Output"}).locator("..").locator("pre").innerText(), "Run code or tests to see output.", "Hint ownership never writes result output");
+    assert.deepEqual(catalogRequests, ["GET"]);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});

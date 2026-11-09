@@ -1,8 +1,7 @@
 "use client";
 import React, {useEffect, useRef, useState} from "react";
 import styles from "./HeaderTaskListButton.module.css";
-import {useTasksArr} from "../../hooks/UseTasks";
-import type {ParsedTask} from "../../lib/ParseTasksArr";
+import type {CatalogTask} from "../../catalog/taskCatalog";
 import {useTaskContext} from "../../context/TaskProvider";
 import HeaderTaskListDeleteButton from "./HeaderTaskListDeleteButton";
 
@@ -16,9 +15,11 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
     const {
         selectedId,
         headerInput,
-        setHeaderInput,
-        setSelectedId,
-        clearSelectedFields,
+        setTaskFilter,
+        selectTask,
+        tasks,
+        catalogError,
+        retryCatalog,
     } = useTaskContext();
 
     const dropdownContentRef = useRef<HTMLDivElement>(null);
@@ -27,7 +28,6 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
     const [openedByTyping, setOpenedByTyping] = useState(false);
     const [highlightIndex, setHighlightIndex] = useState<number | null>(null);
 
-    const tasks = useTasksArr() ?? [];
     const menuId = "headerTaskListMenu";
 
     const toggleDropdown = () => {
@@ -36,17 +36,22 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
     };
 
     const normalizedInput = (headerInput ?? "").trim().toLowerCase();
+    const selectedTask = tasks.find(task => task.id === selectedId);
+    const selectedTaskValue = selectedTask ? `${selectedTask.ordinal}. ${selectedTask.title}` : "";
+    // Keep the native input editable even while the composed task heading is visible.
+    // `clearSelection` focuses this input, so focus alone must not hide the heading.
+    const showTaskIdentity = Boolean(selectedTask && !isOpen && headerInput === selectedTaskValue);
     const filteredTasks = tasks.filter(task =>
         task.title.toLowerCase().includes(normalizedInput) ||
-        task.no.toString().includes(normalizedInput) ||
-        `${task.no}.`.toLowerCase().includes(normalizedInput),
+        task.ordinal.toString().includes(normalizedInput) ||
+        `${task.ordinal}.`.toLowerCase().includes(normalizedInput),
     );
     const listSource =
         !openedByTyping && isOpen && normalizedInput !== "" ? tasks : normalizedInput ? filteredTasks : tasks;
 
     const closeDropdown = () => setIsOpen(false);
 
-    // Ключевой момент: после clearSelectedFields() закрываем список и возвращаем фокус
+    // The input remains the focus owner after clearing a selection.
     useEffect(() => {
         const cleared = (!selectedId) && ((headerInput ?? "").trim() === "");
         if (cleared) {
@@ -73,26 +78,23 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
         }
     }, [listSource, highlightIndex]);
 
-    const handleSelectTask = (task: ParsedTask) => {
+    const handleSelectTask = (task: CatalogTask) => {
         closeDropdown();
-        clearSelectedFields(); // синхронизируем состояние
-        setHeaderInput(`${task.no}. ${task.title}`);
+        selectTask(task.id);
         inputRef.current?.focus();
-        setSelectedId(task.id);
     };
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = event.target.value;
-        setHeaderInput(newValue);
-
+        setTaskFilter(newValue);
         const trimmed = newValue.trim();
         if (trimmed !== "") {
             const inputLower = trimmed.toLowerCase();
             const matches = tasks.filter(
                 task =>
                     task.title.toLowerCase().includes(inputLower) ||
-                    task.no.toString().includes(inputLower) ||
-                    `${task.no}.`.toLowerCase().includes(inputLower),
+                    task.ordinal.toString().includes(inputLower) ||
+                    `${task.ordinal}.`.toLowerCase().includes(inputLower),
             );
             if (matches.length > 0) {
                 setOpenedByTyping(true);
@@ -149,6 +151,9 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
             inputRef.current?.focus();
             return;
         }
+        if (event.key === "Tab") {
+            return;
+        }
         if (event.key === "ArrowDown" && event.altKey) {
             event.preventDefault();
             setOpenedByTyping(false);
@@ -161,7 +166,8 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
             }, 0);
             return;
         }
-        if (!isOpen) {
+        // Keep native editing focused in the input; only explicit navigation opens and focuses the list.
+        if (!isOpen && (event.key === "Enter" || event.key === "ArrowDown" || event.key === "ArrowUp")) {
             setOpenedByTyping(false);
             setIsOpen(true);
             setTimeout(() => {
@@ -183,7 +189,7 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                 setHighlightIndex(0);
                 focusListItem(0);
             }
-        } else {
+        } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
             if (listSource.length > 0 && highlightIndex === null) {
                 setHighlightIndex(0);
                 focusListItem(0);
@@ -210,16 +216,17 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
             <div
                 ref={buttonContainerRef}
                 className={styles.dropdownTrigger}
-                role="button"
-                tabIndex={0}
                 onDoubleClick={toggleDropdown}
-                aria-haspopup="listbox"
-                aria-expanded={isOpen}
-                aria-controls={menuId}
             >
+                {showTaskIdentity && selectedTask && (
+                    <span className={styles.taskIdentity} aria-hidden="true">
+                        <span className={styles.taskNumber}>TASK {String(selectedTask.ordinal).padStart(2, "0")}</span>
+                        <span className={styles.taskTitle}>{selectedTask.title}</span>
+                    </span>
+                )}
                 <input
                     ref={inputRef}
-                    className={styles.dropdownInput}
+                    className={`${styles.dropdownInput} ${showTaskIdentity ? styles.taskIdentityInput : ""}`.trim()}
                     placeholder="Список задач..."
                     value={headerInput}
                     onChange={handleInputChange}
@@ -233,6 +240,13 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                 <HeaderTaskListDeleteButton className={styles.deleteButton}/>
             </div>
 
+            {catalogError && (
+                <div role="alert">
+                    Не удалось загрузить каталог задач.
+                    <button type="button" onClick={retryCatalog}>Повторить</button>
+                </div>
+            )}
+
             {isOpen && (
                 <div
                     id={menuId}
@@ -243,13 +257,14 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                     onKeyDown={handleTaskListKeyDown}
                 >
                     {tasks.length === 0 ? (
-                        <div className={styles.taskListEmptyState}>Loading…</div>
+                        <div className={styles.taskListEmptyState}>{catalogError ? "Каталог недоступен." : "Loading…"}</div>
                     ) : (
                         <ul>
-                            {listSource.map((task: ParsedTask, index: number) => (
+                            {listSource.map((task: CatalogTask, index: number) => (
                                 <li
                                     key={task.id}
                                     role="option"
+                                    aria-selected={task.id === selectedId}
                                     tabIndex={0}
                                     className={styles.dropdownListItem}
                                     title={task.title}
@@ -257,7 +272,7 @@ export default function HeaderTaskListButton({className = ""}: HeaderTaskListBut
                                     onMouseEnter={() => setHighlightIndex(index)}
                                     onMouseLeave={() => setHighlightIndex(null)}
                                 >
-                                    {task.no}. {task.title}
+                                    {task.ordinal}. {task.title}
                                 </li>
                             ))}
                         </ul>

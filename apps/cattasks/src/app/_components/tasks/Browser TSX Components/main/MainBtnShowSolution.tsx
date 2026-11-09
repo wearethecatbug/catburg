@@ -32,7 +32,9 @@ export default function MainBtnShowSolution({
             onClick={onClick}
             disabled={isDisabled}
             aria-pressed={isActive}
-            aria-label={ariaLabel ?? (isActive ? 'Показано решение' : 'Показать решение')}
-        />
+            aria-label={`Give up: ${ariaLabel ?? (isActive ? 'Показано решение' : 'Показать решение')}`}
+        >
+            <span>Give up</span>
+        </button>
     );
 }

@@ -12,7 +12,6 @@ interface HeaderTaskListContainerProps {
 
 
 export default function HeaderTaskListContainer({className}: HeaderTaskListContainerProps) {
-    // const {tasks, setSelectedId} = useTaskContext();
     const {tasks, selectPreviousTask, selectNextTask} = useTaskContext();
     const hasTasks = tasks.length > 0;
 
