@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "prettier": "^3.5.0",
-    "turbo": "^2.4.2",
+    "turbo": "2.9.14",
     "typescript": "5.7.3"
   },
   "packageManager": "pnpm@9.0.0",
@@ -22,7 +22,31 @@
       "minimatch@10.2.5>brace-expansion": "5.0.12",
       "socks>ip-address": "10.7.4",
       "get-uri>basic-ftp": "6.2.6",
-      "postcss>source-map-js": "1.2.2"
+      "postcss>source-map-js": "1.2.2",
+      "@turbo/gen>@turbo/workspaces": "2.9.14",
+      "js-yaml": "4.3.2",
+      "lodash": "4.18.0",
+      "@babel/core": "7.29.6",
+      "baseline-browser-mapping": "2.11.0",
+      "browserslist": "4.28.7",
+      "zod": "4.6.6",
+      "sharp": "0.35.5",
+      "@xmldom/xmldom": "0.8.15",
+      "@humanfs/node": "0.16.8",
+      "postcss": "8.5.23",
+      "nanoid": "3.3.18",
+      "postcss-selector-parser": "6.1.5",
+      "yaml": "2.8.3",
+      "flatted": "3.4.2",
+      "ajv": "6.14.0",
+      "diff": "4.0.4",
+      "minimatch@3.1.2": "3.1.4",
+      "@turbo/gen>minimatch": "11.0.1",
+      "@typescript-eslint/typescript-estree>minimatch": "11.0.1",
+      "picomatch@2.3.1": "2.3.2",
+      "picomatch@4.0.3": "4.0.4",
+      "tailwindcss>sucrase": "3.35.1",
+      "external-editor>tmp": "0.2.7"
     },
     "patchedDependencies": {
       "basic-ftp@6.2.6": "patches/basic-ftp@6.2.6.patch"

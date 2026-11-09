@@ -33,19 +33,6 @@ export function useSettingsDraft({ isOpen, onClose }: UseSettingsDraftOptions) {
     onClose();
   }, [onClose, settings]);
 
-  React.useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        handleCancel();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [handleCancel, isOpen]);
-
   const updateGeneral = React.useCallback((patch: Partial<GeneralSettings>) => {
     setDraftSettings((prev) => ({
       ...prev,
