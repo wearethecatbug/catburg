@@ -128,9 +128,10 @@ export function Dropdown({
     const triggerButton = triggerButtonRef.current;
     if (!triggerButton) return false;
 
-    // The popup is portaled to body, so document order must omit it when leaving the trigger's logical neighborhood.
+    // Shared popups are portaled to body, so document order must omit every popup
+    // when leaving the trigger's logical neighborhood.
     const focusables = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => (
-      !menuRef.current?.contains(element) && element.tabIndex >= 0 && element.getClientRects().length > 0
+      !element.closest('[data-dropdown-popup]') && element.tabIndex >= 0 && element.getClientRects().length > 0
     ));
     const triggerIndex = focusables.indexOf(triggerButton);
     const target = focusables[triggerIndex + (isPrevious ? -1 : 1)];
@@ -184,21 +185,40 @@ export function Dropdown({
     setMenuWidthPx(nextMenuWidthPx);
   }, [align, isOpen, menuWidth]);
 
-  // Close on outside click (only while dropdown is open)
+  // Portaled popups need document-level interaction and focus departure handling.
   useEffect(() => {
     if (!isOpen) return;
 
+    const isInsideDropdown = (target: EventTarget | null) => (
+      target instanceof Node && (
+        dropdownRef.current?.contains(target) || menuRef.current?.contains(target)
+      )
+    );
+
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        !(menuRef.current && menuRef.current.contains(event.target as Node))
-      ) {
+      if (!isInsideDropdown(event.target)) {
         handleClose();
       }
     }
+
+    function handleFocusOutside(event: FocusEvent) {
+      if (!isInsideDropdown(event.target)) {
+        handleClose();
+      }
+    }
+
+    function handleWindowBlur() {
+      handleClose();
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('focusin', handleFocusOutside);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focusin', handleFocusOutside);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
   }, [isOpen, handleClose]);
 
   useEffect(() => {
@@ -322,11 +342,7 @@ export function Dropdown({
           }}
           role={popupRole}
           aria-label={popupLabel}
-          onBlur={popupRole === 'dialog' ? (event) => {
-            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-              handleClose();
-            }
-          } : undefined}
+          data-dropdown-popup
           onKeyDown={handlePopupKeyDown}
         >
           {React.Children.map(children, (child) =>
