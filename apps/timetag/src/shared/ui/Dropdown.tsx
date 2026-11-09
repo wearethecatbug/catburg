@@ -54,6 +54,7 @@ export function Dropdown({
   const hasFocusedPopupRef = useRef(false);
   const closeRequestedRef = useRef(false);
   const focusRestoreModeRef = useRef<'always' | 'if-lost' | null>(null);
+  const pendingWindowFocusCleanupRef = useRef<(() => void) | null>(null);
   const popupId = useId();
   const [menuLeft, setMenuLeft] = useState<number | undefined>(undefined);
   const [menuTop, setMenuTop] = useState<number | undefined>(undefined);
@@ -83,12 +84,15 @@ export function Dropdown({
   }, [isOpen, onClose]);
 
   const handleOpen = useCallback(() => {
+    pendingWindowFocusCleanupRef.current?.();
     if (onOpen) {
       onOpen();
     } else {
       setInternalIsOpen(true);
     }
   }, [onOpen]);
+
+  useEffect(() => () => pendingWindowFocusCleanupRef.current?.(), []);
 
   const setTriggerButton = useCallback((node: HTMLButtonElement | null) => {
     triggerButtonRef.current = node;
@@ -208,6 +212,34 @@ export function Dropdown({
     }
 
     function handleWindowBlur() {
+      pendingWindowFocusCleanupRef.current?.();
+      if (menuRef.current?.contains(document.activeElement)) {
+        let frame: number | null = null;
+        const handleWindowFocus = () => {
+          if (frame !== null) return;
+
+          frame = window.requestAnimationFrame(() => {
+            frame = null;
+            if (!document.hasFocus()) return;
+
+            const triggerButton = triggerButtonRef.current;
+            if (triggerButton?.isConnected && document.activeElement === document.body) {
+              triggerButton.focus();
+            }
+            cleanup();
+          });
+        };
+        const cleanup = () => {
+          if (frame !== null) window.cancelAnimationFrame(frame);
+          window.removeEventListener('focus', handleWindowFocus);
+          if (pendingWindowFocusCleanupRef.current === cleanup) {
+            pendingWindowFocusCleanupRef.current = null;
+          }
+        };
+
+        pendingWindowFocusCleanupRef.current = cleanup;
+        window.addEventListener('focus', handleWindowFocus);
+      }
       handleClose();
     }
 
@@ -307,12 +339,21 @@ export function Dropdown({
     }
   };
 
+  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (isOpen && event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleClose('always');
+    }
+  };
+
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
         ref={setTriggerButton}
         type="button"
         onClick={() => !disabled && (isOpen ? handleClose() : handleOpen())}
+        onKeyDownCapture={handleTriggerKeyDown}
         disabled={disabled}
         className="flex items-center"
         aria-expanded={isOpen}
