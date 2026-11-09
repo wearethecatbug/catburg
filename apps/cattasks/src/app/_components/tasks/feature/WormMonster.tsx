@@ -95,6 +95,7 @@ export default function WormMonster() {
                 try {
                     resizeObserver.disconnect();
                 } catch {
+                    // Continue releasing the remaining resources after a best-effort disconnect.
                 }
                 resizeObserver = null;
             }
@@ -103,6 +104,7 @@ export default function WormMonster() {
                 try {
                     unsubscribeDoggyCollision();
                 } catch {
+                    // Continue releasing the remaining resources after a best-effort unsubscribe.
                 }
                 unsubscribeDoggyCollision = null;
             }
@@ -112,6 +114,7 @@ export default function WormMonster() {
                 try {
                     application.stage.removeChild(sprite);
                 } catch {
+                    // The stage may already have released this sprite during teardown.
                 }
             }
             spriteRef.current = null;

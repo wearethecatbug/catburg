@@ -29,25 +29,19 @@ export const SAFE_ACTION = {
     ON_USER_WIN: "ON_USER_WIN",
 } as const;
 
-type safeAction = keyof typeof SAFE_ACTION;
-//
-// type SafeActions =
-//     | { type: typeof SAFE_ACTION.NEW_GAME; payload: string } // safeCode
-//     | { type: typeof SAFE_ACTION.SET_WIN; payload: boolean }
-//     | { type: typeof SAFE_ACTION.SET_WRONG_SAFE_CODE; payload: boolean }
-//     | { type: typeof SAFE_ACTION.SET_DISABLED; payload: boolean }
-//     | { type: typeof SAFE_ACTION.TOGGLE_HINT }
-//     | { type: typeof SAFE_ACTION.TOGGLE_LOG }
-//     | { type: typeof SAFE_ACTION.ADD_LOG; payload: string }
-//     | { type: typeof SAFE_ACTION.CLEAR_LOGS }
-//     | { type: typeof SAFE_ACTION.SET_GIVE_UP; payload: boolean }
-//     | { type: typeof SAFE_ACTION.SET_INPUT_VALUE; payload: string }
-//     | { type: typeof SAFE_ACTION.TOGGLE_SAFE; payload: boolean }; // описание типов пейлоад
-
-export interface SafeAction {
-    type: safeAction;
-    payload?: any; //TODO рефакторинг типа
-}
+export type SafeAction =
+    | { type: typeof SAFE_ACTION.NEW_GAME; payload: number }
+    | { type: typeof SAFE_ACTION.SET_WIN; payload: boolean }
+    | { type: typeof SAFE_ACTION.SET_WRONG_SAFE_CODE; payload: boolean }
+    | { type: typeof SAFE_ACTION.SET_DISABLED; payload: boolean }
+    | { type: typeof SAFE_ACTION.TOGGLE_HINT }
+    | { type: typeof SAFE_ACTION.TOGGLE_LOG }
+    | { type: typeof SAFE_ACTION.ADD_LOG; payload: string }
+    | { type: typeof SAFE_ACTION.CLEAR_LOGS }
+    | { type: typeof SAFE_ACTION.SET_GIVE_UP; payload: boolean }
+    | { type: typeof SAFE_ACTION.SET_INPUT_VALUE; payload: string }
+    | { type: typeof SAFE_ACTION.TOGGLE_SAFE; payload: boolean }
+    | { type: typeof SAFE_ACTION.ON_USER_WIN; payload: boolean };
 export function getSafeInitialStage(): SafeState {
     // Начальное состояние
     return {

@@ -24,12 +24,13 @@ export default function MainBtnTest({className, isDisabled}: HeaderBtnTestProps)
 
     const handleRunTestsClick = () => {
         const tests = Array.isArray(selectedTask?.tests) ? selectedTask.tests : [];
+        const taskMetadata: Record<string, unknown> = {...selectedTask};
 
         const expectedFunctionName =
-            (selectedTask as any)?.exportName ??
-            (selectedTask as any)?.functionName ??
-            (selectedTask as any)?.expectedExport ??
-            (selectedTask as any)?.expectedFunctionName ??
+            (typeof taskMetadata.exportName === "string" ? taskMetadata.exportName : undefined) ??
+            (typeof taskMetadata.functionName === "string" ? taskMetadata.functionName : undefined) ??
+            (typeof taskMetadata.expectedExport === "string" ? taskMetadata.expectedExport : undefined) ??
+            (typeof taskMetadata.expectedFunctionName === "string" ? taskMetadata.expectedFunctionName : undefined) ??
             undefined;
 
 

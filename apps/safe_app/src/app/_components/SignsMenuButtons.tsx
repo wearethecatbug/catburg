@@ -22,8 +22,8 @@ export const signsButtons: MenuConfiguration = {
 };
 
 type SignsContextType = {
-    activeSign: string;
-    setActiveSign: (sign: (prev) => string) => void;
+    activeSign: string | null;
+    setActiveSign: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 // Создаем контекст для передачи состояния активного знака 
@@ -56,7 +56,7 @@ export default function SignsPopUpView({
     const {activeSign, setActiveSign} = useSigns();
 
 
-    const signHandlers = {
+    const signHandlers: Partial<Record<string, () => void>> = {
         [HintSignsButtons.Signs_Plus]: onSignPlus,
         [HintSignsButtons.Signs_Minus]: onSignMinus,
         [HintSignsButtons.Signs_Multiple]: onSignMultiple,
@@ -109,7 +109,7 @@ export default function SignsPopUpView({
         <>
             <div className={`${styles.signsContainer} ${isSignsVisible ? "" : styles.hiddenSigns}`}>
                 <Menu menuConfiguration={signsButtons} onMenuButtonClickAction={onSignsMenuClick}
-                      getButtonClass={getSignsButtonClass} signHandlers={signHandlers}/>
+                      getButtonClass={getSignsButtonClass}/>
             </div>
 
         </>

@@ -26,34 +26,42 @@ export function usePixiApplication() {
 
         return () => {
             isCancelled = true;
-            const app: any = applicationRef.current;
+            const app = applicationRef.current;
             try {
                 app?.stop?.();
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
-                app && (app.resizeTo = undefined as any);
+                // The Pixi setter clears its resize target for a falsy value, including undefined.
+                if (app) Reflect.set(app, 'resizeTo', undefined);
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
                 app?.stage?.removeChildren?.();
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
                 app?.ticker?.stop?.();
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
                 app?.renderer?.destroy?.();
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
                 app?.canvas?.remove?.();
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             try {
                 app?.destroy?.(true, {children: true});
             } catch {
+                // Cleanup continues so later Pixi resources are still released.
             }
             applicationRef.current = null;
             setIsReady(false);

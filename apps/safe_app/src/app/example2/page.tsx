@@ -15,8 +15,27 @@ export default function Home() {
     );
 }
 
-const QuestionContext = createContext(null);
-function QuestionProvider({ children }) {
+type Question = {
+    questionParts: string;
+    answer: number;
+};
+
+type QuestionContextType = {
+    question: Question;
+    updateQuestion: () => void;
+};
+
+const QuestionContext = createContext<QuestionContextType | null>(null);
+
+function useQuestion() {
+    const context = useContext(QuestionContext);
+    if (!context) {
+        throw new Error("useQuestion must be used within a QuestionProvider");
+    }
+    return context;
+}
+
+function QuestionProvider({ children }: { children: React.ReactNode }) {
     const [question, setQuestion] = useState(generateQuestion());
 
     function updateQuestion() {
@@ -30,10 +49,10 @@ function QuestionProvider({ children }) {
     );
 }
 
-function HintPopupView({ onClose }) {
-    const { question, updateQuestion } = useContext(QuestionContext);
+function HintPopupView({ onClose }: { onClose: () => void }) {
+    const { question, updateQuestion } = useQuestion();
     const [isValid, setIsValid] = useState<boolean | null>(null);
-    const inputRefAnswer = React.useRef(null);
+    const inputRefAnswer = React.useRef<HTMLInputElement | null>(null);
 
     function onNewHint() {
         updateQuestion(); // Обновляем вопрос в контексте

@@ -16,6 +16,11 @@ import {DOG_ANIMATION_NAME_MAP} from "@/app/_components/tasks/feature/pixi/entit
 import {applyBottomLeftLayoutToSprite} from '@/app/_components/tasks/feature/pixi/utils/layout';
 import HealthBarOverlay from '@/app/_components/tasks/feature/pixi/ui/HealthBarOverlay';
 
+declare global {
+    interface Window {
+        __setDoggyHealthPoints?: (value: number) => void;
+    }
+}
 
 export default function Doggy() {
     const {containerRef, applicationRef, isReady} = usePixiApplication();
@@ -108,17 +113,18 @@ export default function Doggy() {
             unsubscribeHitbox = startHitboxEmitter('doggy', application, animatedSprite);
         })();
         // тестовый глобальный сеттер (по желанию удалите)
-        (window as any).__setDoggyHealthPoints = (value: number) => setCurrentHealthPoints(value);
+        window.__setDoggyHealthPoints = (value: number) => setCurrentHealthPoints(value);
 
         return () => {
             isMounted = false;
             setIsSpriteReady(false);
-            delete (window as any).__setDoggyHealthPoints;
+            delete window.__setDoggyHealthPoints;
 
             if (movementSystem) {
                 try {
                     movementSystem.dispose();
                 } catch {
+                    // Continue releasing the remaining resources after a best-effort dispose.
                 }
                 movementSystem = null;
             }
@@ -127,6 +133,7 @@ export default function Doggy() {
                 try {
                     unsubscribeHitbox();
                 } catch {
+                    // Continue releasing the remaining resources after a best-effort unsubscribe.
                 }
                 unsubscribeHitbox = null;
             }
@@ -135,6 +142,7 @@ export default function Doggy() {
                 try {
                     application.stage.removeChild(spriteRef.current);
                 } catch {
+                    // The stage may already have released this sprite during teardown.
                 }
             }
             spriteRef.current = null;
@@ -148,7 +156,7 @@ export default function Doggy() {
         const map = animationTexturesMapRef.current;
         if (!sprite || !map) return;
 
-        setAnimation(sprite, map, currentAnimation as any, {
+        setAnimation(sprite, map, currentAnimation, {
             nameMap: DOG_ANIMATION_NAME_MAP,
             nextStateAfterComplete: s => (s === 'Attack' ? 'Idle' : undefined),
         });
