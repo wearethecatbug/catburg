@@ -1,4 +1,4 @@
-export class GameEvent<T = any> {
+export class GameEvent<T = unknown> {
     readonly type: string;
     readonly data: T;
     readonly timestamp: number;

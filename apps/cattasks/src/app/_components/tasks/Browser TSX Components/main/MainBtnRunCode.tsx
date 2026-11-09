@@ -28,6 +28,7 @@ export default function MainBtnRunCode({className}: MainBtnRunCodeProps) {
                 try {
                     alert(String(returnValue));
                 } catch {
+                    // alert may be unavailable even when the user code completed.
                 }
             }
         } catch (error) {

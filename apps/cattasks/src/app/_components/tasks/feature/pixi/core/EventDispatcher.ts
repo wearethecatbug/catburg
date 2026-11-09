@@ -1,16 +1,16 @@
 import {GameEvent} from './Event';
 
-type EventListener<T = any> = (event: GameEvent<T>) => void;
+type EventListener<T = unknown> = (event: GameEvent<T>) => void;
 
 interface ListenerEntry {
-    callback: EventListener;
+    callback: EventListener<unknown>;
     once: boolean;
 }
 
 export class EventDispatcher {
     private listeners: Map<string, ListenerEntry[]> = new Map();
 
-    addEventListener<T = any>(
+    addEventListener<T = unknown>(
         type: string,
         callback: EventListener<T>,
         options?: { once?: boolean }
@@ -20,14 +20,14 @@ export class EventDispatcher {
         }
 
         const entry: ListenerEntry = {
-            callback: callback as EventListener,
+            callback: callback as EventListener<unknown>,
             once: options?.once ?? false,
         };
 
         this.listeners.get(type)!.push(entry);
     }
 
-    removeEventListener<T = any>(type: string, callback: EventListener<T>): void {
+    removeEventListener<T = unknown>(type: string, callback: EventListener<T>): void {
         const entries = this.listeners.get(type);
         if (!entries) return;
 
@@ -41,12 +41,12 @@ export class EventDispatcher {
         }
     }
 
-    dispatchEvent<T = any>(event: GameEvent<T>): void {
+    dispatchEvent<T = unknown>(event: GameEvent<T>): void {
         const entries = this.listeners.get(event.type);
         if (!entries || entries.length === 0) return;
 
         const entriesToCall = [...entries];
-        const onceListeners: EventListener[] = [];
+        const onceListeners: EventListener<unknown>[] = [];
 
         for (const entry of entriesToCall) {
             entry.callback(event);

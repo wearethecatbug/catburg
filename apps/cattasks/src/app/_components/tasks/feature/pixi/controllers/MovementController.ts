@@ -78,7 +78,7 @@ export class MovementController implements IController {
         this.sceneBounds = undefined;
     }
 
-    protected emitEvent(type: string, data?: any): void {
+    protected emitEvent<T = unknown>(type: string, data?: T): void {
         if (!this.actorModel) return;
         this.actorModel.dispatchEvent(new GameEvent(type, data));
     }

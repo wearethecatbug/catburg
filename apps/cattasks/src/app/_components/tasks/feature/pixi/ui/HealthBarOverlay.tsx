@@ -19,6 +19,11 @@ type HealthBarOverlayProps = {
     totalHeightPixels?: number;       // по умолчанию 12
 };
 
+type HealthBarStyle = React.CSSProperties & Record<
+    '--hp-bar-width' | '--hp-bar-height' | '--hp-bar-radius',
+    string
+>;
+
 export default function HealthBarOverlay(props: HealthBarOverlayProps) {
     const {
         followEnabled,
@@ -147,13 +152,11 @@ export default function HealthBarOverlay(props: HealthBarOverlayProps) {
         <div
             ref={healthBarRootElementRef}
             className={styles.healthBarRoot}
-            style={
-                {
-                    ['--hp-bar-width' as any]: `${totalWidthPixels}px`,
-                    ['--hp-bar-height' as any]: `${totalHeightPixels}px`,
-                    ['--hp-bar-radius' as any]: `${Math.min(6, totalHeightPixels / 2)}px`,
-                } as React.CSSProperties
-            }
+            style={{
+                '--hp-bar-width': `${totalWidthPixels}px`,
+                '--hp-bar-height': `${totalHeightPixels}px`,
+                '--hp-bar-radius': `${Math.min(6, totalHeightPixels / 2)}px`,
+            } as HealthBarStyle}
         >
             <div ref={healthBarFillElementRef} className={styles.healthBarFill}/>
         </div>

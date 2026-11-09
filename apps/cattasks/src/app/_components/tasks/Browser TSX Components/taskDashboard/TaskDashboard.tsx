@@ -7,7 +7,7 @@ export default function TaskDashboard() {
     return (
         <div className={styles.taskDashboardRoot}>
             <Header className={styles.headerContainer}></Header>
-            <Main className={styles.mainContainer}></Main>
+            <Main></Main>
             <Footer className={styles.footerContainer}></Footer>
         </div>
     );

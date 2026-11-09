@@ -117,7 +117,7 @@ export class KeyboardController {
         this.keyDownHandler = (e) => this.onKeyDown(e);
         this.keyUpHandler = (e) => this.onKeyUp(e);
         this.blurHandler = () => this.resetAll();
-        this.visibilityHandler = () => { if (typeof document !== 'undefined' && (document as any).hidden) this.resetAll(); };
+        this.visibilityHandler = () => { if (typeof document !== 'undefined' && document.hidden) this.resetAll(); };
         if (autoAttach) this.attach();
     }
 

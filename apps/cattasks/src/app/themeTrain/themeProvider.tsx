@@ -44,6 +44,7 @@ export function ThemeProvider({children}: { children: React.ReactNode }) {
         try {
             localStorage.setItem(KEY, mode);
         } catch {
+            // Storage may be unavailable, so keep the in-memory theme active.
         }
     }, [mode]);
 

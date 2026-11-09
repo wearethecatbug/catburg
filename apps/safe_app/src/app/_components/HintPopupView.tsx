@@ -19,7 +19,11 @@ const QuestionContext = createContext<{
 } | null>(null);
 
 // Создаем контекст
-export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}) {
+export function QuestionProvider({children, firstNumberHintRange, secondNumberHintRange}: {
+    children: React.ReactNode;
+    firstNumberHintRange: number;
+    secondNumberHintRange: number;
+}) {
     const {activeSign} = useSigns();
     const [question, setQuestion] = useState(() => generateQuestion(activeSign, firstNumberHintRange, secondNumberHintRange));
 
@@ -47,7 +51,7 @@ export function useQuestion() {
     return context;
 }
 
-function generateQuestion(activeSign: string, firstNumberHintRange: number, secondNumberHintRange: number): questionData {
+function generateQuestion(activeSign: string | null, firstNumberHintRange: number, secondNumberHintRange: number): questionData {
 
 
     const operators: Record<string, (a: number, b: number) => number> = {
@@ -58,7 +62,7 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
     }
 
     // Генерируем случайные числа в заданном диапазоне
-    function generateRandomNumberInRange(firstNumberHintRange, secondNumberHintRange, operator: string): [number, number] {
+    function generateRandomNumberInRange(firstNumberHintRange: number, secondNumberHintRange: number, operator: string): [number, number] {
         if (operator == "÷") return getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange);
         const num1 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
         const num2 = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange;
@@ -66,17 +70,17 @@ function generateQuestion(activeSign: string, firstNumberHintRange: number, seco
     }
 
     // Функция для генерации делимого и делителя
-    function getDivisibleNumbers(firstNumberHintRange, secondNumberHintRange): [number, number] {
-        let divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange; // Генерируем делитель
-        let quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
-        let dividend = divisor * quotient; // Получаем делимое
+    function getDivisibleNumbers(firstNumberHintRange: number, secondNumberHintRange: number): [number, number] {
+        const divisor = Math.floor(Math.random() * (secondNumberHintRange - firstNumberHintRange + 1)) + firstNumberHintRange; // Генерируем делитель
+        const quotient = Math.floor(Math.random() * (firstNumberHintRange / divisor)) + 1; // Выбираем случайный множитель
+        const dividend = divisor * quotient; // Получаем делимое
         return [dividend, divisor];
     }
 
     // Функция для генерации случайного знака операции
     function getOperator(): string {
         if (!activeSign) {
-            let operatorsKeys = Object.keys(operators);
+            const operatorsKeys = Object.keys(operators);
             return operatorsKeys[Math.floor(Math.random() * operatorsKeys.length)];
 
         }
@@ -233,7 +237,7 @@ export default function HintPopupView({
 
     // Функция для управления фокусом на инпуте при невалидном ответе
     const handleFocus = () => {
-        if (!isValid) {
+        if (!isValid && inputRefAnswer.current) {
             setIsValid(null);
             getInputClass();
             inputRefAnswer.current.value = ""
@@ -248,7 +252,7 @@ export default function HintPopupView({
         return `${styles.okButtonContainer}`;
     }
 
-    function getButtonClass(buttonId: string): string {
+    function getHintButtonClass(buttonId: string): string {
         console.log(`getButtonClass вызван для: ${buttonId}`);
 
         if (buttonId === HintMenuButtons.GIVE_UP_HINT && isGiveUpHintActive) {
@@ -271,10 +275,10 @@ export default function HintPopupView({
                     <div onClick={onOkButtonClick} className={`${getOkButtonClass()} ${styles.okButtonContainer}`}/>
                     <div className={styles.hintMenuContainer}>
                         <Menu menuConfiguration={menuButtons} onMenuButtonClickAction={onHintMenuClick}
-                              getButtonClass={getButtonClass}/>
+                              getButtonClass={getHintButtonClass}/>
                     </div>
                     <div>
-                        <SignsPopUpView getButtonClass={getButtonClass} isSignsVisible={isSignsVisible}/>
+                        <SignsPopUpView getButtonClass={getHintButtonClass} isSignsVisible={isSignsVisible}/>
                     </div>
                 </div>
             </div>
