@@ -343,7 +343,7 @@ export function Dropdown({
     if (isOpen && event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      handleClose('always');
+      handleClose('if-lost');
     }
   };
 
