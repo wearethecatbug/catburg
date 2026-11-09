@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 
 const VIEWPORT_PADDING_PX = 8;
 const MENU_OFFSET_PX = 4;
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // ============================================================================
 // Dropdown
@@ -22,6 +23,9 @@ export interface DropdownProps {
   isOpen?: boolean; // Controlled state (optional)
   onClose?: () => void; // Callback when dropdown should close
   onOpen?: () => void; // Callback when dropdown should open
+  popupRole?: 'menu' | 'dialog';
+  popupLabel?: string;
+  triggerRef?: React.Ref<HTMLButtonElement>;
 }
 
 export function Dropdown({
@@ -36,34 +40,110 @@ export function Dropdown({
   isOpen: controlledIsOpen,
   onClose,
   onOpen,
+  popupRole = 'menu',
+  popupLabel,
+  triggerRef,
 }: DropdownProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   // Use controlled state if provided, otherwise use internal state
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const hasFocusedPopupRef = useRef(false);
+  const closeRequestedRef = useRef(false);
+  const focusRestoreModeRef = useRef<'always' | 'if-lost' | null>(null);
+  const pendingWindowFocusCleanupRef = useRef<(() => void) | null>(null);
+  const popupId = useId();
   const [menuLeft, setMenuLeft] = useState<number | undefined>(undefined);
   const [menuTop, setMenuTop] = useState<number | undefined>(undefined);
   const [menuWidthPx, setMenuWidthPx] = useState<number | undefined>(undefined);
   const [menuMaxWidth, setMenuMaxWidth] = useState<number | undefined>(undefined);
   const [menuMaxHeight, setMenuMaxHeight] = useState<number | undefined>(undefined);
 
-  const handleClose = useCallback(() => {
+  const restoreTriggerFocus = useCallback((mode: 'always' | 'if-lost') => {
+    window.requestAnimationFrame(() => {
+      const triggerButton = triggerButtonRef.current;
+      if (!triggerButton?.isConnected) return;
+      if (mode === 'if-lost' && document.activeElement !== document.body) return;
+      triggerButton.focus();
+    });
+  }, []);
+
+  const handleClose = useCallback((focusRestoreMode: 'always' | 'if-lost' | null = null) => {
+    if (!isOpen || closeRequestedRef.current) return;
+
+    closeRequestedRef.current = true;
+    focusRestoreModeRef.current = focusRestoreMode;
     if (onClose) {
       onClose();
     } else {
       setInternalIsOpen(false);
     }
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   const handleOpen = useCallback(() => {
+    pendingWindowFocusCleanupRef.current?.();
     if (onOpen) {
       onOpen();
     } else {
       setInternalIsOpen(true);
     }
   }, [onOpen]);
+
+  useEffect(() => () => pendingWindowFocusCleanupRef.current?.(), []);
+
+  const setTriggerButton = useCallback((node: HTMLButtonElement | null) => {
+    triggerButtonRef.current = node;
+    if (typeof triggerRef === 'function') {
+      triggerRef(node);
+    } else if (triggerRef) {
+      triggerRef.current = node;
+    }
+  }, [triggerRef]);
+
+  const getEnabledMenuItems = useCallback(() => {
+    if (!menuRef.current) return [];
+    return Array.from(menuRef.current.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)'));
+  }, []);
+
+  const focusMenuItem = useCallback((index: number) => {
+    const items = getEnabledMenuItems();
+    if (items.length === 0) return;
+
+    const nextIndex = (index + items.length) % items.length;
+    items.forEach((item, itemIndex) => {
+      item.tabIndex = itemIndex === nextIndex ? 0 : -1;
+    });
+    items[nextIndex].focus();
+  }, [getEnabledMenuItems]);
+
+  const focusFirstPopupControl = useCallback(() => {
+    if (popupRole === 'menu') {
+      focusMenuItem(0);
+      return;
+    }
+
+    menuRef.current?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+  }, [focusMenuItem, popupRole]);
+
+  const focusLogicalNeighbor = useCallback((isPrevious: boolean) => {
+    const triggerButton = triggerButtonRef.current;
+    if (!triggerButton) return false;
+
+    // Shared popups are portaled to body, so document order must omit every popup
+    // when leaving the trigger's logical neighborhood.
+    const focusables = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => (
+      !element.closest('[data-dropdown-popup]') && element.tabIndex >= 0 && element.getClientRects().length > 0
+    ));
+    const triggerIndex = focusables.indexOf(triggerButton);
+    const target = focusables[triggerIndex + (isPrevious ? -1 : 1)];
+    if (!target) return false;
+
+    target.focus();
+    return true;
+  }, []);
 
   const updateMenuPlacement = useCallback(() => {
     if (!isOpen || !dropdownRef.current || !menuRef.current) {
@@ -109,36 +189,84 @@ export function Dropdown({
     setMenuWidthPx(nextMenuWidthPx);
   }, [align, isOpen, menuWidth]);
 
-  // Close on outside click (only while dropdown is open)
+  // Portaled popups need document-level interaction and focus departure handling.
   useEffect(() => {
     if (!isOpen) return;
 
+    const isInsideDropdown = (target: EventTarget | null) => (
+      target instanceof Node && (
+        dropdownRef.current?.contains(target) || menuRef.current?.contains(target)
+      )
+    );
+
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        !(menuRef.current && menuRef.current.contains(event.target as Node))
-      ) {
+      if (!isInsideDropdown(event.target)) {
         handleClose();
       }
     }
+
+    function handleFocusOutside(event: FocusEvent) {
+      if (!isInsideDropdown(event.target)) {
+        handleClose();
+      }
+    }
+
+    function handleWindowBlur() {
+      pendingWindowFocusCleanupRef.current?.();
+      if (menuRef.current?.contains(document.activeElement)) {
+        let frame: number | null = null;
+        const handleWindowFocus = () => {
+          if (frame !== null) return;
+
+          frame = window.requestAnimationFrame(() => {
+            frame = null;
+            if (!document.hasFocus()) return;
+
+            const triggerButton = triggerButtonRef.current;
+            if (triggerButton?.isConnected && document.activeElement === document.body) {
+              triggerButton.focus();
+            }
+            cleanup();
+          });
+        };
+        const cleanup = () => {
+          if (frame !== null) window.cancelAnimationFrame(frame);
+          window.removeEventListener('focus', handleWindowFocus);
+          if (pendingWindowFocusCleanupRef.current === cleanup) {
+            pendingWindowFocusCleanupRef.current = null;
+          }
+        };
+
+        pendingWindowFocusCleanupRef.current = cleanup;
+        window.addEventListener('focus', handleWindowFocus);
+      }
+      handleClose();
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('focusin', handleFocusOutside);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('focusin', handleFocusOutside);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
   }, [isOpen, handleClose]);
 
-  // Close on Escape
   useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') handleClose();
+    if (!isOpen) {
+      const focusRestoreMode = focusRestoreModeRef.current;
+      if (focusRestoreMode) {
+        focusRestoreModeRef.current = null;
+        restoreTriggerFocus(focusRestoreMode);
+      }
+      closeRequestedRef.current = false;
     }
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }
-  }, [isOpen, handleClose]);
+  }, [isOpen, restoreTriggerFocus]);
 
   useLayoutEffect(() => {
     if (!isOpen) {
+      hasFocusedPopupRef.current = false;
       setMenuLeft(undefined);
       setMenuTop(undefined);
       setMenuWidthPx(undefined);
@@ -158,15 +286,79 @@ export function Dropdown({
     };
   }, [isOpen, updateMenuPlacement]);
 
+  useLayoutEffect(() => {
+    if (!isOpen || menuLeft === undefined || menuTop === undefined || hasFocusedPopupRef.current) return;
+
+    // Placement commits visibility before entry focus, avoiding a focus call against the hidden portal mount.
+    hasFocusedPopupRef.current = true;
+    focusFirstPopupControl();
+  }, [focusFirstPopupControl, isOpen, menuLeft, menuTop]);
+
+  const handlePopupKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleClose('always');
+      return;
+    }
+
+    if (popupRole !== 'menu') return;
+
+    if (event.key === 'Tab') {
+      if (!focusLogicalNeighbor(event.shiftKey)) {
+        // The portaled popup is outside the trigger's document order. Re-anchor before
+        // unmounting, then let the browser continue its native boundary navigation.
+        const triggerButton = triggerButtonRef.current;
+        if (triggerButton?.isConnected) triggerButton.focus();
+        handleClose();
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      handleClose();
+      return;
+    }
+
+    const items = getEnabledMenuItems();
+    if (items.length === 0) return;
+    const currentIndex = Math.max(0, items.indexOf(document.activeElement as HTMLButtonElement));
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusMenuItem(currentIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusMenuItem(currentIndex - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusMenuItem(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusMenuItem(items.length - 1);
+    }
+  };
+
+  const handleTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (isOpen && event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      handleClose('if-lost');
+    }
+  };
+
   return (
     <div ref={dropdownRef} className={`relative ${className}`}>
       <button
+        ref={setTriggerButton}
         type="button"
         onClick={() => !disabled && (isOpen ? handleClose() : handleOpen())}
+        onKeyDownCapture={handleTriggerKeyDown}
         disabled={disabled}
         className="flex items-center"
         aria-expanded={isOpen}
-        aria-haspopup="true"
+        aria-haspopup={popupRole}
+        aria-controls={popupId}
       >
         {trigger}
       </button>
@@ -174,6 +366,7 @@ export function Dropdown({
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
           ref={menuRef}
+          id={popupId}
           className={`fixed z-[120] overflow-y-auto rounded-lg border py-1 ${menuWidth === 'trigger' ? '' : 'min-w-[180px]'}`}
           style={{
             top: menuTop,
@@ -188,7 +381,10 @@ export function Dropdown({
             maxHeight: menuMaxHeight,
             visibility: menuLeft === undefined || menuTop === undefined ? 'hidden' : undefined,
           }}
-          role="menu"
+          role={popupRole}
+          aria-label={popupLabel}
+          data-dropdown-popup
+          onKeyDown={handlePopupKeyDown}
         >
           {React.Children.map(children, (child) =>
             React.isValidElement(child)
@@ -200,7 +396,7 @@ export function Dropdown({
                         child as React.ReactElement<{ onClick?: () => void }>
                       ).props.onClick?.();
                       if (closeOnSelect) {
-                        handleClose();
+                        handleClose('if-lost');
                       }
                     },
                   },
@@ -223,6 +419,7 @@ interface DropdownItemProps {
   onClick?: () => void;
   danger?: boolean;
   disabled?: boolean;
+  tabIndex?: number;
 }
 
 export function DropdownItem({
@@ -230,12 +427,14 @@ export function DropdownItem({
   onClick,
   danger = false,
   disabled = false,
+  tabIndex,
 }: DropdownItemProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      tabIndex={tabIndex}
       className="w-full px-4 py-2 text-left text-sm disabled:cursor-not-allowed disabled:opacity-50"
       style={{
         color: danger ? '#dc2626' : 'var(--tt-text)',

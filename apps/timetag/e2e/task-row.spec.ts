@@ -252,7 +252,7 @@ test.describe('Task row states', () => {
     await expect(createdRow.getByLabel('Start timer')).toHaveCount(0);
     await expect(createdRow.getByLabel('Pause timer')).toHaveCount(0);
 
-    await createdRow.locator('button[aria-haspopup="true"]').click();
+    await createdRow.locator('button[aria-haspopup="menu"]').click();
     await expect(page.getByRole('menuitem', { name: 'Reset timer' })).toHaveCount(0);
     await page.keyboard.press('Escape');
 
@@ -679,7 +679,7 @@ test.describe('Task row states', () => {
     await gotoSeededPage(page, tasks);
 
     const row = taskRow(page, 'Menu reset task');
-    await row.locator('button[aria-haspopup="true"]').click();
+    await row.locator('button[aria-haspopup="menu"]').click();
     await page.getByRole('menuitem', { name: 'Reset timer' }).click();
 
     await expect.poll(async () => readStoredTimerState(page, 'Menu reset task')).toEqual({

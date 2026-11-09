@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Dropdown,
   DropdownDivider,
@@ -56,6 +56,7 @@ function FilterSectionHeading({ children }: { children: React.ReactNode }) {
 export function FilterDropdown() {
   const { state, setFilter } = useTasks();
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const toggleUrgency = (urgency: UrgencyLevel) => {
     setFilter(toggleUrgencyFilter(state.filter, urgency));
@@ -96,6 +97,9 @@ export function FilterDropdown() {
       isOpen={isOpen}
       onOpen={() => setIsOpen(true)}
       onClose={() => setIsOpen(false)}
+      popupRole="dialog"
+      popupLabel="Filter tasks"
+      triggerRef={triggerRef}
     >
       <div className="px-4 py-2">
         <FilterSectionHeading>Urgency</FilterSectionHeading>
@@ -254,6 +258,7 @@ export function FilterDropdown() {
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(false);
+            requestAnimationFrame(() => triggerRef.current?.focus());
           }}
           className="rounded px-3 py-1 text-sm"
           style={{ background: 'var(--tt-accent)', color: 'var(--tt-accent-contrast)' }}

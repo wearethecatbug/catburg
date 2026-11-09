@@ -23,6 +23,16 @@ export function useKeyboardShortcuts({
 }: KeyboardShortcuts) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
+      const activeDialog = Array.from(
+        document.querySelectorAll<HTMLElement>('dialog[open], [role="dialog"]'),
+      ).some((dialog) => dialog.contains(document.activeElement));
+      if (activeDialog) {
+        if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'n')) {
+          event.preventDefault();
+        }
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
         event.preventDefault();
         onSearchFocus?.();

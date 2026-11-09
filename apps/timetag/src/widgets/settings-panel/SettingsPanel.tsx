@@ -34,20 +34,91 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     handleResetDraft,
     isDirty,
   } = useSettingsDraft({ isOpen, onClose });
+  const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const desktopCloseRef = React.useRef<HTMLButtonElement>(null);
+  const mobileCloseRef = React.useRef<HTMLButtonElement>(null);
+  const openerRef = React.useRef<HTMLElement | null>(null);
+  const closeRequestedRef = React.useRef(false);
+  const openerRestoredRef = React.useRef(false);
 
-  if (!isOpen) return null;
+  const restoreOpener = React.useCallback(() => {
+    if (openerRestoredRef.current) return;
+    openerRestoredRef.current = true;
+    if (openerRef.current?.isConnected && document.activeElement !== openerRef.current) {
+      openerRef.current.focus();
+    }
+  }, []);
+
+  const requestCancel = React.useCallback(() => {
+    if (closeRequestedRef.current) return;
+    closeRequestedRef.current = true;
+    handleCancel();
+  }, [handleCancel]);
+
+  const requestSave = React.useCallback(() => {
+    if (closeRequestedRef.current) return;
+    closeRequestedRef.current = true;
+    handleSave();
+  }, [handleSave]);
+
+  React.useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (!isOpen) {
+      if (dialog.open) dialog.close();
+      restoreOpener();
+      return;
+    }
+
+    closeRequestedRef.current = false;
+    openerRestoredRef.current = false;
+    openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (!dialog.open) dialog.showModal();
+
+    const frame = window.requestAnimationFrame(() => {
+      [mobileCloseRef.current, desktopCloseRef.current]
+        .find((button) => button?.getClientRects().length)?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (dialog.open) dialog.close();
+      restoreOpener();
+    };
+  }, [isOpen, restoreOpener]);
+
+  const handleDialogCancel = (event: React.SyntheticEvent<HTMLDialogElement>) => {
+    event.preventDefault();
+    requestCancel();
+  };
+
+  const handleDialogClose = () => {
+    // A queued close event from a previous native dialog instance must not cancel
+    // the draft after this same node has already been reopened.
+    if (dialogRef.current?.open) return;
+    if (!closeRequestedRef.current) {
+      requestCancel();
+    }
+    restoreOpener();
+  };
+
   const activeSectionLabel = SECTION_LABELS[activeSection];
   const mobileSectionSubtitle = SETTINGS_SECTIONS.map((section) => section.label).join(', ');
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex justify-end backdrop-blur-[1px]"
-      style={{ background: 'var(--tt-overlay)' }}
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
+      className="settings-dialog fixed inset-0 z-50 h-screen w-screen max-h-none max-w-none overflow-hidden border-0 bg-transparent p-0"
       aria-label="Settings"
+      onCancel={handleDialogCancel}
+      onClose={handleDialogClose}
+      style={{ margin: 0, background: 'var(--tt-overlay)', backdropFilter: 'blur(1px)' }}
     >
-      <button type="button" className="flex-1 cursor-default" aria-label="Close settings overlay" onClick={handleCancel} />
+      {/* Keep the native closed state display-controlled so it cannot expose hidden descendants. */}
+      <style>{'.settings-dialog[open] { display: flex; justify-content: flex-end; } .settings-dialog::backdrop { background: transparent; }'}</style>
+      {isOpen && <>
+      <button type="button" className="flex-1 cursor-default max-[700px]:hidden" aria-label="Close settings overlay" onClick={requestCancel} />
       <div
         className="flex h-full w-full max-w-5xl overflow-hidden shadow-2xl"
         style={{
@@ -88,8 +159,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </div>
               </div>
               <button
+                ref={mobileCloseRef}
                 type="button"
-                onClick={handleCancel}
+                onClick={requestCancel}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
                 style={{ color: 'var(--tt-text-soft)' }}
                 aria-label="Close settings"
@@ -142,8 +214,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               <h2 className="mt-1 text-2xl font-semibold" style={{ color: 'var(--tt-text)' }}>{activeSectionLabel}</h2>
             </div>
             <button
+              ref={desktopCloseRef}
               type="button"
-              onClick={handleCancel}
+              onClick={requestCancel}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl transition-colors"
               style={{ color: 'var(--tt-text-soft)' }}
               aria-label="Close settings"
@@ -174,12 +247,13 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
           <SettingsPanelFooter
             isDirty={isDirty}
             onReset={handleResetDraft}
-            onCancel={handleCancel}
-            onSave={handleSave}
+            onCancel={requestCancel}
+            onSave={requestSave}
           />
         </div>
       </div>
-    </div>
+      </>}
+    </dialog>
   );
 }
 
