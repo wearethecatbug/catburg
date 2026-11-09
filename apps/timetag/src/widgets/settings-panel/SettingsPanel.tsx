@@ -94,6 +94,9 @@ export function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   };
 
   const handleDialogClose = () => {
+    // A queued close event from a previous native dialog instance must not cancel
+    // the draft after this same node has already been reopened.
+    if (dialogRef.current?.open) return;
     if (!closeRequestedRef.current) {
       requestCancel();
     }

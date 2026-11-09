@@ -23,8 +23,10 @@ export function useKeyboardShortcuts({
 }: KeyboardShortcuts) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      const activeDialog = document.querySelector<HTMLDialogElement>('dialog[open]');
-      if (activeDialog?.contains(document.activeElement)) {
+      const activeDialog = Array.from(
+        document.querySelectorAll<HTMLElement>('dialog[open], [role="dialog"]'),
+      ).some((dialog) => dialog.contains(document.activeElement));
+      if (activeDialog) {
         if ((event.ctrlKey || event.metaKey) && (event.key === 'k' || event.key === 'n')) {
           event.preventDefault();
         }

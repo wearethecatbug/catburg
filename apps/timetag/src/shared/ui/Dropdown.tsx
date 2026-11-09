@@ -53,7 +53,7 @@ export function Dropdown({
   const menuRef = useRef<HTMLDivElement>(null);
   const hasFocusedPopupRef = useRef(false);
   const closeRequestedRef = useRef(false);
-  const shouldRestoreFocusRef = useRef(false);
+  const focusRestoreModeRef = useRef<'always' | 'if-lost' | null>(null);
   const popupId = useId();
   const [menuLeft, setMenuLeft] = useState<number | undefined>(undefined);
   const [menuTop, setMenuTop] = useState<number | undefined>(undefined);
@@ -61,15 +61,20 @@ export function Dropdown({
   const [menuMaxWidth, setMenuMaxWidth] = useState<number | undefined>(undefined);
   const [menuMaxHeight, setMenuMaxHeight] = useState<number | undefined>(undefined);
 
-  const restoreTriggerFocus = useCallback(() => {
-    window.requestAnimationFrame(() => triggerButtonRef.current?.focus());
+  const restoreTriggerFocus = useCallback((mode: 'always' | 'if-lost') => {
+    window.requestAnimationFrame(() => {
+      const triggerButton = triggerButtonRef.current;
+      if (!triggerButton?.isConnected) return;
+      if (mode === 'if-lost' && document.activeElement !== document.body) return;
+      triggerButton.focus();
+    });
   }, []);
 
-  const handleClose = useCallback((restoreFocus = false) => {
+  const handleClose = useCallback((focusRestoreMode: 'always' | 'if-lost' | null = null) => {
     if (!isOpen || closeRequestedRef.current) return;
 
     closeRequestedRef.current = true;
-    shouldRestoreFocusRef.current = restoreFocus;
+    focusRestoreModeRef.current = focusRestoreMode;
     if (onClose) {
       onClose();
     } else {
@@ -125,7 +130,7 @@ export function Dropdown({
 
     // The popup is portaled to body, so document order must omit it when leaving the trigger's logical neighborhood.
     const focusables = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((element) => (
-      !menuRef.current?.contains(element) && element.getClientRects().length > 0
+      !menuRef.current?.contains(element) && element.tabIndex >= 0 && element.getClientRects().length > 0
     ));
     const triggerIndex = focusables.indexOf(triggerButton);
     const target = focusables[triggerIndex + (isPrevious ? -1 : 1)];
@@ -198,9 +203,10 @@ export function Dropdown({
 
   useEffect(() => {
     if (!isOpen) {
-      if (shouldRestoreFocusRef.current) {
-        shouldRestoreFocusRef.current = false;
-        restoreTriggerFocus();
+      const focusRestoreMode = focusRestoreModeRef.current;
+      if (focusRestoreMode) {
+        focusRestoreModeRef.current = null;
+        restoreTriggerFocus(focusRestoreMode);
       }
       closeRequestedRef.current = false;
     }
@@ -240,17 +246,25 @@ export function Dropdown({
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
-      handleClose(true);
+      handleClose('always');
       return;
     }
 
     if (popupRole !== 'menu') return;
 
     if (event.key === 'Tab') {
+      if (!focusLogicalNeighbor(event.shiftKey)) {
+        // The portaled popup is outside the trigger's document order. Re-anchor before
+        // unmounting, then let the browser continue its native boundary navigation.
+        const triggerButton = triggerButtonRef.current;
+        if (triggerButton?.isConnected) triggerButton.focus();
+        handleClose();
+        return;
+      }
+
       event.preventDefault();
       event.stopPropagation();
-      focusLogicalNeighbor(event.shiftKey);
-      handleClose(false);
+      handleClose();
       return;
     }
 
@@ -308,6 +322,11 @@ export function Dropdown({
           }}
           role={popupRole}
           aria-label={popupLabel}
+          onBlur={popupRole === 'dialog' ? (event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              handleClose();
+            }
+          } : undefined}
           onKeyDown={handlePopupKeyDown}
         >
           {React.Children.map(children, (child) =>
@@ -320,7 +339,7 @@ export function Dropdown({
                         child as React.ReactElement<{ onClick?: () => void }>
                       ).props.onClick?.();
                       if (closeOnSelect) {
-                        handleClose();
+                        handleClose('if-lost');
                       }
                     },
                   },
