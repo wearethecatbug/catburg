@@ -50,6 +50,7 @@ self.onmessage = ({data}) => {
   const equal = (actual, expected) => {
     if (typeof actual !== typeof expected) return false;
     if (typeof actual === "number" && numberIsNaN(actual)) return false;
+    if (typeof actual === "number") return actual === expected;
     if (actual === null || expected === null || typeof actual !== "object") return objectIs(actual, expected);
     if (arrayIsArray(actual) !== arrayIsArray(expected)) return false;
     if (arrayIsArray(actual)) {
@@ -140,6 +141,7 @@ export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSign
         let settled = false;
         let phase: "loading" | "awaiting-execution" | "executing" = "loading";
         let executionWatchdog: number | undefined;
+        let loadTimeout: number | undefined;
         const finish = (result: IsolatedTaskResult) => { if (settled) return; settled = true; if (loadTimeout !== undefined) clearTimeout(loadTimeout); if (executionWatchdog !== undefined) clearTimeout(executionWatchdog); signal?.removeEventListener("abort", cancel); window.removeEventListener("message", receive); frame.remove(); resolve(result); };
         const cancel = () => finish({requestId: request.requestId, status: "cancelled", message: "Запуск отменён", logs: []});
         const receive = (event: MessageEvent<unknown>) => {
@@ -153,9 +155,19 @@ export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSign
             }
             if (isWorkerResult(event.data, nonce, request.requestId)) { const {nonce: _nonce, ...result} = event.data; finish(result); }
         };
-        window.addEventListener("message", receive);
-        const loadTimeout = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), SANDBOX_LOAD_TIMEOUT_MS);
-        document.body.append(frame);
+        try {
+            window.addEventListener("message", receive);
+            loadTimeout = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), SANDBOX_LOAD_TIMEOUT_MS);
+            document.body.append(frame);
+        } catch (error) {
+            finish({
+                requestId: request.requestId,
+                status: "runtime-error",
+                message: `Ошибка выполнения: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`,
+                logs: [],
+            });
+            return;
+        }
         if (signal?.aborted) cancel(); else signal?.addEventListener("abort", cancel, {once: true});
     });
 }

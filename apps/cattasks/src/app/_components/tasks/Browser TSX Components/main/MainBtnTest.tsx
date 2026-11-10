@@ -3,13 +3,12 @@ import React from "react";
 import styles from "./MainBtnTest.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
 import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
-import type {IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 
 
 type HeaderBtnTestProps = {
     readonly className?: string;
     readonly isDisabled?: boolean;
-    readonly execute: (request: IsolatedTaskRequest) => Promise<void>;
+    readonly execute: (mode: "test") => Promise<void>;
 }
 
 export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnTestProps) {
@@ -18,14 +17,8 @@ export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnT
         selectedWorkspace,
     } = useTaskContext();
 
-    const handleRunTestsClick = async () => {
-        await execute({
-            requestId: crypto.randomUUID(),
-            mode: "test",
-            code: selectedWorkspace?.draft ?? "",
-            entryPoint: selectedTask?.entryPoint,
-            tests: selectedTask?.tests,
-        });
+    const handleRunTestsClick = () => {
+        void execute("test");
     };
 
     const getBtnClassName = combineClassNames(

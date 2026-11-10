@@ -125,18 +125,27 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     assert.equal(await search.evaluate(node => node === document.activeElement), true, "the catalogue moves initial keyboard focus to search");
     const topicGroup = page.getByRole("group", {name: "Topics"});
     const statusGroup = page.getByRole("group", {name: "Status"});
-    assert.equal(await topicGroup.getByRole("radio").count(), 5, "Topics exposes exactly the supported taxonomy choices");
+    assert.equal(await topicGroup.getByRole("radio").count(), 6, "Topics exposes the supported taxonomy choices plus normalized Uncategorized rows");
     assert.equal(await statusGroup.getByRole("radio").count(), 3, "Status exposes exactly the approved choices");
-    for (const name of ["All topics", "Arrays", "Strings", "Numbers", "Logic", "All statuses", "Not started", "Completed"]) {
+    for (const name of ["All topics", "Arrays", "Strings", "Numbers", "Logic", "Uncategorized", "All statuses", "Not started", "Completed"]) {
       await page.getByRole("radio", {name, exact: true}).waitFor({state: "visible"});
     }
     assert.equal(await page.getByRole("radio", {name: "All topics"}).isChecked(), true);
     assert.equal(await page.getByRole("radio", {name: "All statuses"}).isChecked(), true);
     assert.equal(await catalogueRows(page).count(), 4, "only the four real fixture tasks are rendered, with no mockup rows");
+    const legacyRow = catalogueRows(page).filter({hasText: "Legacy task"});
+    await page.getByRole("radio", {name: "Uncategorized"}).check();
+    assert.equal(await catalogueRows(page).count(), 1, "Uncategorized isolates the normalized unmapped built-in row");
+    assert.equal(await legacyRow.count(), 1, "the legacy fixture remains the only Uncategorized row");
+    await page.getByRole("radio", {name: "All topics"}).check();
+    assert.equal(await catalogueRows(page).count(), 4, "All topics restores the complete real fixture catalogue");
     assert.equal(await page.getByText("Tortoise race", {exact: true}).count(), 1);
     assert.equal(await page.getByText("Find when B catches A.", {exact: true}).count(), 1);
     const currentRow = page.locator('li[aria-current="true"]');
     assert.equal(await currentRow.count(), 1, "exactly one selected task is marked current");
+    const currentDifficultyGroup = currentRow.locator("xpath=ancestor::section[@aria-labelledby]");
+    assert.equal(await currentDifficultyGroup.getByRole("heading", {level: 3}).count(), 1, "each difficulty group supplies its level-three heading");
+    assert.equal(await currentDifficultyGroup.getByRole("heading", {name: "Tortoise race", level: 4}).count(), 1, "a task title is level four beneath its difficulty heading");
     assert.equal(await currentRow.getByText("Numbers", {exact: true}).count(), 1);
     assert.equal(await page.getByText("In progress", {exact: true}).count(), 1, "the current task status is derived from its edited real workspace");
     await currentRow.getByRole("button", {name: "Open", exact: true}).click();

@@ -6,7 +6,7 @@ import {useTaskContext} from '../../context/TaskProvider';
 import styles from './MainCodeEditor.module.css';
 import MainBtnRunCode from "@/app/_components/tasks/Browser TSX Components/main/MainBtnRunCode";
 import MainBtnTest from "@/app/_components/tasks/Browser TSX Components/main/MainBtnTest";
-import {runIsolatedTask, type IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
+import {runIsolatedTask, type IsolatedTaskRequest, type IsolatedTaskResult} from "../../lib/IsolatedTaskRunner";
 import {useCallback, useEffect, useRef} from "react";
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
@@ -64,15 +64,33 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     }, []);
     useEffect(() => () => activeAbortController.current?.abort(), [selectedTask?.id]);
 
-    const execute = useCallback(async (request: IsolatedTaskRequest): Promise<void> => {
-        const token = beginSelectedRun(request.mode);
+    const execute = useCallback(async (mode: IsolatedTaskRequest['mode']): Promise<void> => {
+        const token = beginSelectedRun(mode);
         if (!token) return;
-        activeAbortController.current?.abort();
-        const controller = new AbortController();
-        activeAbortController.current = controller;
-        const result = await runIsolatedTask(request, controller.signal);
-        if (mounted.current && !controller.signal.aborted) completeRun(token, result);
-    }, [beginSelectedRun, completeRun]);
+        const requestId = `run-${token.selectionGeneration}-${token.runGeneration}`;
+        let controller: AbortController | null = null;
+        let result: IsolatedTaskResult;
+        try {
+            activeAbortController.current?.abort();
+            controller = new AbortController();
+            activeAbortController.current = controller;
+            const request: IsolatedTaskRequest = {
+                requestId,
+                mode,
+                code: selectedWorkspace?.draft ?? "",
+                ...(mode === "test" ? {entryPoint: selectedTask?.entryPoint, tests: selectedTask?.tests} : {}),
+            };
+            result = await runIsolatedTask(request, controller.signal);
+        } catch (error) {
+            result = {
+                requestId,
+                status: "runtime-error",
+                message: `Ошибка выполнения: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`,
+                logs: [],
+            };
+        }
+        if (mounted.current && !controller?.signal.aborted) completeRun(token, result);
+    }, [beginSelectedRun, completeRun, selectedTask, selectedWorkspace]);
 
     const handleEditorChange = (editorValue: string | undefined) => {
         activeAbortController.current?.abort();

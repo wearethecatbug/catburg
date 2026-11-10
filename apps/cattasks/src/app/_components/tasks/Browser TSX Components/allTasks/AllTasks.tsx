@@ -34,7 +34,7 @@ export function AllTasksHeader({className, onBack}: AllTasksProps) {
 }
 
 export default function AllTasks({className, onBack}: AllTasksProps) {
-    const {catalogueRows, catalogError, retryCatalog, selectTask, customTasks} = useTaskContext();
+    const {catalogueRows, catalogError, retryCatalog, selectTask} = useTaskContext();
     const [query, setQuery] = useState('');
     const [topic, setTopic] = useState<TopicFilter>('All topics');
     const [status, setStatus] = useState<StatusFilter>('All statuses');
@@ -45,8 +45,8 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     }, []);
 
     const availableTopicFilters = useMemo<readonly TopicFilter[]>(
-        () => customTasks.some(task => task.topic === undefined) ? [...topicFilters, 'Uncategorized'] : topicFilters,
-        [customTasks],
+        () => catalogueRows.some(row => row.topic === 'Uncategorized') ? [...topicFilters, 'Uncategorized'] : topicFilters,
+        [catalogueRows],
     );
 
     useEffect(() => {
@@ -143,7 +143,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                                 aria-current={row.isCurrent ? 'true' : undefined}
                             >
                                 <div className={styles.taskDescription}>
-                                    <h3>{row.title}</h3>
+                                    <h4>{row.title}</h4>
                                     <p>{row.description}</p>
                                 </div>
                                 <span className={styles.topic}>{row.topic}</span>

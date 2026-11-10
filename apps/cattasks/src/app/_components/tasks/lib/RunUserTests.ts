@@ -16,6 +16,7 @@ function isJsonRecord(value: unknown): value is Record<string, unknown> {
 export function deepEqual(actual: unknown, expected: unknown): boolean {
     if (typeof actual !== typeof expected) return false;
     if (typeof actual === "number" && Number.isNaN(actual)) return false;
+    if (typeof actual === "number") return actual === expected;
     if (actual === null || expected === null || typeof actual !== "object") return Object.is(actual, expected);
     if (Array.isArray(actual) !== Array.isArray(expected)) return false;
     if (Array.isArray(actual) && Array.isArray(expected)) {

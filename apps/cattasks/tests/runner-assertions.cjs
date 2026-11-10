@@ -10,6 +10,10 @@ test("runner equality accepts equivalent JSON values but rejects values JSON.str
   const {assertExpectedEqualsActual, deepEqual} = runnerAssertions;
 
   assert.equal(deepEqual({answer: [true, null, {zero: 0, text: "ok"}]}, {answer: [true, null, {zero: 0, text: "ok"}]}), true);
+  assert.equal(deepEqual(-0, 0), true, "JSON number comparison treats negative and positive zero as equal");
+  assert.equal(deepEqual(0, -0), true, "JSON number comparison treats signed zero equally in either direction");
+  assert.equal(deepEqual({value: [-0]}, {value: [0]}), true, "nested JSON negative zero equals zero");
+  assert.equal(deepEqual({value: [0]}, {value: [-0]}), true, "nested JSON signed zero equality is symmetric");
   assert.equal(deepEqual(Number.NaN, null), false, "NaN must not pass as JSON null");
   assert.equal(deepEqual([undefined], [null]), false, "undefined array entries must not pass as null");
   assert.equal(deepEqual(new Array(1), [null]), false, "sparse array holes must not pass as JSON null entries");

@@ -106,7 +106,7 @@
 .row { position: relative; min-height: 84px; padding: 14px 16px; border-top: 1px solid #d6ddd6; }
 .currentRow { border-radius: 16px; border-top-color: transparent; background: #e5efdd; }
 .currentRow::before { content: ''; position: absolute; inset: 8px auto 8px 0; width: 6px; border-radius: 6px; background: #287640; }
-.taskDescription h3 { margin: 0; color: #12442c; font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.taskDescription h4 { margin: 0; color: #12442c; font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
 .taskDescription p { display: -webkit-box; margin: 4px 0 0; overflow: hidden; color: #3d4540; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .topic, .status { overflow-wrap: anywhere; }
 .status { display: grid; gap: 4px; }

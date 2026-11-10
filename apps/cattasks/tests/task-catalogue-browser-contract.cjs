@@ -183,7 +183,7 @@ test("All tasks groups the already filtered collection by difficulty without cha
     assert.equal(await page.locator("section[aria-labelledby='taskListTitle']").getByRole("alert").count(), 0, "a valid grouped catalogue must not claim a catalogue error");
     const headings = page.locator("section[aria-labelledby^='difficulty-'] > h3");
     assert.deepEqual(await headings.allTextContents(), ["Easy", "Medium", "Hard"], "empty Unrated is omitted and groups follow the approved order after filtering");
-    assert.deepEqual(await page.locator("section[aria-labelledby='difficulty-Easy'] li h3").allTextContents(), ["Easy second"], "grouping retains the provider's row order rather than renumbering it");
+    assert.deepEqual(await page.locator("section[aria-labelledby='difficulty-Easy'] li h4").allTextContents(), ["Easy second"], "grouping retains the provider's row order rather than renumbering it");
     await page.getByRole("radio", {name: "Not started"}).check();
     assert.deepEqual(await headings.allTextContents(), ["Easy", "Hard"], "status filtering removes the completed Medium row before difficulty grouping");
     await page.getByRole("radio", {name: "Completed"}).check();

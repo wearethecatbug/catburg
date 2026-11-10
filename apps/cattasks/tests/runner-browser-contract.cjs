@@ -81,15 +81,132 @@ test("isolated worker JSON record grading", {timeout: 30_000}, async () => {
         throw new Error(`unexpected runner dependency: ${request}`);
       });
       const run = runnerModule.exports.runIsolatedTask;
+      const parsedNegativeZero = JSON.parse("-0");
       return {
         nested: await run({requestId: "worker-json-control", mode: "test", code: "function record() { return {answer: [true, {nested: [0, null]}]}; }", entryPoint: "record", tests: [{args: [], expected: {answer: [true, {nested: [0, null]}]}}]}),
+        negativeZero: await run({requestId: "worker-negative-zero", mode: "test", code: "function value() { return {plain: 0 * -1, nested: [0 * -1]}; }", entryPoint: "value", tests: [{args: [], expected: {plain: 0, nested: [0]}}]}),
+        positiveZero: await run({requestId: "worker-positive-zero", mode: "test", code: "function value() { return {plain: 0, nested: [0]}; }", entryPoint: "value", tests: [{args: [], expected: {plain: parsedNegativeZero, nested: [parsedNegativeZero]}}]}),
         date: await run({requestId: "worker-date-negative", mode: "test", code: "function record() { return new Date(0); }", entryPoint: "record", tests: [{args: [], expected: {}}]}),
         frames: document.querySelectorAll("iframe[sandbox]").length,
       };
     }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs});
     assert.equal(results.nested.status, "completed", "actual isolated worker accepts a nested JSON record control");
+    assert.equal(results.negativeZero.status, "completed", "actual isolated worker treats negative zero as JSON-number equal to zero");
+    assert.equal(results.positiveZero.status, "completed", "actual isolated worker treats zero as JSON-number equal to parsed negative zero");
     assert.equal(results.date.status, "test-failed", "actual isolated worker must reject Date where the JSON expectation is a plain record");
     assert.equal(results.frames, 0, "each actual isolated worker run cleans up its opaque iframe");
+  });
+});
+
+test("runner cleans up owned setup resources when sandbox append rejects", {timeout: 30_000}, async () => {
+  await withBlankRunnerPage(async page => {
+    const result = await page.evaluate(async ({runnerSource, catalogSource}) => {
+      const catalogModule = {exports: {}};
+      new Function("exports", "module", "require", catalogSource)(catalogModule.exports, catalogModule, request => { throw new Error(`unexpected catalog dependency: ${request}`); });
+      const runnerModule = {exports: {}};
+      new Function("exports", "module", "require", runnerSource)(runnerModule.exports, runnerModule, request => {
+        if (request === "../catalog/taskCatalog") return catalogModule.exports;
+        throw new Error(`unexpected runner dependency: ${request}`);
+      });
+      const run = runnerModule.exports.runIsolatedTask;
+      const nativeAdd = window.addEventListener;
+      const nativeRemove = window.removeEventListener;
+      const nativeSetTimeout = window.setTimeout;
+      const nativeClearTimeout = window.clearTimeout;
+      const addDescriptor = Object.getOwnPropertyDescriptor(window, "addEventListener");
+      const removeDescriptor = Object.getOwnPropertyDescriptor(window, "removeEventListener");
+      const setTimeoutDescriptor = Object.getOwnPropertyDescriptor(window, "setTimeout");
+      const clearTimeoutDescriptor = Object.getOwnPropertyDescriptor(window, "clearTimeout");
+      const appendDescriptor = Object.getOwnPropertyDescriptor(HTMLBodyElement.prototype, "append");
+      const nativeAppend = HTMLBodyElement.prototype.append;
+      if (typeof nativeAppend !== "function") throw new Error("runner seam: native body append unavailable");
+      let addedListener = null, loadTimer = null, appendFailures = 0, listenerRemovals = 0, timerClears = 0;
+      let addInstalled = false, removeInstalled = false, setTimeoutInstalled = false, clearTimeoutInstalled = false, appendInstalled = false;
+      let outcome = null, rejection = null;
+      try {
+        Object.defineProperty(window, "addEventListener", {
+          configurable: true,
+          writable: true,
+          value(type, listener, options) {
+            if (type === "message") {
+              if (addedListener !== null) throw new Error("runner seam: more than one owned message listener");
+              addedListener = listener;
+            }
+            return nativeAdd.call(window, type, listener, options);
+          },
+        });
+        addInstalled = true;
+        Object.defineProperty(window, "removeEventListener", {
+          configurable: true,
+          writable: true,
+          value(type, listener, options) {
+            if (type === "message" && listener === addedListener) {
+              listenerRemovals += 1;
+              if (listenerRemovals > 1) throw new Error("runner seam: duplicate owned message listener removal");
+            }
+            return nativeRemove.call(window, type, listener, options);
+          },
+        });
+        removeInstalled = true;
+        Object.defineProperty(window, "setTimeout", {
+          configurable: true,
+          writable: true,
+          value(handler, delay, ...args) {
+            const handle = nativeSetTimeout.call(window, handler, delay, ...args);
+            if (Number(delay) === 5_000) {
+              if (loadTimer !== null) throw new Error("runner seam: more than one owned load timer");
+              loadTimer = handle;
+            }
+            return handle;
+          },
+        });
+        setTimeoutInstalled = true;
+        Object.defineProperty(window, "clearTimeout", {
+          configurable: true,
+          writable: true,
+          value(handle) {
+            if (handle === loadTimer) {
+              timerClears += 1;
+              if (timerClears > 1) throw new Error("runner seam: duplicate owned load timer clear");
+            }
+            return nativeClearTimeout.call(window, handle);
+          },
+        });
+        clearTimeoutInstalled = true;
+        Object.defineProperty(HTMLBodyElement.prototype, "append", {
+          configurable: true,
+          writable: true,
+          value(...nodes) {
+            const [node] = nodes;
+            if (appendFailures === 0 && nodes.length === 1 && node instanceof HTMLIFrameElement && node.hidden && node.sandbox.contains("allow-scripts")) {
+              appendFailures += 1;
+              throw new Error("runner append probe");
+            }
+            return nativeAppend.apply(this, nodes);
+          },
+        });
+        appendInstalled = true;
+        outcome = await run({requestId: "append-cleanup", mode: "test", code: "function value() { return 1; }", entryPoint: "value", tests: [{args: [], expected: 1}]});
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== "runner append probe") throw error;
+        rejection = error.message;
+      } finally {
+        if (appendInstalled) { if (appendDescriptor) Object.defineProperty(HTMLBodyElement.prototype, "append", appendDescriptor); else delete HTMLBodyElement.prototype.append; }
+        if (clearTimeoutInstalled) { if (clearTimeoutDescriptor) Object.defineProperty(window, "clearTimeout", clearTimeoutDescriptor); else delete window.clearTimeout; }
+        if (setTimeoutInstalled) { if (setTimeoutDescriptor) Object.defineProperty(window, "setTimeout", setTimeoutDescriptor); else delete window.setTimeout; }
+        if (removeInstalled) { if (removeDescriptor) Object.defineProperty(window, "removeEventListener", removeDescriptor); else delete window.removeEventListener; }
+        if (addInstalled) { if (addDescriptor) Object.defineProperty(window, "addEventListener", addDescriptor); else delete window.addEventListener; }
+      }
+      return {outcome, rejection, appendFailures, listenerAdded: addedListener !== null, listenerRemovals, loadTimerAllocated: loadTimer !== null, timerClears, frames: document.querySelectorAll("iframe[sandbox]").length};
+    }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs});
+    assert.equal(result.appendFailures, 1, "the exact owned sandbox iframe append fails once");
+    assert.equal(result.listenerAdded, true, "the runner registers one owned parent message listener before append");
+    assert.equal(result.listenerRemovals, 1, "the runner removes its exact owned message listener immediately after append failure");
+    assert.equal(result.loadTimerAllocated, true, "the runner allocates its owned 5,000 ms load timer before append");
+    assert.equal(result.timerClears, 1, "the runner clears its exact owned 5,000 ms load timer immediately after append failure");
+    assert.equal(result.frames, 0, "the failed append leaves no sandbox frame");
+    assert.equal(result.rejection, null, "the runner resolves its known setup failure rather than rejecting");
+    assert.deepEqual(result.outcome, {requestId: "append-cleanup", status: "runtime-error", message: "Ошибка выполнения: runner append probe", logs: []}, "the runner resolves the injected setup failure as its existing terminal runtime result");
   });
 });
 
@@ -266,9 +383,88 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     assert.equal(directBoundary.frames, 0);
 
     await replaceEditor(page, helperSolution);
+    await page.evaluate(() => {
+      const key = "__cattasksRunnerUuidProbe";
+      if (key in window) throw new Error("runner seam: UUID probe already installed");
+      const descriptor = Object.getOwnPropertyDescriptor(crypto, "randomUUID");
+      const nativeRandomUUID = crypto.randomUUID.bind(crypto);
+      let armed = true;
+      Object.defineProperty(crypto, "randomUUID", {
+        configurable: true,
+        value() {
+          if (armed) {
+            armed = false;
+            throw new Error("runner nonce probe");
+          }
+          return nativeRandomUUID();
+        },
+      });
+      window[key] = {descriptor};
+    });
+    let uuidProbeRestored = false;
+    try {
+      await testButton.click();
+      const setupError = await readResult(page, /^Ошибка выполнения: runner nonce probe$/);
+      assert.match(setupError, /^Ошибка выполнения: runner nonce probe$/, "the next runner UUID setup failure reaches a visible terminal Test result");
+    } finally {
+      await page.evaluate(() => {
+        const key = "__cattasksRunnerUuidProbe";
+        const state = window[key];
+        if (!state) throw new Error("runner seam: UUID probe missing during restore");
+        if (state.descriptor) Object.defineProperty(crypto, "randomUUID", state.descriptor);
+        else delete crypto.randomUUID;
+        delete window[key];
+      });
+      uuidProbeRestored = true;
+    }
+    assert.equal(uuidProbeRestored, true, "the one-shot UUID seam restores before recovery");
     await testButton.click();
     const passed = await readResult(page, /^Все тесты пройдены: 2\/2$/);
     assert.match(passed, /^Все тесты пройдены: 2\/2$/, "the helper-dependent task module must pass both typed catalog tests");
+
+    await replaceEditor(page, "console.log('recovered-after-append');");
+    await page.evaluate(() => {
+      const key = "__cattasksRunnerAppendProbe";
+      if (key in window) throw new Error("runner seam: append probe already installed");
+      const descriptor = Object.getOwnPropertyDescriptor(HTMLBodyElement.prototype, "append");
+      const nativeAppend = HTMLBodyElement.prototype.append;
+      if (typeof nativeAppend !== "function") throw new Error("runner seam: native body append unavailable");
+      let armed = true;
+      Object.defineProperty(HTMLBodyElement.prototype, "append", {
+        configurable: true,
+        writable: true,
+        value(...nodes) {
+          const [node] = nodes;
+          if (armed && nodes.length === 1 && node instanceof HTMLIFrameElement && node.hidden && node.sandbox.contains("allow-scripts")) {
+            armed = false;
+            throw new Error("runner append probe");
+          }
+          return nativeAppend.apply(this, nodes);
+        },
+      });
+      window[key] = {descriptor};
+    });
+    let appendProbeRestored = false;
+    try {
+      await runButton.click();
+      const appendError = await readResult(page, /^Ошибка выполнения: runner append probe$/);
+      assert.match(appendError, /^Ошибка выполнения: runner append probe$/, "a rejected runner append reaches a visible terminal Run result");
+      assert.equal(await page.locator("iframe[sandbox]").count(), 0, "a rejected public runner append leaves no sandbox frame");
+    } finally {
+      await page.evaluate(() => {
+        const key = "__cattasksRunnerAppendProbe";
+        const state = window[key];
+        if (!state) throw new Error("runner seam: append probe missing during restore");
+        if (state.descriptor) Object.defineProperty(HTMLBodyElement.prototype, "append", state.descriptor);
+        else delete HTMLBodyElement.prototype.append;
+        delete window[key];
+      });
+      appendProbeRestored = true;
+    }
+    assert.equal(appendProbeRestored, true, "the one-shot append seam restores before recovery");
+    await runButton.click();
+    const recoveredRun = await readResult(page, /^recovered-after-append$/);
+    assert.match(recoveredRun, /^recovered-after-append$/, "Run Code recovers after append setup rejection");
 
     await replaceEditor(page, "function race() { return null; }");
     await testButton.click();
