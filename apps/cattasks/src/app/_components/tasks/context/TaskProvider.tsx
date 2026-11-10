@@ -1,290 +1,308 @@
 'use client';
-import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,} from 'react';
-import type {ParsedTask} from '../lib/ParseTasksArr';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react';
+import type {CatalogTask} from '../catalog/taskCatalog';
+import {getTaskCatalogueRows, type TaskCatalogueRow} from '../catalog/taskCatalogueRows';
+import {appendCustomTasks, getCustomTaskExport, loadCustomTasks} from '../customTasks/customTaskStorage';
+import {exportCustomTasks as serializeCustomTasks, preflightCustomTaskImport} from '../customTasks/customTaskTransfer';
+import type {CustomTaskRecord, CustomTaskResult} from '../customTasks/customTaskTypes';
 import {useTasksArr} from '../hooks/UseTasks';
-
-type TestResultDetail = { resultText: string; areAllTestsPassed: boolean };
-type ContentTab = 'description' | 'solution' | 'info';
+import {
+    beginTaskRun,
+    clearTaskSelection,
+    completeTaskRun,
+    createTaskWorkspaceState,
+    type ContentTab,
+    type TaskRunRecord,
+    type TaskRunToken,
+    type TaskWorkspace,
+    type TaskWorkspaceState,
+    selectTask as selectTaskState,
+    setTaskDraft as setTaskDraftState,
+} from './taskWorkspaceState';
+import type {IsolatedTaskResult} from '../lib/IsolatedTaskRunner';
 
 type TaskContextValue = {
-    tasks: ParsedTask[];
+    tasks: readonly CatalogTask[];
+    catalogueRows: readonly TaskCatalogueRow[];
+    catalogError: Error | null;
+    retryCatalog: () => void;
     selectedId: string | null;
-    selectedTask: ParsedTask | null;
-
-    setSelectedId: (id: string | null) => void;
-    selectTask: (id: string) => void;
-
+    selectedTask: CatalogTask | null;
+    selectedWorkspace: TaskWorkspace | null;
     headerInput: string;
-    setHeaderInput: (v: string) => void;
-
-    updateTask: (id: string, patch: Partial<ParsedTask>) => void;
-    clearSelectedFields: () => void;
-    setTaskSolution: (id: string, solution: string) => void;
-
-    showSolution: boolean;
-    setShowSolution: (v: boolean) => void;
-    toggleShowSolution: (next?: boolean) => void;
-
-    runTest: boolean;
-    setRunTest: (v: boolean) => void;
-
-    validSolution: boolean;
-    setValidSolution: (v: boolean) => void;
-
-    activeContentTab: ContentTab;
-    setActiveContentTab: (v: ContentTab) => void;
-
-    isMainPanelMinimized: boolean;
-    setMainPanelMinimized: (v: boolean) => void;
-
+    setTaskFilter: (value: string) => void;
+    selectTask: (id: string) => void;
+    clearSelection: () => void;
     selectPreviousTask: () => void;
     selectNextTask: () => void;
-
-    editorSolution: string;
-    setEditorSolution: (v: string) => void;
-
-    editorUserCode: string;
-    setEditorUserCode: (v: string) => void;
-
-    testNotificationText: string;
-    setTestNotificationText: (v: string) => void;
-
-    setEditorUserCodeAndReset: (next: string) => void;
+    activeContentTab: ContentTab;
+    selectContentTab: (tab: ContentTab) => void;
+    setSelectedDraft: (draft: string) => void;
+    beginSelectedRun: (mode: TaskRunRecord['mode']) => TaskRunToken | null;
+    completeRun: (token: TaskRunToken, result: IsolatedTaskResult) => void;
+    customTasks: readonly CustomTaskRecord[];
+    customStorageError: string | null;
+    customStorageReady: boolean;
+    addCustomTasks: (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => Promise<CustomTaskResult>;
+    prepareCustomTaskImport: (text: string) => CustomTaskResult;
+    exportCustomTasks: () => Promise<string | null>;
+    retryCustomStorage: () => void;
+    recoveryCustomTaskExport: string | null;
 };
 
 const TaskContext = createContext<TaskContextValue | undefined>(undefined);
-
-// модуль с корректной работой на отрицательных значениях
 const modulo = (value: number, divisor: number) => ((value % divisor) + divisor) % divisor;
 
 export function TaskProvider({children}: { children: React.ReactNode }) {
-    const sourceTasks = useTasksArr() ?? [];
+    const {tasks, error: catalogError, retry: retryCatalog} = useTasksArr();
+    const [workspaceState, setWorkspaceState] = useState<TaskWorkspaceState>(createTaskWorkspaceState);
+    const workspaceStateRef = useRef(workspaceState);
+    workspaceStateRef.current = workspaceState;
+    const [headerInput, setHeaderInput] = useState('');
+    const [customTasks, setCustomTasks] = useState<readonly CustomTaskRecord[]>([]);
+    const [customStorageError, setCustomStorageError] = useState<string | null>(null);
+    const [customStorageReady, setCustomStorageReady] = useState(false);
+    const [recoveryCustomTaskExport, setRecoveryCustomTaskExport] = useState<string | null>(null);
+    const tasksRef = useRef(tasks);
+    const customTasksRef = useRef(customTasks);
+    const catalogErrorRef = useRef(catalogError);
+    const customStorageReadyRef = useRef(customStorageReady);
+    const storageOperationTail = useRef<Promise<void>>(Promise.resolve());
+    tasksRef.current = tasks;
+    customTasksRef.current = customTasks;
+    catalogErrorRef.current = catalogError;
+    customStorageReadyRef.current = customStorageReady;
+    const didInitializeSelection = useRef(false);
 
-    const [tasks, setTasks] = useState<ParsedTask[]>(sourceTasks);
-    const [selectedId, setSelectedId] = useState<string | null>(null);
-
-    const [headerInput, setHeaderInput] = useState<string>('');
-
-    const [showSolution, setShowSolution] = useState<boolean>(false);
-    const [runTest, setRunTest] = useState<boolean>(false);
-    const [validSolution, setValidSolution] = useState<boolean>(false);
-
-    const [editorSolution, setEditorSolution] = useState<string>('No solution available.');
-    const [editorUserCode, setEditorUserCode] = useState<string>('');
-
-    //
-    const defaultSolutionText = '"No solution available."';
-    const defaultTestInfoText = 'No additional information.';
-
-
-    const [activeContentTab, setActiveContentTab] = useState<ContentTab>('description');
-    const [isMainPanelMinimized, setMainPanelMinimized] = useState<boolean>(false);
-
-    const didInitRef = useRef(false);
-
-    const updateTask = useCallback((id: string, patch: Partial<ParsedTask>) => {
-        setTasks(prevTasks => prevTasks.map(task => (task.id === id ? {...task, ...patch} : task)));
-    }, []);
-
-    const [testNotificationText, setTestNotificationText] =
-        useState<string>(defaultTestInfoText);
-
-    // синхронизация задач из источника
-    useEffect(() => {
-        setTasks(sourceTasks);
-    }, [sourceTasks]);
-
-    const selectedTask = useMemo<ParsedTask | null>(() => {
-        if (!selectedId) return null;
-        return tasks.find(t => t.id === selectedId) ?? null;
-    }, [tasks, selectedId]);
-
-    // единая точка смены задачи
-    const selectTask = useCallback(
-        (id: string) => {
-            if (id === selectedId) return;
-            setSelectedId(id);
-
-            const task = tasks.find(t => t.id === id);
-            if (task) setHeaderInput(`${task.no}. ${task.title}`);
-
-            setActiveContentTab('description');
-            setShowSolution(false);
-            setRunTest(false);
-            setValidSolution(false);
-            // setEditorUserCode('');
-            setEditorSolution(defaultSolutionText);
-            setTestNotificationText(defaultTestInfoText);
-
-        },
-        [tasks, selectedId, defaultSolutionText, defaultTestInfoText]
+    const allTasks = useMemo<readonly CatalogTask[]>(() => [
+        ...tasks,
+        ...customTasks.filter(task => !tasks.some(builtIn => builtIn.id === task.id)).map((task, index) => ({...task, ordinal: tasks.length + index + 1})),
+    ], [customTasks, tasks]);
+    const builtInIds = useMemo(() => new Set(tasks.map(task => task.id)), [tasks]);
+    const customTopics = useMemo(
+        () => new Map(customTasks.map(task => [task.id, task.topic] as const)),
+        [customTasks],
+    );
+    const selectedTask = useMemo(() => {
+        if (!workspaceState.selectedId) return null;
+        return allTasks.find(task => task.id === workspaceState.selectedId) ?? null;
+    }, [allTasks, workspaceState.selectedId]);
+    const selectedWorkspace = selectedTask
+        ? workspaceState.workspaces.get(selectedTask.id) ?? {draft: selectedTask.starterCode, draftGeneration: 0, runGeneration: 0}
+        : null;
+    const catalogueRows = useMemo(
+        () => getTaskCatalogueRows(allTasks, workspaceState, customTopics),
+        [allTasks, customTopics, workspaceState],
     );
 
-    // производить showSolution из вкладки
-    useEffect(() => {
-        const isSolution = activeContentTab === 'solution';
-        setShowSolution(isSolution);
-        if (isSolution) {
-            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
-        }
-    }, [activeContentTab, selectedTask?.solution, defaultSolutionText]);
+    const enqueueStorageOperation = useCallback(<T,>(operation: () => Promise<T>): Promise<T> => {
+        const queued = storageOperationTail.current.then(operation, operation);
+        storageOperationTail.current = queued.then(() => undefined, () => undefined);
+        return queued;
+    }, []);
 
-    // навигация стрелками
+    const commitState = useCallback((nextState: TaskWorkspaceState) => {
+        workspaceStateRef.current = nextState;
+        setWorkspaceState(nextState);
+    }, []);
+
+    // Failed storage reads invalidate the projection, but workspace history stays inert until the normal session reset.
+    const quarantineCustomTasks = useCallback((message: string, recoveryRaw: string | null) => {
+        const removedCustomIds = new Set(customTasksRef.current.map(task => task.id));
+        const selectedId = workspaceStateRef.current.selectedId;
+        customTasksRef.current = [];
+        customStorageReadyRef.current = false;
+        setCustomTasks([]);
+        setCustomStorageReady(false);
+        // Only validated collision reads provide raw recovery bytes; other failures remain non-exportable.
+        setRecoveryCustomTaskExport(recoveryRaw);
+        if (selectedId && removedCustomIds.has(selectedId)) {
+            commitState(clearTaskSelection(workspaceStateRef.current));
+            setHeaderInput('');
+        }
+        setCustomStorageError(message);
+    }, [commitState]);
+
+    const readCustomStorage = useCallback(() => {
+        if (tasks.length === 0 || catalogError) return;
+        customStorageReadyRef.current = false;
+        // A pending reread blocks writes without discarding the last validated projection.
+        setCustomStorageReady(false);
+        void enqueueStorageOperation(() => loadCustomTasks(() => window.localStorage, builtInIds))
+            .then(saved => {
+            if (saved.ok) {
+                customTasksRef.current = saved.tasks;
+                customStorageReadyRef.current = true;
+                setCustomTasks(saved.tasks);
+                setCustomStorageReady(true);
+                setCustomStorageError(null);
+                setRecoveryCustomTaskExport(null);
+            } else {
+                quarantineCustomTasks(saved.message, saved.recoveryRaw ?? null);
+            }
+        })
+            .catch(error => {
+                quarantineCustomTasks(error instanceof Error ? error.message : 'Custom task storage is unavailable', null);
+            });
+    }, [builtInIds, catalogError, enqueueStorageOperation, quarantineCustomTasks, tasks.length]);
+
+    useEffect(() => {
+        readCustomStorage();
+    }, [readCustomStorage]);
+
+    const selectTask = useCallback((id: string) => {
+        const task = allTasks.find(candidate => candidate.id === id);
+        if (!task) return;
+        commitState(selectTaskState(workspaceStateRef.current, task.id, task.starterCode));
+        setHeaderInput(`${task.ordinal}. ${task.title}`);
+    }, [allTasks, commitState]);
+
+    const clearSelection = useCallback(() => {
+        didInitializeSelection.current = true;
+        commitState(clearTaskSelection(workspaceStateRef.current));
+        setHeaderInput('');
+    }, [commitState]);
+
+    useEffect(() => {
+        if (didInitializeSelection.current || tasks.length === 0) return;
+        didInitializeSelection.current = true;
+        selectTask(tasks[0].id);
+    }, [selectTask, tasks]);
+
     const selectPreviousTask = useCallback(() => {
-        if (tasks.length === 0) return;
-        const currentIndex = selectedId ? tasks.findIndex(t => t.id === selectedId) : -1;
-        const previousIndex = modulo(currentIndex === -1 ? tasks.length - 1 : currentIndex - 1, tasks.length);
-        selectTask(tasks[previousIndex].id);
-    }, [tasks, selectedId, selectTask]);
+        if (allTasks.length === 0) return;
+        const selectedId = workspaceStateRef.current.selectedId;
+        const currentIndex = selectedId ? allTasks.findIndex(task => task.id === selectedId) : -1;
+        selectTask(allTasks[modulo(currentIndex === -1 ? allTasks.length - 1 : currentIndex - 1, allTasks.length)].id);
+    }, [allTasks, selectTask]);
 
     const selectNextTask = useCallback(() => {
-        if (tasks.length === 0) return;
-        const currentIndex = selectedId ? tasks.findIndex(t => t.id === selectedId) : -1;
-        const nextIndex = modulo(currentIndex + 1, tasks.length);
-        selectTask(tasks[nextIndex].id);
-    }, [tasks, selectedId, selectTask]);
+        if (allTasks.length === 0) return;
+        const selectedId = workspaceStateRef.current.selectedId;
+        const currentIndex = selectedId ? allTasks.findIndex(task => task.id === selectedId) : -1;
+        selectTask(allTasks[modulo(currentIndex + 1, allTasks.length)].id);
+    }, [allTasks, selectTask]);
 
-    // показать/скрыть решение с подстановкой текста
-    const toggleShowSolution = useCallback(
-        (next?: boolean) => {
-            setShowSolution(prev => {
-                const newValue = next ?? !prev;
-                if (newValue) {
-                    setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
-                } else {
-                    setEditorSolution(defaultSolutionText);
-                }
-                return newValue;
-            });
-        },
-        [selectedTask?.solution, defaultSolutionText]
-    );
+    const selectContentTab = useCallback((activeContentTab: ContentTab) => {
+        const current = workspaceStateRef.current;
+        if (current.activeContentTab === activeContentTab) return;
+        commitState({...current, activeContentTab});
+    }, [commitState]);
 
-    // если решение обновилось при открытой панели — синхронизировать
-    useEffect(() => {
-        if (showSolution) {
-            setEditorSolution(selectedTask?.solution ?? defaultSolutionText);
+    const setSelectedDraft = useCallback((draft: string) => {
+        const task = allTasks.find(candidate => candidate.id === workspaceStateRef.current.selectedId);
+        if (!task) return;
+        commitState(setTaskDraftState(workspaceStateRef.current, task.id, draft, task.starterCode));
+    }, [allTasks, commitState]);
+
+    const beginSelectedRun = useCallback((mode: TaskRunRecord['mode']) => {
+        const task = allTasks.find(candidate => candidate.id === workspaceStateRef.current.selectedId);
+        if (!task) return null;
+        const started = beginTaskRun(workspaceStateRef.current, task.id, task.starterCode, mode);
+        if (!started) return null;
+        commitState(started.state);
+        return started.token;
+    }, [allTasks, commitState]);
+
+    const addCustomTasks = useCallback(async (incoming: readonly CustomTaskRecord[], signal?: AbortSignal): Promise<CustomTaskResult> => {
+        if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
+        if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
+            const failure = {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be saved.'} as const;
+            setCustomStorageError(failure.message);
+            return failure;
         }
-    }, [showSolution, selectedTask?.solution, defaultSolutionText]);
+        return enqueueStorageOperation(async () => {
+            if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
+            if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
+                const failure = {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be saved.'} as const;
+                setCustomStorageError(failure.message);
+                return failure;
+            }
+            const saved = await appendCustomTasks(
+                incoming,
+                new Set(tasksRef.current.map(task => task.id)),
+                signal,
+            );
+            if (!saved.ok) {
+                if (saved.kind === 'duplicate-id' && saved.source === 'incoming') return saved;
+                if (!signal?.aborted) setCustomStorageError(saved.message);
+                return saved;
+            }
+            customTasksRef.current = saved.tasks;
+            setCustomTasks(saved.tasks);
+            setCustomStorageError(null);
+            return signal?.aborted ? {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const : saved;
+        }).catch(error => {
+            if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
+            const failure = {ok: false, kind: 'storage', message: error instanceof Error ? error.message : 'Custom task storage is unavailable'} as const;
+            setCustomStorageError(failure.message);
+            return failure;
+        });
+    }, [enqueueStorageOperation]);
 
-    // первичная инициализация выбора
-    useEffect(() => {
-        if (didInitRef.current) return;                 // уже инициализировано или была ручная очистка
-        if (!selectedId && tasks.length > 0) {
-            const first = tasks[0];
-            setSelectedId(first.id);
-            setHeaderInput(`${first.no}. ${first.title}`);
-            setShowSolution(false);
-            setEditorSolution(defaultSolutionText);
-            didInitRef.current = true;                  // больше не автоселектить
+    const prepareCustomTaskImport = useCallback((text: string): CustomTaskResult => {
+        if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
+            return {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be imported.'};
         }
-    }, [tasks, selectedId, defaultSolutionText]);
-
-    // единый обработчик результатов тестов
-    useEffect(() => {
-        const handle = (event: Event) => {
-            const {detail} = event as CustomEvent<TestResultDetail>;
-            if (!detail) return;
-            setTestNotificationText(detail.resultText);
-            setRunTest(true);
-            setValidSolution(detail.areAllTestsPassed);
-        };
-
-        if (typeof window !== 'undefined') {
-            window.addEventListener('capibara:testResult', handle as EventListener);
-            return () =>
-                window.removeEventListener('capibara:testResult', handle as EventListener);
-        }
-        return;
+        return preflightCustomTaskImport(
+            text,
+            new Set(tasksRef.current.map(task => task.id)),
+            new Set(customTasksRef.current.map(task => task.id)),
+        );
     }, []);
 
-    // сброс результата тестов при смене выбранной задачи
-    useEffect(() => {
-        // когда задача сменилась или была очищена, старый результат теста нам не нужен
-        setRunTest(false);
-        setValidSolution(false);
-        setTestNotificationText(defaultTestInfoText);
-    }, [selectedId, defaultTestInfoText]);
-
-    const setTaskSolution = useCallback(
-        (id: string, solution: string) => {
-            updateTask(id, {solution});
-            if (id === selectedId && showSolution) {
-                setEditorSolution(solution || defaultSolutionText);
+    const exportCustomTasks = useCallback(() => {
+        return enqueueStorageOperation(async () => {
+            const saved = await getCustomTaskExport(new Set(tasksRef.current.map(task => task.id)));
+            if (!saved.ok) {
+                quarantineCustomTasks(saved.message, saved.recoveryRaw ?? null);
+                return null;
             }
-        },
-        [updateTask, selectedId, showSolution, defaultSolutionText]
-    );
+            return serializeCustomTasks(saved.tasks);
+        }).catch(error => {
+            quarantineCustomTasks(error instanceof Error ? error.message : 'Custom task storage is unavailable', null);
+            return null;
+        });
+    }, [enqueueStorageOperation, quarantineCustomTasks]);
 
-    const setEditorUserCodeAndReset = useCallback((next: string) => {
-        setEditorUserCode(next);
-        setRunTest(false);
-        setValidSolution(false);
-        setTestNotificationText(defaultTestInfoText);
-    }, [defaultTestInfoText]);
-
-    const clearSelectedFields = useCallback(() => {
-        didInitRef.current = true;                      // после ручной очистки не автоселектить
-        setHeaderInput('');
-        setSelectedId(null);
-        setShowSolution(false);
-        setRunTest(false);
-        setValidSolution(false);
-        setEditorSolution(defaultSolutionText);
-        setTestNotificationText(defaultTestInfoText);
-    }, [defaultSolutionText, defaultTestInfoText]);
+    const completeRun = useCallback((token: TaskRunToken, result: IsolatedTaskResult) => {
+        commitState(completeTaskRun(workspaceStateRef.current, token, result));
+    }, [commitState]);
 
     const value: TaskContextValue = {
-        tasks,
-        selectedId,
+        tasks: allTasks,
+        catalogueRows,
+        catalogError,
+        retryCatalog,
+        selectedId: workspaceState.selectedId,
         selectedTask,
-
-        setSelectedId,
-        selectTask,
-
+        selectedWorkspace,
         headerInput,
-        setHeaderInput,
-
-        updateTask,
-        clearSelectedFields,
-        setTaskSolution,
-
-        showSolution,
-        setShowSolution,
-        toggleShowSolution,
-
-        runTest,
-        setRunTest,
-
-        validSolution,
-        setValidSolution,
-
+        setTaskFilter: setHeaderInput,
+        selectTask,
+        clearSelection,
         selectPreviousTask,
         selectNextTask,
-
-        editorSolution,
-        setEditorSolution,
-
-        editorUserCode,
-        setEditorUserCode,
-
-        testNotificationText,
-        setTestNotificationText,
-
-        setEditorUserCodeAndReset,
-
-        activeContentTab,
-        setActiveContentTab,
-
-        isMainPanelMinimized,
-        setMainPanelMinimized,
+        activeContentTab: workspaceState.activeContentTab,
+        selectContentTab,
+        setSelectedDraft,
+        beginSelectedRun,
+        completeRun,
+        customTasks,
+        customStorageError,
+        customStorageReady,
+        addCustomTasks,
+        prepareCustomTaskImport,
+        exportCustomTasks,
+        retryCustomStorage: readCustomStorage,
+        recoveryCustomTaskExport,
     };
 
     return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }
 
 export function useTaskContext() {
-    const ctx = useContext(TaskContext);
-    if (!ctx) throw new Error('useTaskContext must be used inside TaskProvider');
-    return ctx;
+    const context = useContext(TaskContext);
+    if (!context) throw new Error('useTaskContext must be used inside TaskProvider');
+    return context;
 }

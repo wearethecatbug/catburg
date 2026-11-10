@@ -1,0 +1,17 @@
+.controls { display: grid; gap: 12px; margin-top: 28px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions button, .fileInput, .form button, .retry { min-height: 40px; border: 1px solid #24743f; border-radius: 10px; background: #fff; color: #12442c; font: inherit; font-weight: 700; cursor: pointer; }
+.actions button, .form button, .retry { padding: 0 14px; }
+.actions button:first-child, .form button[type='submit'], .retry { background: #24743f; color: #fff; }
+.fileInput { display: grid; gap: 4px; padding: 7px 10px; }
+.fileInput input { max-width: 100%; }
+.notice { margin: 0; color: #8b2418; }
+.storageError { display: grid; gap: 8px; }
+.storageError p { margin: 0; }
+.form { display: grid; gap: 12px; padding: 16px; border: 1px solid #c5d0c8; border-radius: 16px; background: #edf3ea; }
+.field { display: grid; gap: 5px; font-weight: 700; }
+.field input, .field textarea, .field select { width: 100%; box-sizing: border-box; border: 1px solid #9ba7a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: #26332c; font: inherit; }
+.field textarea { min-height: 76px; resize: vertical; }
+.error { color: #8b2418; font-weight: 400; }
+.formActions { display: flex; flex-wrap: wrap; gap: 10px; }
+@media (max-width: 420px) { .actions, .formActions { display: grid; } .actions button, .fileInput, .form button { width: 100%; } }

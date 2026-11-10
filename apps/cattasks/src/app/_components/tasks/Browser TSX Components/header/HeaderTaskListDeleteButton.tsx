@@ -8,12 +8,11 @@ type HeaderTaskListDeleteButtonProps = {
 };
 
 export default function HeaderTaskListDeleteButton({className}: HeaderTaskListDeleteButtonProps) {
-    const {clearSelectedFields} = useTaskContext();
+    const {clearSelection} = useTaskContext();
 
     const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        console.log("delete button")
         event.stopPropagation();          // не триггерим контейнер
-        clearSelectedFields();            // очищаем контекст
+        clearSelection();                 // очищаем контекст
     };
 
     return (
@@ -23,7 +22,7 @@ export default function HeaderTaskListDeleteButton({className}: HeaderTaskListDe
             aria-label="Очистить выбор задачи"
             onClick={handleClick}
         >
-            X
+            ×
         </button>
     );
 }

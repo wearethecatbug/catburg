@@ -29,7 +29,9 @@ export default function MainBtnShowDescription({
             className={getBtnClassName}
             onClick={onClick}
             aria-pressed={isActive}
-            aria-label={ariaLabel ?? (isActive ? 'Показано описание' : 'Показать описание')}
-        />
+            aria-label={`Task: ${ariaLabel ?? (isActive ? 'Показано описание' : 'Показать описание')}`}
+        >
+            <span>Task</span>
+        </button>
     );
 }

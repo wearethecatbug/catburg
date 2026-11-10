@@ -16,6 +16,11 @@ export type MovementSystemOptions<TAnimation extends string = string> = {
     walkState: TAnimation;
 };
 
+function isEditableTarget(target: EventTarget | null): boolean {
+    return target instanceof HTMLElement &&
+        (target.matches('input, textarea, select') || target.isContentEditable);
+}
+
 export function initHorizontalKeyboardMovement<TAnimation extends string = string>(
     application: Application,
     spriteRef: MutableRefObject<AnimatedSprite | null>,
@@ -46,6 +51,8 @@ export function initHorizontalKeyboardMovement<TAnimation extends string = strin
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
+        // Keep the task selector/editor's native keys out of the footer game.
+        if (isEditableTarget(event.target)) return;
         if (event.code !== 'ArrowLeft' && event.code !== 'KeyA' &&
             event.code !== 'ArrowRight' && event.code !== 'KeyD') return;
         event.preventDefault();

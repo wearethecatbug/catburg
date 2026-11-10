@@ -13,11 +13,6 @@ type MainBtnInfoProps = {
     ariaLabel: string;
 };
 
-// type TestResultDetail = {
-//     resultText: string;
-//     areAllTestsPassed: boolean;
-// };
-
 export default function MainBtnInfo({
                                         className,
                                         isActive,
@@ -25,14 +20,11 @@ export default function MainBtnInfo({
                                         onClick,
                                         ariaLabel,
                                     }: MainBtnInfoProps) {
-    const {
-        validSolution,
-        runTest,
-    } = useTaskContext();
+    const {selectedWorkspace} = useTaskContext();
 
     const getBtnClassName = combineClassNames(
         styles.btnTestInfo,
-        runTest ? (validSolution ? styles.success : styles.fail) :
+        selectedWorkspace?.result?.mode === 'test' ? (selectedWorkspace.result.result.status === 'completed' ? styles.success : styles.fail) :
             isDisabled ? styles.disabled : styles.default,
         className,
     );
@@ -42,12 +34,14 @@ export default function MainBtnInfo({
         <button
             type="button"
             className={getBtnClassName}
-            aria-label={ariaLabel}
+            aria-label={`Hint: ${ariaLabel}`}
             aria-pressed={isActive}
             disabled={isDisabled}
             aria-disabled={isDisabled}
             onClick={onClick}
-        />
+        >
+            <span>Hint</span>
+        </button>
     );
 }
 

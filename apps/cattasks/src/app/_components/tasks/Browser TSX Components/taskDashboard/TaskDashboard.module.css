@@ -27,3 +27,146 @@
     height: 15%;
 
 }
+
+.decorationLayer {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+.viewportDecoration {
+    /* Foliage is viewport-bound while the dashboard-owned light remains local. */
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+}
+
+.windowLight {
+    position: absolute;
+    top: -68px;
+    right: 7%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 15px;
+    width: clamp(280px, 44%, 620px);
+    height: 320px;
+    opacity: .64;
+    filter: blur(4px);
+    transform: skewY(-28deg);
+    -webkit-mask-image: radial-gradient(ellipse at 68% 22%, #000 20%, rgba(0, 0, 0, .92) 48%, transparent 85%);
+    mask-image: radial-gradient(ellipse at 68% 22%, #000 20%, rgba(0, 0, 0, .92) 48%, transparent 85%);
+}
+
+.windowLight > span {
+    min-width: 0;
+    min-height: 0;
+    border-radius: 3px;
+    background: linear-gradient(145deg, rgba(251, 249, 241, .94), rgba(255, 254, 247, .86) 56%, rgba(251, 249, 241, .58));
+}
+
+.ambientLight {
+    position: absolute;
+    top: -100px;
+    right: -5%;
+    width: 78%;
+    height: 420px;
+    opacity: .64;
+    background: radial-gradient(ellipse at 64% 22%, rgba(251, 249, 241, .72), rgba(251, 249, 241, .24) 48%, transparent 76%);
+}
+
+
+.foliageTopRight, .foliageBottomLeft, .foliageBottomRight {
+    position: absolute;
+    display: block;
+    background: center / contain no-repeat;
+}
+
+.foliageTopRight { top: -20px; right: -20px; width: 231px; height: 161px; background-image: url('/cattasks/foliage-top-right.png'); }
+
+.foliageBottomLeft { bottom: 4px; left: 0; width: 96px; height: 246px; background-image: url('/cattasks/foliage-bottom-left.png'); }
+.foliageBottomRight { right: 0; bottom: 4px; width: 211px; height: 226px; background-image: url('/cattasks/foliage-bottom-right.png'); }
+
+@media (min-width: 601px) {
+    .foliageBottomLeft {
+        bottom: -58px;
+        transform: scale(1.16);
+        transform-origin: bottom left;
+    }
+
+    .foliageBottomRight {
+        right: -8px;
+        bottom: -46px;
+        transform: scale(1.16);
+        transform-origin: bottom right;
+    }
+}
+
+.shelf {
+    /* Responsive gutters keep both plaque centers supported as the header reflows. */
+    position: relative;
+    z-index: 1;
+    width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px);
+    height: 14px;
+    flex: 0 0 auto;
+    border-radius: 3px 3px 5px 5px;
+    background: linear-gradient(to bottom, #fff3d9 0%, #f8e5c5 24%, #efd4ad 30%, #e7c69e 84%, #d8b38a 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 253, 242, .85), inset 0 -1px 0 rgba(159, 119, 78, .18), 0 5px 8px -3px rgba(76, 100, 57, .25), 0 13px 18px -8px rgba(76, 100, 57, .17);
+}
+
+@media (max-width: 600px) {
+    .taskDashboardRoot {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .taskDashboardRoot > .headerContainer,
+    .taskDashboardRoot > .mainContainer,
+    .taskDashboardRoot > .footerContainer {
+        height: auto;
+        flex: 0 0 auto;
+    }
+
+    .shelf { width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px); }
+    .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
+}
+
+.taskDashboardRoot {
+    justify-content: flex-start;
+    isolation: isolate;
+    overflow: hidden;
+    min-height: 100dvh;
+    height: auto;
+    color: #254532;
+    background: radial-gradient(ellipse at 72% 7%, rgba(251, 249, 241, .92), transparent 36%), linear-gradient(135deg, #d6e1d4 0%, #e3ebe2 68%, #dce6d7 100%);
+}
+
+.headerContainer, .mainContainer, .footerContainer { position: relative; }
+.headerContainer { min-height: 137px; height: auto; }
+.taskDashboardRoot > .headerContainer { padding-bottom: 0; }
+.mainContainer { flex: 1 1 auto; min-height: 0; }
+.taskDashboardRoot > .hiddenMain { display: none; }
+.footerContainer { min-height: 90px; height: auto; }
+
+@media (min-width: 1151px) {
+    .taskDashboardRoot > .mainContainer {
+        height: min(759px, calc(100dvh - 265px));
+        min-height: 560px;
+        flex: 0 0 auto;
+    }
+
+    .taskDashboardRoot > .hiddenMain + .mainContainer {
+        height: auto;
+        min-height: 0;
+    }
+}
+
+@media (max-width: 600px) {
+    .headerContainer { min-height: 104px; }
+}
