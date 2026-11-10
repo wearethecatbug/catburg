@@ -238,3 +238,37 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     await browser.close();
   }
 });
+
+test("Test result states retain the approved control without legacy PNG paint", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1536, height: 1024}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    const testButton = page.getByRole("button", {name: "Test Code", exact: true});
+    const output = page.locator("pre[aria-live='polite']");
+    const base = await measuredControls(page);
+    await testButton.click();
+    await page.waitForFunction(() => document.querySelector("pre[aria-live='polite']")?.textContent?.includes("Все тесты пройдены"));
+    const passed = await measuredControls(page);
+    assert.doesNotMatch(passed.test.backgroundImage, /url\(/, "a successful Test result does not paint a legacy image");
+    assert.deepEqual([passed.test.width, passed.test.height], [base.test.width, base.test.height], "a successful Test result retains Test geometry");
+    const changed = await page.evaluate(() => {
+      const textarea = document.querySelector('textarea[aria-label="User JavaScript code"]');
+      const editor = (window.monaco?.editor.getEditors() ?? []).find(candidate => candidate.getDomNode()?.contains(textarea));
+      editor?.getModel()?.setValue("function echo(value) { return 'wrong'; }");
+      return Boolean(editor?.getModel());
+    });
+    assert.equal(changed, true, "the reviewed mismatch updates the active user editor only");
+    await testButton.click();
+    await page.waitForFunction(() => document.querySelector("pre[aria-live='polite']")?.textContent?.includes("Тест 1:"));
+    const failed = await measuredControls(page);
+    assert.doesNotMatch(failed.test.backgroundImage, /url\(/, "a failed Test result does not paint a legacy image");
+    assert.deepEqual([failed.test.width, failed.test.height], [base.test.width, base.test.height], "a failed Test result retains Test geometry");
+    assert.match(await output.innerText(), /Тест 1:/, "the reviewed inert mismatch reaches a public failed Test result");
+    assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: [], catalogRequests: [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`]});
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});

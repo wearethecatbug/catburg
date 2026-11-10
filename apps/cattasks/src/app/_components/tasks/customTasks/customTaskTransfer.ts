@@ -1,5 +1,5 @@
 import {CatalogValidationError, parseTaskDefinition} from '../catalog/taskCatalog';
-import {CUSTOM_TASK_TOPICS, type CustomTaskRecord, type CustomTaskResult, type CustomTaskTopic} from './customTaskTypes';
+import {CUSTOM_TASK_TOPICS, type CustomTaskFailure, type CustomTaskRecord, type CustomTaskResult, type CustomTaskTopic} from './customTaskTypes';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -29,20 +29,23 @@ export function validateCustomTaskRecords(
     tasks: readonly CustomTaskRecord[],
     builtInIds: ReadonlySet<string>,
     savedIds: ReadonlySet<string>,
-): void {
+    source: 'document' | 'incoming' = 'incoming',
+): CustomTaskFailure | null {
     const ids = new Set<string>();
     for (const task of tasks) {
-        if (ids.has(task.id)) throw new CatalogValidationError(`custom tasks: duplicate id '${task.id}'`);
-        if (builtInIds.has(task.id)) throw new CatalogValidationError(`custom tasks: id '${task.id}' collides with a built-in task`);
-        if (savedIds.has(task.id)) throw new CatalogValidationError(`custom tasks: id '${task.id}' already exists`);
+        if (ids.has(task.id)) return {ok: false, kind: 'duplicate-id', source, message: `custom tasks: duplicate id '${task.id}'`};
+        if (builtInIds.has(task.id)) return {ok: false, kind: 'duplicate-id', source, message: `custom tasks: id '${task.id}' collides with a built-in task`};
+        if (savedIds.has(task.id)) return {ok: false, kind: 'duplicate-id', source, message: `custom tasks: id '${task.id}' already exists`};
         ids.add(task.id);
     }
+    return null;
 }
 
 export function preflightCustomTaskImport(
     text: string,
     builtInIds: ReadonlySet<string>,
     savedIds: ReadonlySet<string>,
+    source: 'document' | 'incoming' = 'incoming',
 ): CustomTaskResult {
     try {
         let parsed: unknown;
@@ -52,10 +55,11 @@ export function preflightCustomTaskImport(
             throw new CatalogValidationError('custom tasks: JSON is invalid');
         }
         const tasks = readCustomTaskDocument(parsed);
-        validateCustomTaskRecords(tasks, builtInIds, savedIds);
+        const duplicate = validateCustomTaskRecords(tasks, builtInIds, savedIds, source);
+        if (duplicate) return duplicate;
         return {ok: true, tasks};
     } catch (error) {
-        return {ok: false, message: error instanceof Error ? error.message : 'Custom tasks could not be imported'};
+        return {ok: false, kind: 'invalid', message: error instanceof Error ? error.message : 'Custom tasks could not be imported'};
     }
 }
 

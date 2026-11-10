@@ -4,6 +4,14 @@ function renderValue(value: unknown): string {
     try { return JSON.stringify(value) ?? String(value); } catch { return String(value); }
 }
 
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+    if (value === null || typeof value !== "object") return false;
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    const constructor = Object.prototype.hasOwnProperty.call(prototype, "constructor") ? prototype.constructor : undefined;
+    return typeof constructor === "function" && Function.prototype.toString.call(constructor) === Function.prototype.toString.call(Object);
+}
+
 /** Strict structural equality for JSON expectations; never coerces non-JSON runtime values. */
 export function deepEqual(actual: unknown, expected: unknown): boolean {
     if (typeof actual !== typeof expected) return false;
@@ -17,8 +25,9 @@ export function deepEqual(actual: unknown, expected: unknown): boolean {
         }
         return true;
     }
-    const actualRecord = actual as Record<string, unknown>;
-    const expectedRecord = expected as Record<string, unknown>;
+    if (!isJsonRecord(actual) || !isJsonRecord(expected)) return false;
+    const actualRecord = actual;
+    const expectedRecord = expected;
     const actualKeys = Object.keys(actualRecord);
     const expectedKeys = Object.keys(expectedRecord);
     return actualKeys.length === expectedKeys.length && expectedKeys.every(key => Object.prototype.hasOwnProperty.call(actualRecord, key) && deepEqual(actualRecord[key], expectedRecord[key]));

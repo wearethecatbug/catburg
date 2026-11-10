@@ -51,6 +51,145 @@ async function readResult(page, expectedTerminal) {
   return (await result.textContent()).trim();
 }
 
+async function withBlankRunnerPage(callback) {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const pageErrors = [];
+  page.on("pageerror", error => pageErrors.push(error.message));
+  const blankUrl = new URL("/__runner-oracle-blank", baseUrl).href;
+  await context.route(blankUrl, route => route.fulfill({contentType: "text/html", body: "<!doctype html><title>runner oracle</title>"}));
+  try {
+    await page.goto(blankUrl, {waitUntil: "domcontentloaded"});
+    const result = await callback(page);
+    assert.deepEqual(pageErrors, [], "runner oracle blank page has no uncaught fixture errors");
+    return result;
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+}
+
+test("isolated worker JSON record grading", {timeout: 30_000}, async () => {
+  await withBlankRunnerPage(async page => {
+    const results = await page.evaluate(async ({runnerSource, catalogSource}) => {
+      const catalogModule = {exports: {}};
+      new Function("exports", "module", "require", catalogSource)(catalogModule.exports, catalogModule, request => { throw new Error(`unexpected catalog dependency: ${request}`); });
+      const runnerModule = {exports: {}};
+      new Function("exports", "module", "require", runnerSource)(runnerModule.exports, runnerModule, request => {
+        if (request === "../catalog/taskCatalog") return catalogModule.exports;
+        throw new Error(`unexpected runner dependency: ${request}`);
+      });
+      const run = runnerModule.exports.runIsolatedTask;
+      return {
+        nested: await run({requestId: "worker-json-control", mode: "test", code: "function record() { return {answer: [true, {nested: [0, null]}]}; }", entryPoint: "record", tests: [{args: [], expected: {answer: [true, {nested: [0, null]}]}}]}),
+        date: await run({requestId: "worker-date-negative", mode: "test", code: "function record() { return new Date(0); }", entryPoint: "record", tests: [{args: [], expected: {}}]}),
+        frames: document.querySelectorAll("iframe[sandbox]").length,
+      };
+    }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs});
+    assert.equal(results.nested.status, "completed", "actual isolated worker accepts a nested JSON record control");
+    assert.equal(results.date.status, "test-failed", "actual isolated worker must reject Date where the JSON expectation is a plain record");
+    assert.equal(results.frames, 0, "each actual isolated worker run cleans up its opaque iframe");
+  });
+});
+
+test("runner phase boundaries", {timeout: 45_000}, async () => {
+  await withBlankRunnerPage(async page => {
+    const controls = await page.evaluate(async ({runnerSource, catalogSource}) => {
+      const catalogModule = {exports: {}};
+      new Function("exports", "module", "require", catalogSource)(catalogModule.exports, catalogModule, request => { throw new Error(`unexpected catalog dependency: ${request}`); });
+      const runnerModule = {exports: {}};
+      new Function("exports", "module", "require", runnerSource)(runnerModule.exports, runnerModule, request => {
+        if (request === "../catalog/taskCatalog") return catalogModule.exports;
+        throw new Error(`unexpected runner dependency: ${request}`);
+      });
+      const run = runnerModule.exports.runIsolatedTask;
+
+      async function control(kind, abortBeforeReady) {
+        const descriptor = Object.getOwnPropertyDescriptor(HTMLIFrameElement.prototype, "srcdoc");
+        if (!descriptor?.get || !descriptor.set) throw new Error("runner seam: native srcdoc descriptor unavailable");
+        const nativeSetTimeout = window.setTimeout.bind(window);
+        const nativeClearTimeout = window.clearTimeout.bind(window);
+        const trace = [], owned = [];
+        let activeFrame = null, ownedWindowProxy = null, replacements = 0, started = 0, listenerCount = 0, duplicateInjected = false;
+        const receive = event => {
+          if (!event.isTrusted || event.source !== activeFrame?.contentWindow) return;
+          owned.push(event.data);
+          if (event.data?.type === "ready") {
+            ownedWindowProxy = event.source;
+            window.dispatchEvent(new MessageEvent("message", {data: {type: "execution-start", nonce: event.data.nonce, requestId: event.data.requestId}, source: window}));
+            window.dispatchEvent(new MessageEvent("message", {data: {type: "execution-start", nonce: event.data.nonce, requestId: event.data.requestId}, source: ownedWindowProxy}));
+            window.dispatchEvent(new MessageEvent("message", {data: {type: "execution-start", nonce: "wrong-nonce", requestId: event.data.requestId}, source: ownedWindowProxy}));
+            window.dispatchEvent(new MessageEvent("message", {data: {type: "execution-start", nonce: event.data.nonce, requestId: "wrong-request"}, source: ownedWindowProxy}));
+            window.dispatchEvent(new MessageEvent("message", {data: {type: "ready", nonce: event.data.nonce, requestId: event.data.requestId}, source: ownedWindowProxy}));
+          }
+          if (event.data?.type === "execution-start" && !duplicateInjected) {
+            duplicateInjected = true;
+            started += 1;
+            window.dispatchEvent(new MessageEvent("message", {data: event.data, source: ownedWindowProxy}));
+          }
+        };
+        const observer = new MutationObserver(records => {
+          for (const record of records) for (const node of record.addedNodes) if (node instanceof HTMLIFrameElement && node.sandbox.contains("allow-scripts")) activeFrame = node;
+        });
+        Object.defineProperty(HTMLIFrameElement.prototype, "srcdoc", {
+          ...descriptor,
+          set(value) {
+            activeFrame = this;
+            const source = String(value);
+            const pattern = kind === "ready"
+              ? /parent\.postMessage\(\{type: 'ready', nonce: [\s\S]*?\}, '\*'\);/
+              : /worker\.postMessage\(data\);/;
+            const transformed = source.replace(pattern, match => { replacements += 1; return `setTimeout(() => { ${match} }, 2500);`; });
+            if (replacements !== 1 || transformed === source) throw new Error(`runner seam: expected one ${kind} anchor`);
+            return descriptor.set.call(this, transformed);
+          },
+        });
+        window.setTimeout = (handler, delay, ...args) => { trace.push({op: "set", delay: Number(delay)}); return nativeSetTimeout(handler, delay, ...args); };
+        window.clearTimeout = handle => { trace.push({op: "clear"}); return nativeClearTimeout(handle); };
+        window.addEventListener("message", receive); listenerCount += 1;
+        observer.observe(document.body, {childList: true});
+        let outcome;
+        try {
+          const controller = new AbortController();
+          const resultPromise = run({requestId: `phase-${kind}-${abortBeforeReady ? "abort" : "complete"}`, mode: "test", code: "function record() { return {answer: [true, {nested: [0, null]}]}; }", entryPoint: "record", tests: [{args: [], expected: {answer: [true, {nested: [0, null]}]}}]}, controller.signal);
+          if (abortBeforeReady) controller.abort();
+          const result = await resultPromise;
+          const traceBeforeLate = trace.length;
+          if (ownedWindowProxy && owned[0]?.nonce && owned[0]?.requestId) window.dispatchEvent(new MessageEvent("message", {data: {type: "execution-start", nonce: owned[0].nonce, requestId: owned[0].requestId}, source: ownedWindowProxy}));
+          outcome = {result, trace, traceBeforeLate, replacements, started, ownedTypes: owned.map(event => event?.type), frames: document.querySelectorAll("iframe[sandbox]").length};
+        } finally {
+          observer.disconnect();
+          window.removeEventListener("message", receive); listenerCount -= 1;
+          window.setTimeout = nativeSetTimeout;
+          window.clearTimeout = nativeClearTimeout;
+          Object.defineProperty(HTMLIFrameElement.prototype, "srcdoc", descriptor);
+        }
+        return {...outcome, listenerCountAfter: listenerCount};
+      }
+
+      return {ready: await control("ready", false), dispatch: await control("dispatch", false), abort: await control("ready", true)};
+    }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs});
+
+    for (const [name, result] of Object.entries({ready: controls.ready, dispatch: controls.dispatch})) {
+      assert.equal(result.replacements, 1, `${name} seam transforms exactly one generated anchor`);
+      assert.equal(result.result.status, "completed", `${name} delayed valid startup retains the nested JSON control`);
+      assert.deepEqual(result.trace.filter(entry => entry.op === "set").map(entry => entry.delay), [5_000, 1_700], `${name} starts one load timer then one execution/grace timer`);
+      assert.equal(result.ownedTypes.filter(type => type === "execution-start").length, 1, `${name} observes exactly one real owned execution-start`);
+      assert.equal(result.trace.length, result.traceBeforeLate, `${name} late duplicate cannot restart a settled trace`);
+      assert.equal(result.frames, 0, `${name} leaves no sandbox frame`);
+      assert.equal(result.listenerCountAfter, 0, `${name} fixture removes its parent listener after cleanup`);
+    }
+    assert.equal(controls.abort.replacements, 1, "abort seam transforms exactly one generated ready anchor");
+    assert.equal(controls.abort.result.status, "cancelled", "pre-ready abort reaches the cancellation terminal state");
+    assert.equal(controls.abort.started, 0, "pre-ready abort permits no owned execution-start");
+    assert.deepEqual(controls.abort.ownedTypes, [], "pre-ready abort permits no owned ready or worker dispatch");
+    assert.equal(controls.abort.frames, 0, "pre-ready abort removes the owned sandbox frame");
+    assert.equal(controls.abort.trace.filter(entry => entry.op === "clear").length, 1, "pre-ready abort clears its only parent timer");
+    assert.equal(controls.abort.listenerCountAfter, 0, "abort fixture removes its parent listener after cleanup");
+  });
+});
+
 test("CatTasks executes Test and Run through a browser-isolated runner with terminal outcomes and recovery", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext();

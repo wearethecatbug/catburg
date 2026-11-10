@@ -43,7 +43,7 @@ type TaskContextValue = {
     customTasks: readonly CustomTaskRecord[];
     customStorageError: string | null;
     customStorageReady: boolean;
-    addCustomTasks: (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => Promise<boolean>;
+    addCustomTasks: (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => Promise<CustomTaskResult>;
     prepareCustomTaskImport: (text: string) => CustomTaskResult;
     exportCustomTasks: () => Promise<string | null>;
     retryCustomStorage: () => void;
@@ -204,17 +204,19 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         return started.token;
     }, [allTasks, commitState]);
 
-    const addCustomTasks = useCallback(async (incoming: readonly CustomTaskRecord[], signal?: AbortSignal) => {
-        if (signal?.aborted) return false;
+    const addCustomTasks = useCallback(async (incoming: readonly CustomTaskRecord[], signal?: AbortSignal): Promise<CustomTaskResult> => {
+        if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
         if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
-            setCustomStorageError('Tasks must finish loading before custom tasks can be saved.');
-            return false;
+            const failure = {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be saved.'} as const;
+            setCustomStorageError(failure.message);
+            return failure;
         }
         return enqueueStorageOperation(async () => {
-            if (signal?.aborted) return false;
+            if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
             if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
-                setCustomStorageError('Tasks must finish loading before custom tasks can be saved.');
-                return false;
+                const failure = {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be saved.'} as const;
+                setCustomStorageError(failure.message);
+                return failure;
             }
             const saved = await appendCustomTasks(
                 incoming,
@@ -222,23 +224,25 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
                 signal,
             );
             if (!saved.ok) {
+                if (saved.kind === 'duplicate-id' && saved.source === 'incoming') return saved;
                 if (!signal?.aborted) setCustomStorageError(saved.message);
-                return false;
+                return saved;
             }
             customTasksRef.current = saved.tasks;
             setCustomTasks(saved.tasks);
             setCustomStorageError(null);
-            return !signal?.aborted;
+            return signal?.aborted ? {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const : saved;
         }).catch(error => {
-            if (signal?.aborted) return false;
-            setCustomStorageError(error instanceof Error ? error.message : 'Custom task storage is unavailable');
-            return false;
+            if (signal?.aborted) return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'} as const;
+            const failure = {ok: false, kind: 'storage', message: error instanceof Error ? error.message : 'Custom task storage is unavailable'} as const;
+            setCustomStorageError(failure.message);
+            return failure;
         });
     }, [enqueueStorageOperation]);
 
     const prepareCustomTaskImport = useCallback((text: string): CustomTaskResult => {
         if (tasksRef.current.length === 0 || catalogErrorRef.current || !customStorageReadyRef.current) {
-            return {ok: false, message: 'Tasks must finish loading before custom tasks can be imported.'};
+            return {ok: false, kind: 'storage', message: 'Tasks must finish loading before custom tasks can be imported.'};
         }
         return preflightCustomTaskImport(
             text,

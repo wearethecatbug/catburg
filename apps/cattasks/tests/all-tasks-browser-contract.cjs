@@ -1,8 +1,11 @@
 const assert = require("node:assert/strict");
+const {readFileSync} = require("node:fs");
+const {join} = require("node:path");
 const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
+const fullCatalogue = JSON.parse(readFileSync(join(__dirname, "..", "public", "task-catalog.v1.json"), "utf8"));
 const catalog = {
   version: 1,
   tasks: [
@@ -237,6 +240,103 @@ test("All tasks separates loading and recoverable catalogue errors", {timeout: 4
     assert.deepEqual(diagnostics.pageErrors, []);
     assert.deepEqual(diagnostics.failedRequests, []);
     assert.deepEqual(diagnostics.failedResponses, [{url: `${baseUrl}/task-catalog.v1.json`, method: "GET", status: 500}], "only the intentional first catalogue failure is observed");
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("full fifty-task catalogue keeps the final task reachable", {timeout: 45_000}, async () => {
+  assert.equal(Array.isArray(fullCatalogue.tasks), true, "the checked-out public catalogue exposes a task array");
+  assert.equal(fullCatalogue.tasks.length, 50, "the TD007 fixture is the complete public fifty-task catalogue");
+  const finalTask = fullCatalogue.tasks.at(-1);
+  assert.ok(finalTask?.id && finalTask.title && finalTask.description, "the complete public catalogue exposes a final identifiable task");
+
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}});
+  const page = await context.newPage();
+  const diagnostics = await prepare(page, route => route.fulfill({contentType: "application/json", body: JSON.stringify(fullCatalogue)}));
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200);
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+
+    const rows = catalogueRows(page);
+    assert.equal(await rows.count(), 50, "All tasks renders every member of the complete public catalogue before final-row checks");
+    const finalRow = rows.nth(49);
+    assert.match(await finalRow.innerText(), new RegExp(finalTask.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "the final visible row belongs to the actual final public catalogue task");
+    const finalOpen = finalRow.getByRole("button", {name: /^Open(?: |$)/});
+    assert.equal(await finalOpen.count(), 1, "the actual final catalogue row exposes exactly one Open action");
+
+    const beforeScroll = await finalOpen.evaluate(node => {
+      const userScrollOwners = [];
+      const hiddenOrClipAncestors = [];
+      for (let ancestor = node.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        if (["auto", "scroll"].includes(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) userScrollOwners.push(ancestor.scrollTop);
+        if (["hidden", "clip"].includes(style.overflowY)) hiddenOrClipAncestors.push(ancestor.scrollTop);
+      }
+      return {documentScrollY: window.scrollY, userScrollOwners, hiddenOrClipAncestors};
+    });
+    for (let step = 0; step < 20; step += 1) {
+      await page.mouse.move(720, 450);
+      await page.mouse.wheel(0, 720);
+      const isVisible = await finalOpen.evaluate(node => {
+        const bounds = node.getBoundingClientRect();
+        return bounds.top >= 0 && bounds.bottom <= window.innerHeight;
+      });
+      if (isVisible) break;
+    }
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const reachability = await finalOpen.evaluate((node, beforeScroll) => {
+      const target = node.getBoundingClientRect();
+      const clippingAncestors = [];
+      const userScrollOwners = [];
+      const hiddenOrClipAncestors = [];
+      for (let ancestor = node.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        const bounds = ancestor.getBoundingClientRect();
+        const clipsX = ["hidden", "clip", "scroll", "auto"].includes(style.overflowX);
+        const clipsY = ["hidden", "clip", "scroll", "auto"].includes(style.overflowY);
+        if (clipsX || clipsY) clippingAncestors.push({bounds: [bounds.left, bounds.top, bounds.right, bounds.bottom], clipsX, clipsY});
+        if (["auto", "scroll"].includes(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) userScrollOwners.push(ancestor.scrollTop);
+        if (["hidden", "clip"].includes(style.overflowY)) hiddenOrClipAncestors.push(ancestor.scrollTop);
+      }
+      const y = target.top + target.height / 2;
+      const xPositions = [target.left + 1, target.left + target.width / 2, target.right - 1];
+      return {
+        target: [target.left, target.top, target.right, target.bottom],
+        viewport: [window.innerWidth, window.innerHeight],
+        clippingAncestors,
+        userScrollOwners,
+        hiddenOrClipAncestors,
+        documentScroll: [window.scrollX, window.scrollY],
+        hitTests: xPositions.map(x => ({x, containsTarget: Boolean(document.elementFromPoint(x, y) && node.contains(document.elementFromPoint(x, y)))})),
+      };
+    }, beforeScroll);
+    const [left, top, right, bottom] = reachability.target;
+    const [viewportWidth, viewportHeight] = reachability.viewport;
+    assert.ok(left >= -0.5 && top >= -0.5 && right <= viewportWidth + 0.5 && bottom <= viewportHeight + 0.5, `the final Open action fits the 1440x900 viewport after scrolling: ${JSON.stringify(reachability)}`);
+    for (const ancestor of reachability.clippingAncestors) {
+      const [ancestorLeft, ancestorTop, ancestorRight, ancestorBottom] = ancestor.bounds;
+      if (ancestor.clipsX) assert.ok(left >= ancestorLeft - 0.5 && right <= ancestorRight + 0.5, `the final Open action is horizontally reachable inside every clipping ancestor: ${JSON.stringify(reachability)}`);
+      if (ancestor.clipsY) assert.ok(top >= ancestorTop - 0.5 && bottom <= ancestorBottom + 0.5, `the final Open action is vertically reachable inside every clipping ancestor: ${JSON.stringify(reachability)}`);
+    }
+    assert.ok(reachability.userScrollOwners.some((scrollTop, index) => scrollTop > beforeScroll.userScrollOwners[index]) || reachability.documentScroll[1] > beforeScroll.documentScrollY, `the final Open action is reached through a user-scrollable owner or the document: ${JSON.stringify(reachability)}`);
+    assert.deepEqual(reachability.hiddenOrClipAncestors, beforeScroll.hiddenOrClipAncestors, `hidden or clip ancestors are not programmatically scrolled to make the final Open action reachable: ${JSON.stringify(reachability)}`);
+    assert.ok(reachability.hitTests.every(point => point.containsTarget), `the final Open action is hit-testable at left, centre, and right: ${JSON.stringify(reachability)}`);
+
+    await finalOpen.click();
+    await page.getByText(finalTask.description, {exact: true}).waitFor({state: "visible"});
+    await page.getByRole("button", {name: "All tasks"}).click();
+    const selectedFinalRow = page.locator('main ul > li[aria-current="true"]').filter({hasText: finalTask.title});
+    assert.equal(await selectedFinalRow.count(), 1, "opening the final task makes that same real catalogue row current");
+    assert.deepEqual(diagnostics.consoleErrors, []);
+    assert.deepEqual(diagnostics.pageErrors, []);
+    assert.deepEqual(diagnostics.failedRequests, []);
+    assert.deepEqual(diagnostics.failedResponses, []);
   } finally {
     await context.close();
     await browser.close();

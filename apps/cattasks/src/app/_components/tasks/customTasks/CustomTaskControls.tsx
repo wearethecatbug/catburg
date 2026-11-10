@@ -71,11 +71,23 @@ export function CustomTaskControls() {
         try {
             const {topic, ...taskValues} = values;
             const record = parseCustomTask({...taskValues, tests, ...(topic === '' ? {} : {topic})});
+            if (customStorageReady) {
+                const preflight = prepareCustomTaskImport(JSON.stringify({version: 1, tasks: [record]}));
+                if (!preflight.ok && preflight.kind === 'duplicate-id' && preflight.source === 'incoming') {
+                    setFieldErrors({id: preflight.message});
+                    focusField('id');
+                    return;
+                }
+            }
             setIsSaving(true);
-            if (await addCustomTasks([record]) && mounted.current) {
+            const saved = await addCustomTasks([record]);
+            if (saved.ok && mounted.current) {
                 setValues(emptyForm);
                 setTransferError(null);
                 closeForm();
+            } else if (!saved.ok && saved.kind === 'duplicate-id' && saved.source === 'incoming') {
+                setFieldErrors({id: saved.message});
+                focusField('id');
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Task could not be saved.';
@@ -105,7 +117,10 @@ export function CustomTaskControls() {
                 setTransferError(incoming.message);
                 return;
             }
-            await addCustomTasks(incoming.tasks, controller.signal);
+            const saved = await addCustomTasks(incoming.tasks, controller.signal);
+            if (!saved.ok && !controller.signal.aborted && saved.kind === 'duplicate-id' && saved.source === 'incoming') {
+                setTransferError(saved.message);
+            }
         } catch (error) {
             if (mounted.current && !controller.signal.aborted && request === importVersion.current) {
                 setTransferError(error instanceof Error ? error.message : 'Import could not be read.');
@@ -169,7 +184,7 @@ export function CustomTaskControls() {
                         </select>
                     </label>
                     <div className={styles.formActions}>
-                        <button type="submit" disabled={isSaving}>Save task</button>
+                        <button type="submit" disabled={isSaving || !customStorageReady}>Save task</button>
                         <button type="button" onClick={closeForm} disabled={isSaving}>Cancel</button>
                     </div>
                 </form>

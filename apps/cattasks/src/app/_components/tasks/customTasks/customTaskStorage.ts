@@ -10,19 +10,19 @@ type LegacyCustomTaskStorage = Pick<Storage, 'getItem'>;
 type StoredDocument = { readonly exists: boolean; readonly result?: CustomTaskResult };
 
 function storageFailure(error: unknown): CustomTaskResult {
-    return {ok: false, message: error instanceof Error ? error.message : 'Custom task storage is unavailable'};
+    return {ok: false, kind: 'storage', message: error instanceof Error ? error.message : 'Custom task storage is unavailable'};
 }
 
 function cancelled(): CustomTaskResult {
-    return {ok: false, message: 'Custom task save was cancelled'};
+    return {ok: false, kind: 'cancelled', message: 'Custom task save was cancelled'};
 }
 
 function readDocument(raw: unknown, builtInIds: ReadonlySet<string>): CustomTaskResult {
-    if (typeof raw !== 'string') return {ok: false, message: 'Custom task storage document is invalid'};
-    const parsed = preflightCustomTaskImport(raw, new Set(), new Set());
+    if (typeof raw !== 'string') return {ok: false, kind: 'invalid', message: 'Custom task storage document is invalid'};
+    const parsed = preflightCustomTaskImport(raw, new Set(), new Set(), 'document');
     if (!parsed.ok) return parsed;
     const collision = parsed.tasks.find(task => builtInIds.has(task.id));
-    return collision ? {ok: false, message: `custom tasks: id '${collision.id}' collides with a built-in task`, recoveryRaw: raw} : parsed;
+    return collision ? {ok: false, kind: 'duplicate-id', source: 'document', message: `custom tasks: id '${collision.id}' collides with a built-in task`, recoveryRaw: raw} : parsed;
 }
 
 function openDatabase(): Promise<IDBDatabase> {
@@ -168,7 +168,7 @@ export async function getCustomTaskExport(builtInIds: ReadonlySet<string>): Prom
         const stored = await readCurrentDocument(database, builtInIds);
         return stored.exists
             ? stored.result ?? storageFailure(new Error('Custom task storage is unavailable'))
-            : {ok: false, message: 'Custom task storage is not initialized'};
+            : {ok: false, kind: 'storage', message: 'Custom task storage is not initialized'};
     } catch (error) {
         return storageFailure(error);
     } finally {
@@ -213,7 +213,7 @@ export async function appendCustomTasks(
                     return;
                 }
                 const saved = request.result === undefined
-                    ? {ok: false, message: 'Custom task storage is not initialized'} as CustomTaskResult
+                    ? {ok: false, kind: 'storage', message: 'Custom task storage is not initialized'} as CustomTaskResult
                     : readDocument(request.result, builtInIds);
                 if (!saved.ok) {
                     failure = saved;
@@ -223,7 +223,12 @@ export async function appendCustomTasks(
                 try {
                     const savedIds = new Set(saved.tasks.map(task => task.id));
                     const validatedIncoming = incoming.map(parseCustomTask);
-                    validateCustomTaskRecords(validatedIncoming, builtInIds, savedIds);
+                    const duplicate = validateCustomTaskRecords(validatedIncoming, builtInIds, savedIds);
+                    if (duplicate) {
+                        failure = duplicate;
+                        abort();
+                        return;
+                    }
                     const tasks = [...saved.tasks, ...validatedIncoming];
                     const next = {ok: true, tasks} as const;
                     const write = store.put(exportCustomTasks(tasks), CUSTOM_TASK_DOCUMENT_KEY);

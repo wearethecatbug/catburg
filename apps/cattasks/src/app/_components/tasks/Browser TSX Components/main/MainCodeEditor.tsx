@@ -16,6 +16,24 @@ type MainCodeEditorProps = {
     readonly children?: React.ReactNode;
 };
 
+function encodeModelPathId(id: string): string {
+    let encoded = '';
+    for (let index = 0; index < id.length; index += 1) {
+        const codeUnit = id.charCodeAt(index);
+        const next = id.charCodeAt(index + 1);
+        if (codeUnit >= 0xD800 && codeUnit <= 0xDBFF && next >= 0xDC00 && next <= 0xDFFF) {
+            encoded += encodeURIComponent(id.slice(index, index + 2));
+            index += 1;
+        } else if (codeUnit >= 0xD800 && codeUnit <= 0xDFFF) {
+            // Preserve accepted malformed UTF-16 IDs without using them as URI input.
+            encoded += `%u${codeUnit.toString(16).toUpperCase().padStart(4, '0')}`;
+        } else {
+            encoded += encodeURIComponent(id[index]);
+        }
+    }
+    return encodeURIComponent(encoded);
+}
+
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
     const {
         selectedTask,
@@ -93,7 +111,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     const outputMessage = selectedWorkspace?.result?.result.message ?? 'Run code or tests to see output.';
     // Monaco decodes URI paths once, so task IDs are double-encoded for safe model paths.
     const modelPath = selectedTask
-        ? `solution-${encodeURIComponent(encodeURIComponent(selectedTask.id))}.js`
+        ? `solution-${encodeModelPathId(selectedTask.id)}.js`
         : 'solution.js';
 
     return (

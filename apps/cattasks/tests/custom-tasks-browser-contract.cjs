@@ -567,13 +567,17 @@ test("aborted and rejected IndexedDB document writes never publish a task, and R
     assert.equal(await page.evaluate(key => localStorage.getItem(key), legacyStorageKey), legacyRaw, "an aborted transaction leaves legacy bytes untouched");
 
     await page.getByRole("button", {name: "Retry storage"}).click();
+    await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent?.trim() === "New task" && !button.disabled));
+    await alert.waitFor({state: "detached"});
     await page.evaluate(() => { window.__rejectNextCustomTaskWrite = true; });
     await page.getByRole("button", {name: "Save task"}).click();
+    await page.waitForFunction(() => window.__rejectNextCustomTaskWrite === false);
     await alert.waitFor({state: "visible"});
     assert.match(await alert.innerText(), /storage|quota|save|error/i, "a synchronous IndexedDB write rejection is recoverable");
     assert.equal(await storedDocument(page), before, "a rejected document write cannot commit a valid prefix");
 
     await page.getByRole("button", {name: "Retry storage"}).click();
+    await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent?.trim() === "New task" && !button.disabled));
     await page.getByRole("button", {name: "Save task"}).click();
     await rows(page).filter({hasText: incoming.title}).waitFor({state: "visible"});
     assert.deepEqual(await storedTasks(page), [existing, incoming], "a later valid retry commits exactly one complete document");
@@ -901,19 +905,109 @@ test("a pending valid reread blocks writes while retaining the last validated se
     await page.evaluate(({databaseName, storeName, documentKey, validRaw}) => new Promise((resolve, reject) => {
       const open = indexedDB.open(databaseName); open.onerror = () => reject(open.error); open.onsuccess = () => { const db = open.result; const tx = db.transaction(storeName, "readwrite"); tx.objectStore(storeName).put(validRaw, documentKey); tx.oncomplete = () => { db.close(); resolve(); }; tx.onabort = () => reject(tx.error); };
     }), {databaseName, storeName, documentKey, validRaw});
+    await page.getByRole("button", {name: "Cancel"}).click();
+    await fillTaskForm(page, customTask("pending-held-form"));
     await holdDocumentTransaction(page);
     await page.getByRole("button", {name: "Retry storage"}).click();
     assert.equal(await page.getByRole("button", {name: "New task"}).isDisabled(), true, "pending reread marks custom storage not-ready before the held read resolves");
     assert.equal(await page.getByLabel("Import tasks JSON").isDisabled(), true, "pending reread blocks import without clearing validated rows");
+    assert.equal(await page.getByRole("button", {name: "Save task"}).isDisabled(), true, "pending reread blocks a filled form from writing stale custom storage");
     assert.equal(await rows(page).filter({hasText: existing.title}).count(), 1, "pending reread retains the old projection rather than transiently clearing it");
     await page.getByRole("button", {name: "Back to task"}).click();
     await assertActiveDraft(page, draft, "pending reread retains the selected custom draft");
     assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "pending reread retains the selected custom result");
     assert.match(await page.getByLabel(/Hint: Показаны подсказки/).getAttribute("aria-label"), /Показаны подсказки/, "pending reread retains the active Hint tab");
     await releaseDocumentTransaction(page);
+    await page.getByRole("button", {name: "All tasks"}).click();
+    await page.getByRole("button", {name: "New task"}).waitFor({state: "visible"});
+    await page.waitForFunction(() => Array.from(document.querySelectorAll("button")).some(button => button.textContent?.trim() === "New task" && !button.disabled));
+    await fillTaskForm(page, customTask("pending-recovery"));
+    assert.equal(await page.getByRole("button", {name: "Save task"}).isDisabled(), false, "Save re-enables only after the reread finishes");
+    await page.getByRole("button", {name: "Save task"}).click();
+    await rows(page).filter({hasText: "Custom pending-recovery"}).waitFor({state: "visible"});
+    assert.deepEqual((await storedTasks(page)).map(task => task.id), [existing.id, "pending-recovery"], "a recovered Save commits exactly one complete pending form record");
     assert.deepEqual(seen.consoleErrors, []);
   } finally {
     await page.evaluate(() => window.__releaseCustomTaskTransaction?.()).catch(() => undefined);
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("duplicate built-in, saved, and concurrent IDs identify the Task ID field", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const seen = await diagnostics(page);
+  const expectIdFailure = async (record, expectedStoredIds) => {
+    await fillTaskForm(page, record);
+    await page.getByRole("button", {name: "Save task"}).click();
+    const id = page.getByLabel("Task ID");
+    await page.waitForFunction(() => document.activeElement === document.querySelector('input[id="custom-task-id"]'));
+    assert.equal(await id.getAttribute("aria-invalid"), "true", "a duplicate ID is an accessible Task ID field error");
+    assert.equal(await id.evaluate(node => node === document.activeElement), true, "a duplicate ID returns focus to Task ID");
+    assert.deepEqual((await storedTasks(page)).map(task => task.id), expectedStoredIds, "a rejected duplicate does not append a record");
+  };
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    await expectIdFailure(customTask("race", {title: "Rejected built-in duplicate"}), []);
+    await page.reload({waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    const saved = customTask("saved-duplicate");
+    await fillTaskForm(page, saved);
+    await page.getByRole("button", {name: "Save task"}).click();
+    await rows(page).filter({hasText: saved.title}).waitFor({state: "visible"});
+    await expectIdFailure(customTask(saved.id, {title: "Rejected saved duplicate"}), [saved.id]);
+
+    const otherPage = await context.newPage();
+    const otherSeen = await diagnostics(otherPage);
+    await otherPage.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(otherPage);
+    const late = customTask("late-race-id");
+    await fillTaskForm(page, late);
+    await fillTaskForm(otherPage, late);
+    assert.equal(await otherPage.getByRole("button", {name: "Save task"}).isDisabled(), false, "the second page keeps a valid stale form before the first commit");
+    await page.getByRole("button", {name: "Save task"}).click();
+    await rows(page).filter({hasText: late.title}).waitFor({state: "visible"});
+    await otherPage.getByRole("button", {name: "Save task"}).click();
+    const lateId = otherPage.getByLabel("Task ID");
+    await otherPage.waitForFunction(() => document.activeElement === document.querySelector('input[id="custom-task-id"]'));
+    assert.equal(await lateId.getAttribute("aria-invalid"), "true", "a transaction-time duplicate is attributed to Task ID");
+    assert.equal((await storedTasks(page)).filter(task => task.id === late.id).length, 1, "the concurrent duplicate race commits one record only");
+    assert.deepEqual(seen.consoleErrors, []);
+    assert.deepEqual(otherSeen.consoleErrors, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("Unicode custom IDs import, persist, and select without identity rewriting", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const seen = await diagnostics(page);
+  const unicode = [
+    customTask("\uD800", {title: "Lone high surrogate", starterCode: "function echo(value) { return 'high'; }"}),
+    customTask("\uDC00", {title: "Lone low surrogate", starterCode: "function echo(value) { return 'low'; }"}),
+    customTask("é", {title: "Unicode composed", starterCode: "function echo(value) { return 'composed'; }"}),
+    customTask("e\u0301", {title: "Unicode literal lookalike", starterCode: "function echo(value) { return 'lookalike'; }"}),
+  ];
+  try {
+    await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    await openCatalogue(page);
+    await page.getByLabel("Import tasks JSON").setInputFiles({name: "unicode.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({version: 1, tasks: unicode}))});
+    for (const record of unicode) await rows(page).filter({hasText: record.title}).waitFor({state: "visible"});
+    assert.deepEqual((await storedTasks(page)).map(task => task.id), unicode.map(task => task.id), "IndexedDB retains every accepted raw Unicode ID in order");
+    for (const record of unicode) {
+      await rows(page).filter({hasText: record.title}).getByRole("button", {name: /^Open(?: |$)/}).click();
+      await assertActiveDraft(page, record.starterCode, `Open preserves the distinct draft identity for ${record.title}`);
+      await page.getByRole("button", {name: "All tasks"}).click();
+    }
+    assert.deepEqual(seen.consoleErrors, []);
+    assert.deepEqual(seen.pageErrors, []);
+  } finally {
     await context.close();
     await browser.close();
   }

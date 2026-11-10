@@ -2,6 +2,7 @@ import {isTaskEntryPoint, type TaskTestCase} from "../catalog/taskCatalog";
 
 const RUN_TIMEOUT_MS = 1_500;
 const PARENT_GRACE_MS = 200;
+const SANDBOX_LOAD_TIMEOUT_MS = 5_000;
 
 export type IsolatedTaskRequest = { readonly requestId: string; readonly mode: "run" | "test"; readonly code: string; readonly entryPoint?: string; readonly tests?: readonly TaskTestCase[]; };
 export type IsolatedTaskResult = { readonly requestId: string; readonly status: "completed" | "test-failed" | "runtime-error" | "timeout" | "cancelled"; readonly message: string; readonly logs: readonly string[]; readonly passedCount?: number; readonly totalTests?: number; };
@@ -21,20 +22,30 @@ function isReady(value: unknown, nonce: string, requestId: string): boolean {
     return Boolean(value && typeof value === "object" && (value as {type?: unknown}).type === "ready" && (value as {nonce?: unknown}).nonce === nonce && (value as {requestId?: unknown}).requestId === requestId);
 }
 
+function isExecutionStart(value: unknown, nonce: string, requestId: string): boolean {
+    return Boolean(value && typeof value === "object" && (value as {type?: unknown}).type === "execution-start" && (value as {nonce?: unknown}).nonce === nonce && (value as {requestId?: unknown}).requestId === requestId);
+}
+
 function sandboxDocument(nonce: string, requestId: string): string {
     const workerSource = `
 const MAX_LOGS = 40, MAX_LOG_LENGTH = 500;
 self.onmessage = ({data}) => {
   const {nonce, requestId, mode, code, entryPoint, tests} = data || {}, logs = [];
   const postMessage = self.postMessage.bind(self), objectIs = Object.is, arrayIsArray = Array.isArray,
-    numberIsNaN = Number.isNaN, objectKeys = Object.keys, hasOwn = Object.prototype.hasOwnProperty,
+    numberIsNaN = Number.isNaN, objectKeys = Object.keys, objectGetPrototypeOf = Object.getPrototypeOf, hasOwn = Object.prototype.hasOwnProperty,
     reflectApply = Reflect.apply, arrayPush = Array.prototype.push, arrayMap = Array.prototype.map,
     arrayJoin = Array.prototype.join, string = String, stringSlice = String.prototype.slice,
-    errorConstructor = Error;
+    errorConstructor = Error, functionToString = Function.prototype.toString, objectConstructor = Object;
   const text = value => { try { return reflectApply(stringSlice, string(value), [0, MAX_LOG_LENGTH]); } catch { return "[unprintable]"; } };
   const errorText = error => {
     try { return error && typeof error === "object" && typeof error.message === "string" ? error.message : string(error); }
     catch { return "Неизвестная ошибка"; }
+  };
+  const isJsonRecord = value => {
+    const prototype = objectGetPrototypeOf(value);
+    if (prototype === null) return true;
+    const constructor = reflectApply(hasOwn, prototype, ["constructor"]) ? prototype.constructor : undefined;
+    return typeof constructor === "function" && reflectApply(functionToString, constructor, []) === reflectApply(functionToString, objectConstructor, []);
   };
   const equal = (actual, expected) => {
     if (typeof actual !== typeof expected) return false;
@@ -48,6 +59,7 @@ self.onmessage = ({data}) => {
       }
       return true;
     }
+    if (!isJsonRecord(actual) || !isJsonRecord(expected)) return false;
     const actualKeys = objectKeys(actual), expectedKeys = objectKeys(expected);
     if (actualKeys.length !== expectedKeys.length) return false;
     for (let index = 0; index < expectedKeys.length; index += 1) {
@@ -65,6 +77,7 @@ self.onmessage = ({data}) => {
   };
   try {
     self.console = {log: capture, info: capture, warn: capture, error: capture, debug: capture};
+    postMessage({type: "execution-start", nonce, requestId});
     if (mode === "run") {
       const returnValue = new Function('"use strict";\\n' + code)();
       const logsText = logs.length ? reflectApply(arrayJoin, logs, ["\\n"]) : "";
@@ -86,7 +99,7 @@ self.onmessage = ({data}) => {
 };`;
     return `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:"><script>
 const expectedNonce = ${JSON.stringify(nonce)}, expectedRequestId = ${JSON.stringify(requestId)};
-let worker, timer, started = false;
+let worker, timer, started = false, executionStarted = false, finished = false;
 window.addEventListener('message', event => {
   const data = event.data;
   if (event.source !== parent || started || !data || typeof data !== 'object' || data.type !== 'start' ||
@@ -96,11 +109,20 @@ window.addEventListener('message', event => {
   started = true;
   const blob = new Blob([${JSON.stringify(workerSource)}], {type: 'text/javascript'});
   const workerUrl = URL.createObjectURL(blob);
-  const finish = result => { clearTimeout(timer); if (worker) worker.terminate(); URL.revokeObjectURL(workerUrl); parent.postMessage(result, '*'); };
+  const finish = result => { if (finished) return; finished = true; clearTimeout(timer); if (worker) worker.terminate(); URL.revokeObjectURL(workerUrl); parent.postMessage(result, '*'); };
   try { worker = new Worker(workerUrl); } catch (error) { finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Ошибка выполнения: ' + error.message, logs: []}); return; }
-  worker.onmessage = event => finish(event.data);
+  worker.onmessage = event => {
+    const result = event.data;
+    if (result && typeof result === 'object' && result.type === 'execution-start' && result.nonce === data.nonce && result.requestId === data.requestId) {
+      if (executionStarted) return;
+      executionStarted = true;
+      timer = setTimeout(() => finish({nonce: data.nonce, requestId: data.requestId, status: 'timeout', message: 'Превышено время выполнения', logs: []}), ${RUN_TIMEOUT_MS});
+      parent.postMessage(result, '*');
+      return;
+    }
+    if (executionStarted) finish(result);
+  };
   worker.onerror = event => finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Ошибка выполнения: ' + event.message, logs: []});
-  timer = setTimeout(() => finish({nonce: data.nonce, requestId: data.requestId, status: 'timeout', message: 'Превышено время выполнения', logs: []}), ${RUN_TIMEOUT_MS});
   worker.postMessage(data);
 });
 parent.postMessage({type: 'ready', nonce: ${JSON.stringify(nonce)}, requestId: ${JSON.stringify(requestId)}}, '*');</script>`;
@@ -116,15 +138,23 @@ export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSign
     frame.srcdoc = sandboxDocument(nonce, request.requestId);
     return new Promise(resolve => {
         let settled = false;
-        const finish = (result: IsolatedTaskResult) => { if (settled) return; settled = true; clearTimeout(watchdog); signal?.removeEventListener("abort", cancel); window.removeEventListener("message", receive); frame.remove(); resolve(result); };
+        let phase: "loading" | "awaiting-execution" | "executing" = "loading";
+        let executionWatchdog: number | undefined;
+        const finish = (result: IsolatedTaskResult) => { if (settled) return; settled = true; if (loadTimeout !== undefined) clearTimeout(loadTimeout); if (executionWatchdog !== undefined) clearTimeout(executionWatchdog); signal?.removeEventListener("abort", cancel); window.removeEventListener("message", receive); frame.remove(); resolve(result); };
         const cancel = () => finish({requestId: request.requestId, status: "cancelled", message: "Запуск отменён", logs: []});
         const receive = (event: MessageEvent<unknown>) => {
-            if (event.source !== frame.contentWindow) return;
-            if (isReady(event.data, nonce, request.requestId)) { frame.contentWindow?.postMessage({type: "start", nonce, ...request}, "*"); return; }
+            if (!event.isTrusted || event.source !== frame.contentWindow) return;
+            if (phase === "loading" && isReady(event.data, nonce, request.requestId)) { phase = "awaiting-execution"; frame.contentWindow?.postMessage({type: "start", nonce, ...request}, "*"); return; }
+            if (phase === "awaiting-execution" && isExecutionStart(event.data, nonce, request.requestId)) {
+                phase = "executing";
+                if (loadTimeout !== undefined) clearTimeout(loadTimeout);
+                executionWatchdog = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), RUN_TIMEOUT_MS + PARENT_GRACE_MS);
+                return;
+            }
             if (isWorkerResult(event.data, nonce, request.requestId)) { const {nonce: _nonce, ...result} = event.data; finish(result); }
         };
-        const watchdog = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), RUN_TIMEOUT_MS + PARENT_GRACE_MS);
         window.addEventListener("message", receive);
+        const loadTimeout = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), SANDBOX_LOAD_TIMEOUT_MS);
         document.body.append(frame);
         if (signal?.aborted) cancel(); else signal?.addEventListener("abort", cancel, {once: true});
     });
