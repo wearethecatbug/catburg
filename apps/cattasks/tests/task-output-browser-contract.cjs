@@ -49,6 +49,21 @@ async function textOccurrences(locator, text) {
   return locator.evaluate((node, text) => node.textContent.split(text).length - 1, text);
 }
 
+async function firstTextLineFitsScrollViewport(locator) {
+  return locator.evaluate(node => {
+    const viewport = node.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const line = [...range.getClientRects()].find(rect => rect.width > 0 && rect.height > 0);
+    return line ? {
+      lineTop: line.top,
+      lineBottom: line.bottom,
+      viewportTop: viewport.top,
+      viewportBottom: viewport.bottom,
+    } : null;
+  });
+}
+
 function renderTaskOutputRecord(record) {
   const sourcePath = path.join(__dirname, "..", "src", "app", "_components", "tasks", "Browser TSX Components", "main", "TaskOutput.tsx");
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "cattasks-task-output-contract-"));
@@ -133,6 +148,12 @@ test("TaskOutput presents only the selected latest runner record through accessi
     await page.getByText(/^Passed:\s*2\/2$/).waitFor();
     assert.match((await output.innerText()), /2\s*\/\s*2/, "a completed test shows the validated passed and declared count");
     assert.doesNotMatch(await output.innerText(), /failed:\s*0/i, "a completed test does not invent a derived failure count");
+    await page.setViewportSize({width: 768, height: 768});
+    const completedTestLine = await firstTextLineFitsScrollViewport(page.getByRole("tabpanel", {name: "Tests", exact: true}).locator("pre"));
+    assert.ok(
+      completedTestLine && completedTestLine.lineTop >= completedTestLine.viewportTop && completedTestLine.lineBottom <= completedTestLine.viewportBottom,
+      "the first completed Test output line fits the Tests scroll viewport at 768x768",
+    );
 
     await consoleTab.click();
     const consolePanel = page.getByRole("tabpanel", {name: "Console", exact: true});

@@ -87,7 +87,7 @@
 @media (min-width: 601px) {
     .outputPanel {
         display: flex;
-        flex: 0 0 clamp(180px, 20.7dvh, 220px);
+        flex: 0 0 clamp(212px, 20.7dvh, 220px);
         flex-direction: column;
     }
 
