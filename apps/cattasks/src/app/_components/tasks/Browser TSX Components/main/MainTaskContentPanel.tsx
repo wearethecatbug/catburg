@@ -139,7 +139,22 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
                     {activeContentTab === 'hint' && (
                         <div className={combineClassNames(styles.contentContainerFrame, styles.taskInfoContainer)}>
-                            <div key={selectedTask?.id}>{hints.length ? hints.map((hint, index) => <details key={index} className={styles.hint}><summary>Hint {index + 1}</summary><p>{hint}</p></details>) : <p>No hint available for this task.</p>}</div>
+                            <div key={selectedTask?.id} className={styles.hintPanel}>
+                                <div className={styles.hintHeading}>
+                                    <h2>Hints for this task</h2>
+                                    <span>{hints.length} available</span>
+                                </div>
+                                {hints.length ? (
+                                    <div className={styles.hintList}>
+                                        {hints.map((hint, index) => (
+                                            <details key={index} className={styles.hint}>
+                                                <summary>Hint {index + 1}</summary>
+                                                <p>{hint}</p>
+                                            </details>
+                                        ))}
+                                    </div>
+                                ) : <p className={styles.noHints}>No hint available for this task.</p>}
+                            </div>
                         </div>
                     )}
                 </div>

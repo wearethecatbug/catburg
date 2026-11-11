@@ -1,19 +1,21 @@
 .arrowButton {
-    --plaque-width: 108px;
-    --plaque-height: 56px;
-    --mascot-width: 168px;
-    --mascot-height: 108px;
-    --anchor-x: 53.5px;
-    --mirrored-anchor-x: 114.5px;
-    --anchor-bottom-offset: 8px;
+    --plaque-width: 83px;
+    --plaque-height: 43px;
+    --mascot-width: 129px;
+    --mascot-height: 83px;
+    --anchor-x: 41px;
+    --mirrored-anchor-x: 87.6px;
+    /* PNG 336x216: row 198 is the lower opaque contour, leaving 17px scaled to this 83px canvas. */
+    --anchor-bottom-offset: 6.5324px;
+    --mascot-plaque-overlap: 1px;
     position: relative;
-    flex: 0 0 var(--plaque-width);
-    width: var(--plaque-width);
-    height: var(--plaque-height);
-    margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset) - 8px);
+    flex: 0 0 92px;
+    width: 92px;
+    height: 48px;
+    margin-top: var(--mascot-height);
     box-sizing: border-box;
     border: 0;
-    border-radius: 18px;
+    border-radius: 13px;
     background: transparent;
     box-shadow: none;
     cursor: pointer;
@@ -29,7 +31,8 @@
     /* Isolated plaque paint keeps hover filtering away from the mascot artwork. */
     position: absolute;
     z-index: -1;
-    inset: 0;
+    inset: auto 4.5px 0;
+    height: var(--plaque-height);
     box-sizing: border-box;
     border: 3px solid #865634;
     border-radius: inherit;
@@ -44,7 +47,8 @@
     position: absolute;
     z-index: 0;
     left: calc(50% - var(--anchor-x));
-    bottom: calc(100% - var(--anchor-bottom-offset) - 24px);
+    /* Seat the alpha contour on plaque paint; the semantic hit target remains 92x48. */
+    bottom: calc(var(--plaque-height) - var(--anchor-bottom-offset) - var(--mascot-plaque-overlap));
     width: var(--mascot-width);
     height: var(--mascot-height);
     transform-origin: center;
@@ -85,7 +89,7 @@
     z-index: 1;
     display: block;
     width: 24px;
-    height: 4px;
+    height: 3px;
     background: currentColor;
 }
 
@@ -94,18 +98,18 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
+    border-top: 7px solid transparent;
+    border-bottom: 7px solid transparent;
 }
 
 .arrowLeft .directionArrow::after {
     left: -1px;
-    border-right: 13px solid currentColor;
+    border-right: 10px solid currentColor;
 }
 
 .arrowRight .directionArrow::after {
     right: -1px;
-    border-left: 13px solid currentColor;
+    border-left: 10px solid currentColor;
 }
 
 .arrowButton:disabled {
@@ -136,38 +140,7 @@
 
 @media (max-width: 600px) {
     .arrowButton {
-        --plaque-width: 56px;
-        --plaque-height: 28px;
-        --mascot-width: 84px;
-        --mascot-height: 54px;
-        --anchor-x: 26.75px;
-        --mirrored-anchor-x: 57.25px;
-        --anchor-bottom-offset: 4px;
-        border-radius: 10px;
-        margin-top: calc(var(--mascot-height) - var(--anchor-bottom-offset));
-    }
-
-    .arrowButton::before {
-        border-width: 2px;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 2px 0 #b77a4d;
-    }
-
-    .directionArrow {
-        width: 12px;
-        height: 2px;
-    }
-
-    .directionArrow::after {
-        border-top-width: 5px;
-        border-bottom-width: 5px;
-    }
-
-    .arrowLeft .directionArrow::after {
-        border-right-width: 7px;
-    }
-
-    .arrowRight .directionArrow::after {
-        border-left-width: 7px;
+        display: none;
     }
 }
 

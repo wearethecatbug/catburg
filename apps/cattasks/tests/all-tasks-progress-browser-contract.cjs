@@ -39,7 +39,7 @@ test("All tasks reflects successful Test completion through Run and invalidates 
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
 
     await page.getByRole("button", {name: "Test Code"}).click();
-    await page.getByText("Все тесты пройдены: 1/1", {exact: true}).waitFor({state: "visible"});
+    await page.getByRole("tabpanel", {name: "Tests"}).getByText("Все тесты пройдены: 1/1", {exact: true}).waitFor({state: "visible"});
     await page.getByRole("button", {name: "All tasks"}).click();
     const currentRow = page.locator('li[aria-current="true"]');
     await currentRow.getByText("Tortoise race", {exact: true}).waitFor({state: "visible"});
@@ -52,7 +52,7 @@ test("All tasks reflects successful Test completion through Run and invalidates 
 
     await page.getByRole("button", {name: "Back to task"}).click();
     await page.getByRole("button", {name: "Run Code"}).click();
-    await page.getByText("Код выполнен", {exact: true}).waitFor({state: "visible"});
+    await page.getByRole("tabpanel", {name: "Console"}).getByText("Код выполнен", {exact: true}).waitFor({state: "visible"});
     await page.getByRole("button", {name: "All tasks"}).click();
     await currentRow.getByText("Completed", {exact: true}).waitFor({state: "visible"});
 

@@ -3,7 +3,6 @@ import React from "react";
 import {useTaskContext} from '../../context/TaskProvider';
 import HeaderArrowButtons from './HeaderArrowButtons';
 import styles from './HeaderTaskListContainer.module.css';
-import HeaderTaskListButton from "./HeaderTaskListButton";
 
 
 interface HeaderTaskListContainerProps {
@@ -12,8 +11,15 @@ interface HeaderTaskListContainerProps {
 
 
 export default function HeaderTaskListContainer({className}: HeaderTaskListContainerProps) {
-    const {tasks, selectPreviousTask, selectNextTask} = useTaskContext();
+    const {tasks, catalogError, selectedTask, selectPreviousTask, selectNextTask} = useTaskContext();
     const hasTasks = tasks.length > 0;
+    const identityTitle = selectedTask
+        ? selectedTask.title
+        : catalogError
+            ? 'Tasks unavailable.'
+            : hasTasks
+                ? 'No task selected.'
+                : 'Loading tasks…';
 
     return (
         <div className={`${styles.headerTaskListContainer} ${className ?? ''}`}>
@@ -24,7 +30,14 @@ export default function HeaderTaskListContainer({className}: HeaderTaskListConta
                 ariaLabel="Select previous task"
                 disabled={!hasTasks}
             />
-            <HeaderTaskListButton className={styles.taskSelectorButtonContainer}/>
+            <div className={styles.taskIdentity}>
+                {selectedTask && (
+                    <>
+                        <span className={styles.taskNumber}>TASK {String(selectedTask.ordinal).padStart(2, "0")}</span>
+                    </>
+                )}
+                <h1 className={styles.taskTitle} title={selectedTask ? identityTitle : undefined}>{identityTitle}</h1>
+            </div>
             <HeaderArrowButtons
                 className={styles.taskListArrowButton}
                 name='arrowRight'

@@ -37,12 +37,11 @@ async function replaceEditor(page, code) {
 }
 
 async function readResult(page, expectedTerminal) {
-  const result = page.getByRole("heading", {name: "Output"}).locator("..").locator("pre");
+  const result = page.getByRole("tabpanel").locator("pre");
   await result.waitFor({state: "visible", timeout: 10_000});
   await page.waitForFunction(
     ({source, flags}) => {
-      const heading = Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).find(node => node.textContent?.trim() === "Output");
-      const node = heading?.parentElement?.querySelector("pre");
+      const node = document.querySelector('[role="tabpanel"]:not([hidden]) pre');
       return Boolean(node && new RegExp(source, flags).test(node.textContent?.trim() ?? ""));
     },
     {source: expectedTerminal.source, flags: expectedTerminal.flags},

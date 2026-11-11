@@ -189,13 +189,9 @@ async function assertActiveDraft(page, expected, message) {
 }
 
 async function outputText(page, expected) {
-  const outputPanel = page.getByRole("heading", {name: "Output"}).locator("..");
-  const output = outputPanel.locator("pre");
+  const output = page.locator('[role="tabpanel"]:not([hidden]) pre');
   await output.waitFor({state: "visible"});
-  await page.waitForFunction(({expected, heading}) => {
-    const panel = Array.from(document.querySelectorAll("h2")).find(node => node.textContent?.trim() === heading)?.parentElement;
-    return panel?.querySelector("pre")?.textContent?.trim() === expected;
-  }, {expected, heading: "Output"});
+  await page.waitForFunction(expected => document.querySelector('[role="tabpanel"]:not([hidden]) pre')?.textContent?.trim() === expected, expected);
   return (await output.innerText()).trim();
 }
 
@@ -813,7 +809,6 @@ test("an external collision reread quarantines a previously selected custom work
     await page.getByRole("button", {name: "Back to task"}).click();
     assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "a stale custom workspace never rebinds after collision reread");
     assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "collision reread leaves execution unavailable without a selected valid task");
-    assert.equal(await page.getByRole("combobox").inputValue(), "", "collision reread clears the selected custom label rather than selecting a built-in by matching ID");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "collision reread clears stale custom output ownership while preserving the protected editor shell");
     assert.equal(resultBefore, "Все тесты пройдены: 1/1", "the connected history establishes a real result before its custom workspace is quarantined");
     assert.deepEqual(seen.consoleErrors, []);

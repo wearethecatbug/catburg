@@ -4,10 +4,10 @@
     background: linear-gradient(180deg, #428461 0%, #2b6948 50%, #1c5035 100%);
     color: #fffef7;
     cursor: pointer;
-    min-width: 152px;
+    min-width: 124px;
     min-height: 48px;
     padding: 10px 24px;
-    flex: 0 0 152px;
+    flex: 0 0 124px;
     display: inline-flex;
     align-items: center;
     justify-content: center;

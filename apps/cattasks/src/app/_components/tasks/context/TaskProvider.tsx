@@ -29,10 +29,7 @@ type TaskContextValue = {
     selectedId: string | null;
     selectedTask: CatalogTask | null;
     selectedWorkspace: TaskWorkspace | null;
-    headerInput: string;
-    setTaskFilter: (value: string) => void;
     selectTask: (id: string) => void;
-    clearSelection: () => void;
     selectPreviousTask: () => void;
     selectNextTask: () => void;
     activeContentTab: ContentTab;
@@ -58,7 +55,6 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
     const [workspaceState, setWorkspaceState] = useState<TaskWorkspaceState>(createTaskWorkspaceState);
     const workspaceStateRef = useRef(workspaceState);
     workspaceStateRef.current = workspaceState;
-    const [headerInput, setHeaderInput] = useState('');
     const [customTasks, setCustomTasks] = useState<readonly CustomTaskRecord[]>([]);
     const [customStorageError, setCustomStorageError] = useState<string | null>(null);
     const [customStorageReady, setCustomStorageReady] = useState(false);
@@ -118,7 +114,6 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         setRecoveryCustomTaskExport(recoveryRaw);
         if (selectedId && removedCustomIds.has(selectedId)) {
             commitState(clearTaskSelection(workspaceStateRef.current));
-            setHeaderInput('');
         }
         setCustomStorageError(message);
     }, [commitState]);
@@ -154,14 +149,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         const task = allTasks.find(candidate => candidate.id === id);
         if (!task) return;
         commitState(selectTaskState(workspaceStateRef.current, task.id, task.starterCode));
-        setHeaderInput(`${task.ordinal}. ${task.title}`);
     }, [allTasks, commitState]);
-
-    const clearSelection = useCallback(() => {
-        didInitializeSelection.current = true;
-        commitState(clearTaskSelection(workspaceStateRef.current));
-        setHeaderInput('');
-    }, [commitState]);
 
     useEffect(() => {
         if (didInitializeSelection.current || tasks.length === 0) return;
@@ -273,10 +261,7 @@ export function TaskProvider({children}: { children: React.ReactNode }) {
         selectedId: workspaceState.selectedId,
         selectedTask,
         selectedWorkspace,
-        headerInput,
-        setTaskFilter: setHeaderInput,
         selectTask,
-        clearSelection,
         selectPreviousTask,
         selectNextTask,
         activeContentTab: workspaceState.activeContentTab,

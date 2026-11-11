@@ -22,18 +22,9 @@
     color: #6d7d6f;
 }
 
-.success {
+.active {
     border-bottom-color: #356b48;
 }
-
-.fail {
-    border-bottom-color: #a65d50;
-}
-
-.fail:hover {
-    background: rgba(214, 225, 212, .44);
-}
-
-.success:hover {
+.active:hover {
     background: rgba(214, 225, 212, .44);
 }

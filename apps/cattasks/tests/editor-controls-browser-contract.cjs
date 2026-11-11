@@ -82,7 +82,7 @@ async function measuredControls(page) {
       heading: read(heading), language: read(language), output: read(output), test: read(test), run: read(run),
       solutionCard: rect(solutionCard), header: rect(header), headingGroup: rect(headingGroup), languageBox: rect(language), headingBox: rect(heading),
       buttonPadding: {test: getComputedStyle(test).padding, run: getComputedStyle(run).padding},
-      labels: {test: getComputedStyle(test, "::after").content, run: getComputedStyle(run, "::after").content},
+      runLabel: getComputedStyle(run, "::after").content,
       headingMarkers: [decoration(heading, "::before"), decoration(heading, "::after"), ...hiddenDecoration(heading)],
       triangles: [decoration(run, "::before"), decoration(run, "::after"), ...hiddenDecoration(run)],
     };
@@ -114,7 +114,7 @@ async function assertToolbarFits(page, width) {
       viewport: window.innerWidth,
       controls: controls.map(control => {
         const rect = control.getBoundingClientRect();
-        return {left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, hit: control.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2))};
+        return {left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height, hit: control.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2))};
       }),
       actionableOffscreen: actionable.some(control => {
         const rect = control.getBoundingClientRect();
@@ -134,6 +134,14 @@ async function assertToolbarFits(page, width) {
   for (const control of result.controls) {
     assert.ok(control.left >= 0 && control.right <= width, `editor control fits at ${width}px`);
     assert.equal(control.hit, true, `editor control remains hit-testable at ${width}px`);
+  }
+  if (width === 320) {
+    const [test, run] = result.controls;
+    assert.equal(test.width, run.width, "Test and Run keep equal outer widths at 320px");
+    assert.equal(test.height, run.height, "Test and Run keep equal outer heights at 320px");
+    assert.equal(test.top, run.top, "Test and Run stay in one compact row at 320px");
+    assert.ok(test.right <= run.left || run.right <= test.left, "Test and Run stay disjoint at 320px");
+    assert.ok(test.height >= 44, "compact controls retain a 44px minimum hit height");
   }
   if ([1250, 1220, 1151, 600, 601].includes(width)) {
     const contains = (outer, inner) => inner.left >= outer.left && inner.right <= outer.right && inner.top >= outer.top && inner.bottom <= outer.bottom;
@@ -191,13 +199,22 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     const runButton = page.getByRole("button", {name: "Run Code", exact: true});
     const solutionHeading = page.getByRole("heading", {name: "Your solution", exact: true});
     const outputHeading = page.getByRole("heading", {name: "Output", exact: true});
-    const outputMessage = page.locator("pre[aria-live='polite']");
+    const outputMessage = page.getByRole("tabpanel").locator("pre[aria-live='polite']");
 
     assert.equal(await testButton.isDisabled(), false, "valid inert catalog selection enables Test");
     assert.equal(await runButton.isDisabled(), false, "valid inert catalog selection enables Run");
     assert.equal(await solutionHeading.count(), 1, "solution accessible name excludes the code marker");
     assert.equal(await runButton.count(), 1, "Run accessible name excludes its decorative triangle");
     assert.equal(await outputMessage.textContent(), "Run code or tests to see output.", "Output keeps its initial live result message");
+    const flask = testButton.locator("svg[aria-hidden='true']");
+    assert.equal(await flask.count(), 1, "Test contains one decorative inline FlaskConical SVG");
+    assert.deepEqual(await flask.evaluate(node => ({
+      firstElement: node.parentElement?.firstElementChild === node,
+      paths: [...node.querySelectorAll("path")].map(path => path.getAttribute("d")),
+    })), {
+      firstElement: true,
+      paths: ["M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2", "M6.453 15h11.094", "M8.5 2h7"],
+    }, "Test renders the official decorative FlaskConical path set before its visible label");
 
     const desktop = await measuredControls(page);
     assert.deepEqual([desktop.heading.fontSize, desktop.heading.fontWeight, desktop.heading.color], ["26px", "650", "rgb(35, 75, 54)"], "solution heading matches approved desktop type and ink");
@@ -205,14 +222,15 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     assert.equal(desktop.headingMarkers.some(hasCodeMarker), true, "solution heading draws a decorative code marker through CSS or aria-hidden decoration");
     assert.ok(desktop.headingMarkers.filter(hasCodeMarker).every(marker => marker.text === undefined || marker.text.includes("</>")), "code marker is either CSS-generated or contained by aria-hidden decoration");
     assert.deepEqual([desktop.test.width >= 124, desktop.test.height >= 48], [true, true], "Test meets approved minimum geometry");
-    assert.equal(desktop.labels.test.includes("Test"), true, "Test keeps its visible generated label");
-    assert.equal(desktop.labels.run.includes("Run"), true, "Run keeps its visible generated label");
+    assert.equal((await testButton.innerText()).trim(), "Test", "Test keeps its visible text label after the decorative icon");
+    assert.equal(desktop.runLabel.includes("Run"), true, "Run keeps its visible generated label");
     assert.doesNotMatch(desktop.test.backgroundImage, /url\(/, "Test light fill does not load a decorative image");
     assert.ok(desktop.test.backgroundImage !== "none" || desktop.test.backgroundColor !== "rgba(0, 0, 0, 0)", "Test has a visible light fill");
     assert.match(desktop.test.border, /solid/, "Test keeps its visible border");
     assert.match(desktop.test.color, /rgb\(35, 75, 54\)/, "Test keeps the approved ink");
     assert.match(desktop.test.boxShadow, /rgba/, "Test keeps a visible soft shadow");
-    assert.deepEqual([desktop.run.width >= 152, desktop.run.height >= 48], [true, true], "Run meets approved minimum geometry");
+    assert.deepEqual([desktop.test.width, desktop.run.width], [124, 124], "Test and Run share the approved 124px desktop width");
+    assert.ok(desktop.run.height >= 48, "Run keeps its approved desktop minimum height");
     assert.equal(desktop.test.height, desktop.run.height, "Test and Run have equal outer height");
     assert.deepEqual(desktop.buttonPadding, {test: "10px 24px", run: "10px 24px"}, "Test and Run have equal approved padding");
     assert.match(desktop.run.backgroundImage, /rgb\(66, 132, 97\).*rgb\(43, 105, 72\).*rgb\(28, 80, 53\)/, "Run uses the approved three-stop green gradient");
@@ -221,15 +239,12 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     assert.deepEqual([desktop.output.fontSize, desktop.output.color], ["26px", "rgb(35, 75, 54)"], "Output title matches approved type and ink");
     assert.ok(desktop.languageBox.left > desktop.headingBox.right, "JavaScript stays inline after Your solution on desktop");
     assert.ok(desktop.languageBox.top >= desktop.header.top && desktop.languageBox.bottom <= desktop.header.bottom, "JavaScript remains inside the desktop editor header");
-    assert.ok(Math.abs(desktop.solutionCard.left - 609) <= 8 && Math.abs(desktop.solutionCard.right - 1484) <= 8 && Math.abs(desktop.solutionCard.top - 181) <= 8, "solution panel matches approved 1536px desktop anchors");
+    assert.ok(Math.abs(desktop.solutionCard.left - 609) <= 8 && Math.abs(desktop.solutionCard.right - 1484) <= 8 && Math.abs(desktop.solutionCard.top - 221) <= 8, "solution panel matches approved 1536px desktop anchors below the taller shelf");
 
     await assertVisibleFocusAndReducedMotion(testButton, "Test");
     await assertVisibleFocusAndReducedMotion(runButton, "Run");
 
-    for (const width of [1536, 1250, 1220, 1151, 780, 768, 601, 600, 390, 768, 780, 1151, 1220, 1250, 1536]) await assertToolbarFits(page, width);
-    await page.getByRole("button", {name: "Очистить выбор задачи", exact: true}).click();
-    assert.equal(await testButton.isDisabled(), true, "clearing selection retains Test disabled policy");
-    assert.equal(await runButton.isDisabled(), true, "clearing selection retains Run disabled policy");
+    for (const width of [1536, 1250, 1220, 1151, 780, 768, 601, 600, 390, 320, 768, 780, 1151, 1220, 1250, 1536]) await assertToolbarFits(page, width);
     assert.equal(await outputMessage.getAttribute("aria-live"), "polite", "Output retains its live result semantics after selection changes");
     assert.match(await outputMessage.evaluate(node => getComputedStyle(node).overflowY), /auto|scroll/, "Output retains vertical overflow handling");
     assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: [], catalogRequests: [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`]}, "inert presentation checks finish without browser diagnostics and make one catalogue request");

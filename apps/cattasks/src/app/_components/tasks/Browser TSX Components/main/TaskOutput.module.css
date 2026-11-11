@@ -1,0 +1,106 @@
+.outputPanel {
+    width: 100%;
+    max-width: none;
+    overflow: hidden;
+    border: 0;
+    border-top: 1px solid #cedacf;
+    border-radius: 0;
+    background: #fafbfb;
+    box-shadow: none;
+    color: #234b36;
+    flex: 0 0 auto;
+}
+
+.outputHeading {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 46px;
+    margin: 0;
+    padding: 7px 16px;
+    border-bottom: 1px solid #cedacf;
+    background: #ebefe9;
+    font-size: 26px;
+    font-weight: 650;
+    line-height: 1.2;
+}
+
+.tabList {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+}
+
+.tab {
+    min-height: 36px;
+    padding: 6px 12px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.tab[aria-selected='true'] {
+    border-bottom-color: currentColor;
+}
+
+.tab:focus-visible {
+    outline: 3px solid #356b48;
+    outline-offset: 2px;
+}
+
+.panel {
+    min-height: 0;
+}
+
+.panel[hidden] {
+    display: none;
+}
+
+.status {
+    margin: 10px 16px 0;
+    color: #234b36;
+    font-weight: 650;
+}
+
+.count {
+    margin: 10px 16px 0;
+    color: #234b36;
+    font-weight: 650;
+}
+
+.message {
+    min-height: 54px;
+    max-height: 142px;
+    margin: 0;
+    overflow: auto;
+    padding: 12px 16px;
+    color: #234b36;
+    font: 14px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+@media (min-width: 601px) {
+    .outputPanel {
+        display: flex;
+        flex: 0 0 clamp(180px, 20.7dvh, 220px);
+        flex-direction: column;
+    }
+
+    .panel {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .message {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+    }
+}

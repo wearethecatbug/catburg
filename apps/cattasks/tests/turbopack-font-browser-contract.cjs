@@ -8,7 +8,6 @@ const appRoot = path.resolve(__dirname, "..");
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
 const layoutPath = path.join(appRoot, "src", "app", "layout.tsx");
 const globalsPath = path.join(appRoot, "src", "app", "globals.css");
-const headerStylesPath = path.join(appRoot, "src", "app", "_components", "tasks", "Browser TSX Components", "header", "HeaderTaskListButton.module.css");
 
 // This catalogue is valid and nonempty, but this contract never activates Test or Run.
 const catalog = {version: 1, tasks: [{
@@ -28,16 +27,9 @@ function sourceFiles(directory) {
   });
 }
 
-function classBlock(source, className) {
-  const match = new RegExp(`\\.${className}\\s*\\{([\\s\\S]*?)\\}`).exec(source);
-  assert.ok(match, `header stylesheet retains .${className}`);
-  return match[1];
-}
-
-test("font startup source contract removes dead Next loaders and preserves Orbitron CSS consumers", {concurrency: false}, () => {
+test("font startup source contract removes dead Next loaders and preserves live fallback", {concurrency: false}, () => {
   const layout = fs.readFileSync(layoutPath, "utf8");
   const globals = fs.readFileSync(globalsPath, "utf8");
-  const headerStyles = fs.readFileSync(headerStylesPath, "utf8");
   const appSources = sourceFiles(path.join(appRoot, "src", "app"))
     .filter(file => /\.(?:css|tsx?|jsx?)$/.test(file))
     .map(file => ({file, source: fs.readFileSync(file, "utf8")}));
@@ -50,12 +42,10 @@ test("font startup source contract removes dead Next loaders and preserves Orbit
   }
 
   assert.match(globals, /@import\s+url\(['"]https:\/\/fonts\.googleapis\.com\/css2\?family=Orbitron:wght@400;700&display=swap['"]\)\s*;/, "globals retains the approved Orbitron 400/700 CSS import");
-  for (const className of ["dropdownInput", "dropdownListItem", "taskListEmptyState"]) {
-    assert.match(classBlock(headerStyles, className), /font-family:\s*["']?Orbitron["']?\s*,\s*sans-serif\s*;/, `.${className} retains its literal Orbitron family`);
-  }
+  assert.match(globals, /body\s*\{[\s\S]*?font-family:\s*sans-serif\s*;/, "body retains the live sans-serif fallback");
 });
 
-test("ordinary Turbopack page retains Orbitron through header query, list, and Monaco without task execution", {timeout: 45_000, concurrency: false}, async () => {
+test("ordinary Turbopack page retains fallback and Monaco without task execution", {timeout: 45_000, concurrency: false}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1280, height: 900}});
   const page = await context.newPage();
@@ -70,20 +60,14 @@ test("ordinary Turbopack page retains Orbitron through header query, list, and M
 
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
     assert.equal(response?.status(), 200, "the ordinary configured URL responds with HTTP 200");
-    const query = page.getByRole("combobox");
     const editor = page.getByLabel("User JavaScript code");
-    await query.waitFor({state: "visible"});
     await editor.waitFor({state: "visible"});
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
 
-    await query.fill("Font fixture");
-    const option = page.getByRole("option", {name: /Font fixture/});
-    await option.waitFor({state: "visible"});
-    for (const [label, locator] of [["query", query], ["list option", option]]) {
-      const family = await locator.evaluate(node => getComputedStyle(node).fontFamily);
-      assert.match(family, /Orbitron/i, `${label} computed font family retains Orbitron`);
-    }
-    assert.equal(await page.locator("pre[aria-live='polite']").textContent(), "Run code or tests to see output.", "the contract reaches the editor without executing task code");
+    assert.match(await page.locator("body").evaluate(node => getComputedStyle(node).fontFamily), /sans-serif/i, "rendered body retains its global fallback");
+    const outputMessage = page.getByRole("tabpanel").locator("pre[aria-live='polite']");
+    await outputMessage.waitFor({state: "visible"});
+    assert.equal(await outputMessage.textContent(), "Run code or tests to see output.", "the contract reaches the editor without executing task code");
     assert.deepEqual(diagnostics, {console: [], page: [], request: [], response: []}, "startup and inert navigation emit no browser diagnostics");
   } finally {
     await context.close();
