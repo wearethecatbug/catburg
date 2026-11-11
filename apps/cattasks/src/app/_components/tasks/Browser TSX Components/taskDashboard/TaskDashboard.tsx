@@ -39,7 +39,23 @@ export default function TaskDashboard() {
                         allTasksButtonRef={allTasksButtonRef}
                     />
                 )}
-                <div className={styles.shelf} aria-hidden="true"/>
+                <div className={`${styles.shelf} ${isAllTasksOpen ? '' : styles.taskShelf}`} aria-hidden="true">
+                    {!isAllTasksOpen && (
+                        <div className={styles.shelfDecoration}>
+                            <span className={`${styles.shelfBracket} ${styles.shelfBracketLeft}`}/>
+                            <span className={`${styles.shelfBracket} ${styles.shelfBracketRight}`}/>
+                            <img className={styles.shelfBooks} src="/cattasks/shelf/books_standing.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfMug} src="/cattasks/shelf/mug_paw.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantBooks} src="/cattasks/shelf/plant-books.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantPreviousLeft} src="/cattasks/shelf/plant-prev-left.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantPreviousRight} src="/cattasks/shelf/plant-prev-right.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantNextLeft} src="/cattasks/shelf/plant-next-left.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfPlantCup} src="/cattasks/shelf/plant-cup.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
+                        </div>
+                    )}
+                </div>
                 {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
                 <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
                 {isAllTasksOpen && <AllTasks className={styles.mainContainer} onBack={returnToTask}/>}

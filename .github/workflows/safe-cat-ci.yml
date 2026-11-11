@@ -30,10 +30,8 @@ jobs:
         run: |
           set -euo pipefail
           diagnostics_directory="$RUNNER_TEMP/safe-cat-diagnostics"
-          playwright_browsers_directory="$RUNNER_TEMP/safe-cat-playwright-browsers"
           mkdir -p "$diagnostics_directory"
           printf 'SAFE_CAT_DIAGNOSTICS=%s\n' "$diagnostics_directory" >> "$GITHUB_ENV"
-          printf 'PLAYWRIGHT_BROWSERS_PATH=%s\n' "$playwright_browsers_directory" >> "$GITHUB_ENV"
           printf 'Safe Cat CI diagnostics for %s\n' "$GITHUB_SHA" > "$diagnostics_directory/metadata.txt"
 
       - name: Select pinned pnpm
@@ -74,7 +72,8 @@ jobs:
           set -euo pipefail
           playwright_directory="$RUNNER_TEMP/safe-cat-playwright"
           npm install --prefix "$playwright_directory" playwright@1.62.1 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/playwright-install.log"
-          node "$playwright_directory/node_modules/playwright/cli.js" install --with-deps chrome 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/chrome-install.log"
+          # Browser checks launch Playwright's system Chrome channel provided by the hosted runner.
+          google-chrome --version 2>&1 | tee "$SAFE_CAT_DIAGNOSTICS/chrome-version.log"
 
       - name: Run production browser regression
         working-directory: apps/safe_app

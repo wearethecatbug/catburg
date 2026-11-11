@@ -1,6 +1,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const {selectTaskFromCatalogue} = require("./helpers/catalogue-selection.cjs");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43814";
 const catalog = {
@@ -28,23 +29,10 @@ async function assertVisibleDraft(page, expected, message) {
   assert.equal(actual, expected.replace(/\s/g, ""), message);
 }
 
-async function selectTask(page, title) {
-  const selector = page.getByRole("combobox");
-  await selector.fill(title);
-  const option = page.getByRole("option", {name: new RegExp(title)});
-  await option.waitFor({state: "visible"});
-  await option.click();
-  await page.waitForFunction(expected => document.querySelector("input[role='combobox']")?.value.includes(expected), title);
-}
-
 async function outputText(page, expected) {
-  const outputPanel = page.getByRole("heading", {name: "Output"}).locator("..");
-  const output = outputPanel.locator("pre");
+  const output = page.locator('[role="tabpanel"]:not([hidden]) pre');
   await output.waitFor({state: "visible"});
-  await page.waitForFunction(({expected, heading}) => {
-    const panel = Array.from(document.querySelectorAll("h2")).find(node => node.textContent?.trim() === heading)?.parentElement;
-    return panel?.querySelector("pre")?.textContent?.trim() === expected;
-  }, {expected, heading: "Output"});
+  await page.waitForFunction(expected => document.querySelector('[role="tabpanel"]:not([hidden]) pre')?.textContent?.trim() === expected, expected);
   return (await output.textContent()).trim();
 }
 
@@ -83,7 +71,7 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     const hintButton = page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/);
     await editor.waitFor({state: "visible"});
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Race"));
+    await page.getByRole("heading", {name: /Race/}).waitFor({state: "visible"});
 
     await hintButton.click();
     assert.equal(await page.getByText("No hint available for this task.", {exact: true}).count(), 1, "legacy records without plural hints render the exact no-hint fallback");
@@ -105,7 +93,7 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     assert.equal(await outputText(page, "Тест 1: проверка не пройдена\nПройдено: 0/1"), "Тест 1: проверка не пройдена\nПройдено: 0/1");
     assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo() { return 'wrong'; }"), true, "the failed Test reports the draft currently visible in Monaco");
 
-    await selectTask(page, "Digitize");
+    await selectTaskFromCatalogue(page, "Digitize");
     const descriptionButton = page.getByLabel(/Task: Показано описание|Task: Показать описание/);
     assert.match(await descriptionButton.getAttribute("aria-label"), /Показано описание/, "switch uses the Provider's selected-task tab reset");
     const descriptionContent = page.locator("pre[aria-label='Описание задачи']");
@@ -114,12 +102,12 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     await page.waitForFunction(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), catalog.tasks[1].starterCode);
     await assertVisibleDraft(page, catalog.tasks[1].starterCode, "the switched task renders its own starter draft");
 
-    await selectTask(page, "Race");
+    await selectTaskFromCatalogue(page, "Race");
     await setActiveDraft(page, "function echo() { return 'wrong'; }", "function echo(value) { return value; }");
     await page.evaluate(() => { window.__taskMessageProbe.holdTerminal = true; });
     await testButton.click();
     await page.waitForFunction(() => Boolean(window.__taskMessageProbe.heldTerminal), undefined, {timeout: 10_000});
-    await selectTask(page, "Digitize");
+    await selectTaskFromCatalogue(page, "Digitize");
     await setActiveDraft(page, catalog.tasks[1].starterCode, "function echo(value) { return `${value}!`; }");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "switching clears the stale task's visible output without changing the new draft");
     await assertVisibleDraft(page, "function echo(value) { return `${value}!`; }", "the switched task keeps its independently edited visible draft");
@@ -137,7 +125,7 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
 
     await testButton.click();
     assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "the switched and edited task still completes through a fresh real Test");
-    await selectTask(page, "Race");
+    await selectTaskFromCatalogue(page, "Race");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "revisiting the original task proves the held response did not silently populate its workspace");
 
     assert.deepEqual(consoleErrors, []);
@@ -197,9 +185,9 @@ test("All tasks groups the already filtered collection by difficulty without cha
     await search.fill("Hard third");
     assert.deepEqual(await headings.allTextContents(), ["Hard"], "search runs before difficulty grouping and empty headings disappear");
     await page.locator("section[aria-labelledby='difficulty-Hard']").getByRole("button", {name: /Open/}).click();
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Hard third"));
+    await page.getByRole("heading", {name: /Hard third/}).waitFor({state: "visible"});
     await page.getByRole("button", {name: "Select previous task"}).click();
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Easy second"), undefined, {timeout: 5_000});
+    await page.getByRole("heading", {name: /Easy second/}).waitFor({state: "visible", timeout: 5_000});
     assert.deepEqual(diagnostics.consoleErrors, []);
     assert.deepEqual(diagnostics.pageErrors, []);
     assert.deepEqual(diagnostics.failedRequests, []);

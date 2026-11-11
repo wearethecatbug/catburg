@@ -6,6 +6,7 @@ import {useTaskContext} from '../../context/TaskProvider';
 import styles from './MainCodeEditor.module.css';
 import MainBtnRunCode from "@/app/_components/tasks/Browser TSX Components/main/MainBtnRunCode";
 import MainBtnTest from "@/app/_components/tasks/Browser TSX Components/main/MainBtnTest";
+import TaskOutput from "@/app/_components/tasks/Browser TSX Components/main/TaskOutput";
 import {runIsolatedTask, type IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 import {useCallback, useEffect, useRef} from "react";
 
@@ -90,7 +91,6 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     }, []);
 
     const value = selectedWorkspace?.draft ?? "";
-    const outputMessage = selectedWorkspace?.result?.result.message ?? 'Run code or tests to see output.';
     // Monaco decodes URI paths once, so task IDs are double-encoded for safe model paths.
     const modelPath = selectedTask
         ? `solution-${encodeURIComponent(encodeURIComponent(selectedTask.id))}.js`
@@ -137,10 +137,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                     />
                 </div>
 
-                <section className={styles.outputPanel} aria-labelledby="taskOutputHeading">
-                    <h2 id="taskOutputHeading" className={styles.outputHeading}>Output</h2>
-                    <pre className={styles.outputMessage} aria-live="polite">{outputMessage}</pre>
-                </section>
+                <TaskOutput taskId={selectedTask?.id} record={selectedWorkspace?.result}/>
             </section>
         </div>
     );

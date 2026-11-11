@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const {selectTaskFromCatalogue} = require("./helpers/catalogue-selection.cjs");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43814";
 
@@ -56,14 +57,6 @@ async function setActiveDraft(page, starterCode, value) {
   }, value);
 }
 
-async function selectTask(page, title) {
-  const selector = page.getByRole("combobox");
-  await selector.fill(title);
-  const option = page.getByRole("option", {name: new RegExp(title)});
-  await option.waitFor({state: "visible"});
-  await option.click();
-}
-
 async function waitForReferenceSolutionsLayout(page, expectedCodes, finalLineMarker) {
   await page.waitForFunction(({expectedCodes, finalLineMarker}) => {
     const editors = Array.from(document.querySelectorAll("[class*='editorHost'] .monaco-editor"));
@@ -75,7 +68,7 @@ async function waitForReferenceSolutionsLayout(page, expectedCodes, finalLineMar
       });
       const bounds = editor.getBoundingClientRect();
       const model = monacoEditor?.getModel();
-      if (model?.getValue() !== expectedCodes[index] || bounds.width <= 0 || bounds.height <= 100) return false;
+      if (model?.getValue() !== expectedCodes[index] || bounds.width <= 0 || bounds.height <= 0) return false;
       if (!expectedCodes[index].endsWith(finalLineMarker)) return true;
       monacoEditor.revealLineInCenter(model.getLineCount());
       return Array.from(editor.querySelectorAll(".view-line")).some(line => line.textContent?.includes(finalLineMarker));
@@ -112,8 +105,16 @@ async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLa
       const analysisBounds = analysis?.getBoundingClientRect();
       const scrollerBounds = scroller.getBoundingClientRect();
       const editorBounds = editor?.getBoundingClientRect();
+      const cardBounds = card.getBoundingClientRect();
+      const contentHeight = monacoEditor?.getContentHeight() ?? 0;
+      const editorLayoutHeight = monacoEditor?.getLayoutInfo().height ?? 0;
       return {
         editorHeight: editorBounds?.height ?? 0,
+        cardHeight: cardBounds.height,
+        contentHeight,
+        editorLayoutHeight,
+        editorScrolls: Boolean(monacoEditor && monacoEditor.getScrollHeight() > editorLayoutHeight),
+        analysisGap: analysisBounds && editorBounds ? analysisBounds.top - editorBounds.bottom : null,
         readonly: textarea?.readOnly ?? false,
         codeMatches: monacoEditor?.getModel()?.getValue() === expectedCodes[index],
         renderedLinesNonblank: Boolean(editor?.querySelector(".view-lines")?.textContent?.trim()),
@@ -124,11 +125,15 @@ async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLa
         codeImmediatelyBeforeAnalysis,
         parentScrolled: scroller.scrollTop > 0,
         analysisVisibleWithinParent: Boolean(analysisBounds && analysisBounds.top >= scrollerBounds.top - verticalRoundingTolerance && analysisBounds.bottom <= scrollerBounds.bottom + verticalRoundingTolerance),
+        analysisVisibleInViewport: Boolean(analysisBounds && analysisBounds.top >= -verticalRoundingTolerance && analysisBounds.bottom <= window.innerHeight + verticalRoundingTolerance),
       };
     });
     return {
       ready: true,
       scrollable: scroller.scrollHeight > scroller.clientHeight,
+      parentClientHeight: scroller.clientHeight,
+      parentScrollHeight: scroller.scrollHeight,
+      viewport: {width: window.innerWidth, height: window.innerHeight},
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       cards: cardsEvidence,
     };
@@ -139,7 +144,10 @@ async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLa
   }, learnerDraft);
 
   assert.equal(evidence.ready, true, "two rendered reference-solution cards must be present before geometry assertions");
-  assert.equal(evidence.scrollable, true, "the reference viewer's actual parent must own vertical scrolling for multiple solutions");
+  const fixedWorkbenchViewport = evidence.viewport.width >= 768;
+  if (fixedWorkbenchViewport) {
+    assert.equal(evidence.scrollable, true, `the fixed desktop reference viewer's parent scrolls when multiple solution cards overflow: ${JSON.stringify(evidence)}`);
+  }
   assert.equal(evidence.noHorizontalOverflow, true, "the reference viewer must not create horizontal page overflow");
   assert.deepEqual(evidence.cards.map(card => card.codeMatches), [true, true], "the ordered mounted Monaco editors retain their exact code payloads");
   assert.deepEqual(evidence.cards.map(card => card.renderedLinesNonblank), [true, true], "each mounted Monaco editor renders nonblank code lines");
@@ -148,15 +156,22 @@ async function assertReferenceSolutionsReachable(page, expectedCodes, expectedLa
   assert.deepEqual(evidence.cards.map(card => card.labelPrecedesCode), [true, true], "each reference solution label precedes its own editor");
   assert.deepEqual(evidence.cards.map(card => card.finalSourceLineVisible), [true, true], "the final long-reference source line is visible in its actual Monaco editor");
   assert.deepEqual(evidence.cards.map(card => card.readonly), [true, true], "both rendered reference editors retain native read-only semantics");
-  assert.deepEqual(evidence.cards.map(card => card.editorHeight > 100), [true, true], "each rendered Monaco reference editor has meaningful visible height");
+  assert.ok(evidence.cards[0].editorHeight > 100, "the long reference editor has meaningful visible height");
+  assert.equal(evidence.cards[0].editorScrolls, true, "long reference code is capped and scrolls inside its own Monaco viewport");
+  assert.ok(evidence.cards[1].editorHeight <= Math.max(130, evidence.cards[1].contentHeight + 72), "short reference code does not retain a large blank editor viewport");
+  assert.ok(evidence.cards.every(card => card.analysisGap !== null && card.analysisGap >= 0 && card.analysisGap <= 24), "each complexity block follows its code editor directly");
   assert.deepEqual(evidence.cards.map(card => card.codeImmediatelyBeforeAnalysis), [true, true], "each reference code block is immediately followed by its own analysis");
   assert.deepEqual(evidence.cards.map(card => card.analysisVisibleWithinParent), [true, true], "each reference analysis is reachable inside the viewer's actual scroll parent");
-  assert.equal(evidence.cards[1].parentScrolled, true, "the second reference analysis cannot remain clipped outside an inert editor host");
+  assert.deepEqual(evidence.cards.map(card => card.analysisVisibleInViewport), [true, true], "each reference analysis is brought into the user's viewport by its natural scroll owner");
+  if (fixedWorkbenchViewport) {
+    assert.equal(evidence.cards[1].parentScrolled, true, "the second desktop reference analysis cannot remain clipped outside an inert editor host");
+  }
   assert.ok(learnerScrollBefore > 0, "the learner editor must have a meaningful nonzero scroll position before reference scrolling");
   assert.equal(learnerScrollAfter, learnerScrollBefore, "reference scrolling does not change the learner editor scroll position");
+  return evidence;
 }
 
-test("CatTasks keeps drafts per catalog identity and disables execution after clearing selection", {timeout: 30_000}, async () => {
+test("CatTasks keeps drafts per catalog identity through catalogue and arrow navigation", {timeout: 30_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -175,20 +190,18 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
   try {
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
     assert.equal(response.status(), 200);
-    const selector = page.getByRole("combobox");
-    await selector.waitFor({state: "visible"});
     await page.getByLabel("User JavaScript code").waitFor({state: "visible"});
     await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Unsafe ID task"));
+    await page.getByRole("heading", {name: /Unsafe ID task/}).waitFor({state: "visible"});
 
     const firstDraft = "// draft: first\nfunction echo(value) { return value; }";
     const secondDraft = "// draft: second\nfunction echo(value) { return value + '!'; }";
     await setActiveDraft(page, catalog.tasks[0].starterCode, firstDraft);
     const draftInput = page.getByLabel("User JavaScript code");
     assert.equal(await draftInput.evaluate(element => element.readOnly), false, "the user draft editor remains editable");
-    await selectTask(page, "Other task");
+    await selectTaskFromCatalogue(page, "Other task");
     await setActiveDraft(page, catalog.tasks[1].starterCode, secondDraft);
-    await selectTask(page, "Unsafe ID task");
+    await selectTaskFromCatalogue(page, "Unsafe ID task");
     await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), firstDraft, {timeout: 10_000});
     assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), firstDraft.replace(/\s/g, ""), "A→B→A restores the draft owned by the URI-unsafe stable ID");
 
@@ -203,15 +216,10 @@ test("CatTasks keeps drafts per catalog identity and disables execution after cl
     await page.getByRole("button", {name: "Task: Показать описание"}).click();
 
     await page.getByRole("button", {name: "Select next task"}).click();
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Other task"));
+    await page.getByRole("heading", {name: /Other task/}).waitFor({state: "visible"});
     await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), secondDraft);
     assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), secondDraft.replace(/\s/g, ""), "arrow navigation uses the same selection state and preserves B draft");
 
-    await page.getByRole("button", {name: "Очистить выбор задачи", exact: true}).click();
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value === "");
-    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "Test is unavailable with no selected task");
-    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "Run is unavailable with no selected task");
-    assert.equal(await selector.evaluate(element => element === document.activeElement), true, "clear returns focus to the task selector");
     assert.deepEqual(catalogRequests, [new URL("/task-catalog.v1.json", baseUrl).href], "the dashboard issues one catalog request in this isolated scenario");
     assert.deepEqual(consoleErrors, []);
     assert.deepEqual(pageErrors, []);
@@ -240,85 +248,17 @@ test("CatTasks shows a retryable catalog failure without claiming that it is sti
   try {
     const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
     assert.equal(response.status(), 200);
-    const selector = page.getByRole("combobox");
-    await selector.waitFor({state: "visible"});
-    const catalogError = page.getByRole("alert").filter({hasText: "Не удалось загрузить каталог задач."});
+    await page.getByRole("button", {name: "All tasks"}).click();
+    const catalogError = page.getByRole("alert").filter({hasText: "Tasks could not be loaded."});
     await catalogError.waitFor({state: "visible"});
-    await selector.press("ArrowDown");
-    const listbox = page.getByRole("listbox");
-    await listbox.waitFor({state: "visible"});
-    assert.equal(await listbox.textContent(), "Каталог недоступен.", "the empty open list describes the failed catalog request rather than an active load");
 
-    await page.getByRole("button", {name: "Повторить"}).click();
+    await page.getByRole("button", {name: "Try again"}).click();
     await catalogError.waitFor({state: "hidden"});
-    await selector.press("ArrowDown");
-    await page.getByRole("option").first().waitFor({state: "visible"});
+    await page.getByRole("searchbox", {name: "Search tasks"}).waitFor({state: "visible"});
+    await page.getByRole("heading", {name: "Unsafe ID task", exact: true}).waitFor({state: "visible"});
     assert.equal(await catalogError.count(), 0, "a successful retry clears the catalog failure alert");
     assert.equal(catalogAttempts, 2, "retry makes one additional catalog request");
   } finally {
-    await context.close();
-    await browser.close();
-  }
-});
-
-test("CatTasks retains an explicit clear made while the catalog request is pending", {timeout: 30_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext();
-  const page = await context.newPage();
-  const consoleErrors = [];
-  const pageErrors = [];
-  const requestFailures = [];
-  const catalogRequests = [];
-  let releaseCatalog;
-  const catalogRelease = new Promise(resolve => { releaseCatalog = resolve; });
-  const catalogUrl = new URL("/task-catalog.v1.json", baseUrl).href;
-  page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
-  page.on("pageerror", error => pageErrors.push(error.message));
-  page.on("requestfailed", request => requestFailures.push({url: request.url(), method: request.method(), error: request.failure()?.errorText ?? null}));
-  await context.route("**/task-catalog.v1.json", async route => {
-    catalogRequests.push(route.request().url());
-    await catalogRelease;
-    await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
-  });
-
-  try {
-    const catalogRequest = page.waitForRequest(request => request.url() === catalogUrl, {timeout: 5_000});
-    const response = await page.goto(baseUrl, {waitUntil: "commit", timeout: 5_000});
-    assert.equal(response.status(), 200);
-    const selector = page.getByRole("combobox");
-    const clear = page.getByLabel("Очистить выбор задачи", {exact: true});
-    await selector.waitFor({state: "visible", timeout: 5_000});
-    await clear.waitFor({state: "visible", timeout: 5_000});
-    await catalogRequest;
-
-    await clear.click({timeout: 5_000});
-    releaseCatalog();
-
-    const nextTask = page.getByRole("button", {name: "Select next task"});
-    await nextTask.waitFor({state: "visible", timeout: 5_000});
-    await page.waitForFunction(() => !document.querySelector("button[aria-label='Select next task']")?.hasAttribute("disabled"), undefined, {timeout: 5_000});
-    await selector.press("ArrowDown", {timeout: 5_000});
-    await page.getByRole("option").first().waitFor({state: "visible", timeout: 5_000});
-    assert.equal(await page.getByRole("option").count(), 2, "the fulfilled catalog exposes both known tasks");
-    assert.equal(await page.getByRole("option").first().getAttribute("aria-selected"), "false", "an unselected task option exposes its selection state to assistive technology");
-    await page.keyboard.press("Escape");
-
-    assert.equal(await selector.inputValue(), "", "the fulfilled catalog does not overwrite a pending explicit clear");
-    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "Test remains unavailable until the user selects a task");
-    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "Run remains unavailable until the user selects a task");
-    assert.equal(await selector.evaluate(element => element === document.activeElement), true, "catalog rendering retains selector focus after clear");
-    assert.deepEqual(catalogRequests, [catalogUrl], "the delayed-catalog scenario makes one request");
-
-    await selectTask(page, "Unsafe ID task");
-    await page.waitForFunction(() => document.querySelector("input[role='combobox']")?.value.includes("Unsafe ID task"), undefined, {timeout: 5_000});
-    assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), false, "a manual valid selection restores Test");
-    assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), false, "a manual valid selection restores Run");
-    assert.deepEqual(consoleErrors, []);
-    assert.deepEqual(pageErrors, []);
-    assert.deepEqual(requestFailures, []);
-  } finally {
-    releaseCatalog();
-    writeBrowserDiagnostics("pending-clear", {catalogRequests, consoleErrors, pageErrors, requestFailures});
     await context.close();
     await browser.close();
   }
@@ -332,6 +272,7 @@ test("Hint uses independent native disclosures and tab changes preserve the sele
   const finalLineMarker = "LONG_REFERENCE_FINAL_MARKER";
   const longReferenceCode = [
     "function echo(value) {",
+    `  // WRAPPED_REFERENCE_${"long-reference-content ".repeat(18)}`,
     ...Array.from({length: 70}, (_, index) => `  // reference line ${index + 1}`),
     "  return value;",
     "}",
@@ -375,10 +316,11 @@ test("Hint uses independent native disclosures and tab changes preserve the sele
     const referenceCodes = hintCatalog.tasks[0].solutions.map(solution => solution.code);
     const referenceLabels = hintCatalog.tasks[0].solutions.map(solution => solution.label);
     await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
-    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    const desktopReference = await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
     await page.setViewportSize({width: 390, height: 844});
     await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
-    await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    const compactReference = await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
+    assert.ok(compactReference.cards[0].contentHeight > desktopReference.cards[0].contentHeight, "wrapped reference code recomputes its real rendered height after compact reflow");
     await page.setViewportSize({width: 1536, height: 1024});
     await waitForReferenceSolutionsLayout(page, referenceCodes, finalLineMarker);
     await assertReferenceSolutionsReachable(page, referenceCodes, referenceLabels, finalLineMarker, longLearnerDraft);
@@ -410,13 +352,13 @@ test("Hint uses independent native disclosures and tab changes preserve the sele
     await page.getByLabel(/Task: Показано описание|Task: Показать описание/).click();
     await hintButton.click();
     assert.equal(await first.getAttribute("open"), null, "remounting Hint resets disclosure state without a React/storage open-state owner");
-    await selectTask(page, "Second hint task");
-    await selectTask(page, "First hint task");
+    await selectTaskFromCatalogue(page, "Second hint task");
+    await selectTaskFromCatalogue(page, "First hint task");
     await hintButton.click();
     assert.equal(await first.getAttribute("open"), null, "A→B→A cannot leak an old disclosure state");
     await page.waitForFunction(expected => document.querySelector(".monaco-editor .view-lines")?.textContent?.replace(/\s/g, "") === expected.replace(/\s/g, ""), editedDraft);
     assert.equal((await visibleEditorText(page)).replace(/\s/g, ""), editedDraft.replace(/\s/g, ""), "Hint interactions and task switches retain the independently owned Monaco draft");
-    assert.equal(await page.getByRole("heading", {name: "Output"}).locator("..").locator("pre").innerText(), "Run code or tests to see output.", "Hint ownership never writes result output");
+    assert.equal(await page.getByRole("tabpanel").locator("pre").innerText(), "Run code or tests to see output.", "Hint ownership never writes result output");
     assert.deepEqual(catalogRequests, ["GET"]);
   } finally {
     await context.close();

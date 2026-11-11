@@ -25,7 +25,7 @@
     background: transparent;
     color: #234b36;
     font: inherit;
-    font-size: 26px;
+    font-size: 18px;
     font-weight: 600;
     line-height: 1.1;
     cursor: pointer;
@@ -33,21 +33,21 @@
 }
 
 .allTasksButton::before {
-    width: 28px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     flex: 0 0 auto;
     content: '';
-    background: linear-gradient(currentColor, currentColor) center / 28px 3px no-repeat;
+    background: linear-gradient(currentColor, currentColor) center / 18px 2px no-repeat;
 }
 
 .allTasksButton::after {
     position: absolute;
     top: 50%;
     left: 0;
-    width: 13px;
-    height: 13px;
-    border-bottom: 3px solid currentColor;
-    border-left: 3px solid currentColor;
+    width: 9px;
+    height: 9px;
+    border-bottom: 2px solid currentColor;
+    border-left: 2px solid currentColor;
     content: '';
     transform: translateY(-50%) rotate(45deg);
 }
@@ -120,16 +120,16 @@
 
 @media (max-width: 600px) {
     .headerContainer {
-        min-height: 150px;
+        min-height: 132px;
         padding-inline: 16px;
     }
 
     .allTasksButton {
-        min-height: 36px;
+        min-height: 44px;
         gap: 10px;
     }
 
     .headerTaskContainer {
-        min-height: 90px;
+        min-height: 64px;
     }
 }

@@ -120,6 +120,17 @@
     box-shadow: inset 0 1px 0 rgba(255, 253, 242, .85), inset 0 -1px 0 rgba(159, 119, 78, .18), 0 5px 8px -3px rgba(76, 100, 57, .25), 0 13px 18px -8px rgba(76, 100, 57, .17);
 }
 
+.shelfDecoration,
+.shelfDecoration img,
+.shelfBracket {
+    pointer-events: none;
+    user-select: none;
+}
+
+.shelfDecoration {
+    display: none;
+}
+
 @media (max-width: 600px) {
     .taskDashboardRoot {
         height: auto;
@@ -135,6 +146,134 @@
 
     .shelf { width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px); }
     .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
+}
+
+@media (min-width: 1221px) {
+    .taskShelf {
+        height: 22px;
+        margin-bottom: 32px;
+        border: 1px solid #d59a5a;
+        border-radius: 5px 5px 9px 9px;
+        background: linear-gradient(to bottom, #ffe1a8 0%, #f9c77f 25%, #e8a95e 65%, #c88748 100%);
+        box-shadow: inset 0 2px 0 #fff0c9, inset 0 -2px 0 #b8753e, 0 5px 8px rgba(105, 65, 30, .18);
+    }
+
+    .taskShelf::before {
+        position: absolute;
+        inset: 2px 1% auto;
+        height: 4px;
+        border-radius: 100%;
+        background: rgba(255, 255, 255, .45);
+        content: '';
+    }
+
+    .taskShelf::after {
+        position: absolute;
+        inset: auto 2% -5px;
+        height: 6px;
+        border-radius: 0 0 8px 8px;
+        background: #b97a42;
+        content: '';
+    }
+
+    .shelfDecoration {
+        display: block;
+        /* Match the desktop header's plaque centers so the adjacent foliage stays anchored as the viewport grows. */
+        --previous-anchor: calc(50% - 312px);
+        --next-anchor: calc(50% + 292px);
+        --book-inset: clamp(45px, calc(25vw - 275px), 7%);
+        --mug-inset: max(28px, calc(7% - 24px));
+    }
+
+    .shelfDecoration img,
+    .shelfBracket {
+        position: absolute;
+        z-index: 1;
+        display: block;
+    }
+
+    .shelfDecoration img {
+        height: auto;
+        z-index: 2;
+        filter: drop-shadow(0 2px 1px rgba(78, 67, 32, .16));
+    }
+
+    .shelfDecoration .shelfBooks,
+    .shelfDecoration .shelfMug {
+        z-index: 3;
+    }
+
+    .shelfBracket {
+        top: calc(100% + 2px);
+        width: 93px;
+        height: 48px;
+        background: url('/cattasks/shelf/brackets.png') no-repeat;
+        background-size: 300% auto;
+    }
+
+    .shelfBracketLeft {
+        left: 14px;
+        background-position: left -27px;
+    }
+
+    .shelfBracketRight {
+        right: 14px;
+        background-position: right -27px;
+    }
+
+    .shelfBooks {
+        bottom: 19px;
+        left: var(--book-inset);
+        width: clamp(66px, 6vw, 86px);
+    }
+
+    .shelfMug {
+        right: var(--mug-inset);
+        bottom: 19px;
+        width: 57px;
+    }
+
+    .shelfPlantBooks {
+        bottom: 11px;
+        left: max(5px, calc(var(--book-inset) - 51px));
+        width: 64px;
+    }
+
+    .shelfPlantPreviousLeft {
+        bottom: -21px;
+        left: calc(var(--previous-anchor) - 110px);
+        width: 78px;
+    }
+
+    .shelfPlantPreviousRight {
+        bottom: 18px;
+        left: calc(var(--previous-anchor) + 31px);
+        width: 56px;
+    }
+
+    .shelfPlantNextLeft {
+        bottom: 18px;
+        left: calc(var(--next-anchor) - 89px);
+        width: 57px;
+    }
+
+    .shelfPlantNextRight {
+        bottom: -24px;
+        left: calc(var(--next-anchor) + 31px);
+        width: 59px;
+    }
+
+    .shelfPlantCup {
+        bottom: 10px;
+        left: calc(100% - var(--mug-inset) - 102px);
+        width: 52px;
+    }
+
+    .shelfLeafPair {
+        bottom: 57px;
+        left: calc(var(--previous-anchor) - 83px);
+        width: 23px;
+    }
 }
 
 .taskDashboardRoot {

@@ -270,12 +270,12 @@ test("All tasks remains a left header link through compact resizing and returns 
     });
     assert.ok(desktop.bounds[2] < desktop.previous, "All tasks is visually separate to the left of the centered navigation");
     assert.equal(desktop.color, "rgb(35, 75, 54)");
-    assert.equal(desktop.fontSize, "26px");
+    assert.equal(desktop.fontSize, "18px");
     assert.equal(desktop.fontWeight, "600");
     assert.equal(desktop.background, "rgba(0, 0, 0, 0)");
     assert.equal(desktop.borderWidth, "0px");
-    assert.equal(desktop.beforeWidth, "28px");
-    assert.equal(desktop.beforeHeight, "24px");
+    assert.equal(desktop.beforeWidth, "18px");
+    assert.equal(desktop.beforeHeight, "18px");
     assert.equal(desktop.beforeColor, desktop.color, "the decorative arrow inherits currentColor");
 
     await allTasks.hover();
@@ -288,19 +288,23 @@ test("All tasks remains a left header link through compact resizing and returns 
     for (const width of [1536, 1250, 1100, 1000, 981, 980, 780, 390, 780, 1000, 1250, 1536]) {
       await page.setViewportSize({width, height: 900});
       await assertHorizontallyReachable(page, allTasks, `All tasks at ${width}px`);
-      await assertHorizontallyReachable(page, previous, `previous navigation at ${width}px`);
-      await assertHorizontallyReachable(page, next, `next navigation at ${width}px`);
+      if (width > 600) {
+        await assertHorizontallyReachable(page, previous, `previous navigation at ${width}px`);
+        await assertHorizontallyReachable(page, next, `next navigation at ${width}px`);
+      } else {
+        assert.equal(await previous.isVisible(), false, "compact navigation omits the previous mascot control");
+        assert.equal(await next.isVisible(), false, "compact navigation omits the next mascot control");
+      }
       const intersections = await page.evaluate(() => {
         const all = [...document.querySelectorAll('button')].find(node => node.textContent?.trim() === "All tasks");
-        const selector = document.querySelector('[role="combobox"]');
-        const actions = [document.querySelector('[aria-label="Select previous task"]'), selector, document.querySelector('[aria-label="Select next task"]')];
+        const actions = [document.querySelector('[aria-label="Select previous task"]'), document.querySelector('[aria-label="Select next task"]')].filter(node => node && getComputedStyle(node).display !== "none");
         const a = all.getBoundingClientRect();
         return actions.map(node => {
           const b = node.getBoundingClientRect();
           return Math.max(a.left, b.left) < Math.min(a.right, b.right) && Math.max(a.top, b.top) < Math.min(a.bottom, b.bottom);
         });
       });
-      assert.deepEqual(intersections, [false, false, false], `All tasks does not overlap an actionable header control at ${width}px`);
+      assert.deepEqual(intersections, Array(intersections.length).fill(false), `All tasks does not overlap an actionable header control at ${width}px`);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       assert.equal(overflow, 0, `All tasks does not create horizontal overflow at ${width}px`);
     }

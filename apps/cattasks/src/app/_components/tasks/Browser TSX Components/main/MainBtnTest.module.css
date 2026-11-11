@@ -11,6 +11,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     box-sizing: border-box;
     flex: 0 0 124px;
     box-shadow: inset 0 1px 0 #fff, inset 0 -2px 0 rgba(124, 143, 112, .12), 0 2px 3px rgba(40, 68, 35, .22);
@@ -21,7 +22,11 @@
     white-space: nowrap;
 }
 
-.btnTest::after { content: 'Test'; }
+.btnTest svg {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+}
 
 .default {
     /*background-image: url("/btnTest1.png");*/

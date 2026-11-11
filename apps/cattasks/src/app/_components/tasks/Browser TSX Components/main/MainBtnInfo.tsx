@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 import styles from "./MainBtnInfo.module.css";
-import {useTaskContext} from "../../context/TaskProvider";
 import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
 
 
@@ -20,12 +19,10 @@ export default function MainBtnInfo({
                                         onClick,
                                         ariaLabel,
                                     }: MainBtnInfoProps) {
-    const {selectedWorkspace} = useTaskContext();
-
     const getBtnClassName = combineClassNames(
         styles.btnTestInfo,
-        selectedWorkspace?.result?.mode === 'test' ? (selectedWorkspace.result.result.status === 'completed' ? styles.success : styles.fail) :
-            isDisabled ? styles.disabled : styles.default,
+        isActive ? styles.active : '',
+        isDisabled ? styles.disabled : styles.default,
         className,
     );
 

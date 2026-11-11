@@ -106,10 +106,94 @@
     word-break: normal;
 }
 
+.descriptionBody > pre.taskDescriptionPre:focus-visible {
+    outline: 2px solid #708674;
+    border-radius: 4px;
+}
+
 .taskSolutionContainer { padding: 18px; }
-.hint { margin: 0 0 12px; padding: 12px; border-radius: 10px; background: #eef3e9; }
-.hint summary { cursor: pointer; font-weight: 700; }
-.hint p { margin: 10px 0 0; }
+.hintPanel {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    align-self: flex-start;
+}
+
+.hintHeading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 16px;
+    color: #6d7d6f;
+    font: 500 14px/1.35 system-ui, sans-serif;
+}
+
+.hintHeading h2 {
+    margin: 0;
+    font: inherit;
+}
+
+.hintList {
+    display: grid;
+    gap: 12px;
+}
+
+.hint {
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid #d6e2d3;
+    border-radius: 14px;
+    background: #f3f7f0;
+}
+
+.hint[open] {
+    border-color: #bdd7bf;
+    background: #edf6ec;
+}
+
+.hint summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 56px;
+    padding: 0 16px;
+    cursor: pointer;
+    color: #254532;
+    font: 700 18px/1.25 system-ui, sans-serif;
+    list-style: none;
+}
+
+.hint summary::-webkit-details-marker { display: none; }
+
+.hint summary::after {
+    width: 8px;
+    height: 8px;
+    margin: -4px 3px 0 0;
+    border-right: 2px solid #356b48;
+    border-bottom: 2px solid #356b48;
+    content: '';
+    transform: rotate(45deg);
+    transition: transform 160ms ease;
+}
+
+.hint[open] summary::after { transform: rotate(225deg); }
+
+.hint summary:focus-visible {
+    outline: 2px solid #356b48;
+    outline-offset: -4px;
+}
+
+.hint p {
+    margin: 0;
+    padding: 0 16px 16px;
+    color: #46604d;
+    font: 400 16px/1.5 system-ui, sans-serif;
+}
+
+.noHints { margin: 0; }
 .editorHost {
     display: flex;
     flex-direction: column;
@@ -131,18 +215,19 @@
 }
 .min .contentContainerBase { display: none; }
 
-@media (max-width: 1150px) {
-    .taskSolutionContainer {
-        height: clamp(200px, 50dvh, 420px);
-    }
-}
-
 @media (max-width: 600px) {
     .taskDetailsContainer { border-radius: 18px; }
     .btnContainer { min-height: 56px; padding-right: 104px; }
     .mainBtnTask,
-    .mainBtnInfo { min-height: 56px; }
+    .mainBtnInfo {
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 56px;
+    }
     .buttonMinimizeBase { min-width: 104px; min-height: 56px; padding-inline: 12px; font-size: 14px; }
     .contentContainerFrame { padding: 22px; font-size: 16px; }
     .challengeHeading { font-size: 23px; }
+    .hintHeading { gap: 12px; margin-bottom: 12px; font-size: 13px; }
+    .hint summary { min-height: 52px; padding-inline: 14px; font-size: 16px; }
+    .hint p { padding: 0 14px 14px; font-size: 15px; }
 }
