@@ -31,7 +31,9 @@ export function AllTasksHeader({className, onBack}: AllTasksProps) {
                     <img data-catalogue-shelf-sticker="yarn" src="/cattasks/catalogue/yarn-ball.png" alt="" width={219} height={209} loading="lazy"/>
                 </span>
             </h1>
+            <img className={styles.compactCandles} aria-hidden="true" src="/cattasks/catalogue/shelf-candles.png" alt="" width={145} height={131} loading="lazy"/>
             <span className={styles.backControl}>
+                <img className={styles.backRabbit} aria-hidden="true" src="/cattasks/catalogue/shelf-rabbit-carrot.png" alt="" width={310} height={165} loading="lazy"/>
                 <button type="button" className={styles.backButton} onClick={onBack}>
                     <img className={styles.backMascot} data-catalogue-back-capybara="" src="/cattasks/catalogue-back-capybara.png" alt=""/>
                     <span className={styles.backArrow} aria-hidden="true">←</span>

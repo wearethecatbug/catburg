@@ -115,22 +115,23 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     assert.equal(directBoundary.typed.status, "completed");
     assert.deepEqual(directBoundary.invalid.map(result => result.status), ["test-failed", "test-failed", "test-failed", "test-failed", "test-failed", "test-failed"], "worker equality and terminal transport must reject wrong values even after submitted code replaces worker globals");
     assert.equal(directBoundary.cancelled.status, "cancelled");
+    assert.equal(directBoundary.cancelled.message, "Run cancelled.", "a pre-aborted Run reports the approved terminal message");
     assert.equal(directBoundary.frames, 0);
 
     await replaceEditor(page, helperSolution);
     await testButton.click();
-    const passed = await readResult(page, /^Все тесты пройдены: 2\/2$/);
-    assert.match(passed, /^Все тесты пройдены: 2\/2$/, "the helper-dependent task module must pass both typed catalog tests");
+    const passed = await readResult(page, /^All tests passed: 2\/2$/);
+    assert.match(passed, /^All tests passed: 2\/2$/, "the helper-dependent task module must pass both typed catalog tests");
 
     await replaceEditor(page, "function race() { return null; }");
     await testButton.click();
-    const failed = await readResult(page, /^Тест 1: проверка не пройдена\nПройдено: 0\/2$/);
-    assert.match(failed, /^Тест 1: проверка не пройдена\nПройдено: 0\/2$/, "a wrong return value must report the failed test and count");
+    const failed = await readResult(page, /^Test 1 failed\.$/);
+    assert.match(failed, /^Test 1 failed\.$/, "a wrong return value must report the failed test without duplicating structured counts");
 
     await replaceEditor(page, "function race() { throw new Error('runner failure'); }");
     await testButton.click();
-    const runtimeError = await readResult(page, /^Ошибка выполнения: runner failure$/);
-    assert.match(runtimeError, /^Ошибка выполнения: runner failure$/, "a thrown user error must report runtime failure rather than a failed assertion");
+    const runtimeError = await readResult(page, /^Runtime error: runner failure$/);
+    assert.match(runtimeError, /^Runtime error: runner failure$/, "a thrown user error must report runtime failure rather than a failed assertion");
 
     await page.evaluate(() => { globalThis.__runnerParentConsole = console.log; });
     await replaceEditor(page, "globalThis.__runnerLeakProbe = 'worker-only'; console.log('runner-safe-log');");
@@ -142,8 +143,8 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
 
     await replaceEditor(page, "return 42;");
     await runButton.click();
-    const returnedValue = await readResult(page, /42/);
-    assert.match(returnedValue, /42/, "Run Code must expose a non-undefined isolated return value when there are no logs");
+    const returnedValue = await readResult(page, /^Return value: 42$/);
+    assert.match(returnedValue, /^Return value: 42$/, "Run Code must expose a non-undefined isolated return value when there are no logs");
 
     await replaceEditor(page, `try { const request = new XMLHttpRequest(); request.open("GET", ${JSON.stringify(networkProbeUrl)}, false); request.send(); console.log("network-unexpected"); } catch (error) { console.log("network-denied", error.name); }`);
     await runButton.click();
@@ -163,8 +164,8 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     const sandbox = await frame.evaluate(element => ({allowScripts: element.sandbox.contains("allow-scripts"), allowSameOrigin: element.sandbox.contains("allow-same-origin"), opaqueDocument: element.contentDocument === null}));
     assert.deepEqual(sandbox, {allowScripts: true, allowSameOrigin: false, opaqueDocument: true}, "the active worker host must be an opaque scripts-only iframe");
     await frame.evaluate(element => element.contentWindow?.postMessage({type: "start", nonce: "wrong-nonce", requestId: "wrong-request", mode: "run", code: "throw new Error('forged')"}, "*"));
-    const timeout = await readResult(page, /^Превышено время выполнения$/);
-    assert.match(timeout, /^Превышено время выполнения$/, "a non-terminating program must report the timeout terminal state");
+    const timeout = await readResult(page, /^Execution timed out\.$/);
+    assert.match(timeout, /^Execution timed out\.$/, "a non-terminating program must report the timeout terminal state");
     assert.notEqual(timeout, "forged", "a malformed message from the wrong source must not replace the active result");
 
     await replaceEditor(page, "console.log('fresh-after-timeout');");
@@ -176,8 +177,8 @@ test("CatTasks executes Test and Run through a browser-isolated runner with term
     await testButton.click();
     await replaceEditor(page, helperSolution);
     await testButton.click();
-    const afterEdit = await readResult(page, /^Все тесты пройдены: 2\/2$/);
-    assert.match(afterEdit, /^Все тесты пройдены: 2\/2$/, "an old result must not overwrite the newer edited program result");
+    const afterEdit = await readResult(page, /^All tests passed: 2\/2$/);
+    assert.match(afterEdit, /^All tests passed: 2\/2$/, "an old result must not overwrite the newer edited program result");
 
     assert.deepEqual(pageErrors, []);
     assert.deepEqual(consoleErrors, []);
@@ -228,9 +229,9 @@ test("CatTasks isolates Product Except Self grading across published zero cases"
     }, {runnerSource: runnerCommonJs, catalogSource: catalogCommonJs, task});
 
     assert.equal(task.tests.length, 5, "the published task supplies all five grading cases");
-    assert.deepEqual(results.correct, {requestId: "product-correct", status: "completed", message: "Все тесты пройдены: 5/5", logs: [], passedCount: 5, totalTests: 5}, "a correct array implementation passes every published Product Except Self case");
-    assert.deepEqual(results.divisionOnly, {requestId: "product-division", status: "test-failed", message: "Тест 4: проверка не пройдена\nПройдено: 3/5", logs: [], passedCount: 3, totalTests: 5}, "the first zero case rejects division-only code");
-    assert.deepEqual(results.singleZeroOnly, {requestId: "product-single-zero", status: "test-failed", message: "Тест 5: проверка не пройдена\nПройдено: 4/5", logs: [], passedCount: 4, totalTests: 5}, "the multiple-zero case rejects code that only handles one zero");
+    assert.deepEqual(results.correct, {requestId: "product-correct", status: "completed", message: "All tests passed: 5/5", logs: [], passedCount: 5, totalTests: 5}, "a correct array implementation passes every published Product Except Self case");
+    assert.deepEqual(results.divisionOnly, {requestId: "product-division", status: "test-failed", message: "Test 4 failed.", logs: [], passedCount: 3, totalTests: 5}, "the first zero case rejects division-only code while preserving the structured count");
+    assert.deepEqual(results.singleZeroOnly, {requestId: "product-single-zero", status: "test-failed", message: "Test 5 failed.", logs: [], passedCount: 4, totalTests: 5}, "the multiple-zero case rejects code that only handles one zero while preserving the structured count");
     assert.equal(results.frames, 0, "each direct isolated runner attempt removes its sandbox frame");
     assert.deepEqual(catalogRequests, ["GET"], "the public page performs one catalogue request before the direct runner checks");
     assert.deepEqual({consoleErrors, pageErrors, requestFailures, httpFailures}, {consoleErrors: [], pageErrors: [], requestFailures: [], httpFailures: []}, "the published runner regression has clean browser diagnostics");

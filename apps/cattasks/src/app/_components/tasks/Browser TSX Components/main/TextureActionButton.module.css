@@ -41,12 +41,12 @@
 
 .button[data-variant="run"] {
     --action-texture-strength-default: .46;
-    --action-face-top: #497052;
-    --action-face-bottom: #34553e;
-    --action-hover-top: #517b59;
-    --action-hover-bottom: #3b6046;
-    --action-border: #326a43;
-    --action-hover-border: #28573a;
+    --action-face-top: #57745f;
+    --action-face-bottom: #405b4a;
+    --action-hover-top: #5a7863;
+    --action-hover-bottom: #4a6954;
+    --action-border: #4b7457;
+    --action-hover-border: #3c604a;
     --action-ink: #fffdf3;
     --action-rim-top: rgb(255 255 255 / 23%);
     --action-rim-bottom: rgb(15 43 24 / 22%);

@@ -8,6 +8,7 @@ import MainTaskSolutionEditor from '@/app/_components/tasks/Browser TSX Componen
 import MainBtnInfo from '@/app/_components/tasks/Browser TSX Components/main/MainBtnInfo';
 import {combineClassNames} from '@/app/_components/tasks/shared/utils/combineClassNames';
 import CollapsedTaskSpine from './CollapsedTaskSpine';
+import MainTaskSavedSolution from './MainTaskSavedSolution';
 
 type Props = React.HTMLAttributes<HTMLDivElement>;
 
@@ -16,8 +17,10 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
 
     const {
         selectedTask,
+        selectedWorkspace,
         activeContentTab,
         selectContentTab,
+        setSelectedDraft,
     } = useTaskContext();
 
     const isTaskSelected = Boolean(selectedTask);
@@ -72,6 +75,10 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     const handleShowInfo = () => {
         selectContentTab('hint');
     };
+    const handleShowMySolution = () => {
+        if (!isTaskSelected) return;
+        selectContentTab('mySolution');
+    };
 
     return (
         <div
@@ -87,19 +94,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         onExpand={handleToggleMinimize}
                         className={styles.collapsedTaskSpine}
                     />
-                ) : (
-                    <button
-                        ref={minimizeButtonRef}
-                        type="button"
-                        onClick={handleToggleMinimize}
-                        aria-expanded={true}
-                        aria-controls="taskPanelContent"
-                        className={styles.buttonMinimizeBase}
-                        aria-label="Hide task: Свернуть панель"
-                    >
-                        <span>Hide task</span>
-                    </button>
-                )}
+                ) : null}
 
                 {!isMinimized && (
                     <div className={combineClassNames(styles.mainButtonsRow, styles.btnContainer)}
@@ -117,6 +112,33 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                             ariaLabel={activeContentTab === 'hint' ? 'Показаны подсказки' : 'Показать подсказки'}
                             className={styles.mainBtnInfo}
                         />
+                        <button
+                            type="button"
+                            className={styles.mainBtnMySolution}
+                            onClick={handleShowMySolution}
+                            disabled={!isTaskSelected}
+                            aria-disabled={!isTaskSelected}
+                            aria-pressed={activeContentTab === 'mySolution'}
+                        >
+                            <span>My solution</span>
+                        </button>
+                        <button
+                            ref={minimizeButtonRef}
+                            type="button"
+                            onClick={handleToggleMinimize}
+                            aria-expanded={true}
+                            aria-controls="taskPanelContent"
+                            className={styles.buttonMinimizeBase}
+                            aria-label="Hide task: Свернуть панель"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <path d="m3 3 18 18" />
+                                <path d="M10.6 10.6a3 3 0 0 0 4.24 4.24" />
+                                <path d="M9.9 4.24A10.9 10.9 0 0 1 12 4c5.52 0 9.5 4.13 10 8-.18 1.36-.72 2.68-1.57 3.8" />
+                                <path d="M6.61 6.61C4.92 7.78 3.61 9.56 2 12c.5 3.87 4.48 8 10 8 1.61 0 3.08-.35 4.37-.96" />
+                            </svg>
+                            <span>Hide task</span>
+                        </button>
                     </div>
                 )}
 
@@ -175,6 +197,15 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                                 ) : <p className={styles.noHints}>No hint available for this task.</p>}
                             </div>
                         </div>
+                    )}
+
+                    {activeContentTab === 'mySolution' && selectedTask && selectedWorkspace && (
+                        <MainTaskSavedSolution
+                            key={selectedTask.id}
+                            taskId={selectedTask.id}
+                            draft={selectedWorkspace.draft}
+                            onRestore={setSelectedDraft}
+                        />
                     )}
                 </div>
                 {!isMinimized && (

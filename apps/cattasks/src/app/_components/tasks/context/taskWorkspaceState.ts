@@ -1,6 +1,6 @@
 import type {IsolatedTaskResult} from '../lib/IsolatedTaskRunner';
 
-export type ContentTab = 'description' | 'solution' | 'hint';
+export type ContentTab = 'description' | 'solution' | 'hint' | 'mySolution';
 export type TaskRunRecord = { readonly mode: 'run' | 'test'; readonly result: IsolatedTaskResult };
 export type TaskWorkspace = {
     readonly draft: string;

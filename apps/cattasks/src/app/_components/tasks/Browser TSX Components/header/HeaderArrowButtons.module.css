@@ -165,12 +165,6 @@
 
 @media (max-width: 600px) {
     .arrowButton {
-        display: none;
-    }
-}
-
-@media (max-width: 430px) {
-    .arrowButton {
         display: flex;
         flex: 0 0 44px;
         width: 44px;

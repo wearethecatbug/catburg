@@ -242,7 +242,7 @@ async function exerciseFastActions(page, testButton, runButton) {
   const testTrace = traceFastPendingVisual(page, "Test Code");
   await testButton.focus();
   await page.keyboard.press("Space");
-  assert.match(await readTerminalOutput(page, /^Все тесты пройдены: 1\/1$/), /^Все тесты пройдены: 1\/1$/, "fast Test completes with its ordinary result");
+  assert.match(await readTerminalOutput(page, /^All tests passed: 1\/1$/), /^All tests passed: 1\/1$/, "fast Test completes with its ordinary result");
   assertFastTrace(await testTrace, "fast Test");
   assert.equal(await testButton.getAttribute("aria-busy"), null, "fast Test no longer announces busy after its ordinary result");
   await assertLoadingVisual(testButton, {visible: false, motion: false, label: "fast Test after completion"});
@@ -382,7 +382,7 @@ test("CatTasks renders accessible editor controls and Output across responsive w
     assert.ok(desktop.textureLayers.every(layer => layer.pointerEvents === "none"), "texture pseudo-layers cannot intercept action clicks");
     assert.deepEqual(desktop.textureLayers.map(layer => Number.parseFloat(layer.opacity)), [0.69, 0.46], "Test and Run retain the approved moderate wood texture strengths");
     assert.match(desktop.test.backgroundImage, /rgb\(251, 246, 233\).*rgb\(236, 229, 208\)/, "Test retains the approved cream CSS face beneath wood texture");
-    assert.match(desktop.run.backgroundImage, /rgb\(73, 112, 82\).*rgb\(52, 85, 62\)/, "Run retains the approved muted green CSS face beneath wood texture");
+    assert.match(desktop.run.backgroundImage, /rgb\(87, 116, 95\).*rgb\(64, 91, 74\)/, "Run retains the approved calmer green CSS face beneath wood texture");
     assert.match(desktop.test.border, /solid/, "Test keeps its visible CSS border");
     assert.match(desktop.test.boxShadow, /rgba/, "Test keeps its soft CSS shadow");
     assert.ok(desktop.output.height >= 46, "Output header meets its minimum height");
@@ -496,7 +496,7 @@ test("CatTasks retains completed Test success and failure feedback while hovered
 
     await testButton.hover();
     await testButton.click();
-    assert.match(await readTerminalOutput(page, /^Все тесты пройдены: 1\/1$/), /^Все тесты пройдены: 1\/1$/, "the inert default fixture completes Test successfully");
+    assert.match(await readTerminalOutput(page, /^All tests passed: 1\/1$/), /^All tests passed: 1\/1$/, "the inert default fixture completes Test successfully");
     const successHovered = await measuredTestFace(testButton);
     assert.equal(successHovered.hovered, true, "the pointer remains over Test after mouse activation");
     assert.equal(successHovered.borderColor, "rgb(77, 139, 89)", "hover preserves the completed-success Test border rather than returning to idle border");
@@ -512,7 +512,7 @@ test("CatTasks retains completed Test success and failure feedback while hovered
     await replaceEditor(page, "function echo() { return 'wrong'; }");
     await testButton.hover();
     await testButton.click();
-    assert.match(await readTerminalOutput(page, /^Тест 1: проверка не пройдена\nПройдено: 0\/1$/), /^Тест 1: проверка не пройдена\nПройдено: 0\/1$/, "the trusted wrong-value fixture completes Test with failure feedback");
+    assert.match(await readTerminalOutput(page, /^Test 1 failed\.$/), /^Test 1 failed\.$/, "the trusted wrong-value fixture completes Test with failure feedback without duplicating the structured count");
     const failureHovered = await measuredTestFace(testButton);
     assert.equal(failureHovered.hovered, true, "the pointer remains over Test after a failed mouse activation");
     assert.equal(failureHovered.borderColor, "rgb(173, 99, 78)", "hover preserves the completed-failure Test border rather than returning to idle border");

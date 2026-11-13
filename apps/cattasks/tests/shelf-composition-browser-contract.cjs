@@ -266,8 +266,13 @@ test("catalogue shelf and Back to task use the approved independent composition"
       [1757, 22, 2, 101, 60],
       [1440, 22, 2, 101, 60],
       [1151, 22, 2, 101, 60],
-      [1150, 14, 0, 101, 60],
-      [760, 11, 0, 77, 46],
+      [1150, 22, 2, 101, 60],
+      [1149, 22, 2, 101, 60],
+      [1120, 22, 2, 101, 60],
+      [761, 22, 2, 101, 60],
+      [760, 22, 2, 101, 60],
+      [601, 22, 2, 101, 60],
+      [600, 11, 0, 77, 46],
       [320, 11, 0, 77, 46],
     ]) {
       await page.setViewportSize({width, height: 900});
@@ -289,16 +294,19 @@ test("catalogue shelf and Back to task use the approved independent composition"
         const shelf = document.querySelector("[class*='catalogueShelf']");
         const brackets = Array.from(document.querySelectorAll("[class*='catalogueShelfBracket']"));
         const capybara = document.querySelector("img[data-catalogue-back-capybara]");
+        const visible = image => getComputedStyle(image).display !== "none" && image.getBoundingClientRect().width > 0;
         const stickerImages = [
           document.querySelector("img[data-catalogue-shelf-sticker='samoyed']"),
           document.querySelector("img[data-catalogue-shelf-sticker='yarn']"),
         ];
+        const rabbit = document.querySelector("img[class*='backRabbit']");
+        const candles = document.querySelector("img[class*='compactCandles']");
         const button = Array.from(document.querySelectorAll("button")).find(node => node.textContent?.trim() === "←Back to task");
         const arrow = button?.querySelector("span");
         const title = document.querySelector("h1");
-        if (!shelf || !capybara || stickerImages.some(image => !image) || !button || !arrow || !title) throw new Error("catalogue shelf, title, stickers, capybara, Back button, or arrow is unavailable");
+        if (!shelf || !capybara || stickerImages.some(image => !image) || !rabbit || !candles || !button || !arrow || !title) throw new Error("catalogue shelf, title, stickers, rabbit, candles, capybara, Back button, or arrow is unavailable");
         await capybara.decode();
-        await Promise.all(stickerImages.map(image => image.decode()));
+        await Promise.all([...stickerImages, rabbit, candles].filter(visible).map(image => image.decode()));
         const titleStyle = getComputedStyle(title);
         const moss = getComputedStyle(title, "::after");
         return {
@@ -316,6 +324,8 @@ test("catalogue shelf and Back to task use the approved independent composition"
             pointerEvents: getComputedStyle(image).pointerEvents,
             ariaHidden: image.closest("[aria-hidden='true']")?.getAttribute("aria-hidden") ?? null,
           })),
+          rabbit: {visible: visible(rabbit), decoded: rabbit.complete && rabbit.naturalWidth > 0, pointerEvents: getComputedStyle(rabbit).pointerEvents, bottom: getComputedStyle(rabbit).bottom},
+          candles: {visible: visible(candles), decoded: candles.complete && candles.naturalWidth > 0, pointerEvents: getComputedStyle(candles).pointerEvents, transform: getComputedStyle(candles).transform},
           button: box(button),
           arrow: {box: box(arrow), text: arrow.textContent, visible: getComputedStyle(arrow).display !== "none"},
           title: {
@@ -351,9 +361,21 @@ test("catalogue shelf and Back to task use the approved independent composition"
       assert.equal(samoyed.src, "/cattasks/catalogue/samoyed-cushion.png", `${width}px uses the approved Samoyed crop`);
       assert.equal(yarn.src, "/cattasks/catalogue/yarn-ball.png", `${width}px uses the approved yarn crop`);
       assert.ok(view.stickers.every(sticker => sticker.alt === "" && sticker.decoded && sticker.pointerEvents === "none" && sticker.ariaHidden === "true"), `${width}px stickers remain decoded, inert, and outside the accessibility tree`);
-      assert.equal(samoyed.visible, width >= 1151, `${width}px Samoyed visibility follows the desktop catalogue breakpoint`);
-      assert.equal(yarn.visible, width >= 1151, `${width}px yarn visibility follows the desktop catalogue breakpoint`);
-      if (width >= 1151) {
+      assert.equal(samoyed.visible, width >= 900, `${width}px Samoyed visibility follows the approved 900px catalogue breakpoint`);
+      assert.equal(yarn.visible, width >= 1000, `${width}px yarn visibility follows the approved 1000px catalogue breakpoint`);
+      assert.equal(view.rabbit.visible, width >= 761, `${width}px rabbit and carrot follow the approved full-shelf breakpoint`);
+      assert.equal(view.rabbit.pointerEvents, "none", `${width}px rabbit and carrot remain decorative`);
+      if (view.rabbit.visible) {
+        assert.equal(view.rabbit.decoded, true, `${width}px rabbit and carrot asset decodes`);
+        assert.equal(view.rabbit.bottom, "-8px", `${width}px rabbit and carrot retain the approved lowered placement`);
+      }
+      assert.equal(view.candles.visible, width <= 600, `${width}px candles appear only on the compact shelf`);
+      assert.equal(view.candles.pointerEvents, "none", `${width}px candles remain decorative`);
+      if (width <= 600) {
+        assert.equal(view.candles.decoded, true, `${width}px candle asset decodes`);
+        assert.match(view.candles.transform, /matrix\(1, 0, 0, 1, 0, 5\)/, `${width}px candles retain the approved 5px lowering`);
+      }
+      if (width >= 1000) {
         assert.equal(Math.round(samoyed.box.width), 116, `${width}px Samoyed has the approved width`);
         assert.equal(Math.round(yarn.box.width), 44, `${width}px yarn has the approved width`);
         assert.ok(Math.abs(samoyed.box.left - view.title.box.right - 22) <= 1, `${width}px Samoyed begins 22px after All tasks`);
@@ -365,7 +387,7 @@ test("catalogue shelf and Back to task use the approved independent composition"
       if (width > 760) assert.ok(view.button.width >= 235, `${width}px Back to task keeps the desktop minimum width`);
       assert.equal(view.arrow.text, "←", `${width}px Back to task keeps its arrow`);
       assert.equal(view.arrow.visible, true, `${width}px Back to task arrow remains visible`);
-      if (width >= 1151) {
+      if (width >= 601) {
         assert.ok(Math.abs(view.title.box.left - (view.shelf.left + 16)) <= 1, `${width}px All tasks starts 16px from the shelf edge`);
         assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + 7)) <= 1, `${width}px All tasks sits 7px into the shelf`);
         assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px title uses the local approved moss texture`);
@@ -374,9 +396,9 @@ test("catalogue shelf and Back to task use the approved independent composition"
         assert.ok(Math.abs(parseFloat(view.title.moss.top) - (view.title.box.height - 12)) <= 0.1, `${width}px title moss overlaps the title baseline by 12px`);
         assert.ok(Math.abs(parseFloat(view.title.moss.width) - (view.title.box.width + 21)) <= 0.1, `${width}px title moss extends 21px beyond the title`);
       } else {
-        assert.equal(view.title.moss.content, "none", `${width}px compact title has no decorative moss pseudo-element`);
-        assert.equal(view.title.moss.backgroundImage, "none", `${width}px compact title keeps the baseline background`);
-        assert.equal(view.title.fontFamily.includes("Nunito"), false, `${width}px compact title keeps its baseline font`);
+        assert.equal(view.title.moss.content, '""', `${width}px compact title retains its decorative moss pseudo-element`);
+        assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px compact title retains the approved moss texture`);
+        assert.equal(view.title.fontFamily.includes("Nunito"), true, `${width}px compact title retains Nunito`);
       }
       if (width === 1757) {
         assert.deepEqual(nunito, {loaded: true, available: true}, "1757px waits for the loaded local Nunito face");
@@ -439,8 +461,9 @@ test("approved mobile shelf composition swaps exact task-only art without blocki
       [321, ["sprig"]],
       [390, ["sprig"]],
       [430, ["sprig"]],
-      [431, ["books", "fan", "lantern", "vine"]],
-      [600, ["books", "fan", "lantern", "vine"]],
+      [431, ["sprig"]],
+      [598, ["sprig"]],
+      [600, ["sprig"]],
       [601, []],
     ]);
 
@@ -489,20 +512,28 @@ test("approved mobile shelf composition swaps exact task-only art without blocki
         page.getByRole("button", {name: "Select previous task"}),
         page.getByRole("button", {name: "Select next task"}),
       ]);
-      const arrowsVisible = width <= 430 || width > 600;
-      assert.equal(await previous.count(), arrowsVisible ? 1 : 0, `${width}px keeps the approved navigation visibility`);
-      assert.equal(await next.count(), arrowsVisible ? 1 : 0, `${width}px keeps the approved navigation visibility`);
+      assert.equal(await previous.count(), 1, `${width}px keeps the approved previous navigation control`);
+      assert.equal(await next.count(), 1, `${width}px keeps the approved next navigation control`);
 
       const visibleFox = view.fox.filter(fox => fox.visible);
-      if (width > 320 && width <= 430) {
+      if (width > 320 && width <= 600) {
         assert.deepEqual(visibleFox.map(fox => fox.role).sort(), ["body", "paws"], `${width}px exposes both approved fox layers`);
         assert.ok(visibleFox.every(fox => fox.src === "/cattasks/mobile-shelf/raised-paws-fox.png" && fox.decoded && fox.pointerEvents === "none" && fox.ariaHidden === "true" && fox.width === "60px"), `${width}px fox is the exact decoded, decorative, pointer-inert crop`);
         const [previousBox, nextBox] = await Promise.all([previous.boundingBox(), next.boundingBox()]);
         assert.ok(previousBox && nextBox, `${width}px retains both real navigation buttons`);
-        for (const [arrow, box, expectedX] of [[previous, previousBox, width === 320 ? 28 : 71], [next, nextBox, width === 320 ? width - 28 - 44 : width - 71 - 44]]) {
+        const arrowPositions = new Map([
+          [321, [86, 225]],
+          [390, [91, 289]],
+          [430, [94, 326]],
+          [431, [94, 327]],
+          [598, [108, 480]],
+          [600, [108, 482]],
+        ]);
+        const [expectedPreviousX, expectedNextX] = arrowPositions.get(width) ?? [];
+        for (const [arrow, box, expectedX] of [[previous, previousBox, expectedPreviousX], [next, nextBox, expectedNextX]]) {
           assert.equal(Math.round(box.width), 44, `${width}px ${await arrow.getAttribute("aria-label")} is 44px wide`);
           assert.equal(Math.round(box.height), 44, `${width}px ${await arrow.getAttribute("aria-label")} is 44px tall`);
-          assert.equal(Math.round(box.x), expectedX, `${width}px ${await arrow.getAttribute("aria-label")} has the approved symmetric edge inset`);
+          assert.equal(Math.round(box.x), expectedX, `${width}px ${await arrow.getAttribute("aria-label")} keeps its approved shelf position`);
           assert.ok(Math.abs((box.y + box.height) - (view.shelf.top + 4)) <= 1, `${width}px ${await arrow.getAttribute("aria-label")} sits 4px below the rail`);
           const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), {x: box.x + box.width / 2, y: box.y + box.height / 2});
           assert.equal(hit, await arrow.getAttribute("aria-label"), `${width}px decorative fox cannot intercept the native arrow`);
@@ -513,24 +544,16 @@ test("approved mobile shelf composition swaps exact task-only art without blocki
         assert.equal(byRole.paws.zIndex, "3", `${width}px fox paws stay above the previous button`);
         assert.notEqual(byRole.paws.clipPath, "none", `${width}px fox paws use the approved upper crop`);
       } else {
-        assert.equal(visibleFox.length, 0, `${width}px has no fox outside its approved 321–430px range`);
+        assert.equal(visibleFox.length, 0, `${width}px has no fox outside its approved 321–600px range`);
       }
 
       if (width === 320) {
         const [previousBox, nextBox] = await Promise.all([previous.boundingBox(), next.boundingBox()]);
         assert.ok(previousBox && nextBox, "320px retains both real navigation buttons");
-        assert.deepEqual([Math.round(previousBox.x), Math.round(nextBox.x)], [28, 248], "320px arrows retain the approved 28px symmetric edge inset");
+        assert.deepEqual([Math.round(previousBox.x), Math.round(nextBox.x)], [54, 222], "320px arrows retain the approved 54px symmetric viewport insets");
         assert.ok(Math.abs((previousBox.y + previousBox.height) - (view.shelf.top + 4)) <= 1 && Math.abs((nextBox.y + nextBox.height) - (view.shelf.top + 4)) <= 1, "320px arrows sit 4px below the rail");
       }
 
-      if (width === 431) {
-        const byRole = Object.fromEntries(visible.map(art => [art.role, art.box]));
-        const center = ({left, right}) => (left + right) / 2;
-        assert.ok(center(byRole.vine) < center(byRole.books), "431px places the trailing vine to the left of the books");
-        assert.ok(center(byRole.books) < center(byRole.fan), "431px keeps the books left of the flower fan");
-        assert.ok(center(byRole.fan) < center(byRole.lantern), "431px places the flower fan left of the lantern");
-        assert.ok(byRole.lantern.right >= view.shelf.right - 18, "431px moves the lantern toward the outer right shelf edge");
-      }
 
       for (const name of ["Test Code", "Run Code"]) {
         const button = page.getByRole("button", {name});

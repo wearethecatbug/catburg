@@ -1,0 +1,49 @@
+.panel {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 22px;
+    overflow: auto;
+    color: #254532;
+}
+
+.panel h2 { flex: 0 0 auto; margin: 0 0 12px; font: 700 22px/1.2 system-ui, sans-serif; }
+.empty, .status, .error { margin: 0; font: 400 16px/1.5 system-ui, sans-serif; }
+.status { min-height: 24px; margin-top: 12px; color: #356b48; }
+.error { margin-top: 12px; color: #8a4938; }
+
+.code {
+    max-height: 260px;
+    margin: 0;
+    padding: 12px;
+    overflow: auto;
+    border: 1px solid #cedacf;
+    border-radius: 10px;
+    background: #fff;
+    color: #254532;
+    font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.code:focus-visible { outline: 2px solid #356b48; outline-offset: 2px; }
+.actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.panel .action { flex: 0 1 auto; width: auto; min-height: 44px; padding-inline: 12px; border-radius: 12px; font-size: 13px; line-height: 20px; }
+.panel .save { --action-texture-strength: .69; }
+.panel .restore {
+    --action-texture-strength: .46;
+    --action-face-top: #f7f9f3;
+    --action-face-bottom: #eaf0e4;
+    --action-hover-top: #fff;
+    --action-hover-bottom: #edf4e9;
+    --action-border: #b7c2af;
+    --action-hover-border: #78946f;
+}
+
+@media (max-width: 600px) {
+    .panel { padding: 18px; }
+    .panel h2 { font-size: 20px; }
+    .panel .action { flex: 1 1 0; width: auto; min-width: 0; }
+}

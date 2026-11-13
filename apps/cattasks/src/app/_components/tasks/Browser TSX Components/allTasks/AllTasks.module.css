@@ -20,15 +20,20 @@
 
 .pageTitle {
     margin: 0;
-    color: #12442c;
+    color: #6e411d;
     font-size: clamp(2.2rem, 4vw, 3.5rem);
     font-weight: 800;
     line-height: 1;
+    background: linear-gradient(180deg, #80502a 0%, #693d19 70%, #603716 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .shelfStickers { display: none; pointer-events: none; user-select: none; }
 
 .backControl { position: relative; display: inline-flex; isolation: isolate; }
+.backRabbit, .compactCandles { display: none; pointer-events: none; user-select: none; }
 
 .backButton {
     position: relative;
@@ -72,25 +77,21 @@
 .backButton:focus-visible { outline: 3px solid #356b48; outline-offset: 4px; }
 .backArrow { margin: 0; font-size: 24px; line-height: 1; }
 
-@media (min-width: 1151px) {
+@media (min-width: 601px) {
     .catalogueHeader {
         z-index: 2;
-        padding-inline-start: calc((min(1368px, 100% - 108px) - var(--catalogue-shelf-width)) / 2 + 16px);
+        width: var(--catalogue-shelf-width);
+        padding-inline: 16px;
     }
     .pageTitle {
         position: relative;
         z-index: 1;
         isolation: isolate;
-        color: #6e411d;
         font-family: Nunito, sans-serif;
         font-size: clamp(2.2rem, 4vw, 56px);
         font-weight: 900;
         letter-spacing: -.018em;
         transform: translateY(7px);
-        background: linear-gradient(180deg, #80502a 0%, #693d19 70%, #603716 100%);
-        -webkit-background-clip: text;
-        background-clip: text;
-        -webkit-text-fill-color: transparent;
     }
     .pageTitle::after {
         position: absolute;
@@ -118,6 +119,16 @@
     .shelfStickers img { display: block; max-width: none; height: auto; flex: none; }
     .shelfStickers [data-catalogue-shelf-sticker='samoyed'] { width: 116px; }
     .shelfStickers [data-catalogue-shelf-sticker='yarn'] { width: 44px; }
+    .backRabbit {
+        position: absolute;
+        z-index: 0;
+        right: calc(100% + 55px);
+        bottom: -8px;
+        display: block;
+        width: 88px;
+        height: auto;
+        object-fit: contain;
+    }
     .backControl::before {
         position: absolute;
         z-index: 0;
@@ -142,6 +153,23 @@
         pointer-events: none;
         user-select: none;
     }
+}
+
+@media (min-width: 601px) and (max-width: 1150px) {
+    .catalogueHeader { min-height: 176px; }
+    .pageTitle { font-size: clamp(2.2rem, 4vw, 48px); }
+}
+
+@media (max-width: 999px) and (min-width: 601px) {
+    .shelfStickers [data-catalogue-shelf-sticker='yarn'] { display: none; }
+}
+
+@media (max-width: 899px) and (min-width: 601px) {
+    .shelfStickers [data-catalogue-shelf-sticker='samoyed'] { display: none; }
+}
+
+@media (max-width: 760px) and (min-width: 601px) {
+    .backRabbit { display: none; }
 }
 
 .catalogueMain {
@@ -271,7 +299,8 @@
 .pageControls .currentPage { border-color: #f2cf9d; background: #ffdb9e; color: #6e411d; }
 
 @media (max-width: 1120px) {
-    .catalogueHeader, .catalogueMain { width: min(100% - 48px, 960px); }
+    .catalogueMain { width: min(100% - 48px, 960px); }
+    .catalogueHeader { width: var(--catalogue-shelf-width); }
     .catalogueMain { grid-template-columns: 1fr; align-items: start; }
     .filters { align-self: stretch; }
     .columnHeadings { display: none; }
@@ -287,11 +316,7 @@
 }
 
 @media (max-width: 760px) {
-    .catalogueHeader, .catalogueMain { width: min(100% - 32px, 640px); }
-    .catalogueHeader { min-height: 134px; align-items: center; padding-top: 74px; }
-    .backButton { min-width: 0; height: 46px; min-height: 46px; padding: 0 14px; gap: 7px; border-radius: 16px; font-size: 14px; }
-    .backMascot { width: 77px; height: 54px; }
-    .backArrow { font-size: 18px; }
+    .catalogueMain { width: min(100% - 32px, 640px); }
     .catalogueMain { margin-top: 18px; }
     .filters { padding: 20px; }
     .filterGroup { margin-top: 18px; }
@@ -301,12 +326,79 @@
     .pagination { align-items: flex-start; flex-direction: column; margin-inline: -20px; padding-inline: 20px; }
 }
 
+@media (max-width: 600px) {
+    .catalogueHeader, .catalogueMain { width: min(100% - 32px, 640px); }
+    .catalogueHeader { min-height: 134px; align-items: center; justify-content: flex-start; gap: 8px; padding-top: 74px; }
+    .pageTitle {
+        position: relative;
+        z-index: 1;
+        min-width: 0;
+        flex: 0 1 auto;
+        font-family: Nunito, sans-serif;
+        font-size: clamp(26px, 8vw, 36px);
+        font-weight: 900;
+        letter-spacing: -.018em;
+    }
+    .pageTitle::after {
+        position: absolute;
+        z-index: -1;
+        top: calc(100% - 9px);
+        left: -12px;
+        display: block;
+        width: calc(100% + 12px);
+        aspect-ratio: 253 / 45;
+        content: '';
+        background: url('/cattasks/catalogue/title-moss.png') left top / 100% auto no-repeat;
+    }
+    .compactCandles {
+        display: block;
+        flex: 0 0 auto;
+        margin-left: auto;
+        margin-right: 43px;
+        width: clamp(38px, 10vw, 54px);
+        height: auto;
+        object-fit: contain;
+        transform: translateY(5px);
+    }
+    .backControl::before {
+        position: absolute;
+        z-index: 0;
+        top: 8px;
+        left: 2px;
+        width: 52px;
+        aspect-ratio: 193 / 306;
+        content: '';
+        background: url('/cattasks/shelf/catalogue-back-vine.png') center / contain no-repeat;
+        pointer-events: none;
+    }
+    .backControl::after {
+        position: absolute;
+        z-index: 0;
+        top: 9px;
+        left: -36px;
+        width: 44px;
+        aspect-ratio: 911 / 792;
+        content: '';
+        background: url('/cattasks/shelf/catalogue-back-leaves.png') center / contain no-repeat;
+        pointer-events: none;
+    }
+    .backButton { min-width: 0; height: 46px; min-height: 46px; padding: 0 14px; gap: 7px; border-radius: 16px; font-size: 14px; }
+    .backMascot { width: 77px; height: 54px; }
+    .backArrow { font-size: 18px; }
+}
+
 @media (max-width: 420px) {
     .catalogueHeader { gap: 8px; padding-inline: 6px; }
     .pageTitle { font-size: 26px; }
     .backButton { padding-inline: 8px; }
     .taskList { padding: 10px; }
     .row { padding-inline: 10px; }
+}
+
+@media (max-width: 360px) {
+    .pageTitle { font-size: 24px; }
+    .compactCandles { width: 32px; margin-right: 34px; }
+    .backButton { gap: 4px; padding-inline: 6px; font-size: 12px; }
 }
 
 @media (max-width: 600px) {

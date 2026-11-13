@@ -461,13 +461,8 @@ test("All tasks remains a left header link through compact resizing and returns 
     for (const width of [1536, 1250, 1100, 1000, 981, 980, 780, 390, 780, 1000, 1250, 1536]) {
       await page.setViewportSize({width, height: 900});
       await assertHorizontallyReachable(page, allTasks, `All tasks at ${width}px`);
-      if (width <= 430 || width > 600) {
-        await assertHorizontallyReachable(page, previous, `previous navigation at ${width}px`);
-        await assertHorizontallyReachable(page, next, `next navigation at ${width}px`);
-      } else {
-        assert.equal(await previous.isVisible(), false, "intermediate navigation omits the previous mascot control");
-        assert.equal(await next.isVisible(), false, "intermediate navigation omits the next mascot control");
-      }
+      await assertHorizontallyReachable(page, previous, `previous navigation at ${width}px`);
+      await assertHorizontallyReachable(page, next, `next navigation at ${width}px`);
       const intersections = await page.evaluate(() => {
         const all = [...document.querySelectorAll('button')].find(node => node.textContent?.trim() === "All tasks");
         const actions = [document.querySelector('[aria-label="Select previous task"]'), document.querySelector('[aria-label="Select next task"]')].filter(node => node && getComputedStyle(node).display !== "none");

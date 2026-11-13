@@ -78,19 +78,19 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     await setActiveDraft(page, catalog.tasks[0].starterCode, "function echo(value) { return value; }");
     await assertVisibleDraft(page, "function echo(value) { return value; }", "the visible editor shows the exact successful Test draft");
     await testButton.click();
-    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1");
+    assert.equal(await outputText(page, "All tests passed: 1/1"), "All tests passed: 1/1");
     assert.match(await hintButton.getAttribute("aria-label"), /Показаны подсказки/, "Test preserves the active content tab");
     assert.equal(await testButton.evaluate(node => node === document.activeElement), true, "Test leaves keyboard focus on its activating control");
 
     await runButton.click();
-    assert.equal(await outputText(page, "Код выполнен"), "Код выполнен", "Run produces its own visible output");
+    assert.equal(await outputText(page, "Code executed."), "Code executed.", "Run produces its own visible output");
     assert.match(await hintButton.getAttribute("aria-label"), /Показаны подсказки/, "Run preserves the active tab");
     assert.equal(await runButton.evaluate(node => node === document.activeElement), true, "Run leaves focus on its activating control");
 
     await setActiveDraft(page, "function echo(value) { return value; }", "function echo() { return 'wrong'; }");
     await assertVisibleDraft(page, "function echo() { return 'wrong'; }", "the visible editor shows the exact failing Test draft");
     await testButton.click();
-    assert.equal(await outputText(page, "Тест 1: проверка не пройдена\nПройдено: 0/1"), "Тест 1: проверка не пройдена\nПройдено: 0/1");
+    assert.equal(await outputText(page, "Test 1 failed."), "Test 1 failed.");
     assert.equal(await page.evaluate(expected => (window.monaco?.editor.getModels() ?? []).some(model => model.getValue() === expected), "function echo() { return 'wrong'; }"), true, "the failed Test reports the draft currently visible in Monaco");
 
     await selectTaskFromCatalogue(page, "Digitize");
@@ -124,7 +124,7 @@ test("CatTasks reaches session Test/Run/failure/edit/switch/stale paths through 
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "the dispatched stale completion cannot overwrite the switched workspace output");
 
     await testButton.click();
-    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "the switched and edited task still completes through a fresh real Test");
+    assert.equal(await outputText(page, "All tests passed: 1/1"), "All tests passed: 1/1", "the switched and edited task still completes through a fresh real Test");
     await selectTaskFromCatalogue(page, "Race");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "revisiting the original task proves the held response did not silently populate its workspace");
 
@@ -162,7 +162,7 @@ test("All tasks groups the already filtered collection by difficulty without cha
   try {
     await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
     await page.getByRole("button", {name: "Test Code"}).click();
-    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "the inert selected fixture establishes the Completed status control");
+    assert.equal(await outputText(page, "All tests passed: 1/1"), "All tests passed: 1/1", "the inert selected fixture establishes the Completed status control");
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
     const rows = page.locator("section[aria-labelledby^='difficulty-'] li");

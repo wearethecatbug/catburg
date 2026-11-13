@@ -98,10 +98,10 @@ test("TaskOutput rejects invalid test counts while retaining actual terminal mes
     assert.match(rendered, new RegExp(message), `${label} retains the real terminal message as the fallback`);
   }
 
-  const timeout = renderTaskOutputRecord({mode: "test", result: {requestId: "timeout", status: "timeout", message: "Превышено время выполнения", logs: []}});
-  const cancelled = renderTaskOutputRecord({mode: "run", result: {requestId: "cancelled", status: "cancelled", message: "Запуск отменён", logs: []}});
-  assert.match(timeout, /Превышено время выполнения/, "timeout is distinguishable from pass without executing uncontrolled code");
-  assert.match(cancelled, /Запуск отменён/, "cancelled is distinguishable from pass without executing uncontrolled code");
+  const timeout = renderTaskOutputRecord({mode: "test", result: {requestId: "timeout", status: "timeout", message: "Execution timed out.", logs: []}});
+  const cancelled = renderTaskOutputRecord({mode: "run", result: {requestId: "cancelled", status: "cancelled", message: "Run cancelled.", logs: []}});
+  assert.match(timeout, /Execution timed out\./, "timeout is distinguishable from pass without executing uncontrolled code");
+  assert.match(cancelled, /Run cancelled\./, "cancelled is distinguishable from pass without executing uncontrolled code");
 });
 
 test("TaskOutput presents only the selected latest runner record through accessible Tests and Console views", {timeout: 20_000}, async () => {
@@ -164,10 +164,11 @@ test("TaskOutput presents only the selected latest runner record through accessi
     await testsTab.click();
     await replaceActiveDraft(page, "function echo(value) { console.log(value); return value; }", "function echo(value) { return value === 'first' ? value : 'wrong'; }");
     await testButton.click();
-    const firstFailure = page.getByRole("tabpanel", {name: "Tests", exact: true}).getByText(/Тест 2: проверка не пройдена/);
+    const firstFailure = page.getByRole("tabpanel", {name: "Tests", exact: true}).getByText("Test 2 failed.", {exact: true});
     await firstFailure.waitFor();
     assert.match(await output.innerText(), /Stopped at the first failing test/, "first failure has an explicit truthful stop status");
-    assert.match(await output.innerText(), /1\s*\/\s*2/, "first failure exposes only the truthful passed/declared count");
+    assert.equal(await textOccurrences(output, "Passed: 1/2"), 1, "first-failure output renders the structured passed count exactly once");
+    assert.doesNotMatch(await output.innerText(), /Test 2 failed\.\s*(?:\n|\s)*Passed:/, "failure text does not duplicate the structured passed count");
     assert.doesNotMatch(await output.innerText(), /2\s*\/\s*2/, "first-failure output cannot claim later tests passed");
 
     await replaceActiveDraft(page, "function echo(value) { return value === 'first' ? value : 'wrong'; }", "console.log('trusted-run-log'); return 42;");
@@ -181,9 +182,9 @@ test("TaskOutput presents only the selected latest runner record through accessi
     await replaceActiveDraft(page, "console.log('trusted-run-log'); return 42;", "throw new Error('trusted-runtime-error');");
     await runButton.click({timeout: 10_000});
     const visibleConsole = page.getByRole("tabpanel", {name: "Console", exact: true});
-    await visibleConsole.getByText(/Ошибка выполнения: trusted-runtime-error/).waitFor({timeout: 10_000});
+    await visibleConsole.getByText(/Runtime error: trusted-runtime-error/).waitFor({timeout: 10_000});
     assert.match(await visibleConsole.innerText(), /Runtime error/, "runtime error has an explicit status distinct from failed tests");
-    assert.match(await output.innerText(), /Ошибка выполнения: trusted-runtime-error/, "runtime error is distinguished from a failed test");
+    assert.match(await output.innerText(), /Runtime error: trusted-runtime-error/, "runtime error is distinguished from a failed test");
 
     await selectTaskFromCatalogue(page, "Output B");
     assert.doesNotMatch(await output.innerText(), /trusted-runtime-error|trusted-run-log|1\s*\/\s*2/, "selecting another task cannot show a stale prior task result");
