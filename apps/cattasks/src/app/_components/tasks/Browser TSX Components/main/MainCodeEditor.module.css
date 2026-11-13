@@ -193,11 +193,7 @@
     .buttonsRow > button {
         width: 100%;
         min-width: 0;
-        min-height: 44px;
-        padding: 8px 12px;
         flex: 1 1 0;
-        border-radius: 14px;
-        box-shadow: 0 1px 2px rgba(38, 68, 37, .18);
     }
 
     .codeEditorContainer .codeEditorFrame {
@@ -215,6 +211,36 @@
 
     .codeEditorFrame {
         min-height: 240px;
+    }
+
+}
+
+@media (max-width: 600px) {
+    .solutionHeader {
+        gap: 10px;
+        padding: 12px 16px;
+    }
+
+    .solutionHeader > div:first-child {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .solutionHeading {
+        gap: 7px;
+        font-size: clamp(18px, 3.6vw, 21px);
+        white-space: nowrap;
+    }
+
+    .codeMarker { font-size: 15px; }
+    .languageLabel { color: #506c58; font-size: 14px; }
+
+    .buttonsRow {
+        grid-template-columns: repeat(2, minmax(0, 100px));
+        justify-content: end;
     }
 
 }

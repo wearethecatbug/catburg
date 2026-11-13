@@ -39,8 +39,9 @@ export default function TaskDashboard() {
                         allTasksButtonRef={allTasksButtonRef}
                     />
                 )}
-                <div className={`${styles.shelf} ${isAllTasksOpen ? '' : styles.taskShelf}`} aria-hidden="true">
+                <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
                     {!isAllTasksOpen && (
+                        <>
                         <div className={styles.shelfDecoration}>
                             <span className={`${styles.shelfBracket} ${styles.shelfBracketLeft}`}/>
                             <span className={`${styles.shelfBracket} ${styles.shelfBracketRight}`}/>
@@ -53,12 +54,28 @@ export default function TaskDashboard() {
                             <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
                             <img className={styles.shelfPlantCup} src="/cattasks/shelf/plant-cup.png" alt="" loading="lazy"/>
                             <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
+                            <img className={styles.shelfOwl} src="/cattasks/shelf/owl.png" alt="" loading="lazy"/>
+                        </div>
+                        <div className={styles.mobileShelfDecoration}>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="books" src="/cattasks/mobile-shelf/books.png" alt="" loading="lazy"/>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="fan" src="/cattasks/mobile-shelf/fan.png" alt="" loading="lazy"/>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="lantern" src="/cattasks/mobile-shelf/lantern.png" alt="" loading="lazy"/>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="vine" src="/cattasks/mobile-shelf/vine.png" alt="" loading="lazy"/>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="crystals" src="/cattasks/mobile-shelf/crystals.png" alt="" loading="lazy"/>
+                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="sprig" src="/cattasks/mobile-shelf/sprig.png" alt="" loading="lazy"/>
+                        </div>
+                        </>
+                    )}
+                    {isAllTasksOpen && (
+                        <div className={styles.catalogueShelfDecoration}>
+                            <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketLeft}`}/>
+                            <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketRight}`}/>
                         </div>
                     )}
                 </div>
                 {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
                 <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
-                {isAllTasksOpen && <AllTasks className={styles.mainContainer} onBack={returnToTask}/>}
+                {isAllTasksOpen && <AllTasks onBack={returnToTask}/>}
                 <Footer className={styles.footerContainer}></Footer>
             </div>
         </TaskProvider>

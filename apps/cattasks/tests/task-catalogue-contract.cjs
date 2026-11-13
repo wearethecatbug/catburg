@@ -74,9 +74,9 @@ test("catalogue rows project validated difficulty without reordering, and omitte
     {id: "ct-js-11", title: "Medium fourth", description: "", starterCode: "", ordinal: 11, difficulty: "Medium"},
   ];
   const projected = catalogue.getTaskCatalogueRows(difficultyTasks, workspace.createTaskWorkspaceState());
-  assert.deepEqual(projected.map(row => [row.id, row.difficulty]), [
-    ["ct-js-01", "Easy"], ["ct-js-46", "Hard"], ["legacy-custom", "Unrated"], ["ct-js-11", "Medium"],
-  ], "projection retains provider order and does not rewrite omitted legacy/custom metadata");
+  assert.deepEqual(projected.map(row => [row.id, row.ordinal, row.difficulty]), [
+    ["ct-js-01", 1, "Easy"], ["ct-js-46", 46, "Hard"], ["legacy-custom", 51, "Unrated"], ["ct-js-11", 11, "Medium"],
+  ], "projection retains the provider's source ordinal and order, including an unrated custom task");
 });
 
 test("selection is current-only; a full current-draft Test pass completes and a later Run retains completion", () => {

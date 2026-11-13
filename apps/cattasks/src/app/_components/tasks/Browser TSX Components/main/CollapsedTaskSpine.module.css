@@ -1,0 +1,176 @@
+.spine {
+    --spine-band: linear-gradient(
+        to bottom,
+        transparent 0 1px,
+        rgb(81 110 77 / 0.33) 1px 2px,
+        rgb(252 252 243 / 0.62) 2px 3px,
+        transparent 3px 7px,
+        rgb(81 110 77 / 0.33) 7px 8px,
+        rgb(252 252 243 / 0.62) 8px 9px,
+        transparent 9px
+    );
+
+    position: relative;
+    isolation: isolate;
+    box-sizing: border-box;
+    display: block;
+    align-self: stretch;
+    justify-self: stretch;
+    inline-size: var(--task-spine-width, 88px);
+    min-inline-size: 80px;
+    block-size: auto;
+    min-block-size: var(--task-spine-min-height, 300px);
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--task-spine-border-color, #9bab94);
+    border-radius: var(--task-spine-radius, 22px);
+    background-color: #d8e2d3;
+    background-image:
+        linear-gradient(90deg, rgb(240 244 232 / 0.30), rgb(233 239 225 / 0.11) 45%, rgb(209 224 204 / 0.18)),
+        var(--task-spine-desktop-image, url('/task-spine/book-spine-desktop.png')),
+        linear-gradient(90deg, #c8d7c3, #e3ebe0 35%, #d3e1cf 72%, #c4d4bf);
+    background-position: center, var(--task-spine-desktop-position, center), center;
+    background-size: 100% 100%, var(--task-spine-desktop-size, cover), 100% 100%;
+    background-repeat: no-repeat;
+    background-blend-mode: normal, luminosity, normal;
+    box-shadow:
+        0 3px 5px rgb(48 74 48 / 0.12),
+        0 7px 16px rgb(48 74 48 / 0.07);
+    color: var(--task-spine-text-color, #174f35);
+    font-family: inherit;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    caret-color: transparent;
+    appearance: none;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.spine::before {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background-image: linear-gradient(90deg, rgb(55 91 58 / 0.06), rgb(250 252 240 / 0.17) 20%, rgb(250 252 240 / 0.06) 52%, rgb(61 89 62 / 0.09));
+    box-shadow: inset 0 0 5px rgb(62 90 63 / 0.15), inset 0 1px 2px rgb(252 255 248 / 0.58);
+    content: '';
+    pointer-events: none;
+}
+
+.spine::after {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background-image: var(--spine-band), var(--spine-band);
+    background-position: center var(--task-spine-band-offset, 22px), center calc(100% - var(--task-spine-band-offset, 22px));
+    background-repeat: no-repeat;
+    background-size: 100% 10px;
+    content: '';
+    pointer-events: none;
+}
+
+.label {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    z-index: 1;
+    display: block;
+    margin: 0;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    transform-origin: center;
+    white-space: nowrap;
+}
+
+.chevron {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 9px;
+    z-index: 1;
+    display: block;
+    inline-size: 18px;
+    block-size: 18px;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transform-origin: center;
+}
+
+@media (hover: hover) {
+    .spine:not(:disabled):hover {
+        border-color: #849b80;
+        box-shadow: 0 4px 7px rgb(48 74 48 / 0.15), 0 8px 18px rgb(48 74 48 / 0.09);
+    }
+}
+
+.spine:not(:disabled):active { box-shadow: 0 1px 3px rgb(48 74 48 / 0.15); }
+
+.spine:focus-visible {
+    outline: 3px solid #1a5a3e;
+    outline-offset: 3px;
+}
+
+.spine:disabled { cursor: not-allowed; opacity: 0.55; }
+
+@media (max-width: 1150px) {
+    .spine {
+        --spine-band: linear-gradient(
+            to right,
+            transparent 0 1px,
+            rgb(81 110 77 / 0.33) 1px 2px,
+            rgb(252 252 243 / 0.62) 2px 3px,
+            transparent 3px 7px,
+            rgb(81 110 77 / 0.33) 7px 8px,
+            rgb(252 252 243 / 0.62) 8px 9px,
+            transparent 9px
+        );
+
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: clamp(56px, var(--task-spine-mobile-height, 60px), 64px);
+        min-block-size: 0;
+        border-radius: var(--task-spine-mobile-radius, 20px);
+        background-image:
+            linear-gradient(180deg, rgb(240 244 232 / 0.30), rgb(233 239 225 / 0.11) 45%, rgb(209 224 204 / 0.18)),
+            var(--task-spine-mobile-image, url('/task-spine/book-spine-mobile.png')),
+            linear-gradient(180deg, #c8d7c3, #e3ebe0 35%, #d3e1cf 72%, #c4d4bf);
+        background-position: center, var(--task-spine-mobile-position, center), center;
+        background-size: 100% 100%, var(--task-spine-mobile-size, cover), 100% 100%;
+        font-size: 1rem;
+    }
+
+    .spine::before {
+        background-image: linear-gradient(180deg, rgb(55 91 58 / 0.06), rgb(250 252 240 / 0.17) 20%, rgb(250 252 240 / 0.06) 52%, rgb(61 89 62 / 0.09));
+        box-shadow: inset 0 0 5px rgb(62 90 63 / 0.15), inset 0 1px 2px rgb(252 255 248 / 0.58);
+    }
+
+    .spine::after {
+        background-position: var(--task-spine-mobile-band-offset, 14px) center, calc(100% - var(--task-spine-mobile-band-offset, 14px)) center;
+        background-size: 10px 100%;
+    }
+
+    .label { transform: translate(-50%, -50%); }
+    .chevron { inset-inline-end: 24px; transform: translateY(-50%) rotate(90deg); }
+}
+
+@media (prefers-reduced-motion: reduce) { .spine { transition: none; } }
+
+@media (forced-colors: active) {
+    .spine,
+    .spine:not(:disabled):hover,
+    .spine:not(:disabled):active {
+        border-color: ButtonText;
+        background: ButtonFace;
+        box-shadow: none;
+        color: ButtonText;
+    }
+
+    .spine::before,
+    .spine::after { display: none; }
+    .spine:focus-visible { outline-color: Highlight; }
+}

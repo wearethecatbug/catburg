@@ -144,6 +144,7 @@ export function CustomTaskControls() {
                         event.currentTarget.value = '';
                         void importTasks(file);
                     }}/>
+                    <span className={styles.fileSelection} aria-hidden="true"><span className={styles.fileButton}>Choose file</span><span>No file selected</span></span>
                 </label>
                 <button type="button" onClick={() => void exportTasks()} disabled={(!customStorageReady && !recoveryCustomTaskExport) || isExporting}>{recoveryCustomTaskExport ? 'Export recovery JSON' : 'Export tasks'}</button>
             </div>

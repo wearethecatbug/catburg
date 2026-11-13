@@ -1,10 +1,22 @@
 .controls { display: grid; gap: 12px; margin-top: 28px; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.actions { display: grid; min-width: 0; gap: 10px; }
 .actions button, .fileInput, .form button, .retry { min-height: 40px; border: 1px solid #24743f; border-radius: 10px; background: #fff; color: #12442c; font: inherit; font-weight: 700; cursor: pointer; }
 .actions button, .form button, .retry { padding: 0 14px; }
-.actions button:first-child, .form button[type='submit'], .retry { background: #24743f; color: #fff; }
-.fileInput { display: grid; gap: 4px; padding: 7px 10px; }
-.fileInput input { max-width: 100%; }
+.actions > button, .fileInput { min-width: 0; border-radius: 15px; }
+.actions > button:first-child { position: relative; width: 100%; min-height: 44px; padding-inline: 40px 48px; overflow: hidden; border-color: #547447; border-radius: 15px; background: radial-gradient(ellipse at 112% -35%, #c1cb8052, transparent 48%), linear-gradient(174deg, #527540 0%, #43663a 55%, #365530 100%); box-shadow: inset 0 1px 0 #e9efbb99, 0 2px 0 #354f2f, 0 4px 8px #3d542b24; color: #fff9e8; text-align: left; }
+.actions > button:first-child::before, .actions > button:first-child::after { position: absolute; top: 50%; pointer-events: none; content: ''; }
+.actions > button:first-child::before { left: 15px; width: 14px; height: 14px; transform: translateY(-50%); background: linear-gradient(currentColor, currentColor) center / 14px 2px no-repeat, linear-gradient(currentColor, currentColor) center / 2px 14px no-repeat; }
+.actions > button:first-child::after { right: 0; width: min(47%, 138px); height: 100%; transform: translateY(-50%); background: url('/cattasks/new-task-honeycomb.png') right center / 144px 80px no-repeat; opacity: .42; mask-image: linear-gradient(to right, transparent, #000); }
+.actions > button:first-child:focus-visible { outline: 2px solid #284b31; outline-offset: 3px; }
+.form button[type='submit'], .retry { background: #24743f; color: #fff; }
+.fileInput { position: relative; display: grid; gap: 6px; padding: 7px 10px; border-color: #cbc0a8; background: #fffdf8; }
+.fileInput input { position: absolute; width: 1px; height: 1px; padding: 0; clip-path: inset(50%); }
+.fileInput:focus-within { outline: 2px solid #386b43; outline-offset: 2px; }
+.fileSelection { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 8px; color: #485247; font-size: 13px; font-weight: 500; }
+.fileButton { display: inline-grid; min-height: 36px; place-items: center; padding: 0 12px; border: 1px solid #cdc2ab; border-radius: 12px; background: #f3eedf; color: #254532; font-weight: 700; }
+.fileInput:hover .fileButton { background: #ebe5d2; }
+.fileInput:has(input:disabled) { cursor: not-allowed; opacity: .58; }
+.fileInput:has(input:disabled):hover .fileButton { background: #f3eedf; }
 .notice { margin: 0; color: #8b2418; }
 .storageError { display: grid; gap: 8px; }
 .storageError p { margin: 0; }
