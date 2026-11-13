@@ -10,7 +10,8 @@
 }
 
 .panel h2 { flex: 0 0 auto; margin: 0 0 12px; font: 700 22px/1.2 system-ui, sans-serif; }
-.empty, .error { margin: 0; font: 400 16px/1.5 system-ui, sans-serif; }
+.empty, .status, .error { margin: 0; font: 400 16px/1.5 system-ui, sans-serif; }
+.status { min-height: 24px; margin-top: 12px; color: #356b48; }
 .error { margin-top: 12px; color: #8a4938; }
 
 .code {

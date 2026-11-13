@@ -56,6 +56,14 @@ async function savedCodeVisible(page, code) {
   await page.waitForFunction(code => [...document.querySelectorAll("pre")].some(node => node.textContent === code), code);
 }
 
+async function assertSavedStatus(page) {
+  const status = page.getByRole("status").filter({hasText: "Solution saved."});
+  await status.waitFor();
+  assert.equal(await status.count(), 1, "Save exposes one persistent success status");
+  assert.equal(await status.getAttribute("aria-live"), "polite", "Save success is announced politely");
+  return status;
+}
+
 async function headerEvidence(page) {
   return page.evaluate(() => {
     const controls = [...document.querySelectorAll("button")].filter(button => /^(Task|Hint|My solution|Hide task)/.test(button.textContent?.trim() ?? ""));
@@ -117,6 +125,16 @@ test("CatTasks keeps one saved solution per task, restores only after confirmati
     await openSavedSolution(page);
     await save.click();
     await savedCodeVisible(page, firstSaved);
+    const savedStatus = await assertSavedStatus(page);
+    await savedStatus.evaluate(node => {
+      window.__savedSolutionStatusNode = node;
+      window.__savedSolutionStatusUpdated = false;
+      new MutationObserver(() => { window.__savedSolutionStatusUpdated = true; }).observe(node, {childList: true});
+    });
+    await save.click();
+    await page.waitForFunction(() => window.__savedSolutionStatusUpdated === true);
+    const repeatedSaveStatus = await assertSavedStatus(page);
+    assert.equal(await repeatedSaveStatus.evaluate(node => node === window.__savedSolutionStatusNode), true, "repeating Save updates the existing public status region rather than replacing it");
 
     const replacementSaved = "function echo(value) { return `replacement:${value}`; }";
     await page.getByLabel(/Task:/).click();
@@ -201,6 +219,7 @@ test("CatTasks reports saved-solution storage errors and keeps the previous snap
     await openSavedSolution(page);
     await save.click();
     await savedCodeVisible(page, baseline);
+    await assertSavedStatus(page);
     await page.evaluate(baseline => {
       window.__savedSolutionTargetKey = Object.keys(localStorage).find(key => localStorage.getItem(key) === baseline);
     }, baseline);
@@ -208,11 +227,12 @@ test("CatTasks reports saved-solution storage errors and keeps the previous snap
 
     await page.evaluate(() => { window.__savedSolutionFailWrite = true; });
     const attempted = "function echo(value) { return `not-stored:${value}`; }";
-    await page.getByLabel(/Task:/).click();
     await replaceDraft(page, baseline, attempted);
-    await openSavedSolution(page);
     await save.click();
-    await page.locator("[role='alert'], [role='status']").filter({hasText: /storage|save|unavailable|error/i}).waitFor();
+    const writeError = page.getByRole("alert").filter({hasText: /^This solution could not be saved\.$/});
+    await writeError.waitFor();
+    assert.equal(await writeError.count(), 1, "a failed write reports the exact save error as an alert");
+    assert.equal(await page.getByRole("status").filter({hasText: "Solution saved."}).count(), 0, "a failed Save clears any prior success status");
     assert.equal(await page.locator("pre").filter({hasText: baseline}).count(), 1, "a failed Save retains the previous task snapshot");
     assert.equal(await page.locator("pre").filter({hasText: attempted}).count(), 0, "a failed Save never reports the attempted draft as saved");
 

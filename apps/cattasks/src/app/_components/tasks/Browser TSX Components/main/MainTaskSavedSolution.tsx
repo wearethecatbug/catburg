@@ -16,12 +16,14 @@ const storageKey = (taskId: string) => `cattasks:saved-solution:v1:${encodeURICo
 export default function MainTaskSavedSolution({taskId, draft, onRestore}: Props) {
     const [savedCode, setSavedCode] = useState<string | null>(null);
     const [storageError, setStorageError] = useState<string | null>(null);
+    const [saveStatusVersion, setSaveStatusVersion] = useState<number | null>(null);
 
     useEffect(() => {
         try {
             setSavedCode(window.localStorage.getItem(storageKey(taskId)));
         } catch {
             setStorageError('Saved solutions are unavailable in this browser.');
+            setSaveStatusVersion(null);
         }
     }, [taskId]);
 
@@ -30,8 +32,10 @@ export default function MainTaskSavedSolution({taskId, draft, onRestore}: Props)
             window.localStorage.setItem(storageKey(taskId), draft);
             setSavedCode(draft);
             setStorageError(null);
+            setSaveStatusVersion(version => (version ?? 0) + 1);
         } catch {
             setStorageError('This solution could not be saved.');
+            setSaveStatusVersion(null);
         }
     };
 
@@ -49,6 +53,9 @@ export default function MainTaskSavedSolution({taskId, draft, onRestore}: Props)
             ) : (
                 <pre tabIndex={0} className={styles.code} aria-label="Saved solution code"><code>{savedCode}</code></pre>
             )}
+            <p className={styles.status} role="status" aria-live="polite" aria-atomic="true">
+                {saveStatusVersion !== null && <span key={saveStatusVersion}>Solution saved.</span>}
+            </p>
             {storageError && <p className={styles.error} role="alert">{storageError}</p>}
             <div className={styles.actions}>
                 <button type="button" className={`${actionStyles.button} ${styles.action} ${styles.save}`} data-material="wood" onClick={saveCurrentCode}>
