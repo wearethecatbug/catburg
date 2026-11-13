@@ -271,8 +271,10 @@ test("catalogue shelf and Back to task use the approved independent composition"
       [1120, 22, 2, 101, 60],
       [761, 22, 2, 101, 60],
       [760, 22, 2, 101, 60],
-      [601, 22, 2, 101, 60],
+      [602, 22, 2, 101, 60],
+      [601, 11, 0, 77, 46],
       [600, 11, 0, 77, 46],
+      [582, 11, 0, 77, 46],
       [320, 11, 0, 77, 46],
     ]) {
       await page.setViewportSize({width, height: 900});
@@ -302,11 +304,24 @@ test("catalogue shelf and Back to task use the approved independent composition"
         const rabbit = document.querySelector("img[class*='backRabbit']");
         const candles = document.querySelector("img[class*='compactCandles']");
         const button = Array.from(document.querySelectorAll("button")).find(node => node.textContent?.trim() === "←Back to task");
+        const backControl = button?.closest("[class*='backControl']");
         const arrow = button?.querySelector("span");
         const title = document.querySelector("h1");
-        if (!shelf || !capybara || stickerImages.some(image => !image) || !rabbit || !candles || !button || !arrow || !title) throw new Error("catalogue shelf, title, stickers, rabbit, candles, capybara, Back button, or arrow is unavailable");
+        if (!shelf || !capybara || stickerImages.some(image => !image) || !rabbit || !candles || !button || !backControl || !arrow || !title) throw new Error("catalogue shelf, title, stickers, rabbit, candles, capybara, Back control, button, or arrow is unavailable");
         await capybara.decode();
         await Promise.all([...stickerImages, rabbit, candles].filter(visible).map(image => image.decode()));
+        const paintedBottom = image => {
+          const canvas = document.createElement("canvas");
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d", {willReadFrequently: true});
+          context.drawImage(image, 0, 0);
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          let bottom = -1;
+          for (let y = canvas.height - 1; y >= 0 && bottom < 0; y -= 1) for (let x = 0; x < canvas.width; x += 1) if (pixels[(y * canvas.width + x) * 4 + 3] >= 240) { bottom = y; break; }
+          const imageBox = box(image);
+          return bottom < 0 ? null : imageBox.top + (bottom + 1) * imageBox.height / canvas.height;
+        };
         const titleStyle = getComputedStyle(title);
         const moss = getComputedStyle(title, "::after");
         return {
@@ -325,8 +340,12 @@ test("catalogue shelf and Back to task use the approved independent composition"
             ariaHidden: image.closest("[aria-hidden='true']")?.getAttribute("aria-hidden") ?? null,
           })),
           rabbit: {visible: visible(rabbit), decoded: rabbit.complete && rabbit.naturalWidth > 0, pointerEvents: getComputedStyle(rabbit).pointerEvents, bottom: getComputedStyle(rabbit).bottom},
-          candles: {visible: visible(candles), decoded: candles.complete && candles.naturalWidth > 0, pointerEvents: getComputedStyle(candles).pointerEvents, transform: getComputedStyle(candles).transform},
-          button: box(button),
+          candles: {visible: visible(candles), decoded: candles.complete && candles.naturalWidth > 0, pointerEvents: getComputedStyle(candles).pointerEvents, translate: getComputedStyle(candles).translate, box: box(candles), paintedBottom: visible(candles) ? paintedBottom(candles) : null},
+          backFoliage: ["::before", "::after"].map(pseudo => {
+            const style = getComputedStyle(backControl, pseudo);
+            return {content: style.content, backgroundImage: style.backgroundImage, zIndex: style.zIndex, pointerEvents: style.pointerEvents};
+          }),
+          button: {...box(button), zIndex: getComputedStyle(button).zIndex},
           arrow: {box: box(arrow), text: arrow.textContent, visible: getComputedStyle(arrow).display !== "none"},
           title: {
             box: box(title),
@@ -357,6 +376,9 @@ test("catalogue shelf and Back to task use the approved independent composition"
       assert.equal(view.capybara.pointerEvents, "none", `${width}px capybara cannot intercept the button`);
       assert.equal(Math.round(view.capybara.box.width), expectedMascotWidth, `${width}px capybara keeps its approved responsive width`);
       assert.ok(Math.abs((view.capybara.box.left + view.capybara.box.right) / 2 - (view.button.left + view.button.right) / 2) <= 1, `${width}px capybara stays centered over Back to task`);
+      assert.deepEqual(view.backFoliage.map(foliage => foliage.backgroundImage.includes("catalogue-back-vine.png") || foliage.backgroundImage.includes("catalogue-back-leaves.png")).sort(), [true, true], `${width}px keeps both approved Back foliage layers`);
+      assert.ok(view.backFoliage.every(foliage => foliage.content === '""' && foliage.zIndex === "0" && foliage.pointerEvents === "none"), `${width}px Back foliage stays visible, decorative, and behind the front button edge`);
+      assert.equal(view.button.zIndex, "1", `${width}px Back to task remains above its foliage layers`);
       const [samoyed, yarn] = view.stickers;
       assert.equal(samoyed.src, "/cattasks/catalogue/samoyed-cushion.png", `${width}px uses the approved Samoyed crop`);
       assert.equal(yarn.src, "/cattasks/catalogue/yarn-ball.png", `${width}px uses the approved yarn crop`);
@@ -369,11 +391,12 @@ test("catalogue shelf and Back to task use the approved independent composition"
         assert.equal(view.rabbit.decoded, true, `${width}px rabbit and carrot asset decodes`);
         assert.equal(view.rabbit.bottom, "-8px", `${width}px rabbit and carrot retain the approved lowered placement`);
       }
-      assert.equal(view.candles.visible, width <= 600, `${width}px candles appear only on the compact shelf`);
+      assert.equal(view.candles.visible, width <= 601, `${width}px candles appear only on the compact shelf`);
       assert.equal(view.candles.pointerEvents, "none", `${width}px candles remain decorative`);
-      if (width <= 600) {
+      if (width <= 601) {
         assert.equal(view.candles.decoded, true, `${width}px candle asset decodes`);
-        assert.match(view.candles.transform, /matrix\(1, 0, 0, 1, 0, 5\)/, `${width}px candles retain the approved 5px lowering`);
+        assert.equal(view.candles.translate, "0px 4px", `${width}px candles retain the approved compact lowering`);
+        assert.ok(view.candles.paintedBottom >= view.shelf.top + 2 && view.candles.paintedBottom <= view.shelf.bottom, `${width}px visible candle foot remains seated within the compact shelf rail`);
       }
       if (width >= 1000) {
         assert.equal(Math.round(samoyed.box.width), 116, `${width}px Samoyed has the approved width`);
@@ -384,10 +407,11 @@ test("catalogue shelf and Back to task use the approved independent composition"
         assert.ok(Math.abs(yarn.box.bottom - view.shelf.top - 14) <= 1, `${width}px yarn sits 14px into the shelf`);
       }
       assert.equal(Math.round(view.button.height), expectedButtonHeight, `${width}px Back to task keeps its approved height`);
+      assert.ok(Math.abs(view.button.bottom - view.shelf.top) <= 1, `${width}px Back to task sits on the shelf top edge`);
       if (width > 760) assert.ok(view.button.width >= 235, `${width}px Back to task keeps the desktop minimum width`);
       assert.equal(view.arrow.text, "←", `${width}px Back to task keeps its arrow`);
       assert.equal(view.arrow.visible, true, `${width}px Back to task arrow remains visible`);
-      if (width >= 601) {
+      if (width > 601) {
         assert.ok(Math.abs(view.title.box.left - (view.shelf.left + 16)) <= 1, `${width}px All tasks starts 16px from the shelf edge`);
         assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + 7)) <= 1, `${width}px All tasks sits 7px into the shelf`);
         assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px title uses the local approved moss texture`);

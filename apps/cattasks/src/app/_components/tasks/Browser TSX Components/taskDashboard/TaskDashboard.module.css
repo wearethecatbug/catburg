@@ -228,7 +228,6 @@
     }
 
     .shelf { width: var(--catalogue-shelf-width); }
-    .catalogueShelf { height: 11px; }
     .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
 }
 
@@ -429,7 +428,11 @@
     }
 }
 
-@media (min-width: 601px) {
+@media (max-width: 601px) {
+    .catalogueShelf { height: 11px; }
+}
+
+@media (width > 601px) {
     .catalogueShelf {
         height: 22px;
         margin-bottom: 22px;
