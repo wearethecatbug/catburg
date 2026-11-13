@@ -75,6 +75,12 @@
 @media (min-width: 1221px) {
     .headerContainer {
         padding-inline: max(clamp(20px, 5.5vw, 84px), calc((100% - 1430px) / 2 + 31px));
+        padding-block-start: 21px;
+    }
+
+    .allTasksButton {
+        align-self: start;
+        margin-block-start: 14px;
     }
 }
 
@@ -84,7 +90,7 @@
     }
 }
 
-@media (max-width: 1220px) {
+@media (width < 1221px) {
     .headerContainer {
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto auto;
@@ -115,6 +121,13 @@
 @media (min-width: 601px) and (max-width: 1150px) {
     .headerContainer {
         padding-inline: max(16px, calc((100% - 875px) / 2));
+    }
+}
+
+@media (min-width: 601px) and (max-width: 1200px) {
+    .headerContainer {
+        /* Keep the full arrow plaques inside the same rail gutters as the shelf. */
+        padding-inline: calc((100% - var(--catalogue-shelf-width)) / 2 + var(--task-shelf-arrow-inset));
     }
 }
 

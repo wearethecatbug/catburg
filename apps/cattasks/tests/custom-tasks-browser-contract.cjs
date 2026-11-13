@@ -232,6 +232,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
     const taggedRow = rows(page).filter({hasText: tagged.title});
     await taggedRow.waitFor({state: "visible"});
     assert.match(await taggedRow.innerText(), /Arrays/, "a tagged custom record is a real catalogue row");
+    assert.equal(await taggedRow.locator("[data-task-ordinal]").innerText(), "03", "a created custom task receives and displays its immutable source ordinal");
     assert.equal(await page.getByRole("radio", {name: "Uncategorized", exact: true}).count(), 0, "the optional Uncategorized filter stays absent without an untagged custom row");
 
     await fillTaskForm(page, legacy);
@@ -239,6 +240,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
     const legacyRow = rows(page).filter({hasText: legacy.title});
     await legacyRow.waitFor({state: "visible"});
     assert.match(await legacyRow.innerText(), /Uncategorized/, "a legacy no-topic record uses the neutral label");
+    assert.equal(await legacyRow.locator("[data-task-ordinal]").innerText(), "04", "later custom additions keep their own source ordinal");
     assert.equal(await page.getByRole("radio", {name: "Uncategorized", exact: true}).count(), 1, "the conditional Uncategorized filter appears only when an untagged custom record exists");
 
     const search = page.getByRole("searchbox", {name: "Search tasks"});
@@ -246,6 +248,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
     assert.equal(await rows(page).count(), 1, "custom rows participate in the same search collection");
     await page.getByRole("radio", {name: "Arrays", exact: true}).check();
     assert.equal(await rows(page).count(), 1, "custom rows participate in the same topic filter");
+    assert.equal(await taggedRow.locator("[data-task-ordinal]").innerText(), "03", "search and topic filtering never renumber a custom row");
     await page.getByRole("radio", {name: "Not started", exact: true}).check();
     assert.equal(await rows(page).count(), 1, "custom rows participate in the same status filter");
     await page.getByRole("radio", {name: "All statuses", exact: true}).check();
@@ -270,6 +273,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
     await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
+    assert.equal(await rows(page).filter({hasText: tagged.title}).locator("[data-task-ordinal]").innerText(), "03", "current-task grouping retains the custom source ordinal");
     await page.getByRole("button", {name: "Back to task"}).click();
     assert.match(await page.getByLabel(/Hint: Показаны подсказки/).getAttribute("aria-label"), /Показаны подсказки/, "Back preserves the custom task's active tab");
     await assertActiveDraft(page, editedDraft, "Back preserves the custom draft without a second state owner");
@@ -288,7 +292,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
 
 test("JSON import/export are custom-only and rejected documents preserve browser prestate", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext();
+  const context = await browser.newContext({locale: "ru-RU"});
   const page = await context.newPage();
   const seen = await diagnostics(page);
   const existing = customTask("existing", {topic: "Logic"});
@@ -303,10 +307,20 @@ test("JSON import/export are custom-only and rejected documents preserve browser
     const before = await storedDocument(page);
 
     const badFile = page.getByLabel("Import tasks JSON");
-    await badFile.setInputFiles({name: "bad.json", mimeType: "application/json", buffer: Buffer.from("{")});
+    assert.equal(await badFile.getAttribute("accept"), "application/json", "native import control filters for JSON files");
+    const filePresentation = badFile.locator("xpath=..");
+    await filePresentation.getByText("Choose file", {exact: true}).waitFor({state: "visible"});
+    await filePresentation.getByText("No file selected", {exact: true}).waitFor({state: "visible"});
+    await badFile.focus();
+    assert.equal(await badFile.evaluate(node => node === document.activeElement), true, "the native JSON control remains keyboard focusable");
+    const chooserOpened = page.waitForEvent("filechooser");
+    await badFile.press("Enter");
+    const chooser = await chooserOpened;
+    await chooser.setFiles({name: "bad.json", mimeType: "application/json", buffer: Buffer.from("{")});
     const alert = customAlerts(page);
     await alert.waitFor({state: "visible"});
     assert.match(await alert.innerText(), /import|JSON|invalid|error/i, "malformed import is visibly recoverable");
+    assert.equal(await badFile.evaluate(input => input.files?.length), 0, "every attempted native-file import immediately clears its selection");
     assert.equal(await storedDocument(page), before, "malformed import cannot partially mutate the IndexedDB document");
 
     await badFile.setInputFiles({name: "collision.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({version: 1, tasks: [customTask("race")]}))});

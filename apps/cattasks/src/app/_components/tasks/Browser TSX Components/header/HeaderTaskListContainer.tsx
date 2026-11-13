@@ -30,6 +30,28 @@ export default function HeaderTaskListContainer({className}: HeaderTaskListConta
                 ariaLabel="Select previous task"
                 disabled={!hasTasks}
             />
+            <img
+                className={styles.mobileFoxBody}
+                data-mobile-fox="body"
+                src="/cattasks/mobile-shelf/raised-paws-fox.png"
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                loading="lazy"
+                width={882}
+                height={1280}
+            />
+            <img
+                className={styles.mobileFoxPaws}
+                data-mobile-fox="paws"
+                src="/cattasks/mobile-shelf/raised-paws-fox.png"
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+                loading="lazy"
+                width={882}
+                height={1280}
+            />
             <div className={styles.taskIdentity}>
                 {selectedTask && (
                     <>

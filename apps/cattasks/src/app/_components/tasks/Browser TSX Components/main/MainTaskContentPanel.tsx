@@ -7,6 +7,7 @@ import MainBtnShowDescription from './MainBtnShowDescription';
 import MainTaskSolutionEditor from '@/app/_components/tasks/Browser TSX Components/main/MainTaskSolutionEditor';
 import MainBtnInfo from '@/app/_components/tasks/Browser TSX Components/main/MainBtnInfo';
 import {combineClassNames} from '@/app/_components/tasks/shared/utils/combineClassNames';
+import CollapsedTaskSpine from './CollapsedTaskSpine';
 
 type Props = React.HTMLAttributes<HTMLDivElement>;
 
@@ -26,6 +27,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     const hints = selectedTask?.hints ?? [];
 
     const minimizeButtonRef = useRef<HTMLButtonElement | null>(null);
+    const shouldRestoreToggleFocus = useRef(false);
 
     const taskDescriptionPreElementRef =
         useRef<HTMLPreElement | null>(null);
@@ -49,10 +51,14 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     }, [selectedTask?.id]);
 
     useEffect(() => {
-        if (isMinimized) minimizeButtonRef.current?.focus();
+        if (!shouldRestoreToggleFocus.current) return;
+
+        minimizeButtonRef.current?.focus();
+        shouldRestoreToggleFocus.current = false;
     }, [isMinimized]);
 
     const handleToggleMinimize = () => {
+        shouldRestoreToggleFocus.current = true;
         setIsMinimized(prev => !prev);
     };
 
@@ -68,19 +74,32 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     };
 
     return (
-        <div className={combineClassNames(styles.root, isMinimized && styles.min, className)} {...rest}>
+        <div
+            className={combineClassNames(styles.root, isMinimized && styles.min, className)}
+            data-task-collapsed={isMinimized || undefined}
+            {...rest}
+        >
             <div className={styles.taskDetailsContainer}>
-                <button
-                    ref={minimizeButtonRef}
-                    type="button"
-                    onClick={handleToggleMinimize}
-                    aria-expanded={!isMinimized}
-                    aria-controls="taskPanelContent"
-                    className={styles.buttonMinimizeBase}
-                    aria-label={isMinimized ? 'Show task: Показать панель' : 'Hide task: Свернуть панель'}
-                >
-                    <span>{isMinimized ? 'Show task' : 'Hide task'}</span>
-                </button>
+                {isMinimized ? (
+                    <CollapsedTaskSpine
+                        ref={minimizeButtonRef}
+                        controlsId="taskPanelContent"
+                        onExpand={handleToggleMinimize}
+                        className={styles.collapsedTaskSpine}
+                    />
+                ) : (
+                    <button
+                        ref={minimizeButtonRef}
+                        type="button"
+                        onClick={handleToggleMinimize}
+                        aria-expanded={true}
+                        aria-controls="taskPanelContent"
+                        className={styles.buttonMinimizeBase}
+                        aria-label="Hide task: Свернуть панель"
+                    >
+                        <span>Hide task</span>
+                    </button>
+                )}
 
                 {!isMinimized && (
                     <div className={combineClassNames(styles.mainButtonsRow, styles.btnContainer)}

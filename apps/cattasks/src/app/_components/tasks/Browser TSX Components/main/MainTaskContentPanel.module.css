@@ -96,6 +96,30 @@
     font: 700 28px/1.2 system-ui, sans-serif;
 }
 
+@media (min-width: 1151px) {
+    .btnContainer,
+    .mainBtnTask,
+    .mainBtnInfo,
+    .buttonMinimizeBase {
+        min-height: 60px;
+    }
+
+    .btnContainer .mainBtnTask,
+    .btnContainer .mainBtnInfo {
+        padding-block: 0;
+    }
+
+    .taskDescriptionContainer {
+        padding: 22px 24px;
+        font-size: 18px;
+    }
+
+    .challengeHeading {
+        margin-bottom: 10px;
+        font-size: 24px;
+    }
+}
+
 .taskDescriptionPre,
 .taskInfoPre {
     min-width: 0;
@@ -207,13 +231,33 @@
     width: 100%;
 }
 
-.min { height: auto; }
-.min .taskDetailsContainer { flex: 0 0 auto; }
-.min .buttonMinimizeBase {
-    position: static;
-    border-left: 0;
+.min .taskDetailsContainer {
+    flex: 1 1 auto;
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 .min .contentContainerBase { display: none; }
+
+.collapsedTaskSpine {
+    flex: 1 1 auto;
+    height: 100%;
+}
+
+@media (min-width: 1151px) {
+    .min .taskDetailsContainer { overflow: visible; }
+}
+
+@media (max-width: 1150px) {
+    .min {
+        width: 100%;
+        height: auto;
+    }
+
+    .min .taskDetailsContainer { flex: 1 1 auto; }
+}
 
 @media (max-width: 600px) {
     .taskDetailsContainer { border-radius: 18px; }
@@ -226,7 +270,8 @@
     }
     .buttonMinimizeBase { min-width: 104px; min-height: 56px; padding-inline: 12px; font-size: 14px; }
     .contentContainerFrame { padding: 22px; font-size: 16px; }
-    .challengeHeading { font-size: 23px; }
+    .taskDescriptionContainer { padding: 18px; }
+    .challengeHeading { margin-bottom: 10px; font-size: 20px; }
     .hintHeading { gap: 12px; margin-bottom: 12px; font-size: 13px; }
     .hint summary { min-height: 52px; padding-inline: 14px; font-size: 16px; }
     .hint p { padding: 0 14px 14px; font-size: 15px; }

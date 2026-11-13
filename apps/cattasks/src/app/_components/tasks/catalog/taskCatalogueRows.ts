@@ -28,6 +28,7 @@ const builtInTopics = new Map<string, TaskTopic>([
 
 export type TaskCatalogueRow = {
     readonly id: string;
+    readonly ordinal: number;
     readonly title: string;
     readonly description: string;
     readonly topic: TaskTopic;
@@ -54,6 +55,7 @@ export function getTaskCatalogueRows(
 ): readonly TaskCatalogueRow[] {
     return tasks.map(task => ({
         id: task.id,
+        ordinal: task.ordinal,
         title: task.title,
         description: task.description,
         topic: customTopics.has(task.id) ? customTopics.get(task.id) ?? 'Uncategorized' : getBuiltInTaskTopic(task.id),

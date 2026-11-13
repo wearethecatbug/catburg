@@ -8,13 +8,18 @@ import MainBtnRunCode from "@/app/_components/tasks/Browser TSX Components/main/
 import MainBtnTest from "@/app/_components/tasks/Browser TSX Components/main/MainBtnTest";
 import TaskOutput from "@/app/_components/tasks/Browser TSX Components/main/TaskOutput";
 import {runIsolatedTask, type IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
-import {useCallback, useEffect, useRef} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
 type MainCodeEditorProps = {
     readonly className?: string;
     readonly children?: React.ReactNode;
+};
+
+type PendingAction = {
+    readonly taskId: string;
+    readonly mode: IsolatedTaskRequest["mode"];
 };
 
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
@@ -31,11 +36,20 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     const ownedModels = useRef(new Set<editor.ITextModel>());
     const modelChangeSubscription = useRef<IDisposable | null>(null);
     const mounted = useRef(true);
+    const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+
+    const abortActiveRun = useCallback(() => {
+        activeAbortController.current?.abort();
+        activeAbortController.current = null;
+        if (mounted.current) setPendingAction(null);
+    }, []);
+
     useEffect(() => {
         mounted.current = true;
         return () => {
             mounted.current = false;
             activeAbortController.current?.abort();
+            activeAbortController.current = null;
             modelChangeSubscription.current?.dispose();
             const activeModel = codeEditor.current?.getModel();
             for (const model of ownedModels.current) {
@@ -45,20 +59,31 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
             codeEditor.current = null;
         };
     }, []);
-    useEffect(() => () => activeAbortController.current?.abort(), [selectedTask?.id]);
+    useEffect(() => () => {
+        abortActiveRun();
+    }, [abortActiveRun, selectedTask?.id]);
 
     const execute = useCallback(async (request: IsolatedTaskRequest): Promise<void> => {
         const token = beginSelectedRun(request.mode);
         if (!token) return;
-        activeAbortController.current?.abort();
+        abortActiveRun();
         const controller = new AbortController();
         activeAbortController.current = controller;
-        const result = await runIsolatedTask(request, controller.signal);
-        if (mounted.current && !controller.signal.aborted) completeRun(token, result);
-    }, [beginSelectedRun, completeRun]);
+        setPendingAction({taskId: token.taskId, mode: request.mode});
+        try {
+            const result = await runIsolatedTask(request, controller.signal);
+            if (mounted.current && !controller.signal.aborted) completeRun(token, result);
+        } finally {
+            // A superseded request must not clear the newer action's pending state.
+            if (activeAbortController.current === controller) {
+                activeAbortController.current = null;
+                if (mounted.current) setPendingAction(null);
+            }
+        }
+    }, [abortActiveRun, beginSelectedRun, completeRun]);
 
     const handleEditorChange = (editorValue: string | undefined) => {
-        activeAbortController.current?.abort();
+        abortActiveRun();
         const safeEditorValue = editorValue ?? '';
         setSelectedDraft(safeEditorValue);
     };
@@ -91,6 +116,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     }, []);
 
     const value = selectedWorkspace?.draft ?? "";
+    const actionMaterial = "wood" as const;
     // Monaco decodes URI paths once, so task IDs are double-encoded for safe model paths.
     const modelPath = selectedTask
         ? `solution-${encodeURIComponent(encodeURIComponent(selectedTask.id))}.js`
@@ -107,9 +133,9 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                         </h2>
                         <p className={styles.languageLabel}>JavaScript</p>
                     </div>
-                    <div className={styles.buttonsRow}>
-                        <MainBtnTest className={styles.btnTest} execute={execute} isDisabled={!selectedTask}/>
-                        <MainBtnRunCode className={styles.btnRunCode} execute={execute}/>
+                    <div className={styles.buttonsRow} data-material={actionMaterial}>
+                        <MainBtnTest execute={execute} isDisabled={!selectedTask} isPending={pendingAction?.mode === "test" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
+                        <MainBtnRunCode execute={execute} isPending={pendingAction?.mode === "run" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
                     </div>
                 </header>
 

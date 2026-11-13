@@ -15,7 +15,7 @@ const catalog = {version: 1, tasks: [{
   tests: [{args: ["fixture"], expected: "fixture"}],
 }]};
 
-async function prepare(context, page) {
+async function prepare(context, page, fixtureCatalog = catalog) {
   const diagnostics = {console: [], page: [], request: [], response: []};
   page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
   page.on("pageerror", error => diagnostics.page.push(error.message));
@@ -23,7 +23,7 @@ async function prepare(context, page) {
   page.on("response", response => {
     if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`);
   });
-  await context.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}));
+  await context.route("**/task-catalog.v1.json", route => route.fulfill({contentType: "application/json", body: JSON.stringify(fixtureCatalog)}));
   const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
   assert.equal(response?.status(), 200, "the isolated dashboard route responds with HTTP 200");
   return diagnostics;
@@ -51,9 +51,12 @@ async function advanceUntilObservedTick(page, predicate, description, limit = 3_
 }
 
 async function dropAt(page, strip, ratio) {
+  await strip.scrollIntoViewIfNeeded();
   const box = await strip.boundingBox();
   assert.ok(box && box.width > 0 && box.height > 0, "the pet strip must expose a visible pointer target");
-  return dropAtX(page, strip, box.x + Math.round(box.width * ratio), box.y + box.height / 2);
+  const y = box.y + box.height / 2;
+  assert.ok(y >= 0 && y <= page.viewportSize().height, "the measured pet-strip pointer midpoint must be inside the viewport");
+  return dropAtX(page, strip, box.x + Math.round(box.width * ratio), y);
 }
 
 async function dropAtX(page, strip, x, y) {
@@ -417,7 +420,7 @@ test("CatTasks renders unified near and far pet travel on the measured safe trac
   }
 });
 
-test("CatTasks keeps viewport foliage separate from six local pet-strip grasses through responsive scroll and resize", {timeout: 45_000}, async () => {
+test("CatTasks keeps viewport foliage separate from responsive local pet-strip grasses through scroll and resize", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1536, height: 1024}});
   const page = await context.newPage();
@@ -436,7 +439,12 @@ test("CatTasks keeps viewport foliage separate from six local pet-strip grasses 
     const inspect = () => page.evaluate(() => {
       const strip = document.querySelector("[aria-label='Pet feeding strip']");
       if (!strip) throw new Error("pet strip unavailable");
+      const track = strip.querySelector("[aria-hidden='true']");
+      if (!track) throw new Error("pet strip track unavailable");
       const findAsset = name => [...document.querySelectorAll("*")].filter(node => getComputedStyle(node).backgroundImage.includes(name));
+      const viewportDecoration = document.querySelector("[class*='viewportDecoration']");
+      const decorationLayer = document.querySelector("[class*='decorationLayer']");
+      if (!viewportDecoration || !decorationLayer) throw new Error("dashboard viewport decorations unavailable");
       const rectangle = node => {
         const rect = node.getBoundingClientRect();
         const style = getComputedStyle(node);
@@ -451,33 +459,84 @@ test("CatTasks keeps viewport foliage separate from six local pet-strip grasses 
       const parentStyle = getComputedStyle(strip.parentElement);
       return {
         viewport: {width: innerWidth, height: innerHeight, scrollX, scrollY, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth},
+        meadow: {...rectangle(viewportDecoration), backgroundImage: getComputedStyle(viewportDecoration).backgroundImage, backgroundPosition: getComputedStyle(viewportDecoration).backgroundPosition, backgroundRepeat: getComputedStyle(viewportDecoration).backgroundRepeat, backgroundSize: getComputedStyle(viewportDecoration).backgroundSize},
+        light: {display: getComputedStyle(decorationLayer).display},
         strip: {...rectangle(strip), availableWidth: (strip.parentElement?.getBoundingClientRect().width ?? 0) - parseFloat(parentStyle.paddingInlineStart) - parseFloat(parentStyle.paddingInlineEnd), minBlockSize: getComputedStyle(strip).minBlockSize, maxInlineSize: getComputedStyle(strip).maxInlineSize, borderRadius: getComputedStyle(strip).borderTopLeftRadius},
-        grasses: findAsset("grass-").map(node => ({...rectangle(node), inStrip: strip.contains(node)})),
-        foliage: ["foliage-top-right.png", "foliage-bottom-left.png", "foliage-bottom-right.png"].map(asset => ({asset, nodes: findAsset(asset).map(node => ({...rectangle(node), fixedAncestor: hasFixedAncestor(node)}))})),
+        track: rectangle(track),
+        grassNodes: findAsset("grass-").length,
+        grasses: findAsset("grass-").filter(node => getComputedStyle(node).display !== "none").map(node => ({...rectangle(node), inStrip: strip.contains(node), backgroundImage: getComputedStyle(node).backgroundImage})),
+        foliage: ["foliage-top-right.png", "foliage-bottom-left.png", "foliage-bottom-right.png"].map(asset => ({asset, nodes: findAsset(asset).map(node => ({...rectangle(node), display: getComputedStyle(node).display, fixedAncestor: hasFixedAncestor(node)}))})),
       };
     });
 
+    const assertDesktopMeadowAsset = () => page.evaluate(async () => {
+      const image = new Image();
+      image.src = "/cattasks/desktop-meadow.png";
+      await new Promise((resolve, reject) => {
+        image.addEventListener("load", resolve, {once: true});
+        image.addEventListener("error", () => reject(new Error("desktop meadow asset failed to load")), {once: true});
+      });
+      return {currentSrc: image.currentSrc, width: image.naturalWidth, height: image.naturalHeight};
+    });
+
     let previousFoliage = null;
-    for (const [width, height] of [[1536, 1024], [780, 900], [390, 844], [780, 900], [1536, 1024]]) {
+    const desktopGrasses = [
+      {asset: "grass-01.png", inlineStart: 0.08},
+      {asset: "grass-02.png", inlineStart: 0.23},
+      {asset: "grass-03.png", inlineStart: 0.39},
+      {asset: "grass-01.png", inlineStart: 0.57},
+      {asset: "grass-02.png", inlineStart: 0.74},
+      {asset: "grass-03.png", inlineStart: 0.90},
+    ];
+    const mobileGrasses = [
+      {asset: "grass-02.png", inlineStart: 0.23},
+      {asset: "grass-01.png", inlineStart: 0.57},
+      {asset: "grass-03.png", inlineStart: 0.90},
+    ];
+    for (const [width, height] of [[1150, 900], [1151, 900], [1150, 900], [1536, 1024], [780, 900], [601, 900], [600, 900], [500, 900], [390, 844], [320, 844], [601, 900], [780, 900], [1536, 1024]]) {
       await page.setViewportSize({width, height});
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await strip.scrollIntoViewIfNeeded();
       const beforeScroll = await inspect();
       assert.equal(beforeScroll.viewport.scrollWidth, beforeScroll.viewport.clientWidth, `${width}px has no horizontal document overflow`);
-      assert.equal(beforeScroll.grasses.length, 6, `${width}px renders exactly six grass assets`);
+      const expectedGrasses = width <= 600 ? mobileGrasses : desktopGrasses;
+      assert.equal(beforeScroll.grassNodes, 6, `${width}px retains all six local grass anchors`);
+      assert.equal(beforeScroll.grasses.length, expectedGrasses.length, `${width}px renders the approved visible grass density`);
       assert.ok(beforeScroll.grasses.every(grass => grass.inStrip), `${width}px keeps every grass element inside PetStrip`);
-      assert.equal(new Set(beforeScroll.grasses.map(grass => Math.round(grass.left))).size, 6, `${width}px keeps each grass at a distinct inline position`);
+      assert.equal(new Set(beforeScroll.grasses.map(grass => Math.round(grass.left))).size, expectedGrasses.length, `${width}px keeps each visible grass at a distinct inline position`);
       assert.ok(new Set(beforeScroll.grasses.map(grass => Math.round(grass.top))).size > 1, `${width}px keeps grass vertically staggered`);
       assert.ok(beforeScroll.grasses.every(grass => grass.pointerEvents === "none"), `${width}px grass is pointer inert`);
+      for (const [index, expected] of expectedGrasses.entries()) {
+        const grass = beforeScroll.grasses[index];
+        assert.ok(grass.backgroundImage.includes(expected.asset), `${width}px renders ${expected.asset} in the approved visible order`);
+        assert.ok(Math.abs((grass.left - beforeScroll.track.left) / beforeScroll.track.width - expected.inlineStart) <= 0.02, `${width}px keeps ${expected.asset} at its approved inline position`);
+      }
       assert.ok(parseFloat(beforeScroll.strip.minBlockSize) >= 64, `${width}px retains at least the approved 64px frame height minimum`);
       assert.equal(beforeScroll.strip.maxInlineSize, "1428px", `${width}px retains the 1428px frame maximum`);
       assert.equal(beforeScroll.strip.borderRadius, "32px", `${width}px retains the 32px frame radius`);
       assert.ok(beforeScroll.strip.height >= 64, `${width}px frame height honors its minimum`);
       assert.ok(Math.abs(beforeScroll.strip.width - Math.min(1428, beforeScroll.strip.availableWidth)) <= 1, `${width}px frame fills its available inline width within its maximum`);
-      assert.equal(beforeScroll.foliage.length, 3, `${width}px reads all three foliage asset kinds`);
-      assert.ok(beforeScroll.foliage.every(({nodes}) => nodes.length === 1 && nodes[0].pointerEvents === "none" && nodes[0].fixedAncestor), `${width}px foliage stays in one fixed pointer-inert viewport decoration per corner`);
-      const topBranch = beforeScroll.foliage[0].nodes[0];
-      assert.ok(topBranch.top < 0 || topBranch.right > width, `${width}px top branch extends beyond a viewport edge to hide its source endpoint`);
+      const expectsDesktopMeadow = width >= 1151;
+      assert.equal(beforeScroll.meadow.position, "fixed", `${width}px viewport decoration remains fixed`);
+      assert.equal(beforeScroll.meadow.pointerEvents, "none", `${width}px viewport decoration remains pointer inert`);
+      if (expectsDesktopMeadow) {
+        assert.ok(beforeScroll.meadow.backgroundImage.includes("desktop-meadow.png"), `${width}px uses the approved desktop meadow background`);
+        assert.equal(beforeScroll.meadow.backgroundPosition, "50% 50%", `${width}px centers the desktop meadow background`);
+        assert.equal(beforeScroll.meadow.backgroundRepeat, "no-repeat", `${width}px does not tile the desktop meadow background`);
+        assert.equal(beforeScroll.meadow.backgroundSize, "cover", `${width}px covers the desktop viewport with the meadow background`);
+        assert.equal(beforeScroll.light.display, "none", `${width}px hides the retired desktop light decoration`);
+        assert.ok(beforeScroll.foliage.every(({nodes}) => nodes.length === 1 && nodes[0].display === "none"), `${width}px hides every retired corner foliage decoration`);
+        const meadowAsset = await assertDesktopMeadowAsset();
+        assert.ok(meadowAsset.currentSrc.endsWith("/cattasks/desktop-meadow.png"), `${width}px loads the published desktop meadow asset`);
+        assert.deepEqual({width: meadowAsset.width, height: meadowAsset.height}, {width: 1779, height: 884}, `${width}px desktop meadow asset retains its approved dimensions`);
+      } else {
+        assert.equal(beforeScroll.meadow.backgroundImage, "none", `${width}px keeps the desktop meadow background off below its breakpoint`);
+        assert.notEqual(beforeScroll.light.display, "none", `${width}px retains the local light decoration below the desktop breakpoint`);
+        assert.equal(beforeScroll.foliage.length, 3, `${width}px reads all three foliage asset kinds`);
+        assert.ok(beforeScroll.foliage.every(({nodes}) => nodes.length === 1 && nodes[0].display !== "none" && nodes[0].pointerEvents === "none" && nodes[0].fixedAncestor), `${width}px foliage stays in one visible fixed pointer-inert viewport decoration per corner`);
+        const topBranch = beforeScroll.foliage[0].nodes[0];
+        assert.ok(topBranch.top < 0 || topBranch.right > width, `${width}px top branch extends beyond a viewport edge to hide its source endpoint`);
+      }
 
       for (const grass of beforeScroll.grasses) {
         const hit = await page.evaluate(({x, y}) => {
@@ -491,11 +550,126 @@ test("CatTasks keeps viewport foliage separate from six local pet-strip grasses 
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
       const afterScroll = await inspect();
       assert.ok(afterScroll.viewport.scrollY > 0, `${width}px scenario reaches a real scroll position`);
-      assert.deepEqual(afterScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), beforeScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), `${width}px foliage remains viewport-anchored while the document scrolls`);
-      if (previousFoliage) assert.equal(afterScroll.foliage.length, previousFoliage.length, `${width}px reverse resize retains every foliage asset kind`);
+      if (expectsDesktopMeadow) {
+        assert.deepEqual({left: afterScroll.meadow.left, top: afterScroll.meadow.top, width: afterScroll.meadow.width, height: afterScroll.meadow.height}, {left: beforeScroll.meadow.left, top: beforeScroll.meadow.top, width: beforeScroll.meadow.width, height: beforeScroll.meadow.height}, `${width}px desktop meadow remains viewport-anchored while the document scrolls`);
+      } else {
+        assert.deepEqual(afterScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), beforeScroll.foliage.map(({asset, nodes}) => ({asset, left: nodes[0].left, top: nodes[0].top})), `${width}px foliage remains viewport-anchored while the document scrolls`);
+      }
+      if (previousFoliage && !expectsDesktopMeadow) assert.equal(afterScroll.foliage.length, previousFoliage.length, `${width}px reverse resize retains every foliage asset kind`);
       previousFoliage = afterScroll.foliage;
       await page.evaluate(() => window.scrollTo(0, 0));
     }
+    await page.setViewportSize({width: 1536, height: 1024});
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible", timeout: 10_000});
+    const catalogue = await inspect();
+    assert.ok(catalogue.meadow.backgroundImage.includes("desktop-meadow.png"), "desktop catalogue shares the approved meadow background");
+    assert.equal(catalogue.meadow.position, "fixed", "desktop catalogue meadow remains fixed");
+    assert.equal(catalogue.meadow.pointerEvents, "none", "desktop catalogue meadow remains pointer inert");
+    assert.equal(catalogue.light.display, "none", "desktop catalogue hides the retired light decoration");
+    assert.ok(catalogue.foliage.every(({nodes}) => nodes.length === 1 && nodes[0].display === "none"), "desktop catalogue hides every retired corner foliage decoration");
+    assertCleanDiagnostics(diagnostics);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks keeps the 1151px workspace editor and rendered Output above the pet strip", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1151, height: 700}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(context, page);
+    const strip = page.getByLabel(stripName, {exact: true});
+    const editor = page.getByLabel("User JavaScript code");
+    const output = page.locator("section[aria-labelledby='taskOutputHeading']");
+    await Promise.all([
+      strip.waitFor({state: "visible", timeout: 10_000}),
+      editor.waitFor({state: "visible", timeout: 10_000}),
+      output.waitFor({state: "visible", timeout: 10_000}),
+    ]);
+    const geometry = await page.evaluate(() => {
+      const pick = selector => document.querySelector(selector);
+      const strip = pick("[aria-label='Pet feeding strip']");
+      const workspace = [...document.querySelectorAll("[class*='taskContentPanelContainer']")]
+        .find(node => getComputedStyle(node).display !== "none");
+      const editor = pick("[class*='codeEditorFrame']");
+      const output = pick("section[aria-labelledby='taskOutputHeading']");
+      if (!strip || !workspace || !editor || !output) throw new Error("workspace geometry anchors unavailable");
+      const rect = node => { const box = node.getBoundingClientRect(); return {top: box.top, bottom: box.bottom, height: box.height}; };
+      return {strip: rect(strip), workspace: rect(workspace), editor: rect(editor), output: rect(output)};
+    });
+    assert.ok(geometry.editor.height >= 240, `the rendered Monaco editor keeps its 240px minimum: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.output.height >= 212, `the rendered Output keeps its 212px minimum: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.workspace.bottom <= geometry.strip.top, `the visible workspace ends before the PetStrip rather than being covered by it: ${JSON.stringify(geometry)}`);
+    assert.ok(geometry.output.bottom <= geometry.strip.top, `the rendered Output ends before the PetStrip rather than being covered by it: ${JSON.stringify(geometry)}`);
+    assertCleanDiagnostics(diagnostics);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("CatTasks lets a tall 1305px catalogue paginate to its final inert row above the pet strip and open it", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1305, height: 1132}});
+  const page = await context.newPage();
+  const tallCatalog = {version: 1, tasks: Array.from({length: 18}, (_, index) => ({
+    id: `pet-strip-row-${index + 1}`,
+    title: `Inert catalogue row ${index + 1}`,
+    description: `Safe inert row ${index + 1} exists only to exercise paginated catalogue navigation.`,
+    entryPoint: "echo",
+    starterCode: "function echo(value) { return value; }",
+    solution: "function echo(value) { return value; }",
+    tests: [{args: [`row-${index + 1}`], expected: `row-${index + 1}`}],
+  }))};
+  try {
+    const diagnostics = await prepare(context, page, tallCatalog);
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    const strip = page.getByLabel(stripName, {exact: true});
+    const list = page.locator("section[aria-labelledby='taskListTitle']");
+    const filters = page.getByLabel("Task filters", {exact: true});
+    const pageNavigation = page.getByRole("navigation", {name: "Task pages", exact: true});
+    const lastOpen = page.getByRole("button", {name: "Open Inert catalogue row 18", exact: true});
+    await Promise.all([
+      strip.waitFor({state: "visible", timeout: 10_000}),
+      list.waitFor({state: "visible", timeout: 10_000}),
+      filters.waitFor({state: "visible", timeout: 10_000}),
+      pageNavigation.waitFor({state: "visible", timeout: 10_000}),
+    ]);
+    const initialGeometry = await page.evaluate(() => {
+      const strip = document.querySelector("[aria-label='Pet feeding strip']");
+      const catalogue = document.querySelector("[class*='catalogueMain']");
+      const list = document.querySelector("section[aria-labelledby='taskListTitle']");
+      const filters = document.querySelector("[aria-label='Task filters']");
+      if (!strip || !catalogue || !list || !filters) throw new Error("catalogue geometry anchors unavailable");
+      const rect = node => { const box = node.getBoundingClientRect(); return {top: box.top, bottom: box.bottom, height: box.height}; };
+      return {strip: rect(strip), catalogue: rect(catalogue), filters: rect(filters), list: rect(list)};
+    });
+    assert.ok(initialGeometry.catalogue.bottom <= initialGeometry.strip.top, `the catalogue ends before the PetStrip rather than continuing behind it: ${JSON.stringify(initialGeometry)}`);
+    assert.ok(initialGeometry.filters.bottom <= initialGeometry.strip.top, `the catalogue filters end before the PetStrip rather than continuing behind it: ${JSON.stringify(initialGeometry)}`);
+    assert.ok(initialGeometry.list.bottom <= initialGeometry.strip.top, `the catalogue task list ends before the PetStrip rather than continuing behind it: ${JSON.stringify(initialGeometry)}`);
+    assert.equal(await lastOpen.count(), 0, "the final catalogue action is not rendered until its pagination page is selected");
+    const thirdPage = pageNavigation.getByRole("button", {name: "3", exact: true});
+    await thirdPage.click();
+    await lastOpen.waitFor({state: "visible", timeout: 10_000});
+    assert.equal(await thirdPage.getAttribute("aria-current"), "page", "the real third pagination page is active before the final row is inspected");
+    const scroll = await page.evaluate(() => ({scrollY, listScrollTop: document.querySelector("section[aria-labelledby='taskListTitle']")?.scrollTop ?? null}));
+    assert.equal(scroll.listScrollTop, 0, "the final catalogue action does not rely on a hidden task-list scroll container");
+    const lastAction = await lastOpen.boundingBox();
+    const stripBox = await strip.boundingBox();
+    assert.ok(lastAction && lastAction.y >= 0 && lastAction.y + lastAction.height <= 1132, "pagination exposes the final catalogue action inside the viewport");
+    assert.ok(lastAction && stripBox && lastAction.y + lastAction.height <= stripBox.y, "the paginated final catalogue action remains above the PetStrip");
+    const hit = await lastOpen.evaluate(node => {
+      const box = node.getBoundingClientRect();
+      const target = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return Boolean(target && node.contains(target));
+    });
+    assert.equal(hit, true, "the final catalogue action is hit-testable rather than masked by the PetStrip");
+    await lastOpen.click();
+    await page.getByRole("button", {name: "All tasks", exact: true}).waitFor({state: "visible", timeout: 10_000});
+    await page.getByText("Safe inert row 18 exists only to exercise paginated catalogue navigation.", {exact: true}).waitFor({state: "visible"});
     assertCleanDiagnostics(diagnostics);
   } finally {
     await context.close();

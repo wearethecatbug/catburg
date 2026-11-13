@@ -1,0 +1,140 @@
+.button {
+    --action-texture-strength-default: .69;
+    --action-face-top: #fbf6e9;
+    --action-face-bottom: #ece5d0;
+    --action-hover-top: #fffdf3;
+    --action-hover-bottom: #f0ead8;
+    --action-border: #aab59f;
+    --action-hover-border: #78946f;
+    --action-ink: #244b33;
+    --action-rim-top: rgb(255 255 255 / 55%);
+    --action-rim-bottom: rgb(46 63 37 / 12%);
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 124px;
+    gap: 8px;
+    width: 124px;
+    min-height: 48px;
+    padding: 10px 16px;
+    border: 1px solid var(--action-border);
+    border-radius: 16px;
+    background: linear-gradient(180deg, var(--action-face-top), var(--action-face-bottom));
+    color: var(--action-ink);
+    box-shadow: 0 1px 2px rgb(34 54 32 / 13%), 0 4px 8px -3px rgb(34 54 32 / 18%);
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 24px;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 120ms ease;
+}
+
+.button[data-variant="run"] {
+    --action-texture-strength-default: .46;
+    --action-face-top: #497052;
+    --action-face-bottom: #34553e;
+    --action-hover-top: #517b59;
+    --action-hover-bottom: #3b6046;
+    --action-border: #326a43;
+    --action-hover-border: #28573a;
+    --action-ink: #fffdf3;
+    --action-rim-top: rgb(255 255 255 / 23%);
+    --action-rim-bottom: rgb(15 43 24 / 22%);
+}
+
+.button[data-material="linen"] {
+    --action-texture-image: url("/cattasks/button-textures/linen-fibers.png");
+    --action-texture-size: 300% auto;
+    --action-texture-brightness: .899;
+    --action-texture-contrast: 3.6;
+}
+
+.button[data-material="wood"] {
+    --action-texture-image: url("/cattasks/button-textures/painted-wood-grain.png");
+    --action-texture-size: cover;
+    --action-texture-brightness: 1.025;
+    --action-texture-contrast: 4.2;
+}
+
+.button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    background-image: var(--action-texture-image, none);
+    background-position: var(--action-texture-position, center);
+    background-size: var(--action-texture-size, cover);
+    background-repeat: no-repeat;
+    opacity: clamp(0, var(--action-texture-strength, var(--action-texture-strength-default)), 1);
+    filter: grayscale(1) brightness(var(--action-texture-brightness, 1)) contrast(var(--action-texture-contrast, 1));
+    mix-blend-mode: var(--action-texture-blend, soft-light);
+    pointer-events: none;
+}
+
+.button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+    box-shadow: inset 0 1px 0 var(--action-rim-top), inset 0 -1px 0 var(--action-rim-bottom);
+    pointer-events: none;
+}
+
+.button[data-result="success"] { --action-border: #4d8b59; --action-hover-border: #4d8b59; }
+.button[data-result="failure"] { --action-border: #ad634e; --action-hover-border: #ad634e; --action-ink: #693426; }
+
+.icon,
+.label { position: relative; z-index: 2; pointer-events: none; }
+.icon { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 18px; inline-size: 18px; block-size: 18px; }
+.icon svg { display: block; inline-size: 100%; block-size: 100%; }
+.icon::after { content: ""; position: absolute; inset: 1px; box-sizing: border-box; border: 2px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; opacity: 0; }
+
+@media (hover: hover) and (pointer: fine) {
+    .button:not(:disabled):hover {
+        border-color: var(--action-hover-border);
+        background: linear-gradient(180deg, var(--action-hover-top), var(--action-hover-bottom));
+        transform: translateY(-1px);
+        box-shadow: 0 2px 3px rgb(34 54 32 / 12%), 0 6px 12px -4px rgb(34 54 32 / 21%);
+    }
+}
+
+.button:focus-visible { outline: 3px solid #285d3c; outline-offset: 3px; }
+.button:not(:disabled):active { transform: translateY(1px); box-shadow: 0 1px 1px rgb(34 54 32 / 12%), 0 2px 3px -1px rgb(34 54 32 / 12%); }
+.button:not(:disabled):active::after { box-shadow: inset 0 1px 2px rgb(24 47 29 / 15%), inset 0 -1px 0 rgb(255 255 255 / 15%); }
+.button:disabled { opacity: .55; cursor: not-allowed; }
+.button[data-pending="true"]:disabled { opacity: 1; cursor: progress; }
+.button[data-pending="true"] .icon svg { opacity: 0; transition: opacity 0s 200ms; }
+.button[data-pending="true"] .icon::after { opacity: 1; animation: textureActionSpin 800ms linear 200ms infinite; transition: opacity 0s 200ms; }
+
+@keyframes textureActionSpin { to { transform: rotate(1turn); } }
+
+@media (max-width: 600px) {
+    .button { flex-basis: 100px; width: 100px; min-height: 44px; padding: 8px 10px; border-radius: 12px; font-size: 15px; gap: 6px; }
+    .icon { flex-basis: 16px; inline-size: 16px; block-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .button { transition: none; }
+    .button:not(:disabled):hover, .button:not(:disabled):active { transform: none; }
+    .button[data-pending="true"] .icon::after { animation: none; }
+}
+
+@media (forced-colors: active) {
+    .button, .button:not(:disabled):hover, .button:not(:disabled):active { forced-color-adjust: auto; border-color: ButtonText; background: ButtonFace; color: ButtonText; box-shadow: none; }
+    .button::before, .button::after { display: none; }
+    .button:focus-visible { outline-color: Highlight; }
+    .button:disabled, .button[data-pending="true"]:disabled { opacity: 1; border-color: GrayText; color: GrayText; }
+    .button[data-pending="true"] .icon::after { border-color: currentColor; border-inline-end-color: transparent; border-inline-end-style: none; }
+}

@@ -1,18 +1,18 @@
 "use client";
 import React from "react";
-import styles from "./MainBtnTest.module.css";
+import styles from "./TextureActionButton.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
-import {combineClassNames} from "@/app/_components/tasks/shared/utils/combineClassNames";
 import type {IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 
 
 type HeaderBtnTestProps = {
-    readonly className?: string;
     readonly isDisabled?: boolean;
+    readonly isPending?: boolean;
+    readonly material: "linen" | "wood";
     readonly execute: (request: IsolatedTaskRequest) => Promise<void>;
 }
 
-export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnTestProps) {
+export default function MainBtnTest({isDisabled, isPending = false, material, execute}: HeaderBtnTestProps) {
     const {
         selectedTask,
         selectedWorkspace,
@@ -28,21 +28,22 @@ export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnT
         });
     };
 
-    const getBtnClassName = combineClassNames(
-        styles.btnTest,
-        !selectedTask ? styles.disabled :
-            selectedWorkspace?.result?.mode !== 'test' ? styles.default :
-                selectedWorkspace.result.result.status === 'completed' ? styles.success : styles.fail,
-        className,
-    );
+    const resultState = selectedWorkspace?.result?.mode !== "test"
+        ? undefined
+        : selectedWorkspace.result.result.status === "completed" ? "success" : "failure";
 
     return (
         <button
             type="button"
-            className={getBtnClassName}
+            className={styles.button}
             aria-label="Test Code"
             onClick={handleRunTestsClick}
-            disabled={isDisabled || !selectedTask}
+            disabled={isDisabled || !selectedTask || isPending}
+            aria-busy={isPending || undefined}
+            data-variant="test"
+            data-material={material}
+            data-result={resultState}
+            data-pending={isPending || undefined}
         >
             {/*
              * Lucide Icons ISC License
@@ -58,12 +59,14 @@ export default function MainBtnTest({className, isDisabled, execute}: HeaderBtnT
              * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
              * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
              */}
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" />
-                <path d="M6.453 15h11.094" />
-                <path d="M8.5 2h7" />
-            </svg>
-            <span>Test</span>
+            <span className={styles.icon} aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" />
+                    <path d="M6.453 15h11.094" />
+                    <path d="M8.5 2h7" />
+                </svg>
+            </span>
+            <span className={styles.label}>Test</span>
         </button>
     );
 }
