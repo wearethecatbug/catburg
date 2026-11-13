@@ -12,7 +12,7 @@ permissions:
 jobs:
   safe-cat:
     name: Build and browser checks
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.CI_LINUX_RUNNER == 'github' && 'ubuntu-latest' || 'wearethecatbug-ci' }}
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: "1"
