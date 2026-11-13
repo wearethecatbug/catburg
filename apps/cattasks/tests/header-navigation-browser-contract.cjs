@@ -23,10 +23,18 @@ async function prepare(page) {
 
 const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
 const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
-const settle = page => page.waitForTimeout(240);
 const zeroDurations = values => values.flatMap(value => value.split(",")).every(value => Number.parseFloat(value) === 0);
 const assertClose = (actual, expected, message) => assert.ok(Math.abs(actual - expected) <= .08, `${message}: expected ${expected}, received ${actual}`);
 const translateY = transform => transform === "none" ? 0 : Number.parseFloat(/matrix\((?:[^,]+,){5}\s*([^)]+)\)/.exec(transform)?.[1]);
+
+async function waitForArrowState(button) {
+  await button.evaluate(async node => {
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+    await Promise.allSettled(node.getAnimations({subtree: true}).map(animation => animation.finished));
+    await new Promise(requestAnimationFrame);
+  });
+}
 
 async function arrowState(button) {
   return button.evaluate(node => {
@@ -98,7 +106,7 @@ test("static identity replaces header query while desktop capybara navigation re
       assertClose(before.plaque.height, 43, "desktop arrow uses the approved 43px plaque height");
       const body = center(before.mascot);
       await page.mouse.move(body.x, body.y);
-      await settle(page);
+      await waitForArrowState(arrow);
       const hover = await arrowState(arrow);
       assert.equal(hover.paintFilter, "none", "hover keeps the approved plaque color without a brightness filter");
       assertClose(translateY(hover.transform), -2, "hover lifts the complete arrow control by 2px");
@@ -106,7 +114,7 @@ test("static identity replaces header query while desktop capybara navigation re
       assert.equal(hover.reveal, "1", "hover reveals the capybara");
       assert.equal(await arrow.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)), body), true, "mascot paint belongs to arrow hit target");
       await page.mouse.down();
-      await settle(page);
+      await waitForArrowState(arrow);
       const active = await arrowState(arrow);
       assert.equal(active.paintFilter, "none", "pressed arrow keeps the approved unfiltered plaque color");
       assertClose(translateY(active.transform), 3, "pressed arrow settles 3px below its resting position");
@@ -118,14 +126,14 @@ test("static identity replaces header query while desktop capybara navigation re
   } finally { await context.close(); await browser.close(); }
 });
 
-test("static identity keeps native sage arrows only through the approved <=430px mobile range", {timeout: 45_000}, async () => {
+test("static identity keeps native sage arrows through the approved compact range", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 320, height: 900}}); const page = await context.newPage();
   try {
     const diagnostics = await prepare(page); await openFromCatalogue(page, "A deliberately long task title that must wrap without covering controls"); const title = page.getByText("A deliberately long task title that must wrap without covering controls", {exact: true}); const ordinal = page.getByText("TASK 02", {exact: true}); const allTasks = page.getByRole("button", {name: "All tasks"}); const previous = page.getByRole("button", {name: "Select previous task", includeHidden: true}); const next = page.getByRole("button", {name: "Select next task", includeHidden: true});
-    for (const width of [320, 321, 390, 430, 431, 600]) {
+    for (const width of [320, 321, 390, 430, 431, 598, 600]) {
       await page.setViewportSize({width, height: 900});
       await assertNoRetiredHeaderControls(page);
-      const compactArrows = width <= 430;
+      const compactArrows = width <= 600;
       if (compactArrows) {
         const [previousBox, nextBox] = await Promise.all([previous.boundingBox(), next.boundingBox()]);
         assert.ok(previousBox && nextBox, `${width}px keeps both compact arrows in layout`);
@@ -139,14 +147,9 @@ test("static identity keeps native sage arrows only through the approved <=430px
         assert.equal(await previous.evaluate(node => node === document.activeElement && node.matches(":focus-visible")), true, `${width}px previous arrow keeps a visible keyboard focus`);
         if (width === 390) {
           await page.mouse.move(...Object.values(center(previousBox)));
-          await settle(page);
+          await waitForArrowState(previous);
           assertClose(translateY(await previous.evaluate(node => getComputedStyle(node).transform)), -2, "390px sage arrow retains the Back-style hover lift");
         }
-      } else {
-        assert.equal(await previous.boundingBox(), null, `previous has no intermediate compact box at ${width}px`);
-        assert.equal(await next.boundingBox(), null, `next has no intermediate compact box at ${width}px`);
-        assert.equal(await page.getByRole("button", {name: "Select previous task"}).count(), 0, `previous is absent from intermediate compact accessibility at ${width}px`);
-        assert.equal(await page.getByRole("button", {name: "Select next task"}).count(), 0, `next is absent from intermediate compact accessibility at ${width}px`);
       }
       const [allBox, titleBox, ordinalBox] = await Promise.all([allTasks.boundingBox(), title.boundingBox(), ordinal.boundingBox()]);
       assert.ok(allBox.width >= 44 && allBox.height >= 44 && !intersects(allBox, titleBox) && !intersects(allBox, ordinalBox), `All tasks retains isolated hit geometry at ${width}px`);
@@ -182,6 +185,7 @@ test("static identity keeps native sage arrows only through the approved <=430px
         await assertMascotContact(arrow, `arrow at ${width}px`);
       }
       if (width === 1250) {
+        await allTasks.scrollIntoViewIfNeeded();
         const edgeHits = await allTasks.evaluate(node => { const box = node.getBoundingClientRect(); const y = box.top + box.height / 2; return [box.left + 2, box.left + box.width / 2, box.right - 2].map(x => node.contains(document.elementFromPoint(x, y))); });
         assert.deepEqual(edgeHits, [true, true, true], "All tasks preserves 1250px left, centre, and right hit geometry");
       }
@@ -228,7 +232,7 @@ test("desktop arrows remain disabled during loading and honor reduced motion", {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 780, height: 900}, reducedMotion: "reduce"}); const page = await context.newPage(); let release;
   try {
     const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []}; page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); }); page.on("pageerror", error => diagnostics.page.push(error.message)); page.on("requestfailed", request => diagnostics.request.push(request.url())); page.on("response", response => { if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`); }); const held = new Promise(resolve => { release = resolve; }); await page.route("**/task-catalog.v1.json", async route => { diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`); await held; await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}); });
-    assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200); const previous = page.getByRole("button", {name: "Select previous task"}); await previous.waitFor(); assert.equal(await previous.isDisabled(), true); const before = await arrowState(previous); await page.mouse.move(...Object.values(center(before.mascot))); await settle(page); const after = await arrowState(previous); assert.equal(after.reveal, "0", "disabled arrow does not reveal"); assert.equal(after.paintFilter, before.paintFilter, "disabled arrow does not hover"); assertClose(translateY(after.transform), 0, "reduced-motion disabled arrow does not translate"); assert.equal(zeroDurations(after.durations), true, "reduced motion removes arrow transitions"); release(); await page.getByText("Tortoise race", {exact: true}).waitFor(); assert.equal(await previous.isDisabled(), false, "loaded catalogue enables arrow"); assertClean(diagnostics);
+    assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200); const previous = page.getByRole("button", {name: "Select previous task"}); await previous.waitFor(); assert.equal(await previous.isDisabled(), true); const before = await arrowState(previous); await page.mouse.move(...Object.values(center(before.mascot))); await waitForArrowState(previous); const after = await arrowState(previous); assert.equal(after.reveal, "0", "disabled arrow does not reveal"); assert.equal(after.paintFilter, before.paintFilter, "disabled arrow does not hover"); assertClose(translateY(after.transform), 0, "reduced-motion disabled arrow does not translate"); assert.equal(zeroDurations(after.durations), true, "reduced motion removes arrow transitions"); release(); await page.getByText("Tortoise race", {exact: true}).waitFor(); assert.equal(await previous.isDisabled(), false, "loaded catalogue enables arrow"); assertClean(diagnostics);
   } finally { if (release) release(); await context.close(); await browser.close(); }
 });
 
@@ -238,7 +242,7 @@ test("mobile sage arrows honor reduced motion without losing their native focus 
     const diagnostics = await prepare(page); const previous = page.getByRole("button", {name: "Select previous task"}); await previous.waitFor();
     const box = await previous.boundingBox(); assert.ok(box, "390px reduced-motion previous arrow remains rendered");
     await page.getByRole("button", {name: "All tasks"}).focus(); await page.keyboard.press("Tab"); assert.equal(await previous.evaluate(node => node === document.activeElement && node.matches(":focus-visible")), true, "390px reduced-motion previous arrow retains visible focus");
-    await page.mouse.move(...Object.values(center(box))); await settle(page);
+    await page.mouse.move(...Object.values(center(box))); await waitForArrowState(previous);
     const style = await previous.evaluate(node => ({transform: getComputedStyle(node).transform, duration: getComputedStyle(node).transitionDuration}));
     assertClose(translateY(style.transform), 0, "390px reduced-motion hover does not translate the arrow");
     assert.equal(zeroDurations([style.duration]), true, "390px reduced-motion arrow removes its transition");

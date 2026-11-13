@@ -268,7 +268,7 @@ test("custom task controls validate accessibly, persist only custom definitions,
     const editedDraft = "function echo(value) { return `${value}`; }";
     await setActiveDraft(page, tagged.starterCode, editedDraft);
     await page.getByRole("button", {name: "Test Code"}).click();
-    const actualResult = await outputText(page, "Все тесты пройдены: 1/1");
+    const actualResult = await outputText(page, "All tests passed: 1/1");
     assert.match(actualResult, /1\/1/, "the inert custom task reaches a real Test result before catalogue navigation");
     await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
@@ -786,7 +786,7 @@ test("an external collision reread quarantines a previously selected custom work
     const draft = "function echo(value) { return `${value}`; }";
     await setActiveDraft(page, existing.starterCode, draft);
     await page.getByRole("button", {name: "Test Code"}).click();
-    const resultBefore = await outputText(page, "Все тесты пройдены: 1/1");
+    const resultBefore = await outputText(page, "All tests passed: 1/1");
     await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
@@ -824,7 +824,7 @@ test("an external collision reread quarantines a previously selected custom work
     assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "a stale custom workspace never rebinds after collision reread");
     assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "collision reread leaves execution unavailable without a selected valid task");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "collision reread clears stale custom output ownership while preserving the protected editor shell");
-    assert.equal(resultBefore, "Все тесты пройдены: 1/1", "the connected history establishes a real result before its custom workspace is quarantined");
+    assert.equal(resultBefore, "All tests passed: 1/1", "the connected history establishes a real result before its custom workspace is quarantined");
     assert.deepEqual(seen.consoleErrors, []);
   } finally {
     await context.close();
@@ -847,7 +847,7 @@ test("a pending valid reread blocks writes while retaining the last validated se
     const draft = "function echo(value) { return `${value}`; }";
     await setActiveDraft(page, existing.starterCode, draft);
     await page.getByRole("button", {name: "Test Code"}).click();
-    await outputText(page, "Все тесты пройдены: 1/1");
+    await outputText(page, "All tests passed: 1/1");
     await page.getByLabel(/Hint: Показать подсказки|Hint: Показаны подсказки/).click();
     await page.getByRole("button", {name: "All tasks"}).click();
 
@@ -869,7 +869,7 @@ test("a pending valid reread blocks writes while retaining the last validated se
     assert.equal(await rows(page).filter({hasText: existing.title}).count(), 1, "pending reread retains the old projection rather than transiently clearing it");
     await page.getByRole("button", {name: "Back to task"}).click();
     await assertActiveDraft(page, draft, "pending reread retains the selected custom draft");
-    assert.equal(await outputText(page, "Все тесты пройдены: 1/1"), "Все тесты пройдены: 1/1", "pending reread retains the selected custom result");
+    assert.equal(await outputText(page, "All tests passed: 1/1"), "All tests passed: 1/1", "pending reread retains the selected custom result");
     assert.match(await page.getByLabel(/Hint: Показаны подсказки/).getAttribute("aria-label"), /Показаны подсказки/, "pending reread retains the active Hint tab");
     await releaseDocumentTransaction(page);
     assert.deepEqual(seen.consoleErrors, []);

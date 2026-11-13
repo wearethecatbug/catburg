@@ -34,7 +34,7 @@ self.onmessage = ({data}) => {
   const text = value => { try { return reflectApply(stringSlice, string(value), [0, MAX_LOG_LENGTH]); } catch { return "[unprintable]"; } };
   const errorText = error => {
     try { return error && typeof error === "object" && typeof error.message === "string" ? error.message : string(error); }
-    catch { return "Неизвестная ошибка"; }
+    catch { return "Unknown error"; }
   };
   const equal = (actual, expected) => {
     if (typeof actual !== typeof expected) return false;
@@ -68,21 +68,21 @@ self.onmessage = ({data}) => {
     if (mode === "run") {
       const returnValue = new Function('"use strict";\\n' + code)();
       const logsText = logs.length ? reflectApply(arrayJoin, logs, ["\\n"]) : "";
-      const returnText = returnValue === undefined ? "" : "Возвращаемое значение: " + text(returnValue);
-      report("completed", logsText && returnText ? logsText + "\\n" + returnText : logsText || returnText || "Код выполнен");
+      const returnText = returnValue === undefined ? "" : "Return value: " + text(returnValue);
+      report("completed", logsText && returnText ? logsText + "\\n" + returnText : logsText || returnText || "Code executed.");
       return;
     }
     const entry = new Function('"use strict";\\n' + code + '\\nreturn typeof ' + entryPoint + ' === "function" ? ' + entryPoint + ' : undefined;')();
-    if (typeof entry !== "function") throw new errorConstructor("Точка входа не найдена: " + entryPoint);
+    if (typeof entry !== "function") throw new errorConstructor("Entry point not found: " + entryPoint);
     let passedCount = 0;
     for (let index = 0; index < tests.length; index += 1) {
       const test = tests[index], actual = reflectApply(entry, undefined, test.args);
-      if (actual && typeof actual.then === "function") throw new errorConstructor("Асинхронные решения не поддерживаются");
-      if (!equal(actual, test.expected)) { report("test-failed", "Тест " + (index + 1) + ": проверка не пройдена\\nПройдено: " + passedCount + "/" + tests.length, {passedCount, totalTests: tests.length}); return; }
+      if (actual && typeof actual.then === "function") throw new errorConstructor("Async solutions are not supported.");
+      if (!equal(actual, test.expected)) { report("test-failed", "Test " + (index + 1) + " failed.", {passedCount, totalTests: tests.length}); return; }
       passedCount += 1;
     }
-    report("completed", "Все тесты пройдены: " + passedCount + "/" + tests.length, {passedCount, totalTests: tests.length});
-  } catch (error) { report("runtime-error", "Ошибка выполнения: " + errorText(error)); }
+    report("completed", "All tests passed: " + passedCount + "/" + tests.length, {passedCount, totalTests: tests.length});
+  } catch (error) { report("runtime-error", "Runtime error: " + errorText(error)); }
 };`;
     return `<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src 'none'; img-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'; script-src 'unsafe-inline' 'unsafe-eval' blob:; worker-src blob:"><script>
 const expectedNonce = ${JSON.stringify(nonce)}, expectedRequestId = ${JSON.stringify(requestId)};
@@ -97,18 +97,18 @@ window.addEventListener('message', event => {
   const blob = new Blob([${JSON.stringify(workerSource)}], {type: 'text/javascript'});
   const workerUrl = URL.createObjectURL(blob);
   const finish = result => { clearTimeout(timer); if (worker) worker.terminate(); URL.revokeObjectURL(workerUrl); parent.postMessage(result, '*'); };
-  try { worker = new Worker(workerUrl); } catch (error) { finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Ошибка выполнения: ' + error.message, logs: []}); return; }
+  try { worker = new Worker(workerUrl); } catch (error) { finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Runtime error: ' + error.message, logs: []}); return; }
   worker.onmessage = event => finish(event.data);
-  worker.onerror = event => finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Ошибка выполнения: ' + event.message, logs: []});
-  timer = setTimeout(() => finish({nonce: data.nonce, requestId: data.requestId, status: 'timeout', message: 'Превышено время выполнения', logs: []}), ${RUN_TIMEOUT_MS});
+  worker.onerror = event => finish({nonce: data.nonce, requestId: data.requestId, status: 'runtime-error', message: 'Runtime error: ' + event.message, logs: []});
+  timer = setTimeout(() => finish({nonce: data.nonce, requestId: data.requestId, status: 'timeout', message: 'Execution timed out.', logs: []}), ${RUN_TIMEOUT_MS});
   worker.postMessage(data);
 });
 parent.postMessage({type: 'ready', nonce: ${JSON.stringify(nonce)}, requestId: ${JSON.stringify(requestId)}}, '*');</script>`;
 }
 
 export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSignal): Promise<IsolatedTaskResult> {
-    if (!request.code.trim()) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Код пустой", logs: []});
-    if (request.mode === "test" && (!request.entryPoint || !isTaskEntryPoint(request.entryPoint) || !request.tests?.length)) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Некорректные данные задачи", logs: []});
+    if (!request.code.trim()) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Code is empty.", logs: []});
+    if (request.mode === "test" && (!request.entryPoint || !isTaskEntryPoint(request.entryPoint) || !request.tests?.length)) return Promise.resolve({requestId: request.requestId, status: "runtime-error", message: "Invalid task data.", logs: []});
     const nonce = newToken();
     const frame = document.createElement("iframe");
     frame.sandbox.add("allow-scripts");
@@ -117,13 +117,13 @@ export function runIsolatedTask(request: IsolatedTaskRequest, signal?: AbortSign
     return new Promise(resolve => {
         let settled = false;
         const finish = (result: IsolatedTaskResult) => { if (settled) return; settled = true; clearTimeout(watchdog); signal?.removeEventListener("abort", cancel); window.removeEventListener("message", receive); frame.remove(); resolve(result); };
-        const cancel = () => finish({requestId: request.requestId, status: "cancelled", message: "Запуск отменён", logs: []});
+        const cancel = () => finish({requestId: request.requestId, status: "cancelled", message: "Run cancelled.", logs: []});
         const receive = (event: MessageEvent<unknown>) => {
             if (event.source !== frame.contentWindow) return;
             if (isReady(event.data, nonce, request.requestId)) { frame.contentWindow?.postMessage({type: "start", nonce, ...request}, "*"); return; }
             if (isWorkerResult(event.data, nonce, request.requestId)) { const {nonce: _nonce, ...result} = event.data; finish(result); }
         };
-        const watchdog = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Превышено время выполнения", logs: []}), RUN_TIMEOUT_MS + PARENT_GRACE_MS);
+        const watchdog = window.setTimeout(() => finish({requestId: request.requestId, status: "timeout", message: "Execution timed out.", logs: []}), RUN_TIMEOUT_MS + PARENT_GRACE_MS);
         window.addEventListener("message", receive);
         document.body.append(frame);
         if (signal?.aborted) cancel(); else signal?.addEventListener("abort", cancel, {once: true});

@@ -152,11 +152,10 @@ async function observe(name, width, height) {
     const spaceExpansion = {focusOnHide: await hideTask.evaluate(element => element === document.activeElement)};
     await previous.waitFor({state: "visible", timeout: 10_000});
     const arrowInventory = {previous: await visibleHeaderArrows.previous.count(), next: await visibleHeaderArrows.next.count()};
-    const arrowsExpected = width <= 430 || width > 600;
-    const arrowReachability = arrowsExpected ? {
+    const arrowReachability = {
       previous: await observeReachability(page, "Select previous task", headerArrows.previous),
       next: await observeReachability(page, "Select next task", headerArrows.next),
-    } : null;
+    };
     const observation = { app: "cattasks", viewport: { name, width, height }, status: response && response.status(), scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth), clientWidth: await page.evaluate(() => document.documentElement.clientWidth), requiredContent: { descriptionLength: descriptionCount ? (await description.innerText()).trim().length : 0, editorVisible: await editor.isVisible(), previousVisible: await previous.isVisible(), nextVisible: await next.isVisible(), staticIdentity: { ordinalCount: await page.getByText("TASK 01", {exact: true}).count(), titleCount: await page.getByRole("heading", {name: initialTask.title, level: 1, exact: true}).count(), retiredComboboxCount: await page.getByRole("combobox").count() }, arrowInventory, productControlInventory: controlInventory, restoreControl, mouseExpansion, enterExpansion, spaceCollapse, spaceExpansion }, reachability: { description: await observeReachability(page, "pre[aria-label]", description), editor: await observeReachability(page, ".monaco-editor", editor), arrows: arrowReachability, controls: controlReachability }, editorUsability: await observeEditorUsability(editor), consoleErrors, pageErrors, localRequestFailures, localHttpFailures, faviconExceptions };
     const screenshot = artifactPath(name, "png"); const json = artifactPath(name, "json");
     if (screenshot && json) { await page.screenshot({ path: screenshot, fullPage: true }); fs.writeFileSync(json, `${JSON.stringify(observation, null, 2)}\n`, { flag: "wx" }); }
@@ -168,7 +167,7 @@ for (const [name, width, height] of viewports) test(`CatTasks initial dashboard 
   const observation = await observe(name, width, height);
   assert.equal(observation.status, 200); assert.ok(observation.requiredContent.descriptionLength > 0); assert.equal(observation.requiredContent.editorVisible, true);
   assert.deepEqual(observation.requiredContent.staticIdentity, {ordinalCount: 1, titleCount: 1, retiredComboboxCount: 0}, "the report retains static identity and no retired header combobox");
-  const expectedArrowCount = observation.viewport.width <= 430 || observation.viewport.width > 600 ? 1 : 0;
+  const expectedArrowCount = 1;
   assert.deepEqual(observation.requiredContent.arrowInventory, {previous: expectedArrowCount, next: expectedArrowCount}, "header arrows are present on the approved small-mobile and desktop ranges only");
   for (const [name, inventory] of Object.entries(observation.requiredContent.productControlInventory)) assert.equal(inventory.count, 1, `${name} must have exactly one product control (${inventory.selector})`);
   assert.equal(observation.requiredContent.restoreControl.count, 1, `Show task must expose one control (${observation.requiredContent.restoreControl.selector})`);
@@ -194,7 +193,7 @@ for (const [name, width, height] of viewports) test(`CatTasks initial dashboard 
   assert.deepEqual(observation.requiredContent.spaceCollapse, {focusOnShow: true}, "Space collapses the task and returns focus to Show task");
   assert.deepEqual(observation.requiredContent.spaceExpansion, {focusOnHide: true}, "Space expands the task and transfers focus to Hide task");
   for (const [name, result] of Object.entries({ description: observation.reachability.description, editor: observation.reachability.editor, ...observation.reachability.controls })) { assert.equal(result.rendered, true, `${name} must render`); assert.equal(result.unclipped, true, `${name} must not be clipped`); assert.equal(result.receivesPointer, true, `${name} must receive pointer hits without another initial-screen layer occluding it`); }
-  if (observation.reachability.arrows) for (const [name, result] of Object.entries(observation.reachability.arrows)) { assert.equal(result.rendered, true, `${name} arrow must render`); assert.equal(result.unclipped, true, `${name} arrow must not be clipped`); assert.equal(result.receivesPointer, true, `${name} arrow must receive pointer hits`); }
+  for (const [name, result] of Object.entries(observation.reachability.arrows)) { assert.equal(result.rendered, true, `${name} arrow must render`); assert.equal(result.unclipped, true, `${name} arrow must not be clipped`); assert.equal(result.receivesPointer, true, `${name} arrow must receive pointer hits`); }
   assert.ok(observation.editorUsability.box.height >= 240, "the initial editor must retain the approved 240px usable height"); assert.ok(observation.editorUsability.lineCount >= 1, "the editor must contain at least one rendered source line"); assert.equal(observation.editorUsability.line && observation.editorUsability.line.complete, true, "at least one complete editor line must fit inside the editor viewport");
   assert.deepEqual(observation.pageErrors, []); assert.deepEqual(observation.consoleErrors, []); assert.deepEqual(observation.localRequestFailures, []); assert.deepEqual(observation.localHttpFailures, []); assert.equal(observation.scrollWidth, observation.clientWidth);
 });

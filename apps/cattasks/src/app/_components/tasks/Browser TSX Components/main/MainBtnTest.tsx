@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, {useRef} from "react";
 import styles from "./TextureActionButton.module.css";
 import {useTaskContext} from "../../context/TaskProvider";
 import type {IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
@@ -17,14 +17,25 @@ export default function MainBtnTest({isDisabled, isPending = false, material, ex
         selectedTask,
         selectedWorkspace,
     } = useTaskContext();
+    const selectedTaskIdRef = useRef(selectedTask?.id);
+    selectedTaskIdRef.current = selectedTask?.id;
 
-    const handleRunTestsClick = async () => {
+    const handleRunTestsClick = async (event: React.MouseEvent<HTMLButtonElement>) => {
+        const button = event.currentTarget;
+        const taskId = selectedTask?.id;
+        const restoreFocus = document.activeElement === button;
         await execute({
             requestId: crypto.randomUUID(),
             mode: "test",
             code: selectedWorkspace?.draft ?? "",
             entryPoint: selectedTask?.entryPoint,
             tests: selectedTask?.tests,
+        });
+        if (!restoreFocus) return;
+
+        requestAnimationFrame(() => {
+            if (selectedTaskIdRef.current !== taskId || !button.isConnected || button.disabled || document.activeElement !== document.body) return;
+            button.focus();
         });
     };
 

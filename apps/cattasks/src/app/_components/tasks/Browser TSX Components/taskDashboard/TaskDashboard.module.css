@@ -212,25 +212,10 @@
         transform-origin: center;
     }
 
-    .taskShelf [data-mobile-shelf-art='crystals'],
-    .taskShelf [data-mobile-shelf-art='sprig'] {
-        display: none;
-    }
-
-    .shelf { width: var(--catalogue-shelf-width); }
-    .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
-}
-
-@media (max-width: 430px) {
-    .taskShelf { margin-bottom: 8px; }
-
     .taskShelf [data-mobile-shelf-art='books'],
     .taskShelf [data-mobile-shelf-art='fan'],
     .taskShelf [data-mobile-shelf-art='lantern'],
-    .taskShelf [data-mobile-shelf-art='vine'] {
-        display: none;
-    }
-
+    .taskShelf [data-mobile-shelf-art='vine'],
     .taskShelf [data-mobile-shelf-art='crystals'] {
         display: none;
     }
@@ -241,6 +226,14 @@
         bottom: -5px;
         width: 35px;
     }
+
+    .shelf { width: var(--catalogue-shelf-width); }
+    .catalogueShelf { height: 11px; }
+    .foliageTopRight { top: -12px; right: -14px; width: 154px; height: 107px; opacity: .72; }
+}
+
+@media (max-width: 430px) {
+    .taskShelf { margin-bottom: 8px; }
 }
 
 @media (max-width: 320px) {
@@ -436,7 +429,7 @@
     }
 }
 
-@media (min-width: 1151px) {
+@media (min-width: 601px) {
     .catalogueShelf {
         height: 22px;
         margin-bottom: 22px;
@@ -452,10 +445,6 @@
     .catalogueShelfBracket { position: absolute; z-index: 1; top: calc(100% + 2px); display: block; width: 93px; height: 48px; background: url('/cattasks/shelf/brackets.png') no-repeat; background-size: 300% auto; pointer-events: none; user-select: none; }
     .catalogueShelfBracketLeft { left: 14px; background-position: left -27px; }
     .catalogueShelfBracketRight { right: 14px; background-position: right -27px; }
-}
-
-@media (max-width: 760px) {
-    .catalogueShelf { height: 11px; }
 }
 
 @media (min-width: 1201px) and (max-width: 1220px) {
