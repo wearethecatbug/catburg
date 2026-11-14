@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const { waitForArtworkReadiness, waitForStableVisualGeometry, visibleAlphaBounds } = require("./readiness.cjs");
+const { waitForArtworkReadiness, visibleAlphaBounds } = require("./readiness.cjs");
 const { exact, ordinaryOwner } = require("./game-controls.cjs");
 
 
@@ -7,28 +7,9 @@ const { exact, ordinaryOwner } = require("./game-controls.cjs");
 async function ordinaryArt(page, mode, asset, description = `ordinary ${mode} art`) {
   const owner = await ordinaryOwner(page, mode, description);
   const image = await exact(owner.locator("img"), `${description} image`);
-  await waitForStableVisualGeometry(page, false);
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await image.waitFor({ state: "visible" });
-  assert.equal(await image.isVisible(), true, `${description} image is visible`);
-  let state;
-  for (let attempt = 0; attempt < 100 && !state?.ready; attempt += 1) {
-    state = await image.evaluate((element) => {
-      if (!(element instanceof HTMLImageElement))
-        throw new Error("ordinary art image is not an HTMLImageElement");
-      const box = element.getBoundingClientRect();
-      return {
-        ready: element.complete && element.naturalWidth > 0 && element.naturalHeight > 0 && box.width > 0 && box.height > 0,
-        src: element.getAttribute("src"),
-        currentSrc: element.currentSrc,
-        complete: element.complete,
-        naturalWidth: element.naturalWidth,
-        naturalHeight: element.naturalHeight,
-        loading: element.loading,
-      };
-    });
-    if (!state.ready) await page.waitForTimeout(25);
-  }
-  assert.equal(state?.ready, true, `${description} image is decoded and measurable: ${JSON.stringify(state)}`);
+  await waitForArtworkReadiness(page, image);
   assert.match(
     await image.getAttribute("src"),
     new RegExp(asset),
