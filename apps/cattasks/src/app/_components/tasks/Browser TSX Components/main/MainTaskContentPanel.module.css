@@ -31,13 +31,17 @@
     border-bottom: 1px solid #cedacf;
 }
 
-.mainBtnTask,
-.mainBtnInfo,
-.mainBtnMySolution,
-.buttonMinimizeBase {
+.btnContainer > button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     min-width: 0;
     min-height: 70px;
+    padding: 0 4px;
+    font: 600 16px/1.15 system-ui, sans-serif;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .mainBtnInfo {
@@ -51,8 +55,6 @@
     background: transparent;
     color: #254532;
     cursor: pointer;
-    font: 500 18px/1 system-ui, sans-serif;
-    padding: 22px 8px 18px;
 }
 
 .mainBtnMySolution:hover { background: rgba(214, 225, 212, .44); }
@@ -61,20 +63,12 @@
 
 .buttonMinimizeBase {
     position: static;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
     border: 0;
     border-left: 1px solid #cedacf;
     background: #fafbfb;
     color: #254532;
     cursor: pointer;
-    font: 500 17px/1 system-ui, sans-serif;
-    padding: 8px;
 }
-
-.buttonMinimizeBase svg { flex: 0 0 17px; width: 17px; height: 17px; }
 
 .buttonMinimizeBase:hover { background: rgba(214, 225, 212, .44); }
 .btnContainer > button:focus-visible {
@@ -122,17 +116,8 @@
 
 @media (min-width: 1151px) {
     .btnContainer,
-    .mainBtnTask,
-    .mainBtnInfo,
-    .mainBtnMySolution,
-    .buttonMinimizeBase {
+    .btnContainer > button {
         min-height: 60px;
-    }
-
-    .btnContainer .mainBtnTask,
-    .btnContainer .mainBtnInfo,
-    .btnContainer .mainBtnMySolution {
-        padding-block: 0;
     }
 
     .taskDescriptionContainer {
@@ -288,21 +273,15 @@
 @media (max-width: 600px) {
     .taskDetailsContainer { border-radius: 18px; }
     .btnContainer { min-height: 56px; }
-    .mainBtnTask,
-    .mainBtnInfo,
-    .mainBtnMySolution,
-    .buttonMinimizeBase {
-        min-height: 56px;
-    }
-    .mainBtnTask,
-    .mainBtnInfo,
-    .mainBtnMySolution { padding-inline: 4px; font-size: clamp(11px, 3.3vw, 15px); }
-    .buttonMinimizeBase { min-height: 56px; padding-inline: 4px; font-size: clamp(11px, 3.3vw, 14px); }
-    .buttonMinimizeBase svg { flex-basis: 15px; width: 15px; height: 15px; }
+    .btnContainer > button { min-height: 56px; }
     .contentContainerFrame { padding: 22px; font-size: 16px; }
     .taskDescriptionContainer { padding: 18px; }
     .challengeHeading { margin-bottom: 10px; font-size: 20px; }
     .hintHeading { gap: 12px; margin-bottom: 12px; font-size: 13px; }
     .hint summary { min-height: 52px; padding-inline: 14px; font-size: 16px; }
     .hint p { padding: 0 14px 14px; font-size: 15px; }
+}
+
+@media (max-width: 420px) {
+    .btnContainer > button { font-size: 11px; }
 }

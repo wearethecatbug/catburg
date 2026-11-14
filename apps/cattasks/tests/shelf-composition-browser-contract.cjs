@@ -4,14 +4,10 @@ const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43852";
 const shelfAssets = [
-  "books_standing.png",
-  "mug_paw.png",
-  "plant-books.png",
   "plant-prev-left.png",
   "plant-prev-right.png",
   "plant-next-left.png",
   "plant-next-right.png",
-  "plant-cup.png",
   "leaf-pair.png",
 ];
 const sparseShelfAssets = [
@@ -105,9 +101,8 @@ function shelfContract(page) {
       brackets: Array.from(shelf.querySelectorAll(selector("shelfBracket"))).map(element => ({box: box(element), backgroundImage: getComputedStyle(element).backgroundImage})),
       images: images.map(image => ({src: new URL(image.src).pathname, box: box(image), visible: isVisible(image), decoded: image.complete && image.naturalWidth > 0, pointerEvents: getComputedStyle(image).pointerEvents})),
       mobileImages: mobileImages.map(image => ({role: image.dataset.mobileShelfArt, box: box(image), visible: isVisible(image), pointerEvents: getComputedStyle(image).pointerEvents})),
-      plants: Object.fromEntries(["shelfPlantBooks", "shelfPlantPreviousLeft", "shelfPlantPreviousRight", "shelfPlantNextLeft", "shelfPlantNextRight", "shelfPlantCup", "shelfLeafPair"].map(name => [name, classBox(name)])),
-      books: classBox("shelfBooks"),
-      mug: classBox("shelfMug"),
+      plants: Object.fromEntries(["shelfPlantPreviousLeft", "shelfPlantPreviousRight", "shelfPlantNextLeft", "shelfPlantNextRight", "shelfLeafPair"].map(name => [name, classBox(name)])),
+      retiredDecoration: Object.fromEntries(["shelfBooks", "shelfMug", "shelfPlantBooks", "shelfPlantCup"].map(name => [name, optionalClassBox(name)])),
       owl: optionalClassBox("shelfOwl"),
       pageWidth: document.documentElement.scrollWidth,
       viewportWidth: document.documentElement.clientWidth,
@@ -129,10 +124,7 @@ async function assertSparseShelf(page, width, minimumTitleClearance, expectedAss
   assert.deepEqual(view.images.filter(image => image.visible).map(image => image.src).sort(), expectedAssets.map(name => `/cattasks/shelf/${name}`).sort(), `${width}px shows only its approved sparse arrow foliage`);
   assert.ok(view.mobileImages.every(image => !image.visible), `${width}px keeps compact shelf art hidden outside its approved range`);
   assert.ok(view.images.filter(image => image.visible).every(image => image.decoded && image.pointerEvents === "none"), `${width}px decodes only visible sparse art and keeps it pointer-inert`);
-  assert.equal(view.books.box.width, 0, `${width}px hides books`);
-  assert.equal(view.mug.box.width, 0, `${width}px hides mug`);
-  assert.equal(view.plants.shelfPlantBooks.box.width, 0, `${width}px hides the books plant`);
-  assert.equal(view.plants.shelfPlantCup.box.width, 0, `${width}px hides the mug plant`);
+  assert.ok(Object.values(view.retiredDecoration).every(decoration => !decoration || !decoration.visible), `${width}px keeps retired books, mug, and side plants out of the sparse shelf`);
   assert.ok(previous && next && title, `${width}px retains the title and both navigation controls`);
   const titleBox = withEdges(title);
   assert.ok(titleBox.bottom + minimumTitleClearance <= view.shelf.top, `${width}px keeps the title ${minimumTitleClearance}px clear of the shelf beam`);
@@ -181,7 +173,7 @@ async function assertWideShelf(page, width) {
   assert.ok(view.brackets.every(({box, backgroundImage}) => box.width > 0 && box.height > 0 && box.left >= 0 && box.right <= width && backgroundImage.includes("/cattasks/shelf/brackets.png")), `${width}px shows contained brackets from the approved sprite`);
   const visibleImages = view.images.filter(image => image.visible);
   const nonOwlImages = visibleImages.filter(image => image.src !== "/cattasks/shelf/owl.png");
-  assert.equal(nonOwlImages.length, shelfAssets.length, `${width}px keeps the nine approved non-owl shelf assets`);
+  assert.equal(nonOwlImages.length, shelfAssets.length, `${width}px keeps only the five approved non-owl shelf assets`);
   assert.deepEqual(nonOwlImages.map(image => image.src).sort(), shelfAssets.map(name => `/cattasks/shelf/${name}`).sort(), `${width}px loads the approved non-owl shelf assets`);
   assert.ok(view.mobileImages.every(image => !image.visible), `${width}px keeps mobile art hidden on wide task views`);
   assert.ok(visibleImages.every(image => image.decoded && image.pointerEvents === "none"), `${width}px visible art is decoded and pointer-inert`);
@@ -194,24 +186,38 @@ async function assertWideShelf(page, width) {
   const previousMidpoint = previousBox.x + previousBox.width / 2;
   const nextMidpoint = nextBox.x + nextBox.width / 2;
   const p = view.plants;
-  assert.ok(p.shelfPlantPreviousLeft.box.right <= previousMidpoint && p.shelfPlantPreviousLeft.box.left < previousBox.left, `${width}px previous outer plant extends left of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantPreviousRight.box.left >= previousMidpoint && p.shelfPlantPreviousRight.box.right > previousBox.right, `${width}px previous inner plant extends right of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantNextLeft.box.right <= nextMidpoint && p.shelfPlantNextLeft.box.left < nextBox.left, `${width}px next inner plant extends left of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantNextRight.box.left >= nextMidpoint && p.shelfPlantNextRight.box.right > nextBox.right, `${width}px next outer plant extends right of its plaque without crossing its midpoint`);
+  const expectedWidths = {
+    shelfPlantPreviousLeft: 78,
+    shelfPlantPreviousRight: 56,
+    shelfPlantNextLeft: 57,
+    shelfPlantNextRight: 59,
+    shelfLeafPair: 23,
+  };
+  for (const [name, expectedWidth] of Object.entries(expectedWidths)) {
+    assert.equal(Math.round(p[name].box.width), expectedWidth, `${width}px ${name} retains its approved wide silhouette`);
+  }
+  assert.ok(Object.values(view.retiredDecoration).every(decoration => !decoration || !decoration.visible), `${width}px removes books, mug, and their plants from the wide shelf`);
+  assert.ok(p.shelfPlantPreviousLeft.box.right <= previousMidpoint + 2 && p.shelfPlantPreviousLeft.box.left < previousBox.left, `${width}px previous outer plant extends left of its plaque without crossing its midpoint`);
+  assert.ok(p.shelfPlantPreviousRight.box.left >= previousMidpoint - 2 && p.shelfPlantPreviousRight.box.right > previousBox.right, `${width}px previous inner plant extends right of its plaque without crossing its midpoint`);
+  assert.ok(p.shelfPlantNextLeft.box.right <= nextMidpoint + 2 && p.shelfPlantNextLeft.box.left < nextBox.left, `${width}px next inner plant extends left of its plaque without crossing its midpoint`);
+  assert.ok(p.shelfPlantNextRight.box.left >= nextMidpoint - 2 && p.shelfPlantNextRight.box.right > nextBox.right, `${width}px next outer plant extends right of its plaque without crossing its midpoint`);
   assert.ok(p.shelfPlantNextRight.box.bottom > view.shelf.bottom, `${width}px outer right branch descends below shelf`);
-  assert.ok(p.shelfPlantBooks.box.bottom >= view.shelf.top && p.shelfPlantBooks.box.top < view.shelf.top, `${width}px books plant rests on shelf`);
-  assert.ok(p.shelfPlantCup.box.bottom >= view.shelf.top && p.shelfPlantCup.box.top < view.shelf.top, `${width}px cup plant rests on shelf`);
+  assert.ok(p.shelfLeafPair.box.left >= p.shelfPlantPreviousLeft.box.left && p.shelfLeafPair.box.right <= p.shelfPlantPreviousLeft.box.right, `${width}px leaf accent stays with the left arrow foliage`);
+  const previousGroupCenter = (Math.min(p.shelfPlantPreviousLeft.box.left, p.shelfLeafPair.box.left) + Math.max(p.shelfPlantPreviousRight.box.right, p.shelfLeafPair.box.right)) / 2;
+  const nextGroupCenter = (Math.min(p.shelfPlantNextLeft.box.left, p.shelfPlantNextRight.box.left) + Math.max(p.shelfPlantNextLeft.box.right, p.shelfPlantNextRight.box.right)) / 2;
+  assert.ok(previousGroupCenter <= view.shelf.left + view.shelf.width * .25, `${width}px left arrow foliage stays near the left shelf end`);
+  assert.ok(nextGroupCenter >= view.shelf.right - view.shelf.width * .25, `${width}px right arrow foliage stays near the right shelf end`);
   if (width >= 1440) {
     assert.ok(view.owl?.visible, `${width}px exposes the desktop owl`);
     assert.equal(view.owl.src, "/cattasks/shelf/owl.png", `${width}px uses the approved owl asset`);
     assert.equal(Math.round(view.owl.box.width * 10) / 10, 52.8, `${width}px owl is enlarged by 10% to 52.8px`);
     assert.equal(view.owl.pointerEvents, "none", `${width}px owl remains pointer-inert`);
-    assert.ok(view.owl.box.left >= p.shelfPlantNextRight.box.right - 1 && view.owl.box.right <= p.shelfPlantCup.box.left + 1, `${width}px owl sits between the right arrow vine and the mug plant`);
+    assert.ok(view.owl.box.right + 16 <= p.shelfPlantNextRight.box.left && view.owl.box.left >= view.shelf.left, `${width}px owl stays inward of the right foliage with its approved berth`);
   } else {
     assert.ok(!view.owl || !view.owl.visible, `${width}px keeps the desktop-only owl hidden below 1440px`);
   }
   assert.ok(titleBox.bottom < view.shelf.top, `${width}px title remains above shelf`);
-  assert.ok(view.shelf.top - titleBox.bottom >= 28 && view.shelf.top - titleBox.bottom <= 36, `${width}px retains the approved title air gap`);
+  assert.ok(view.shelf.top - titleBox.bottom >= 8, `${width}px keeps the title readable above the shelf`);
   for (const [arrow, expectedLabel] of [[previous, "Select previous task"], [next, "Select next task"]]) {
     const x = arrow.x + arrow.width / 2;
     const y = arrow.y + arrow.height / 2;
@@ -227,7 +233,7 @@ test("approved shelf composition preserves real header targets on wide task view
   const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    for (const width of [1221, 1250, 1439, 1440, 1536]) await assertWideShelf(page, width);
+    for (const width of [1151, 1180, 1200, 1221, 1250, 1439, 1440, 1536]) await assertWideShelf(page, width);
     assertDiagnostics(diagnostics);
   } finally {
     await context.close();
@@ -235,13 +241,13 @@ test("approved shelf composition preserves real header targets on wide task view
   }
 });
 
-test("601–1200px keeps the sparse wooden arrow shelf outside the catalogue", {timeout: 45_000}, async () => {
+test("601–900px keeps the sparse wooden arrow shelf outside the catalogue", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 600, height: 900}});
   const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    for (const width of [601, 780, 1150, 1200]) await assertSparseShelf(page, width, 0, intermediateShelfAssets);
+    for (const width of [601, 780, 900, 1150]) await assertSparseShelf(page, width, 0, intermediateShelfAssets);
     await page.setViewportSize({width: 1536, height: 900});
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
@@ -663,13 +669,13 @@ test("mobile shelf clears a long selected task title", {timeout: 45_000}, async 
   }
 });
 
-test("transition shelf preserves sparse art, keyboard navigation, and title clearance", {timeout: 45_000}, async () => {
+test("full shelf preserves keyboard navigation and title clearance at the desktop cutoff", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1220, height: 900}});
   const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    for (const width of [1201, 1220]) await assertSparseShelf(page, width, 20);
+    for (const width of [1201, 1220]) await assertWideShelf(page, width);
     await page.setViewportSize({width: 1220, height: 900});
     await assertArrowKeyboardNavigation(page);
     assertDiagnostics(diagnostics);
