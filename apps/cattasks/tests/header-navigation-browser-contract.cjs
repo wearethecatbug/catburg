@@ -7,7 +7,15 @@ const catalog = {version: 1, tasks: [
   {id: "race", title: "Tortoise race", description: "First", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "long", title: "A deliberately long task title that must wrap without covering controls", description: "Long", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "third", title: "Third independent task", description: "Third", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "fourth", title: "Fourth fixture task", description: "Fourth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "fifth", title: "Fifth fixture task", description: "Fifth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "sixth", title: "Sixth fixture task", description: "Sixth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "seventh", title: "Seventh fixture task", description: "Seventh", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "eighth", title: "Eighth fixture task", description: "Eighth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "ninth", title: "Ninth fixture task", description: "Ninth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "tenth", title: "Tenth fixture task", description: "Tenth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "anagrams", title: "Check Whether Two Strings Are Anagrams", description: "Task 11 title fixture.", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "frequent", title: "Find the Most Frequent Element", description: "Task 12 title fixture.", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
 ]};
 
 async function prepare(page) {
@@ -25,6 +33,7 @@ const center = box => ({x: box.x + box.width / 2, y: box.y + box.height / 2});
 const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 const zeroDurations = values => values.flatMap(value => value.split(",")).every(value => Number.parseFloat(value) === 0);
 const assertClose = (actual, expected, message) => assert.ok(Math.abs(actual - expected) <= .08, `${message}: expected ${expected}, received ${actual}`);
+const assertSameAnchorY = (actual, expected, message) => assert.ok(Math.abs(actual - expected) <= 1, `${message}: expected ${expected}, received ${actual}`);
 const translateY = transform => transform === "none" ? 0 : Number.parseFloat(/matrix\((?:[^,]+,){5}\s*([^)]+)\)/.exec(transform)?.[1]);
 
 async function waitForArrowState(button) {
@@ -34,6 +43,19 @@ async function waitForArrowState(button) {
     await Promise.allSettled(node.getAnimations({subtree: true}).map(animation => animation.finished));
     await new Promise(requestAnimationFrame);
   });
+}
+
+async function settleHeaderLayout(page) {
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
+  });
+}
+
+async function settleArrowAnchors(page, previous, next) {
+  await page.mouse.move(0, 0);
+  await Promise.all([waitForArrowState(previous), waitForArrowState(next)]);
 }
 
 async function arrowState(button) {
@@ -76,8 +98,8 @@ async function titleGeometry(page, title) {
     if (!shelf) throw new Error("task header shelf is unavailable");
     const style = getComputedStyle(node);
     return {
-      shelfTop: shelf.getBoundingClientRect().top,
-      lines: [...range.getClientRects()].map(rect => ({bottom: rect.bottom, left: rect.left, right: rect.right})),
+      shelfTop: shelf.getBoundingClientRect().top + window.scrollY,
+      lines: [...range.getClientRects()].map(rect => ({top: rect.top + window.scrollY, bottom: rect.bottom + window.scrollY, left: rect.left, right: rect.right})),
       overflow: style.overflow,
       lineClamp: style.webkitLineClamp,
     };
@@ -194,6 +216,41 @@ test("static identity keeps native sage arrows through the approved compact rang
         for (const bottom of shelf.bottoms) assert.ok(Math.abs(bottom - shelf.top) <= 3, "desktop plaque remains seated on shelf support");
       }
     }
+    assertClean(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("431px task navigation reserves mobile header anchors through three title lines without clipping longer titles", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 431, height: 900}}); const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    const task11Title = "Check Whether Two Strings Are Anagrams";
+    const task12Title = "Find the Most Frequent Element";
+    const previous = page.getByRole("button", {name: "Select previous task"}); const next = page.getByRole("button", {name: "Select next task"});
+    await openFromCatalogue(page, task11Title);
+    await settleHeaderLayout(page);
+    await settleArrowAnchors(page, previous, next);
+    const task11 = page.getByRole("heading", {name: task11Title, exact: true}); const task11Ordinal = page.getByText("TASK 11", {exact: true});
+    const task11Geometry = await titleGeometry(page, task11);
+    assert.equal(task11Geometry.lines.length, 3, "431px Task 11 exposes its three rendered title lines");
+    const task11Anchors = await Promise.all([task11Ordinal, previous, next].map(locator => locator.evaluate(node => node.getBoundingClientRect().top + window.scrollY))).then(([numberTop, previousTop, nextTop]) => ({numberTop, titleTop: task11Geometry.lines[0].top, previousTop, nextTop, shelfTop: task11Geometry.shelfTop}));
+    for (const [name, value] of Object.entries(task11Anchors)) assert.notEqual(value, undefined, `431px Task 11 exposes ${name}`);
+
+    await next.click(); await page.getByRole("heading", {name: task12Title, exact: true}).waitFor(); await settleHeaderLayout(page); await settleArrowAnchors(page, previous, next);
+    const task12 = page.getByRole("heading", {name: task12Title, exact: true}); const task12Ordinal = page.getByText("TASK 12", {exact: true});
+    const task12Geometry = await titleGeometry(page, task12);
+    assert.equal(task12Geometry.lines.length, 2, "431px Task 12 exposes its two rendered title lines");
+    const task12Anchors = await Promise.all([task12Ordinal, previous, next].map(locator => locator.evaluate(node => node.getBoundingClientRect().top + window.scrollY))).then(([numberTop, previousTop, nextTop]) => ({numberTop, titleTop: task12Geometry.lines[0].top, previousTop, nextTop, shelfTop: task12Geometry.shelfTop}));
+    for (const anchor of Object.keys(task11Anchors)) assertSameAnchorY(task12Anchors[anchor], task11Anchors[anchor], `431px task navigation preserves ${anchor}`);
+
+    const longTitle = "A deliberately long task title that must wrap without covering controls";
+    await openFromCatalogue(page, longTitle);
+    await settleHeaderLayout(page);
+    const long = page.getByRole("heading", {name: longTitle, exact: true}); const longGeometry = await titleGeometry(page, long);
+    assert.ok(longGeometry.lines.length > 3, "431px title beyond three lines remains fully rendered");
+    assert.equal(longGeometry.overflow, "visible", "431px title beyond three lines has no clipping box");
+    assert.equal(longGeometry.lineClamp, "none", "431px title beyond three lines has no line clamp");
+    assert.ok(longGeometry.lines.at(-1).bottom <= longGeometry.shelfTop, "431px title beyond three lines clears the shelf");
     assertClean(diagnostics);
   } finally { await context.close(); await browser.close(); }
 });

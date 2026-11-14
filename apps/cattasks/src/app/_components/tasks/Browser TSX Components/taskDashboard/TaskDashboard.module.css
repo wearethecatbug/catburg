@@ -1,6 +1,8 @@
 .taskDashboardRoot {
     --catalogue-shelf-width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px);
     --task-shelf-arrow-inset: 10px;
+    --task-shelf-previous-anchor: 122px;
+    --task-shelf-next-inset: 102px;
     caret-color: transparent;
     position: relative;
     display: flex;
@@ -274,8 +276,6 @@
         /* Match the desktop header's plaque centers so the adjacent foliage stays anchored as the viewport grows. */
         --previous-anchor: calc(50% - 312px);
         --next-anchor: calc(50% + 292px);
-        --book-inset: clamp(45px, calc(25vw - 275px), 7%);
-        --mug-inset: max(28px, calc(7% - 24px));
     }
 
     .shelfDecoration img,
@@ -289,11 +289,6 @@
         height: auto;
         z-index: 2;
         filter: drop-shadow(0 2px 1px rgba(78, 67, 32, .16));
-    }
-
-    .shelfDecoration .shelfBooks,
-    .shelfDecoration .shelfMug {
-        z-index: 3;
     }
 
     .shelfBracket {
@@ -312,24 +307,6 @@
     .shelfBracketRight {
         right: 14px;
         background-position: right -27px;
-    }
-
-    .shelfBooks {
-        bottom: 19px;
-        left: var(--book-inset);
-        width: clamp(66px, 6vw, 86px);
-    }
-
-    .shelfMug {
-        right: var(--mug-inset);
-        bottom: 19px;
-        width: 57px;
-    }
-
-    .shelfPlantBooks {
-        bottom: 11px;
-        left: max(5px, calc(var(--book-inset) - 51px));
-        width: 64px;
     }
 
     .shelfPlantPreviousLeft {
@@ -356,12 +333,6 @@
         width: 59px;
     }
 
-    .shelfPlantCup {
-        bottom: 10px;
-        left: calc(100% - var(--mug-inset) - 102px);
-        width: 52px;
-    }
-
     .shelfLeafPair {
         bottom: 57px;
         left: calc(var(--previous-anchor) - 83px);
@@ -370,7 +341,7 @@
 
 }
 
-@media (min-width: 601px) and (max-width: 1200px) {
+@media (min-width: 601px) and (max-width: 1150px) {
     .taskShelf {
         margin-bottom: 32px;
     }
@@ -382,10 +353,6 @@
         --next-anchor: calc(100% - var(--transition-arrow-inset));
     }
 
-    .shelfDecoration .shelfBooks,
-    .shelfDecoration .shelfMug,
-    .shelfDecoration .shelfPlantBooks,
-    .shelfDecoration .shelfPlantCup,
     .shelfDecoration .shelfLeafPair {
         display: none;
     }
@@ -418,10 +385,19 @@
     }
 }
 
+@media (min-width: 1151px) {
+    .shelfDecoration {
+        /* Each desktop plaque and its complete foliage group share one rail anchor. */
+        --previous-anchor: var(--task-shelf-previous-anchor);
+        --next-anchor: calc(100% - var(--task-shelf-next-inset));
+    }
+}
+
 @media (min-width: 1440px) {
     .shelfDecoration .shelfOwl {
         display: block;
-        right: calc(var(--mug-inset) + 102px);
+        /* Leave a 16px berth before the inward edge of the right plant group. */
+        right: calc(var(--task-shelf-next-inset) + 105px);
         bottom: 20px;
         width: 52.8px;
         z-index: 3;
@@ -448,20 +424,6 @@
     .catalogueShelfBracket { position: absolute; z-index: 1; top: calc(100% + 2px); display: block; width: 93px; height: 48px; background: url('/cattasks/shelf/brackets.png') no-repeat; background-size: 300% auto; pointer-events: none; user-select: none; }
     .catalogueShelfBracketLeft { left: 14px; background-position: left -27px; }
     .catalogueShelfBracketRight { right: 14px; background-position: right -27px; }
-}
-
-@media (min-width: 1201px) and (max-width: 1220px) {
-    .shelfDecoration {
-        --previous-anchor: 120px;
-        --next-anchor: calc(100% - 120px);
-    }
-
-    .shelfDecoration .shelfBooks,
-    .shelfDecoration .shelfMug,
-    .shelfDecoration .shelfPlantBooks,
-    .shelfDecoration .shelfPlantCup {
-        display: none;
-    }
 }
 
 .taskDashboardRoot {

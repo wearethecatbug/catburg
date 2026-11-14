@@ -79,8 +79,10 @@
     }
 
     .allTasksButton {
+        grid-row: 1;
         align-self: start;
         margin-block-start: 14px;
+        z-index: 1;
     }
 }
 
@@ -114,6 +116,33 @@
         min-width: 0;
         height: auto;
         min-height: 152px;
+        transform: none;
+    }
+}
+
+@media (min-width: 1151px) {
+    .headerContainer > .headerTaskContainer {
+        /* Use the shelf rail itself as the navigation coordinate system. */
+        width: min(calc(100vw - clamp(32px, 16vw, 258px)), 1281px);
+        min-width: 0;
+        transform: none;
+    }
+}
+
+@media (min-width: 1151px) and (max-width: 1220px) {
+    .headerContainer > .headerTaskContainer {
+        /* Center this exact rail width in the transition header's padded grid cell. */
+        margin-inline: 0;
+        justify-self: center;
+    }
+}
+
+@media (min-width: 1221px) {
+    .headerContainer > .headerTaskContainer {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        justify-self: center;
+        /* Keep long desktop titles in grid flow so they can extend the header safely. */
         transform: none;
     }
 }

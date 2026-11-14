@@ -70,6 +70,11 @@ async function headerEvidence(page) {
     return controls.map(button => {
       const rect = button.getBoundingClientRect();
       const before = getComputedStyle(button, "::before");
+      const style = getComputedStyle(button);
+      const label = [...button.querySelectorAll("span")].find(node => node.textContent?.trim() === button.textContent?.trim()) ?? button;
+      const labelRange = document.createRange();
+      labelRange.selectNodeContents(label);
+      const labelRect = labelRange.getBoundingClientRect();
       return {
         text: button.textContent?.trim(),
         width: rect.width,
@@ -77,12 +82,15 @@ async function headerEvidence(page) {
         right: rect.right,
         top: rect.top,
         bottom: rect.bottom,
-        eye: button.textContent?.trim() === "Hide task" ? button.querySelectorAll("svg[aria-hidden='true'], [aria-hidden='true'] svg").length : 0,
-        eyeBeforeLabel: (() => {
-          const eye = button.querySelector("svg[aria-hidden='true'], [aria-hidden='true'] svg");
-          const label = [...button.querySelectorAll("span")].find(node => node.textContent?.trim() === "Hide task");
-          return Boolean(eye && label && eye.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING);
-        })(),
+        decorativeSvgCount: button.querySelectorAll("svg").length,
+        fontFamily: style.fontFamily,
+        fontSize: Number.parseFloat(style.fontSize),
+        fontWeight: style.fontWeight,
+        lineHeight: Number.parseFloat(style.lineHeight),
+        whiteSpace: style.whiteSpace,
+        labelLeft: labelRect.left,
+        labelRight: labelRect.right,
+        labelLineCount: labelRange.getClientRects().length,
         material: button.getAttribute("data-material"),
         texture: before.backgroundImage,
       };
@@ -97,18 +105,27 @@ async function assertFourEqualHeaderControls(page, width) {
   assert.ok(controls.every(control => Math.abs(control.width - controls[0].width) <= .5), `all four task controls have equal outer widths at ${width}px`);
   assert.ok(controls.every(control => control.left >= 0 && control.right <= width), `all four task controls fit at ${width}px`);
   assert.ok(controls.every(control => control.top === controls[0].top && control.bottom === controls[0].bottom), `all four task controls share one row at ${width}px`);
-  assert.equal(controls[3].eye, 1, "Hide task presents exactly one decorative eye icon before its text");
-  assert.equal(controls[3].eyeBeforeLabel, true, "Hide task places its decorative eye before the visible label");
+  assert.equal(controls[3].decorativeSvgCount, 0, "Hide task is text-only and has no decorative eye icon");
+
+  const expectedFontSize = width <= 420 ? 11 : 16;
+  const expectedLineHeight = expectedFontSize * 1.15;
+  assert.ok(controls.every(control => control.fontFamily === controls[0].fontFamily), `all four task controls share one font family at ${width}px`);
+  assert.ok(controls.every(control => /^system-ui(?:,|$)/.test(control.fontFamily)), `task controls use the approved system-ui font family at ${width}px`);
+  assert.ok(controls.every(control => control.fontWeight === "600"), `all four task controls use the approved 600 weight at ${width}px`);
+  assert.ok(controls.every(control => Math.abs(control.fontSize - expectedFontSize) <= .1), `all four task controls use ${expectedFontSize}px type at ${width}px`);
+  assert.ok(controls.every(control => Math.abs(control.lineHeight - expectedLineHeight) <= .1), `all four task controls use the approved 1.15 line height at ${width}px`);
+  assert.ok(controls.every(control => control.whiteSpace === "nowrap"), `all four task labels stay on one line at ${width}px`);
+  assert.ok(controls.every(control => control.labelLineCount === 1 && control.labelLeft >= control.left - .5 && control.labelRight <= control.right + .5), `all four task labels fit inside one line at ${width}px`);
 }
 
 test("CatTasks keeps one saved solution per task, restores only after confirmation, and exposes the approved header controls", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 1268, height: 900}, reducedMotion: "reduce"});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    await assertFourEqualHeaderControls(page, 1268);
-    await assertFourEqualHeaderControls(page, 598);
+    await assertFourEqualHeaderControls(page, 1440);
+    await assertFourEqualHeaderControls(page, 600);
     await assertFourEqualHeaderControls(page, 320);
 
     await openSavedSolution(page);
