@@ -99,7 +99,11 @@ async function assertHistoryGrip(page, description) {
           getComputedStyle(icon).display !== "none" &&
           getComputedStyle(icon).visibility !== "hidden" &&
           Number.parseFloat(getComputedStyle(icon).opacity) > 0 &&
-          icon.getClientRects().length > 0,
+          icon.getClientRects().length > 0 &&
+          (!(icon instanceof SVGSVGElement) ||
+            [...icon.querySelectorAll("circle, ellipse, line, path, polygon, polyline, rect")].some(
+              (shape) => shape.getClientRects().length > 0,
+            )),
       ),
     };
   });

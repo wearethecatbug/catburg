@@ -8358,7 +8358,7 @@ test("Give up centers its actions and exposes only the public arithmetic result"
               `${routeName} ${width}x${height} disabled Check is visibly muted rather than retaining its enabled paint`,
             );
           }
-          if (route === "/") {
+          if (width <= 600 || route === "/") {
             const status = await exact(
               hint.dialog.getByRole("status").getByText(expectedMessage, { exact: true }),
               `${routeName} ${width}x${height} Give up result status`,
