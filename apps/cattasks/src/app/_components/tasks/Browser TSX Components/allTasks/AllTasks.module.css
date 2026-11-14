@@ -169,6 +169,8 @@
 }
 
 @media (601px < width <= 760px) {
+    .pageTitle { transform: translateY(-1px); }
+    .pageTitle::after { top: calc(100% - 4px); }
     .backRabbit { display: none; }
 }
 
