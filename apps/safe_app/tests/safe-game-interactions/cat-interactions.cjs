@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { runtimeBaseUrl: baseUrl, fixedClockStart } = require("./shared/runtime-context.cjs");
-const { visibleAlphaBounds } = require("./shared/readiness.cjs");
+const { visibleAlphaBounds, waitForArtworkReadiness } = require("./shared/readiness.cjs");
 const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectOrdinaryReturn, gameControls, approximatelyEqual } = require("./shared/game-controls.cjs");
 const { ordinaryArt, exactHiddenChild, visibleDialAngle, publicAssetPresentation, clickVisibleArtwork, assertPaintedHeaderClearance, logicalBox } = require("./shared/artwork-geometry.cjs");
 
@@ -942,6 +942,7 @@ test("Each pet creates a distinct activation-point burst without extending the r
         assert.ok(before, `${width}px pet target has a box`);
         const points = [];
         for (let index = 0; index < 3; index += 1) {
+          await waitForArtworkReadiness(page, pet);
           const point = await pointForCurrentArt(points);
           assert.ok(point, `${width}px activation ${index + 1} has an opaque point in the current art`);
           points.push(point);
