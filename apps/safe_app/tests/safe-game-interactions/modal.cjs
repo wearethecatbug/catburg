@@ -5168,22 +5168,20 @@ test("SC06: live breakpoint crossings preserve the active question, answer, and 
           `${width}px does not duplicate the dialog`,
         );
       }
+      const desktopCatSource = hint.dialog.locator('picture > source[media="(min-width: 821px)"]');
       await page.clock.runFor(9999 - 9000 - resizeElapsed);
-      assert.equal(
-        (await sc06RenderedReferences(hint.dialog)).some((reference) =>
-          reference.source.includes("hint-popup-cat-concerned-640.png"),
-        ),
-        false,
+      assert.match(
+        await desktopCatSource.getAttribute("srcset"),
+        /\/hint-popup-cat-thinking-640\.png$/,
         "9,999ms keeps the thinking cat despite resize",
       );
       await page.clock.runFor(1);
-      assert.equal(
-        (await sc06RenderedReferences(hint.dialog)).some((reference) =>
-          reference.source.includes("hint-popup-cat-concerned-640.png"),
-        ),
-        true,
+      assert.match(
+        await desktopCatSource.getAttribute("srcset"),
+        /\/hint-popup-cat-concerned-640\.png$/,
         "10,000ms changes the same unresolved challenge to concerned desktop cat",
       );
+      await waitForChallengeArtwork(page, hint.dialog, "hint-popup-cat-concerned-640.png", "concerned desktop cat after resize");
     },
   );
 });
