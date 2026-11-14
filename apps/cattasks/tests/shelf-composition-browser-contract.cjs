@@ -262,6 +262,7 @@ test("catalogue shelf and Back to task use the approved independent composition"
     await page.getByRole("button", {name: "All tasks"}).click();
     await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
 
+    const mossRailOffsets = new Map();
     for (const [width, expectedShelfHeight, expectedBrackets, expectedMascotWidth, expectedButtonHeight] of [
       [1757, 22, 2, 101, 60],
       [1440, 22, 2, 101, 60],
@@ -358,6 +359,7 @@ test("catalogue shelf and Back to task use the approved independent composition"
               left: moss.left,
               top: moss.top,
               width: moss.width,
+              height: moss.height,
               pointerEvents: moss.pointerEvents,
             },
           },
@@ -412,17 +414,26 @@ test("catalogue shelf and Back to task use the approved independent composition"
       assert.equal(view.arrow.text, "←", `${width}px Back to task keeps its arrow`);
       assert.equal(view.arrow.visible, true, `${width}px Back to task arrow remains visible`);
       if (width > 601) {
+        const raisedTransitionTitle = width <= 760;
         assert.ok(Math.abs(view.title.box.left - (view.shelf.left + 16)) <= 1, `${width}px All tasks starts 16px from the shelf edge`);
-        assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + 7)) <= 1, `${width}px All tasks sits 7px into the shelf`);
+        assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + (raisedTransitionTitle ? -1 : 7))) <= 1, `${width}px All tasks uses its approved shelf clearance`);
         assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px title uses the local approved moss texture`);
         assert.equal(view.title.moss.pointerEvents, "none", `${width}px title moss is pointer-inert`);
         assert.equal(parseFloat(view.title.moss.left), -21, `${width}px title moss starts 21px left of the title`);
-        assert.ok(Math.abs(parseFloat(view.title.moss.top) - (view.title.box.height - 12)) <= 0.1, `${width}px title moss overlaps the title baseline by 12px`);
+        assert.ok(Math.abs(parseFloat(view.title.moss.top) - (view.title.box.height - (raisedTransitionTitle ? 4 : 12))) <= 0.1, `${width}px title moss uses its approved title-relative overlap`);
         assert.ok(Math.abs(parseFloat(view.title.moss.width) - (view.title.box.width + 21)) <= 0.1, `${width}px title moss extends 21px beyond the title`);
+        mossRailOffsets.set(width, {
+          top: view.title.box.top + parseFloat(view.title.moss.top) - view.shelf.top,
+          bottom: view.title.box.top + parseFloat(view.title.moss.top) + parseFloat(view.title.moss.height) - view.shelf.top,
+        });
       } else {
         assert.equal(view.title.moss.content, '""', `${width}px compact title retains its decorative moss pseudo-element`);
         assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px compact title retains the approved moss texture`);
         assert.equal(view.title.fontFamily.includes("Nunito"), true, `${width}px compact title retains Nunito`);
+        if (width === 601) {
+          assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + 2)) <= 1, "601px retains the compact title's approved shelf position");
+          assert.ok(Math.abs(view.title.box.top + parseFloat(view.title.moss.top) - (view.shelf.top - 7)) <= 1, "601px retains the compact moss position against the shelf");
+        }
       }
       if (width === 1757) {
         assert.deepEqual(nunito, {loaded: true, available: true}, "1757px waits for the loaded local Nunito face");
@@ -436,6 +447,11 @@ test("catalogue shelf and Back to task use the approved independent composition"
       assert.equal(await button.evaluate(node => node === document.activeElement), true, `${width}px Back to task remains keyboard focusable`);
       const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.textContent?.trim(), {x: view.button.left + view.button.width / 2, y: view.button.top + view.button.height / 2});
       assert.equal(hit, "←Back to task", `${width}px capybara and shelf do not block Back to task`);
+    }
+    const normalMossOffsets = mossRailOffsets.get(761);
+    for (const width of [602, 760]) {
+      const transitionMossOffsets = mossRailOffsets.get(width);
+      assert.ok(Math.abs(transitionMossOffsets.top - normalMossOffsets.top) <= .1 && Math.abs(transitionMossOffsets.bottom - normalMossOffsets.bottom) <= .1, `${width}px raised title preserves the moss's absolute position against the shelf`);
     }
     await page.setViewportSize({width: 1440, height: 900});
     await page.getByRole("button", {name: "Back to task"}).focus();
