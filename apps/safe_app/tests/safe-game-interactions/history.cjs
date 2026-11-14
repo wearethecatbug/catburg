@@ -87,9 +87,15 @@ async function assertHistoryGrip(page, description) {
   );
   assert.equal(await handle.isVisible(), true, `${description} grip is visible`);
   const grip = await handle.evaluate((element) => {
-    const pseudoContents = ["::before", "::after"].map((pseudo) =>
-      getComputedStyle(element, pseudo).content.replaceAll('"', "").replaceAll("'", "").trim(),
-    );
+    const visibilityOptions = { opacityProperty: true, visibilityProperty: true };
+    const pseudoContents = ["::before", "::after"].flatMap((pseudo) => {
+      const style = getComputedStyle(element, pseudo);
+      if (style.display === "none" || style.visibility !== "visible" ||
+          Number(style.opacity) <= 0 || !element.checkVisibility(visibilityOptions)) {
+        return [];
+      }
+      return [style.content.replaceAll('"', "").replaceAll("'", "").trim()];
+    });
     return {
       text: element.innerText.trim(),
       pseudoContents,
@@ -102,7 +108,7 @@ async function assertHistoryGrip(page, description) {
           icon.getClientRects().length > 0 &&
           (!(icon instanceof SVGSVGElement) ||
             [...icon.querySelectorAll("circle, ellipse, line, path, polygon, polyline, rect")].some(
-              (shape) => shape.getClientRects().length > 0,
+              (shape) => shape.getClientRects().length > 0 && shape.checkVisibility(visibilityOptions),
             )),
       ),
     };
