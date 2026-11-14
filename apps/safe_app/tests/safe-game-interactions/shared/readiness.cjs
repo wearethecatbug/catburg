@@ -1,8 +1,8 @@
-function withinReadinessTimeout(promise, description) {
+function withinReadinessTimeout(promise, description, timeoutMs = 30_000) {
   let timer;
   return Promise.race([
     promise,
-    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${description} timed out after 30000ms`)), 30_000); }),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${description} timed out after ${Math.ceil(timeoutMs)}ms`)), timeoutMs); }),
   ]).finally(() => clearTimeout(timer));
 }
 
@@ -23,40 +23,45 @@ async function waitForArtworkReadiness(page, locator) {
   let snapshot;
   // Resolve the locator again on each check because React can replace the image.
   while (performance.now() < deadline) {
-    snapshot = await locator.evaluate((element) => {
-      let image = element instanceof HTMLImageElement ? element : element.querySelector("img");
-      let reference;
-      const kind = image ? "image" : "background";
-      if (!image) {
-        const owner = [element, ...element.querySelectorAll("*")]
-          .find((candidate) => getComputedStyle(candidate).backgroundImage !== "none");
-        reference = getComputedStyle(owner || element).backgroundImage;
-        const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1];
-        if (!url) return { kind, ready: false, reference };
-        const images = window.__safeCatArtworkReadiness ||= new Map();
-        image = images.get(url);
+    const remainingMs = Math.max(1, deadline - performance.now());
+    snapshot = await withinReadinessTimeout(
+      locator.evaluate((element) => {
+        let image = element instanceof HTMLImageElement ? element : element.querySelector("img");
+        let reference;
+        const kind = image ? "image" : "background";
         if (!image) {
-          image = new Image();
-          image.src = url;
-          images.set(url, image);
+          const owner = [element, ...element.querySelectorAll("*")]
+            .find((candidate) => getComputedStyle(candidate).backgroundImage !== "none");
+          reference = getComputedStyle(owner || element).backgroundImage;
+          const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1];
+          if (!url) return { kind, ready: false, reference };
+          const images = window.__safeCatArtworkReadiness ||= new Map();
+          image = images.get(url);
+          if (!image) {
+            image = new Image();
+            image.src = url;
+            images.set(url, image);
+          }
         }
-      }
-      return {
-        kind,
-        ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
-        src: image.getAttribute("src"),
-        currentSrc: image.currentSrc,
-        complete: image.complete,
-        naturalWidth: image.naturalWidth,
-        naturalHeight: image.naturalHeight,
-        reference,
-      };
-    }, undefined, { timeout: Math.max(1, deadline - performance.now()) });
+        return {
+          kind,
+          ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+          src: image.getAttribute("src"),
+          currentSrc: image.currentSrc,
+          complete: image.complete,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          reference,
+        };
+      }, undefined, { timeout: remainingMs }),
+      "visible alpha artwork evaluation",
+      remainingMs,
+    );
     if (snapshot.ready) return snapshot;
     if (snapshot.complete && snapshot.currentSrc) {
       throw new Error(`visible alpha artwork failed to load: ${JSON.stringify(snapshot)}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, Math.min(50, Math.max(0, deadline - performance.now()))));
   }
   throw new Error(`visible alpha artwork readiness timed out after 30000ms: ${JSON.stringify(snapshot)}`);
 }
