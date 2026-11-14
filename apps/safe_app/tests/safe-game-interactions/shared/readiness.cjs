@@ -1,8 +1,8 @@
-function withinReadinessTimeout(promise, description) {
+function withinReadinessTimeout(promise, description, timeoutMs = 30_000) {
   let timer;
   return Promise.race([
     promise,
-    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${description} timed out after 30000ms`)), 30_000); }),
+    new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${description} timed out after ${Math.ceil(timeoutMs)}ms`)), timeoutMs); }),
   ]).finally(() => clearTimeout(timer));
 }
 
@@ -19,20 +19,51 @@ async function waitForStableVisualGeometry(page, settleFrames = true) {
 }
 
 async function waitForArtworkReadiness(page, locator) {
-  const snapshot = await withinReadinessTimeout(locator.evaluate(async (element) => {
-      const rendered = element instanceof HTMLImageElement ? element : element.querySelector("img");
-      if (rendered instanceof HTMLImageElement) {
-        if (rendered.complete) await rendered.decode().catch(() => {});
-        else await new Promise((resolve) => { rendered.addEventListener("load", resolve, { once: true }); rendered.addEventListener("error", resolve, { once: true }); if (rendered.complete) resolve(); });
-        return { kind: "image", ready: rendered.complete && rendered.naturalWidth > 0 && rendered.naturalHeight > 0, src: rendered.getAttribute("src"), currentSrc: rendered.currentSrc, complete: rendered.complete, naturalWidth: rendered.naturalWidth, naturalHeight: rendered.naturalHeight };
-      }
-      const owner = [element, ...element.querySelectorAll("*")].find((candidate) => getComputedStyle(candidate).backgroundImage !== "none"); const reference = getComputedStyle(owner || element).backgroundImage; const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1]; const images = window.__safeCatArtworkReadiness ||= new Map(); let image = images.get(url); if (!image) { image = new Image(); image.src = url; images.set(url, image); }
-      if (image.complete) await image.decode().catch(() => {});
-      else await new Promise((resolve) => { image.addEventListener("load", resolve, { once: true }); image.addEventListener("error", resolve, { once: true }); if (image.complete) resolve(); });
-      return { kind: "background", ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0, src: image.src, reference, complete: image.complete, naturalWidth: image.naturalWidth, naturalHeight: image.naturalHeight };
-    }), "visible alpha artwork readiness");
-  if (snapshot.ready) return snapshot;
-  throw new Error(`visible alpha ${snapshot?.kind || "artwork"} readiness timed out: ${JSON.stringify(snapshot)}`);
+  const deadline = performance.now() + 30_000;
+  let snapshot;
+  // Resolve the locator again on each check because React can replace the image.
+  while (performance.now() < deadline) {
+    const remainingMs = Math.max(1, deadline - performance.now());
+    snapshot = await withinReadinessTimeout(
+      locator.evaluate((element) => {
+        let image = element instanceof HTMLImageElement ? element : element.querySelector("img");
+        let reference;
+        const kind = image ? "image" : "background";
+        if (!image) {
+          const owner = [element, ...element.querySelectorAll("*")]
+            .find((candidate) => getComputedStyle(candidate).backgroundImage !== "none");
+          reference = getComputedStyle(owner || element).backgroundImage;
+          const url = reference.match(/url\(["']?(.*?)["']?\)/)?.[1];
+          if (!url) return { kind, ready: false, reference };
+          const images = window.__safeCatArtworkReadiness ||= new Map();
+          image = images.get(url);
+          if (!image) {
+            image = new Image();
+            image.src = url;
+            images.set(url, image);
+          }
+        }
+        return {
+          kind,
+          ready: image.complete && image.naturalWidth > 0 && image.naturalHeight > 0,
+          src: image.getAttribute("src"),
+          currentSrc: image.currentSrc,
+          complete: image.complete,
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          reference,
+        };
+      }, undefined, { timeout: remainingMs }),
+      "visible alpha artwork evaluation",
+      remainingMs,
+    );
+    if (snapshot.ready) return snapshot;
+    if (snapshot.complete && snapshot.currentSrc) {
+      throw new Error(`visible alpha artwork failed to load: ${JSON.stringify(snapshot)}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(50, Math.max(0, deadline - performance.now()))));
+  }
+  throw new Error(`visible alpha artwork readiness timed out after 30000ms: ${JSON.stringify(snapshot)}`);
 }
 
 async function visibleAlphaBounds(page, locator, sourceCrop) {
