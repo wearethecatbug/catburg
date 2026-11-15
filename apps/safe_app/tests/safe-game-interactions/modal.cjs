@@ -6208,6 +6208,12 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
           true,
           `${width}x${height} wrong input visibly exposes its red error treatment`,
         );
+        await waitForChallengeArtwork(
+          page,
+          vignette,
+          width <= 820 ? narrowConcernedAsset : desktopConcernedAsset,
+          `${width}x${height} wrong-answer concerned cat`,
+        );
         const concerned = await exact(
           vignette.locator('img[src*="hint-popup-cat-"]'),
           `${width}x${height} wrong-answer concerned cat`,
@@ -6216,17 +6222,6 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
           await concerned.isVisible(),
           true,
           `${width}x${height} wrong-answer concerned cat remains visible`,
-        );
-        assert.equal(
-          await concerned.evaluate(
-            (image, expectedAsset) =>
-              image.complete &&
-              image.naturalWidth > 0 &&
-              image.currentSrc.includes(expectedAsset),
-            width <= 820 ? narrowConcernedAsset : desktopConcernedAsset,
-          ),
-          true,
-          `${width}x${height} wrong-answer concerned cat source is loaded`,
         );
         const retryCopy = "Try again — you’ve got this!";
         const decorativeRetry = await exact(
