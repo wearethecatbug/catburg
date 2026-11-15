@@ -350,7 +350,7 @@ test("History mouse and touch dragging, bounds, internal scrolling, reopen, rese
 function register02() {
 
 
-test("History uses a visible non-text grip without duplicating its readable identity", async () => {
+test("SCV02 History uses a visible non-text grip without duplicating its readable identity", async () => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 390, height: 844 },
@@ -367,7 +367,7 @@ test("History uses a visible non-text grip without duplicating its readable iden
   }
 });
 
-test("/safe smoke keeps the History grip reachable without horizontal overflow", async () => {
+test("SCV02 /safe smoke keeps the History grip reachable without horizontal overflow", async () => {
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 390, height: 844 },

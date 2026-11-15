@@ -877,7 +877,7 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
   );
 });
 
-test("Pet me stays above the painted cat at desktop and compact widths", async () => {
+test("SCV04: Pet me stays above the painted cat at desktop and compact widths", async () => {
   for (const [width, height] of [[1440, 900], [390, 844]])
     await withSession(
       { width, height },
@@ -904,7 +904,7 @@ test("Pet me stays above the painted cat at desktop and compact widths", async (
     );
 });
 
-test("Each pet creates a distinct activation-point burst without extending the round presentation", async () => {
+test("SCV04: each pet creates a distinct activation-point burst without extending the round presentation", async () => {
   for (const [width, height, tolerance] of [[1440, 900, 8], [390, 844, 10]])
     await withSession(
       { width, height },
@@ -982,7 +982,7 @@ test("Each pet creates a distinct activation-point burst without extending the r
     );
 });
 
-test("A click crossing the pet deadline cannot leak its origin into the next accepted burst", async () => {
+test("SCV04: a click crossing the pet deadline cannot leak its origin into the next accepted burst", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { clockStart: fixedClockStart },
@@ -1034,7 +1034,7 @@ test("A click crossing the pet deadline cannot leak its origin into the next acc
       await page.clock.runFor(1199);
       const rejected = await opaquePointAwayFrom([initial]);
       assert.ok(rejected, "deadline-race pre-deadline opaque point exists");
-      const bridgeKey = "__petDeadlineNowRestore";
+      const bridgeKey = "__scv04DeadlineNowRestore";
       await page.evaluate((key) => {
         const target = performance;
         const hadOwn = Object.prototype.hasOwnProperty.call(target, "now");
@@ -1072,7 +1072,7 @@ test("A click crossing the pet deadline cannot leak its origin into the next acc
   );
 });
 
-test("Dialog transitions and route unmount clear live bursts; /safe remains proportional", async () => {
+test("SCV04: dialog transitions and route unmount clear live bursts; /safe remains proportional", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { clockStart: fixedClockStart, route: "/safe" },

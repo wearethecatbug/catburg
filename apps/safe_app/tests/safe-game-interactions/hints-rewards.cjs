@@ -83,7 +83,7 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
       assert.equal(
         await hint.answer.inputValue(),
         String(abandonedAnswer),
-        "Give up replaces the former blank-input expectation with the visible equation answer",
+        "SCV03 Give up replaces the former blank-input expectation with the visible equation answer",
       );
       assert.equal(
         await page.getByText(/even|odd/i).count(),
@@ -1293,7 +1293,7 @@ test("SC05 provider: reduced-motion safe open and close never animate", async ()
 
 function register03() {
 
-test("Stored hints follows Show hint through resize, internal scrolling, close, and reopen", async () => {
+test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scrolling, close, and reopen", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { random: 0.041, clockStart: fixedClockStart },

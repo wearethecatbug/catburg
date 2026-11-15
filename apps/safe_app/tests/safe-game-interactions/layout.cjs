@@ -61,7 +61,7 @@ function measuredArtworkWidth(layer, aspectRatio) {
   throw new Error(`scene artwork needs a resolved proportional size, received ${size}`);
 }
 
-// The decorative scene artwork may be a dedicated element or a route-owner
+// AC3 permits the decorative scene artwork to be a dedicated element or a route-owner
 // pseudo-element. The public oracle deliberately observes both without selecting an
 // implementation-specific class name.
 async function sceneBackground(page) {
@@ -1550,7 +1550,7 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
     );
 });
 
-test("Resting and surrendered painted cats retain safe contact, clearance, and the approved body footprint", async () => {
+test("SCV01 AC1/AC2: resting and surrendered painted cats retain safe contact, clearance, and the approved body footprint", async () => {
   const surrenderedBodyRoi = { left: 180, top: 355, right: 710, bottom: 685 };
   for (const [width, height] of [[1440, 900], [390, 844]])
     await withSession({ width, height }, { random: 0.041 }, async ({ page }) => {
@@ -1600,7 +1600,7 @@ test("Resting and surrendered painted cats retain safe contact, clearance, and t
     });
 });
 
-test("/safe smoke keeps a reachable scene owner after dialog close at both approved widths", async () => {
+test("SCV01 /safe smoke: both approved widths retain a reachable scene owner after dialog close", async () => {
   for (const [width, height] of [[1440, 900], [390, 844]])
     await withSession({ width, height }, { route: "/safe", random: 0.041 }, async ({ page }) => {
       const controls = await gameControls(page);
@@ -2260,7 +2260,7 @@ test("SC05 D25: a wrong valid code is visibly rejected and any real input edit c
   );
 });
 
-test("1074px gameplay group is visible and vertically balanced", async () => {
+test("SCV05 AC1: 1074px gameplay group is visible and vertically balanced", async () => {
   await withSession({ width: 1074, height: 1134 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     const safe = page.getByLabel("Safe closed", { exact: true });
@@ -2290,7 +2290,7 @@ test("1074px gameplay group is visible and vertically balanced", async () => {
   });
 });
 
-test("Responsive scene art is quiet, proportional, and never intercepts gameplay", async () => {
+test("SCV05 AC3: responsive scene art is quiet, proportional, and never intercepts gameplay", async () => {
   for (const [width, height, expectedAsset, expectedArtworkWidth, aspectRatio] of [
     [1440, 900, "scene-background-wide.webp", 880, 1600 / 900],
     [1074, 1134, "scene-background-wide.webp", 880, 1600 / 900],
@@ -2379,7 +2379,7 @@ test("Responsive scene art is quiet, proportional, and never intercepts gameplay
   });
 });
 
-test("Compact cat-safe contact has no resize bounce", async () => {
+test("SCV05 AC7: compact cat-safe contact has no resize bounce", async () => {
   await withSession({ width: 601, height: 1134 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
     const safe = page.getByLabel("Safe closed", { exact: true });

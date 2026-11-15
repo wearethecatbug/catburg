@@ -61,11 +61,6 @@
   transform: translate(-50%, -50%);
 }
 
-.safeRegion:has([data-visual-mode="SURRENDERED"]) {
-  /* Preserve painted paw contact while the uniformly scaled terminal art clears the header. */
-  transform: translate(-50%, -50%) translateY(20px);
-}
-
 .characterEffectZone {
   box-sizing: border-box;
   height: var(--character-zone);
@@ -162,6 +157,8 @@
 }
 @media (min-width: 1280px) and (max-height: 800px) { .headerZone, .header { top: max(13px, calc(50% - 416px)); } }
 @media (min-width: 1280px) and (min-height: 900px) {
+  /* Reserve room for the flag without moving the safe or distorting the cat. */
+  .stage:has([data-visual-mode="SURRENDERED"]) .headerZone { top: -21px; }
   .safeRegion { top: calc(50% + 12px); }
   .codeEntry { top: calc(50% + 202px); }
   .menuRegion { top: calc(50% - 103px); }
