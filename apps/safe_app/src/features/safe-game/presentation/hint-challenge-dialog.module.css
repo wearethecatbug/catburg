@@ -792,8 +792,9 @@
 
   .abandonedBubble {
     right: -106px;
-    top: 16px;
-    transform: none;
+    /* Keep the speech beside the cat even when the text wraps to fewer lines. */
+    top: 128px;
+    transform: translateY(-75%);
   }
 
   .imageButton {
