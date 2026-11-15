@@ -1479,6 +1479,7 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
 test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette and preserves subtitle clearance", async () => {
   for (const [width, height] of [
     [2560, 1277],
+    [1920, 1040],
     [1440, 900],
     [1280, 800],
     [1024, 768],
@@ -1493,6 +1494,8 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
       { width, height },
       { random: 0.041 },
         async ({ page }) => {
+        if (width === 1920 && height === 1040)
+          await page.emulateMedia({ reducedMotion: "reduce" });
         const controls = await gameControls(page);
         const safe = page.getByLabel("Safe closed", { exact: true });
         const samples = [];
@@ -1502,9 +1505,11 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
             ? await Promise.all([visibleAlphaBounds(page, cat), visibleAlphaBounds(page, safe)])
             : [await visibleAlphaBounds(page, cat), null];
           const subtitle = await controls.instruction.boundingBox();
-          const title = await page
-            .getByRole("heading", { name: "Guess the number", exact: true })
-            .boundingBox();
+          const heading = await exact(
+            page.getByRole("heading", { name: "Guess the number", exact: true }),
+            `${width}x${height} semantic title heading`,
+          );
+          const title = await heading.boundingBox();
           assertPaintedHeaderClearance({
             catAlpha: bounds,
             title,
@@ -1519,6 +1524,18 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
               safeGap >= -8 && safeGap <= 8,
               `${width}x${height} SURRENDERED painted paws remain in the approved -8..8px safe-contact band: ${safeGap}px`,
             );
+            if (width === 1920 && height === 1040) {
+              const titleText = await exact(
+                heading.locator("svg text"),
+                "1920x1040 surrendered visible title glyphs",
+              );
+              const titleGlyphBounds = await titleText.boundingBox();
+              for (const [name, box] of Object.entries({ heading: title, titleGlyphs: titleGlyphBounds }))
+                assert.ok(
+                  box && box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= height,
+                  `1920x1040 SURRENDERED ${name} remains inside the viewport: ${JSON.stringify(box)}`,
+                );
+            }
           }
           samples.push({ label: mode, bounds });
         };

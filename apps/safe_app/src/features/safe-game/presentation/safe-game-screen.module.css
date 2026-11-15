@@ -164,6 +164,13 @@
   .menuRegion { top: calc(50% - 103px); }
 }
 @media (min-width: 1920px) { .stage { transform: translateY(-50%) scale(1.35); } }
+@media (min-width: 1920px) and (900px <= height < 1121px) {
+  .stage {
+    /* Fit the 760px stage with 70px of vertical room for the raised title. */
+    transform: translateY(-50%);
+    transform: translateY(-50%) scale(min(1.35, calc(100svh / 830px)));
+  }
+}
 @media (min-width: 1280px) and (max-height: 720px) { .stage { transform: translateY(-50%) scale(0.947); } }
 @media (min-width: 1280px) and (max-height: 680px) { .stage { transform: translateY(-50%) scale(0.79); } }
 @media (min-width: 1280px) and (max-height: 600px) { .stage { transform: translateY(-50%) scale(0.63); } }
