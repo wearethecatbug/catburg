@@ -54,10 +54,8 @@
   object-position: center bottom;
 }
 .catContainer[data-visual-mode="SURRENDERED"] .art img {
-  /* Keep the flag cat in the common slot: its paws stay on the safe while
-     the taller art remains below the permanent subtitle. Its painted paws
-     end at source alpha y=227/272, rather than at the transparent canvas edge. */
-  transform: scale(0.97);
+  /* Scale around the painted paws so the flag clears the subtitle with the safe in place. */
+  transform: scale(0.84);
   transform-origin: center 83.5%;
 }
 .catContainer[data-visual-mode="WON"] .art img {
@@ -145,11 +143,33 @@
   .prompt { top: 63px; }
 }
 
-@media (min-width: 1280px) and (max-height: 800px) {
-  .catContainer[data-visual-mode="SURRENDERED"] .art img {
-    transform: scale(0.8);
+@media (min-width: 1280px) and (height > 800px) {
+  .catContainer[data-presentation-mode="PET_PROMPT"] .art img {
+    /* Scale around the painted paws so the prompt clears the header and the cat stays on the safe. */
+    transform: scale(0.9);
+    transform-origin: center 83%;
   }
+}
 
+@media (max-width: 390px) {
+  .catContainer[data-visual-mode="SURRENDERED"] .art img {
+    transform: scale(0.97);
+  }
+}
+
+@media (min-width: 1280px) and (min-height: 900px) {
+  .catContainer[data-visual-mode="SURRENDERED"] .art img {
+    transform: scale(0.97);
+  }
+}
+
+@media (min-width: 1280px) and (601px <= height < 900px) {
+  .catContainer[data-visual-mode="SURRENDERED"] .art img {
+    transform: scale(0.7);
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 800px) {
   .prompt { top: 104px; }
 }
 

@@ -868,16 +868,40 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       assert.equal(await bursts.count(), 0, "New game clears live pet bursts before their natural expiry");
       await pet.evaluate((node) => node.click());
       await bursts.first().waitFor({ state: "attached" });
+      const surrenderedCommitKey = "__safeCatSurrenderedCommit";
+      await page.evaluate((key) => {
+        const main = document.querySelector("main");
+        if (!main) throw new Error("surrender observation requires the game main landmark");
+        const ownerSelector = '[data-presentation-mode="SURRENDERED"]';
+        const observer = new MutationObserver(() => {
+          const owners = main.querySelectorAll(ownerSelector).length;
+          if (!owners) return;
+          observer.disconnect();
+          window[key] = {
+            owners,
+            heartGroups: main.querySelectorAll("[data-pet-burst-id]").length,
+          };
+        });
+        observer.observe(main, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-presentation-mode"] });
+      }, surrenderedCommitKey);
       await controls.surrender.click();
       const surrendered = page.locator('[data-presentation-mode="SURRENDERED"]');
       await surrendered.waitFor({ state: "visible" });
+      const surrenderedCommit = await page.evaluate((key) => {
+        const snapshot = window[key];
+        delete window[key];
+        return snapshot;
+      }, surrenderedCommitKey);
+      assert.ok(surrenderedCommit, "surrender records its first observable terminal DOM commit");
+      assert.equal(surrenderedCommit.owners, 1, "first terminal DOM commit has one public SURRENDERED owner");
+      assert.equal(surrenderedCommit.heartGroups, 0, "first terminal DOM commit has no live heart groups");
       assert.equal(await surrendered.count(), 1, "surrender commits its terminal presentation owner");
       assert.equal(await bursts.count(), 0, "committed terminal outcome clears live pet bursts");
     },
   );
 });
 
-test("Pet me stays above the painted cat at desktop and compact widths", async () => {
+test("SCV04: Pet me stays above the painted cat at desktop and compact widths", async () => {
   for (const [width, height] of [[1440, 900], [390, 844]])
     await withSession(
       { width, height },
@@ -904,7 +928,7 @@ test("Pet me stays above the painted cat at desktop and compact widths", async (
     );
 });
 
-test("Each pet creates a distinct activation-point burst without extending the round presentation", async () => {
+test("SCV04: each pet creates a distinct activation-point burst without extending the round presentation", async () => {
   for (const [width, height, tolerance] of [[1440, 900, 8], [390, 844, 10]])
     await withSession(
       { width, height },
@@ -982,7 +1006,7 @@ test("Each pet creates a distinct activation-point burst without extending the r
     );
 });
 
-test("A click crossing the pet deadline cannot leak its origin into the next accepted burst", async () => {
+test("SCV04: a click crossing the pet deadline cannot leak its origin into the next accepted burst", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { clockStart: fixedClockStart },
@@ -1034,7 +1058,7 @@ test("A click crossing the pet deadline cannot leak its origin into the next acc
       await page.clock.runFor(1199);
       const rejected = await opaquePointAwayFrom([initial]);
       assert.ok(rejected, "deadline-race pre-deadline opaque point exists");
-      const bridgeKey = "__petDeadlineNowRestore";
+      const bridgeKey = "__scv04DeadlineNowRestore";
       await page.evaluate((key) => {
         const target = performance;
         const hadOwn = Object.prototype.hasOwnProperty.call(target, "now");
@@ -1072,7 +1096,7 @@ test("A click crossing the pet deadline cannot leak its origin into the next acc
   );
 });
 
-test("Dialog transitions and route unmount clear live bursts; /safe remains proportional", async () => {
+test("SCV04: dialog transitions and route unmount clear live bursts; /safe remains proportional", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { clockStart: fixedClockStart, route: "/safe" },

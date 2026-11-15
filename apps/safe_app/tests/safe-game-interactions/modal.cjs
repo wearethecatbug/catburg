@@ -114,7 +114,7 @@ function assertCommittedPresentationOwner(actual, expected, description) {
 
 function register01() {
 
-test("Observer owner oracle rejects blank and wrong replacement cardinality", () => {
+test("SCV01 observer owner oracle rejects blank and wrong replacement cardinality", () => {
   assert.throws(() => assertCommittedPresentationOwner({ ordinary: 0, reward: 0 }, { ordinary: 1, reward: 0 }, "blank close"));
   assert.throws(() => assertCommittedPresentationOwner({ ordinary: 1, reward: 0 }, { ordinary: 0, reward: 1 }, "wrong successful close"));
 });
@@ -6208,6 +6208,12 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
           true,
           `${width}x${height} wrong input visibly exposes its red error treatment`,
         );
+        await waitForChallengeArtwork(
+          page,
+          vignette,
+          width <= 820 ? narrowConcernedAsset : desktopConcernedAsset,
+          `${width}x${height} wrong-answer concerned cat`,
+        );
         const concerned = await exact(
           vignette.locator('img[src*="hint-popup-cat-"]'),
           `${width}x${height} wrong-answer concerned cat`,
@@ -6216,17 +6222,6 @@ test("SC06: wrong-answer feedback never shifts the responsive challenge layout w
           await concerned.isVisible(),
           true,
           `${width}x${height} wrong-answer concerned cat remains visible`,
-        );
-        assert.equal(
-          await concerned.evaluate(
-            (image, expectedAsset) =>
-              image.complete &&
-              image.naturalWidth > 0 &&
-              image.currentSrc.includes(expectedAsset),
-            width <= 820 ? narrowConcernedAsset : desktopConcernedAsset,
-          ),
-          true,
-          `${width}x${height} wrong-answer concerned cat source is loaded`,
         );
         const retryCopy = "Try again — you’ve got this!";
         const decorativeRetry = await exact(
@@ -7815,7 +7810,7 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
     );
 });
 
-test("Short narrow modal keeps card-local overflow and does not create page scrolling", async () => {
+test("SCV05: short narrow modal keeps card-local overflow and does not create page scrolling", async () => {
   await withSession(
     { width: 320, height: 568 },
     { random: 0.041 },
@@ -7913,7 +7908,7 @@ test("Short narrow modal keeps card-local overflow and does not create page scro
   );
 });
 
-test("Compact hint card is bounded, locally scrollable, and preserves its public keyboard outcome", async () => {
+test("SCV05: compact hint card is bounded, locally scrollable, and preserves its public keyboard outcome", async () => {
   for (const [width, height] of [
     [550, 1134],
     [500, 1134],
@@ -7934,7 +7929,7 @@ test("Compact hint card is bounded, locally scrollable, and preserves its public
             name: "Solve a quick math question",
             exact: true,
           }),
-          `${width}x${height} challenge title`,
+          `${width}x${height} SCV05 challenge title`,
         );
         const [shellBox, dialogBox, titleBox, initialFocus, scrollMetrics] =
           await Promise.all([
@@ -8055,7 +8050,7 @@ test("Compact hint card is bounded, locally scrollable, and preserves its public
     );
 });
 
-test("Wide Show hint card projects the answer input to the calculation eye anchor", async () => {
+test("SCV05: wide Show hint card projects the answer input to the calculation eye anchor", async () => {
   for (const [width, height] of [
     [1440, 900],
     [1800, 1230],
@@ -8070,17 +8065,20 @@ test("Wide Show hint card projects the answer input to the calculation eye ancho
         await controls.hint.click();
         const hint = await sc06Dialog(page);
         await waitForStableVisualGeometry(page);
-        const [shellBox, answerBox, initialFocus] = await Promise.all([
+        const [shellBox, answerBox, subtitleBox, initialFocus] = await Promise.all([
           hint.dialog.locator("xpath=..").boundingBox(),
           hint.answer.boundingBox(),
+          controls.instruction.boundingBox(),
           page.evaluate(() => document.activeElement?.id),
         ]);
-        assert.ok(shellBox && answerBox, `${width}x${height} exposes shell and answer geometry`);
+        assert.ok(shellBox && answerBox && subtitleBox, `${width}x${height} exposes shell, answer, and subtitle geometry`);
         const gutter = 24;
         const relativeInputX = answerBox.x + answerBox.width / 2 - shellBox.x;
         const relativeInputY = answerBox.y + answerBox.height / 2 - shellBox.y;
         const expectedX = Math.min(Math.max(width * 0.5 - relativeInputX, gutter), width - gutter - shellBox.width);
-        const expectedY = Math.min(Math.max(height * 0.45 - relativeInputY, gutter), height - gutter - shellBox.height);
+        const headerBottom = Math.ceil(subtitleBox.y + subtitleBox.height);
+        const minY = Math.max(gutter, headerBottom);
+        const expectedY = Math.min(Math.max(height * 0.45 - relativeInputY, minY), height - gutter - shellBox.height);
         assert.ok(
           Math.abs(shellBox.x - expectedX) <= 3 && Math.abs(shellBox.y - expectedY) <= 3,
           `${width}x${height} projects the actual answer-input center to the eye anchor`,
@@ -8091,6 +8089,7 @@ test("Wide Show hint card projects the answer input to the calculation eye ancho
             shellBox.y + shellBox.height <= height - gutter,
           `${width}x${height} keeps the complete shell inside its 24px wide gutters`,
         );
+        assert.ok(shellBox.y >= headerBottom, `${width}x${height} keeps the complete shell below the header`);
         assert.equal(initialFocus, "hint-answer", `${width}x${height} retains initial calculation focus`);
         assert.deepEqual(
           await page.evaluate(() => ({
@@ -8104,7 +8103,7 @@ test("Wide Show hint card projects the answer input to the calculation eye ancho
     );
 });
 
-test("1280x600 retains card-local short-height scrolling without page escape", async () => {
+test("SCV05: 1280x600 retains card-local short-height scrolling without page escape", async () => {
   await withSession(
     { width: 1280, height: 600 },
     { random: 0.041 },
@@ -8246,7 +8245,7 @@ test("SC06: closing a short-tablet dialog restores its nonzero pre-open page scr
   );
 });
 
-test("Give up centers its actions and exposes only the public arithmetic result", async () => {
+test("SCV03: Give up centers its actions and exposes only the public arithmetic result", async () => {
   for (const [route, routeName] of [["/", "scene"], ["/safe", "safe"]])
     for (const [width, height] of [[1440, 900], [390, 844]])
       await withSession(
@@ -8374,7 +8373,7 @@ test("Give up centers its actions and exposes only the public arithmetic result"
               assert.equal(await bubble.isVisible(), true, `${routeName} desktop Give up speech remains visible`);
               const sadCatPicture = await exact(
                 hint.dialog.locator('picture:has(source[srcset*="hint-popup-cat-sad-640.png"])'),
-                "Desktop sad dialog cat picture",
+                "SCV03 desktop sad dialog cat picture",
               );
               const [bubbleBox, catAlpha, tail] = await Promise.all([
                 bubble.boundingBox(),
@@ -8384,15 +8383,15 @@ test("Give up centers its actions and exposes only the public arithmetic result"
                   return { content: after.content, width: Number.parseFloat(after.width), height: Number.parseFloat(after.height), borderWidth: Number.parseFloat(after.borderTopWidth) };
                 }),
               ]);
-              assert.ok(bubbleBox, "Desktop abandoned speech has rendered geometry");
-              assert.equal(intersects(bubbleBox, catAlpha), false, "Desktop abandoned speech and sad cat alpha do not overlap");
+              assert.ok(bubbleBox, "SCV03 desktop abandoned speech has rendered geometry");
+              assert.equal(intersects(bubbleBox, catAlpha), false, "SCV03 desktop abandoned speech and sad cat alpha do not overlap");
               assert.ok(
                 (Math.min(bubbleBox.y + bubbleBox.height, catAlpha.y + catAlpha.height) - Math.max(bubbleBox.y, catAlpha.y)) / Math.min(bubbleBox.height, catAlpha.height) >= 0.25,
-                "Desktop abandoned speech and sad cat alpha overlap vertically by at least one quarter of the smaller height",
+                "SCV03 desktop abandoned speech and sad cat alpha overlap vertically by at least one quarter of the smaller height",
               );
               const horizontalGap = Math.max(bubbleBox.x, catAlpha.x) - Math.min(bubbleBox.x + bubbleBox.width, catAlpha.x + catAlpha.width);
-              assert.ok(horizontalGap <= Math.max(24, catAlpha.width * 0.2), "Desktop abandoned speech stays attached to the sad cat alpha");
-              assert.ok(tail.content !== "none" && (tail.width > 0 || tail.height > 0 || tail.borderWidth > 0), "Desktop abandoned speech retains a nonempty tail");
+              assert.ok(horizontalGap <= Math.max(24, catAlpha.width * 0.2), "SCV03 desktop abandoned speech stays attached to the sad cat alpha");
+              assert.ok(tail.content !== "none" && (tail.width > 0 || tail.height > 0 || tail.borderWidth > 0), "SCV03 desktop abandoned speech retains a nonempty tail");
             }
           }
           if (route === "/") {

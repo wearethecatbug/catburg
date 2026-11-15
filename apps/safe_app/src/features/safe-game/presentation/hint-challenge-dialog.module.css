@@ -792,8 +792,9 @@
 
   .abandonedBubble {
     right: -106px;
-    top: 28px;
-    transform: none;
+    /* Keep the speech beside the cat even when the text wraps to fewer lines. */
+    top: 128px;
+    transform: translateY(-75%);
   }
 
   .imageButton {
@@ -1771,7 +1772,7 @@
   }
 }
 
-/* Anchor the complete wide canvas at the answer-field eye line. */
+/* Project the wide canvas toward the answer-field eye line below the header. */
 @media (min-width: 821px) and (min-height: 801px) {
   .backdrop {
     align-items: flex-start;
@@ -1780,25 +1781,27 @@
   }
 
   .dialogShell {
+    --wide-shell-min-top: max(24px, calc(var(--dialog-lane-top, 0px) - var(--header-gap, 0px)));
     --wide-shell-width: min(940px, calc(100vw - 48px), calc((100svh - var(--dialog-lane-top, 0px) - 12px) * 1327 / 1185));
     --wide-shell-height: calc(var(--wide-shell-width) * 1185 / 1327);
     left: clamp(24px, calc(50vw - var(--wide-shell-width) * 0.2805), calc(100vw - 24px - var(--wide-shell-width)));
     margin: 0;
     position: absolute;
     right: auto;
-    top: clamp(24px, calc(45svh - var(--wide-shell-height) * 0.472), calc(100svh - 24px - var(--wide-shell-height)));
+    top: clamp(var(--wide-shell-min-top), calc(45svh - var(--wide-shell-height) * 0.472), calc(100svh - 24px - var(--wide-shell-height)));
     transform: none;
     width: var(--wide-shell-width);
   }
 }
 
-/* Compact screens keep a finite card: the card scrolls, never the locked page. */
+/* Keep the compact card below the header and scroll its contents inside the locked page. */
 @media (max-width: 600px) {
   .backdrop {
+    --compact-dialog-top: max(16px, var(--dialog-lane-top, 0px));
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    padding: 16px;
+    padding: var(--compact-dialog-top) 16px 16px;
   }
 
   .dialogShell {
@@ -1806,8 +1809,8 @@
     border-radius: 28px;
     box-shadow: inset 0 0 0 3px rgb(222 205 251 / 0.72), 0 12px 30px rgb(48 35 78 / 0.18);
     contain: layout;
-    height: min(920px, calc(100svh - 32px));
-    max-height: calc(100svh - 32px);
+    height: min(920px, 100%);
+    max-height: 100%;
     overflow: hidden;
     width: min(468px, calc(100vw - 32px));
   }
