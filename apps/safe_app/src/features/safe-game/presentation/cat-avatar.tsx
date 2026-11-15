@@ -37,7 +37,7 @@ type VisibleArtEvent = {
   clientY: number;
 };
 type BurstOrigin = { x: number; y: number; rise: number };
-type Burst = BurstOrigin & { id: string };
+type Burst = BurstOrigin & { id: string; roundEpoch: number };
 
 const normalBurstLifetime = 1300;
 const reducedBurstLifetime = 700;
@@ -221,20 +221,20 @@ export function CatAvatar({ presentation }: { presentation: PresentationState })
     burstTimers.current.clear();
     setBursts([]);
   };
+  const burstSurface = presentation.mode === "PLAYING" || presentation.mode === "LONG_IDLE" || presentation.mode === "PET_PROMPT" || presentation.mode === "PET_NORMAL" || presentation.mode === "PET_PROMPT_SUCCESS";
   useEffect(() => {
     if (observedRoundEpoch.current !== presentation.roundEpoch) {
       clearBursts();
       observedRoundEpoch.current = presentation.roundEpoch;
       return;
     }
-    const burstSurface = presentation.mode === "PLAYING" || presentation.mode === "LONG_IDLE" || presentation.mode === "PET_PROMPT" || presentation.mode === "PET_NORMAL" || presentation.mode === "PET_PROMPT_SUCCESS";
     if (burstSurface && !dialogSurface) return;
     clearBursts();
-  }, [dialogSurface, presentation.mode, presentation.roundEpoch]);
+  }, [burstSurface, dialogSurface, presentation.roundEpoch]);
   const startBurst = (origin: BurstOrigin, modality: "pointer" | "keyboard" | "touch") => {
     if (!controller.catPetStart(modality)) return;
     const lifetime = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? reducedBurstLifetime : normalBurstLifetime;
-    const burst = { ...origin, id: String(++burstSequence.current) };
+    const burst = { ...origin, id: String(++burstSequence.current), roundEpoch: presentation.roundEpoch };
     setBursts((current) => [...current, burst]);
     burstTimers.current.set(burst.id, setTimeout(() => {
       burstTimers.current.delete(burst.id);
@@ -290,7 +290,7 @@ export function CatAvatar({ presentation }: { presentation: PresentationState })
   };
   const visualMode = presentation.mode === "HISTORY" || ((presentation.mode === "TERMINAL_STORED_HINTS_PENDING" || presentation.mode === "STORED_HINTS") && (presentation.resumeMode === "WON" || presentation.resumeMode === "SURRENDERED")) ? presentation.resumeMode : presentation.mode;
   const art = <span ref={artRef} aria-hidden="true" className={styles.art}><Image src={`/safe-cat/${artByMode[visualMode]}`} alt="" fill sizes="272px" loading="eager" draggable={false} onLoad={() => setArtRevision((revision) => revision + 1)} /></span>;
-  const effect = bursts.map((burst) => <span key={burst.id} data-pet-burst-id={burst.id} aria-hidden="true" className={styles.hearts} style={{ "--heart-origin-x": `${burst.x}%`, "--heart-origin-y": `${burst.y}%`, "--heart-rise": `${burst.rise}px` } as CSSProperties}><i aria-hidden="true">♥</i><i aria-hidden="true">♥</i><i aria-hidden="true">♥</i></span>);
+  const effect = burstSurface && !dialogSurface ? bursts.filter((burst) => burst.roundEpoch === presentation.roundEpoch).map((burst) => <span key={burst.id} data-pet-burst-id={burst.id} aria-hidden="true" className={styles.hearts} style={{ "--heart-origin-x": `${burst.x}%`, "--heart-origin-y": `${burst.y}%`, "--heart-rise": `${burst.rise}px` } as CSSProperties}><i aria-hidden="true">♥</i><i aria-hidden="true">♥</i><i aria-hidden="true">♥</i></span>) : null;
   const promptNode = prompt && <span ref={promptRef} data-pet-prompt className={styles.prompt} style={promptTop === null || promptLeft === null ? undefined : { "--pet-prompt-top": `${promptTop}px`, "--pet-prompt-left": `${promptLeft}px` } as CSSProperties}>Pet me</span>;
   const child = dialogSurface ? <div className={styles.catContainer} data-presentation-mode={presentation.mode} /> : !pettable ? (
     <button ref={activeButtonRef} type="button" disabled aria-label={catLabel} className={styles.catContainer} data-presentation-mode={presentation.mode}>
