@@ -15,6 +15,12 @@ type SidePlacement = {
   top: number;
 };
 
+type StoredHintsCardProps = {
+  facts: readonly EarnedHintFact[];
+  historyPanelRef?: RefObject<HTMLElement | null>;
+  onHistoryCovered?: (covered: boolean) => void;
+};
+
 function overlaps(
   left: number,
   top: number,
@@ -67,11 +73,7 @@ export function StoredHintsCard({
   facts,
   historyPanelRef,
   onHistoryCovered,
-}: {
-  facts: readonly EarnedHintFact[];
-  historyPanelRef?: RefObject<HTMLElement | null>;
-  onHistoryCovered?: (covered: boolean) => void;
-}) {
+}: StoredHintsCardProps) {
   const cardRef = useRef<HTMLElement>(null);
   const [layout, setLayout] = useState<CardLayout>();
 

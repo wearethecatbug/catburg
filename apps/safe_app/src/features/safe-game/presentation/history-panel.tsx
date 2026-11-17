@@ -21,6 +21,18 @@ type LaneRefs = {
   panelLaneRef: RefObject<HTMLDivElement | null>;
 };
 
+type HistoryPanelProps = {
+  attempts: number[];
+  anchorRef: RefObject<HTMLButtonElement | null>;
+  characterEffectZoneRef: RefObject<HTMLDivElement | null>;
+  headerZoneRef: RefObject<HTMLElement | null>;
+  panelLaneRef: RefObject<HTMLDivElement | null>;
+  externalPanelRef?: RefObject<HTMLDivElement | null>;
+  covered?: boolean;
+  onClose: () => void;
+  onActivity: () => void;
+};
+
 function getOffsetParentRect(panel: HTMLDivElement) {
   const offsetParent = panel.offsetParent;
   return offsetParent instanceof HTMLElement
@@ -109,17 +121,7 @@ export function HistoryPanel({
   covered = false,
   onClose,
   onActivity,
-}: {
-  attempts: number[];
-  anchorRef: RefObject<HTMLButtonElement | null>;
-  characterEffectZoneRef: RefObject<HTMLDivElement | null>;
-  headerZoneRef: RefObject<HTMLElement | null>;
-  panelLaneRef: RefObject<HTMLDivElement | null>;
-  externalPanelRef?: RefObject<HTMLDivElement | null>;
-  covered?: boolean;
-  onClose: () => void;
-  onActivity: () => void;
-}) {
+}: HistoryPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
   const activityFrameRef = useRef<number | null>(null);

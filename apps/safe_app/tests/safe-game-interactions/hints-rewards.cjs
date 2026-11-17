@@ -1544,6 +1544,54 @@ test("SC05 provider: current-round reset cancels a pending touch card before it 
   );
 });
 
+test("SC05 provider: Escape closes an animation-previewed stored-hint list after the cat settles", async () => {
+  await withSession(
+    { width: 1175, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await pauseClockAtCurrentTime(page);
+      await controls.hint.evaluate((element) => element.blur());
+
+      await clickVisibleArtwork(page, controls.cat);
+      await ordinaryOwner(page, "PET_NORMAL", "pet animation before the local stored-hint preview");
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint remains reachable during pet animation");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(150);
+      const card = await exact(
+        page.getByRole("region", { name: "Stored hints", exact: true }),
+        "animation-previewed stored-hint card",
+      );
+      await page.clock.runFor(1051);
+      await ordinaryOwner(page, "PLAYING", "animation settles while its stored-hint preview remains open");
+
+      const list = await exact(
+        card.getByRole("list", { name: "Stored hint list", exact: true }),
+        "animation-previewed stored-hint list",
+      );
+      await list.focus();
+      assert.equal(
+        await list.evaluate((element) => element === document.activeElement),
+        true,
+        "keyboard focus reaches the animation-previewed hint list before Escape",
+      );
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await page.getByRole("region", { name: "Stored hints", exact: true }).count(),
+        0,
+        "Escape closes the settled animation preview without immediately reopening stored hints",
+      );
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.textContent?.trim()),
+        "Show hint",
+        "Escape from the settled animation preview restores Show hint focus",
+      );
+    },
+  );
+});
+
 test("SC05 provider: Escape from a keyboard-focused stored-hint list closes once and restores its trigger", async () => {
   await withSession(
     { width: 390, height: 844 },
@@ -1754,6 +1802,53 @@ test("SC05 provider: reduced-motion safe open and close never animate", async ()
 }
 
 function register03() {
+
+test("SC05: a scheduled History-preview close preserves focus inside Stored hints and closes after outside blur", async () => {
+  await withSession(
+    { width: 2560, height: 1440 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await controls.history.click();
+      await controls.history.focus();
+      await pauseClockAtCurrentTime(page);
+      assert.equal(
+        await controls.history.evaluate((element) => element === document.activeElement),
+        true,
+        "History is focused before its local Stored hints preview opens",
+      );
+
+      const stored = page.getByRole("region", { name: "Stored hints", exact: true });
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint has a pointer target while focused History is open");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(150);
+      const card = await exact(stored, "History-previewed Stored hints card");
+      const list = await exact(
+        card.getByRole("list", { name: "Stored hint list", exact: true }),
+        "History-previewed Stored hints list",
+      );
+
+      await page.mouse.move(0, 0);
+      await list.focus();
+      assert.equal(
+        await list.evaluate((element) => element === document.activeElement),
+        true,
+        "focus enters Stored hints after its pointer-leave close is scheduled",
+      );
+      await page.clock.runFor(201);
+      assert.equal(
+        await stored.count(),
+        1,
+        "the scheduled close keeps History-previewed Stored hints visible while its list is focused",
+      );
+
+      await controls.code.focus();
+      assert.equal(await stored.count(), 0, "blurring the focused list outside its wrapper closes the preview");
+    },
+  );
+});
 
 test("Stored hints: earned stored hints coexist with History when room permits and restore compact History", async () => {
   await withSession(

@@ -4,7 +4,11 @@ import type { RefObject } from "react";
 import { useSafeGameContext } from "../model/safe-game-context";
 import { StoredHintsCard } from "./stored-hints-card";
 
-function MenuIcon({ kind }: { kind: "new" | "give-up" | "hint" | "history" }) {
+type MenuIconProps = {
+  kind: "new" | "give-up" | "hint" | "history";
+};
+
+function MenuIcon({ kind }: MenuIconProps) {
   if (kind === "new") return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5c0-1.2 1.3-1.9 2.3-1.2l11 7.5a1.5 1.5 0 0 1 0 2.4l-11 7.5C7.3 21.4 6 20.7 6 19.5Z" fill="currentColor" /></svg>;
   if (kind === "give-up") return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 4v5h-5M4 20v-5h5M4.8 8a8 8 0 0 1 13.1-3L20 9M4 15l2.1 4A8 8 0 0 0 19.2 16" /></svg>;
   if (kind === "hint") return <svg className={styles.hintIcon} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path className={styles.hintIconBulb} d="M12 5a6 6 0 0 0-4 10.5V18h8v-2.5A6 6 0 0 0 12 5Z" fill="currentColor" /><path className={styles.hintIconRays} d="M12 1v1M3.5 4l1 1M1 11h1M21 11h1M19.5 4l-1 1" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /><path className={styles.hintIconBase} d="M9 21h6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>;
@@ -22,6 +26,11 @@ const HINT_BLOCKING_PET_MODES = new Set([
   "PET_MISSED",
 ]);
 
+type GameMenuProps = {
+  historyPanelRef?: RefObject<HTMLDivElement | null>;
+  onHistoryCovered?: (covered: boolean) => void;
+};
+
 /**
  * Local earned-hint previews keep an open History panel and blocking pet
  * animation intact; normal Stored hints dwell state remains reducer-owned.
@@ -29,10 +38,7 @@ const HINT_BLOCKING_PET_MODES = new Set([
 export function GameMenu({
   historyPanelRef,
   onHistoryCovered,
-}: {
-  historyPanelRef?: RefObject<HTMLDivElement | null>;
-  onHistoryCovered?: (covered: boolean) => void;
-}) {
+}: GameMenuProps) {
   const controller = useSafeGameContext();
   const { state, presentation } = controller;
   const ended = state.phase !== "playing";
@@ -109,6 +115,8 @@ export function GameMenu({
     }
     if (previewCloseTimer.current !== null) return;
     previewCloseTimer.current = window.setTimeout(() => {
+      previewCloseTimer.current = null;
+      if (document.activeElement instanceof Node && hintWrapRef.current?.contains(document.activeElement)) return;
       clearLocalPreview();
     }, POINTER_CLOSE_GRACE);
   }, [clearLocalPreview]);
@@ -201,18 +209,14 @@ export function GameMenu({
           disabled={ended && facts.length === 0}
           aria-describedby={cardVisible ? "stored-hints-card" : undefined}
           onFocus={() => {
+            if (suppressLocalPreviewFocusRef.current) {
+              suppressLocalPreviewFocusRef.current = false;
+              return;
+            }
             if (historyOpen) {
-              if (suppressLocalPreviewFocusRef.current) {
-                suppressLocalPreviewFocusRef.current = false;
-                return;
-              }
               showLocalPreview("history", 0);
             }
             else if (petAnimationBlocksHints || localPreviewOriginRef.current === "animation") {
-              if (suppressLocalPreviewFocusRef.current) {
-                suppressLocalPreviewFocusRef.current = false;
-                return;
-              }
               showLocalPreview("animation", 0);
             }
             else controller.showHintFocus();

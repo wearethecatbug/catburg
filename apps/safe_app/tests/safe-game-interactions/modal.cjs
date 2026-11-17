@@ -6132,6 +6132,7 @@ test("SC06: approved desktop question and retry tails attach at the bubble rim",
         });
 
       const questionPresentation = await readPresentation(question);
+      const questionText = await visibleTextBounds(question);
       assert.deepEqual(
         questionPresentation.tail,
         {
@@ -6166,11 +6167,34 @@ test("SC06: approved desktop question and retry tails attach at the bubble rim",
         "desktop decorative retry speech",
       );
       const retryPresentation = await readPresentation(retry);
+      const retryText = await visibleTextBounds(retry);
       assert.deepEqual(
-        retryPresentation.body,
-        questionPresentation.body,
-        "desktop retry keeps the question speech body unchanged",
+        (({ height, ...body }) => body)(retryPresentation.body),
+        (({ height, ...body }) => body)(questionPresentation.body),
+        "desktop retry keeps the approved question speech body tokens while its distinct copy keeps auto height",
       );
+      for (const [name, presentation, text] of [
+        ["question", questionPresentation, questionText],
+        ["retry", retryPresentation, retryText],
+      ]) {
+        assert.ok(
+          text.width > 0 &&
+            text.height > 0 &&
+            text.x >= presentation.box.x &&
+            text.y >= presentation.box.y &&
+            text.x + text.width <= presentation.box.x + presentation.box.width &&
+            text.y + text.height <= presentation.box.y + presentation.box.height,
+          `desktop ${name} speech keeps its visible text readable and contained by the bubble`,
+        );
+        approximatelyEqual(
+          Number.parseFloat(presentation.tail.top),
+          (Number.parseFloat(presentation.body.height) -
+            2 * Number.parseFloat(presentation.body.borderWidth)) *
+            0.94,
+          0.05,
+          `desktop ${name} tail stays on its own approved 94% bubble rim`,
+        );
+      }
       approximatelyEqual(
         retryPresentation.box.x - questionPresentation.box.x,
         2,
@@ -6180,7 +6204,6 @@ test("SC06: approved desktop question and retry tails attach at the bubble rim",
       for (const [property, expected] of Object.entries({
         y: questionPresentation.box.y,
         width: questionPresentation.box.width,
-        height: questionPresentation.box.height,
       }))
         approximatelyEqual(
           retryPresentation.box[property],
@@ -7590,6 +7613,10 @@ test("SC06: Escape can finish success early, while reduced motion keeps the succ
 test("SC06: reward centers the cat on the closed safe without covering protected game content", async () => {
   for (const [width, height] of [
     [1440, 900],
+    [1280, 800],
+    [1280, 720],
+    [1280, 680],
+    [1279, 800],
     [768, 1024],
     [508, 1111],
     [390, 844],
@@ -7667,6 +7694,21 @@ test("SC06: reward centers the cat on the closed safe without covering protected
           rewardEnvelope,
           postDialogScrollY,
         );
+        const [rewardTitle, rewardSubtitle] = await Promise.all([
+          page
+            .getByRole("heading", { name: "Guess the number", exact: true })
+            .boundingBox(),
+          controls.instruction.boundingBox(),
+        ]);
+        if (width >= 1280 && height > 600)
+          assertPaintedHeaderClearance({
+            catAlpha: rewardEnvelope,
+            title: rewardTitle,
+            subtitle: rewardSubtitle,
+            width,
+            height,
+            description: `${width}x${height} reward art`,
+          });
         assert.ok(
           rewardEnvelope.height >= normalCat.height * 0.9 &&
             rewardEnvelope.width >= normalCat.width * 0.75,

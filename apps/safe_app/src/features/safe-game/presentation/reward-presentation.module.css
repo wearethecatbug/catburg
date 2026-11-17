@@ -62,6 +62,14 @@
   }
 }
 
+@media (min-width: 1280px) and (min-height: 601px) and (max-height: 800px) {
+  .reward img {
+    height: 224px;
+    transform: translate(-50%, -15px);
+    width: 224px;
+  }
+}
+
 @media (max-width: 600px) {
   .reward {
     max-width: 100%;
