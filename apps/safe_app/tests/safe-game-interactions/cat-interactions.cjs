@@ -4,7 +4,26 @@ const { withSession } = require("./shared/session.cjs");
 const { runtimeBaseUrl: baseUrl, fixedClockStart } = require("./shared/runtime-context.cjs");
 const { visibleAlphaBounds, waitForArtworkReadiness } = require("./shared/readiness.cjs");
 const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectOrdinaryReturn, gameControls, approximatelyEqual } = require("./shared/game-controls.cjs");
-const { ordinaryArt, exactHiddenChild, visibleDialAngle, publicAssetPresentation, clickVisibleArtwork, assertPaintedHeaderClearance, logicalBox } = require("./shared/artwork-geometry.cjs");
+const { ordinaryArt, exactHiddenChild, visibleDialAngle, publicAssetPresentation, clickVisibleArtwork, assertPaintedHeaderClearance, logicalBox, paintedCatSafeGap } = require("./shared/artwork-geometry.cjs");
+
+const longIdlePaws = {
+  left: { left: 276, top: 530, right: 431, bottom: 646 },
+  right: { left: 609, top: 549, right: 722, bottom: 670 },
+};
+
+async function measureRestingPaws(page, mode = "LONG_IDLE") {
+  const cat = page.locator(`[data-presentation-mode="${mode}"]`);
+  const safe = page.getByLabel("Safe closed", { exact: true });
+  const [leftPaw, rightPaw, safeAlpha] = await Promise.all([
+    visibleAlphaBounds(page, cat, longIdlePaws.left),
+    visibleAlphaBounds(page, cat, longIdlePaws.right),
+    visibleAlphaBounds(page, safe),
+  ]);
+  return {
+    left: paintedCatSafeGap(leftPaw, safeAlpha),
+    right: paintedCatSafeGap(rightPaw, safeAlpha),
+  };
+}
 
 function register01() {
 
@@ -12,6 +31,8 @@ function register01() {
 test("SC07: public ordinary cat states map their timed, attention, and terminal modes to approved contained artwork", async () => {
   for (const [width, height] of [
     [1440, 900],
+    [1920, 900],
+    [1280, 720],
     [1024, 768],
     [390, 844],
     [844, 390],
@@ -22,6 +43,8 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
     async ({ page }) => {
       const controls = await gameControls(page);
       await pauseClockAtCurrentTime(page);
+      const restingAlignmentGaps = new Map();
+      const restingAlignmentModes = new Set(["PLAYING", "PET_NORMAL", "PET_PROMPT", "PET_PROMPT_SUCCESS", "PET_MISSED", "LONG_IDLE", "HINT_ATTENTION", "WRONG"]);
       const expected = [
         ["PLAYING", "cat-playing-800.webp", [272, 272]],
         ["PET_NORMAL", "cat-pet-hover-800.webp", [272, 272]],
@@ -59,12 +82,15 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
           "contain",
           `${mode} never crops the character`,
         );
-        const [catAlpha, title, subtitle] = await Promise.all([
+        const [catAlpha, title, subtitle, safeAlpha] = await Promise.all([
           visibleAlphaBounds(page, cat),
           page
             .getByRole("heading", { name: "Guess the number", exact: true })
             .boundingBox(),
           controls.instruction.boundingBox(),
+          height > 600 && restingAlignmentModes.has(mode)
+            ? visibleAlphaBounds(page, page.getByLabel("Safe closed", { exact: true }))
+            : Promise.resolve(null),
         ]);
         assertPaintedHeaderClearance({
           catAlpha,
@@ -74,6 +100,17 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
           height,
           description: `${width}x${height} ${mode} timed-state art`,
         });
+        if (safeAlpha) {
+          const stageScale = await page.locator("main > div").first().evaluate((element) => {
+            const transform = getComputedStyle(element).transform;
+            return Math.abs(
+              transform.match(/matrix\(([^)]+)\)/)?.[1]
+                .split(",")
+                .map(Number)[0] ?? 1,
+            );
+          });
+          restingAlignmentGaps.set(mode, paintedCatSafeGap(catAlpha, safeAlpha) / stageScale);
+        }
       };
       await inspect(...expected[0]);
       await clickVisibleArtwork(page, controls.cat);
@@ -113,6 +150,15 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
       await controls.newRound.click();
       await controls.surrender.click();
       await inspect(...expected[9]);
+      if (height > 600) {
+        const longIdleGap = restingAlignmentGaps.get("LONG_IDLE");
+        assert.ok(Number.isFinite(longIdleGap), `${width}x${height} LONG_IDLE supplies the approved painted anchor`);
+        for (const mode of ["PLAYING", "PET_NORMAL", "PET_PROMPT", "PET_PROMPT_SUCCESS", "PET_MISSED", "HINT_ATTENTION", "WRONG"])
+          assert.ok(
+            Math.abs(restingAlignmentGaps.get(mode) - longIdleGap) <= 2,
+            `${width}x${height} ${mode} painted gap shares the LONG_IDLE anchor: ${restingAlignmentGaps.get(mode)} vs ${longIdleGap}`,
+          );
+      }
       assert.equal(
         await controls.code.isDisabled(),
         true,
@@ -192,6 +238,142 @@ test("SC07: public ordinary cat states map their timed, attention, and terminal 
         true,
         "a failed primary asset retains the labelled cat scene instead of removing it",
       );
+    },
+  );
+});
+
+test("idle cat moves sixteen more pixels down in the approved resting states", async () => {
+  const priorDesktopPaws = new Map([
+    ["1280x900", { left: 1.93, right: -5.21 }],
+    ["1440x900", { left: 1.93, right: -5.21 }],
+    ["1920x900", { left: 2.09, right: -5.65 }],
+    ["1280x720", { left: 1.83, right: -4.93 }],
+  ]);
+  const priorCompactPaws = new Map([
+    ["1174x939", { left: 2.07, right: -3.81 }],
+    ["1279x900", { left: 2.07, right: -3.81 }],
+    ["508x1111", { left: 2.07, right: -3.81 }],
+    ["390x844", { left: 2.1, right: -3.78 }],
+  ]);
+  const retainedPaws = new Map([
+    ["1280x600", { left: 0.03, right: -3.96 }],
+  ]);
+  const desktopCases = [
+    [1280, 900],
+    [1440, 900],
+    [1920, 900],
+    [1280, 720],
+  ];
+  for (const [width, height] of desktopCases)
+    await withSession(
+      { width, height },
+      { clockStart: fixedClockStart },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await pauseClockAtCurrentTime(page);
+        assert.equal(
+          await page
+            .locator('[data-presentation-mode="PLAYING"] img')
+            .evaluate((image) => getComputedStyle(image).transform),
+          "matrix(1, 0, 0, 1, 0, 20.5)",
+          `${width}x${height} PLAYING shares the approved 20.5px resting-art shift`,
+        );
+        await page.clock.runFor(15_001);
+        const cat = page.locator('[data-presentation-mode="LONG_IDLE"]');
+        assert.equal(await cat.isDisabled(), false, `${width}x${height} LONG_IDLE remains pettable`);
+        const [paws, stageScale] = await Promise.all([
+          measureRestingPaws(page),
+          page.locator("main > div").first().evaluate((element) =>
+            Math.abs(
+              getComputedStyle(element)
+                .transform.match(/matrix\(([^)]+)\)/)?.[1]
+                .split(",")
+                .map(Number)[0] ?? 1,
+            ),
+          ),
+        ]);
+        const prior = priorDesktopPaws.get(`${width}x${height}`);
+        for (const [name, gap] of Object.entries(paws))
+          assert.ok(
+            Math.abs(gap - (prior[name] - 16 * stageScale)) <= 1,
+            `${width}x${height} LONG_IDLE ${name} paw moves 16px below the prior candidate: ${gap}px`,
+          );
+        await clickVisibleArtwork(page, controls.cat);
+        await ordinaryOwner(page, "PET_NORMAL", `${width}x${height} opaque idle cat accepts a pet`);
+      },
+    );
+
+  const compactCases = [
+    [1174, 939],
+    [1279, 900],
+    [508, 1111],
+    [390, 844],
+  ];
+  for (const [width, height] of compactCases)
+    await withSession(
+      { width, height },
+      { clockStart: fixedClockStart },
+      async ({ page }) => {
+        await pauseClockAtCurrentTime(page);
+        assert.equal(
+          await page
+            .locator('[data-presentation-mode="PLAYING"] img')
+            .evaluate((image) => getComputedStyle(image).transform),
+          "matrix(1, 0, 0, 1, 0, 16)",
+          `${width}x${height} PLAYING shares the approved compact 16px resting-art shift`,
+        );
+        await page.clock.runFor(15_001);
+        const paws = await measureRestingPaws(page);
+        const prior = priorCompactPaws.get(`${width}x${height}`);
+        for (const [name, gap] of Object.entries(paws))
+          assert.ok(
+            Math.abs(gap - (prior[name] - 16)) <= 1,
+            `${width}x${height} ${name} paw moves 16px below the prior compact candidate: ${gap}px`,
+          );
+      },
+    );
+
+  await withSession(
+    { width: 1280, height: 600 },
+    { clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      assert.equal(
+        await page
+          .locator('[data-presentation-mode="PLAYING"] img')
+          .evaluate((image) => getComputedStyle(image).transform),
+        "none",
+        "1280x600 PLAYING keeps the retained short-viewport resting-art geometry",
+      );
+      await page.clock.runFor(15_001);
+      const paws = await measureRestingPaws(page);
+      const retained = retainedPaws.get("1280x600");
+      for (const [name, gap] of Object.entries(paws))
+        assert.ok(
+          Math.abs(gap - retained[name]) <= 1,
+          `1280x600 ${name} paw keeps its retained short-viewport geometry: ${gap}px`,
+        );
+    },
+  );
+
+  await withSession(
+    { width: 1440, height: 900 },
+    { clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      await page.clock.runFor(15_001);
+      await page.clock.runFor(15_000);
+      await ordinaryOwner(page, "PET_PROMPT", "PET_MISSED starts from a reached pet prompt");
+      await page.clock.runFor(5000);
+      const missed = page.locator('[data-presentation-mode="PET_MISSED"]');
+      assert.equal(await missed.isDisabled(), true, "PET_MISSED retains disabled semantics");
+      const paws = await measureRestingPaws(page, "PET_MISSED");
+      const prior = priorDesktopPaws.get("1440x900");
+      for (const [name, gap] of Object.entries(paws))
+        assert.ok(
+          Math.abs(gap - (prior[name] - 16)) <= 1,
+          `PET_MISSED ${name} paw applies the approved 16px offset: ${gap}px`,
+        );
     },
   );
 });
@@ -834,11 +1016,14 @@ test("SC05 D05: cat petting supports click, touch, and keyboard while bubbles st
       assert.equal(await bursts.count(), 2, "pointer follow-up retains the touch group and appends its own group");
       assert.equal(await hearts.count(), 6, "two valid activations render six decorative hearts");
       await page.clock.runFor(1100);
-      assert.equal(await page.locator('[data-presentation-mode="PLAYING"]').count(), 1, "repeated effects do not extend the original semantic settle");
-      await page.clock.runFor(101);
+      await ordinaryOwner(page, "PET_NORMAL", "repeat petting retains happy art through the original deadline");
+      await page.clock.runFor(99);
+      await ordinaryOwner(page, "PET_NORMAL", "repeat petting retains happy art before its latest deadline");
+      await page.clock.runFor(1);
+      await ordinaryOwner(page, "PLAYING", "repeat petting settles at its latest deadline");
       await page.waitForTimeout(0);
       assert.equal(await bursts.count(), 1, "touch group expires at its own deadline while the pointer group remains");
-      await page.clock.runFor(100);
+      await page.clock.runFor(101);
       await page.waitForTimeout(0);
       assert.equal(await hearts.count(), 0, "pointer group clears after its own deadline");
       await pet.focus();
@@ -928,7 +1113,7 @@ test("SCV04: Pet me stays above the painted cat at desktop and compact widths", 
     );
 });
 
-test("SCV04: each pet creates a distinct activation-point burst without extending the round presentation", async () => {
+test("SCV04: each pet creates a distinct activation-point burst and refreshes the happy-pose deadline", async () => {
   for (const [width, height, tolerance] of [[1440, 900, 8], [390, 844, 10]])
     await withSession(
       { width, height },
@@ -972,6 +1157,7 @@ test("SCV04: each pet creates a distinct activation-point burst without extendin
           points.push(point);
           await page.mouse.click(point.x, point.y);
           await page.waitForTimeout(0);
+          if (index < 2) await page.clock.runFor(400);
         }
         const groups = page.locator("[data-pet-burst-id]");
         assert.equal(await groups.count(), 3, `${width}px three rapid activations retain three burst groups`);
@@ -997,9 +1183,13 @@ test("SCV04: each pet creates a distinct activation-point burst without extendin
         assert.equal(durations.every((duration, index) => index === 0 || duration - durations[index - 1] >= 100), true, `${width}px heart profiles use staggered durations`);
         const offsets = profiles.map((heart) => heart.offsetY).sort((a, b) => a - b);
         assert.equal(offsets.every((offset, index) => index === 0 || offset - offsets[index - 1] >= 4), true, `${width}px heart profiles start at distinct vertical offsets: ${offsets.join(", ")}`);
-        await page.clock.runFor(1200);
-        assert.equal(await page.locator('[data-presentation-mode="PLAYING"]').count(), 1, `${width}px repeat petting keeps the original presentation deadline`);
-        assert.equal(await groups.count(), 3, `${width}px burst groups outlive the unchanged game-state settle until their own final profile ends`);
+        await page.clock.runFor(400);
+        await ordinaryOwner(page, "PET_NORMAL", `${width}px repeat petting remains happy at the first deadline`);
+        assert.equal(await groups.count(), 3, `${width}px live burst groups retain their independent lifetimes through the first deadline`);
+        await page.clock.runFor(799);
+        await ordinaryOwner(page, "PET_NORMAL", `${width}px repeat petting remains happy before the latest deadline`);
+        await page.clock.runFor(1);
+        await ordinaryOwner(page, "PLAYING", `${width}px repeat petting settles at the latest deadline`);
         await page.clock.runFor(101);
         assert.equal(await groups.count(), 0, `${width}px every group cleans itself after its longest profile`);
       },
@@ -1265,6 +1455,33 @@ test("SC07: transparent physical cat pixels are inert while the visible Pet me p
         3,
         "one visible Pet me activation emits one three-heart burst",
       );
+    },
+  );
+});
+
+test("SCV04: repeated Pet me refreshes the successful happy-pose deadline", async () => {
+  await withSession(
+    { width: 390, height: 844 },
+    { hasTouch: true, clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      await page.clock.runFor(15_001);
+      await page.clock.runFor(15_000);
+      const prompt = await exact(page.locator("[data-pet-prompt]"), "fresh compact Pet me prompt");
+      await prompt.click();
+      const success = await ordinaryArt(page, "PET_PROMPT_SUCCESS", "cat-pet-success-800.webp", "fresh Pet me activation");
+      await page.clock.runFor(1000);
+      await clickVisibleArtwork(page, success);
+      await success.locator(':scope > [data-pet-burst-id]').nth(1).waitFor({ state: "attached" });
+      assert.equal(await success.locator(':scope > [aria-hidden="true"] i').count(), 6, "repeat Pet me appends its own three-heart burst");
+      await page.clock.runFor(2999);
+      await ordinaryOwner(page, "PET_PROMPT_SUCCESS", "repeat Pet me survives the original deadline");
+      await page.clock.runFor(1);
+      await ordinaryOwner(page, "PET_PROMPT_SUCCESS", "repeat Pet me ignores the original deadline callback");
+      await page.clock.runFor(999);
+      await ordinaryOwner(page, "PET_PROMPT_SUCCESS", "repeat Pet me remains active before its latest deadline");
+      await page.clock.runFor(1);
+      await ordinaryOwner(page, "PLAYING", "repeat Pet me settles at its latest deadline");
     },
   );
 });

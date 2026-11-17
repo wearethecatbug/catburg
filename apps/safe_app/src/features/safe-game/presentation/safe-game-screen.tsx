@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RoundSource } from "../domain";
 import { SafeGameProvider } from "../model/safe-game-provider";
 import { useSafeGameContext } from "../model/safe-game-context";
@@ -21,6 +21,8 @@ function SafeGameScreenContent() {
   const headerZoneRef = useRef<HTMLElement | null>(null);
   const characterEffectZoneRef = useRef<HTMLDivElement | null>(null);
   const panelLaneRef = useRef<HTMLDivElement | null>(null);
+  const historyPanelRef = useRef<HTMLDivElement | null>(null);
+  const [historyCovered, setHistoryCovered] = useState(false);
   const { state, presentation } = controller;
   const terminal = selectTerminalPresentation(state);
   const { hintsExhausted, statusText } = selectEarnedHintPresentation(state);
@@ -34,6 +36,10 @@ function SafeGameScreenContent() {
         : presentation.mode === "PET_PROMPT" && presentation.promptId === 1
           ? "Pet me"
           : "";
+
+  useEffect(() => {
+    if (presentation.mode !== "HISTORY") setHistoryCovered(false);
+  }, [presentation.mode]);
 
   useLayoutEffect(() => {
     if (!dialogActive) return;
@@ -79,9 +85,7 @@ function SafeGameScreenContent() {
   return (
     <main
       ref={screenRef}
-      className={`${styles.safeGameScreen} ${
-        presentation.mode === "HISTORY" ? styles.historyOpen : ""
-      }`}
+      className={styles.safeGameScreen}
       onKeyDown={(event) => {
         if (
           event.key !== "Escape" ||
@@ -116,8 +120,8 @@ function SafeGameScreenContent() {
             {hintsExhausted && <p aria-hidden="true" className={styles.earnedHint}>No further hints are available.</p>}
           </div>
           <div ref={panelLaneRef} className={`${styles.panelLane} ${presentation.mode === "HISTORY" ? styles.panelLaneOpen : ""}`}>
-            <div className={styles.menuRegion}><GameMenu /></div>
-            {presentation.mode === "HISTORY" && <HistoryPanel attempts={state.attempts} anchorRef={controller.historyButtonRef} headerZoneRef={headerZoneRef} panelLaneRef={panelLaneRef} characterEffectZoneRef={characterEffectZoneRef} onClose={controller.toggleHistory} onActivity={controller.historyActivity} />}
+            <div className={styles.menuRegion}><GameMenu historyPanelRef={historyPanelRef} onHistoryCovered={setHistoryCovered} /></div>
+            {presentation.mode === "HISTORY" && <HistoryPanel attempts={state.attempts} anchorRef={controller.historyButtonRef} headerZoneRef={headerZoneRef} panelLaneRef={panelLaneRef} characterEffectZoneRef={characterEffectZoneRef} externalPanelRef={historyPanelRef} covered={historyCovered} onClose={controller.toggleHistory} onActivity={controller.historyActivity} />}
           </div>
         </div>
       </div>

@@ -78,26 +78,30 @@ function register01() {
       });
   });
 
-  test("SC08 History: lavender shell adds one inert paw while retaining the named, movable 250x180 region", async () => {
-    for (const [width, height] of [[1175, 1098], [390, 844]])
+  test("SC08 History: desktop follows its menu button while compact simplifies the decorative grip", async () => {
+    const measurements = new Map();
+    for (const [width, height, compact] of [[1440, 900, false], [2560, 1440, false], [1280, 600, true], [1175, 1098, true], [390, 844, true]])
       await withSession({ width, height }, {}, async ({ page }) => {
         const controls = await gameControls(page);
         await controls.history.click();
         const panel = await exact(page.getByRole("region", { name: "History", exact: true }), `${width}px History region`);
         const heading = await exact(panel.getByRole("heading", { name: "History", exact: true }), `${width}px History heading`);
         const grip = await exact(page.getByRole("button", { name: "Move History", exact: true }), `${width}px History grip`);
+        const close = await exact(panel.getByRole("button", { name: "Close History", exact: true }), `${width}px History close`);
         assert.equal(await page.getByRole("button", { name: "Move History", exact: true }).count(), 1, `${width}px has one Move History control`);
-        const paw = await exact(panel.locator('img[aria-hidden="true"][alt=""][src*="history-paw-192.webp"]'), `${width}px decorative History paw`);
-        const [panelBox, gripBox, pawBox, appearance] = await Promise.all([
-          panel.boundingBox(), grip.boundingBox(), paw.boundingBox(), panel.evaluate((element) => {
+        const [panelBox, buttonBox, gripBox, closeBox, appearance, headingStyle, panelHeight] = await Promise.all([
+          panel.boundingBox(), controls.history.boundingBox(), grip.boundingBox(), close.boundingBox(), panel.evaluate((element) => {
             const entries = element.querySelector("[aria-live='polite']");
             const shell = getComputedStyle(element);
             const entry = getComputedStyle(entries);
             return { backgroundImage: shell.backgroundImage, boxShadow: shell.boxShadow, borderColor: shell.borderColor, entriesBackground: entry.backgroundColor, entriesBorder: entry.borderColor, entriesColor: entry.color, entriesPadding: entry.padding };
-          }),
+          }), heading.evaluate((element) => ({ fontSize: Number.parseFloat(getComputedStyle(element).fontSize), fontWeight: Number.parseInt(getComputedStyle(element).fontWeight, 10) })), panel.evaluate((element) => getComputedStyle(element).height),
         ]);
-        assert.deepEqual({ width: Math.round(panelBox.width), height: Math.round(panelBox.height) }, { width: 250, height: 180 }, `${width}px History preserves ordinary geometry`);
+        assert.ok(panelBox && buttonBox && gripBox && closeBox, `${width}px History controls have measurable geometry`);
+        assert.equal(panelHeight, "180px", `${width}px History preserves its scrollable panel height`);
         assert.ok(gripBox.width >= 44 && gripBox.height >= 44, `${width}px History grip retains the 44px target`);
+        assert.ok(closeBox.x >= panelBox.x && closeBox.x + closeBox.width <= panelBox.x + panelBox.width, `${width}px Close stays inside History`);
+        approximatelyEqual(gripBox.x + gripBox.width / 2, panelBox.x + panelBox.width / 2, 1, `${width}px grip remains centered in History`);
         assert.match(appearance.backgroundImage, /linear-gradient/, `${width}px History has the lavender layered shell`);
         assert.notEqual(appearance.boxShadow, "none", `${width}px History retains shell depth`);
         assert.notEqual(appearance.entriesBackground, "rgb(0, 0, 0)", `${width}px History entries are never black`);
@@ -105,6 +109,21 @@ function register01() {
         assert.equal(appearance.entriesBorder, "rgb(217, 200, 238)", `${width}px History entries retain their lavender border`);
         assert.equal(appearance.entriesColor, "rgb(52, 39, 74)", `${width}px History entries retain readable dark text`);
         assert.equal(appearance.entriesPadding, "8px", `${width}px History entries retain 8px padding`);
+        const paws = grip.locator('svg[aria-hidden="true"]');
+        assert.equal(await paws.count(), 1, `${width}px grip keeps one decorative paw in its semantic-free markup`);
+        assert.equal(await paws.isVisible(), !compact, `${width}px grip ${compact ? "hides" : "shows"} its decorative paw`);
+        assert.equal(await grip.locator("img").count(), 0, `${width}px grip does not use the retired raster paw`);
+        const dotColumns = grip.locator(":scope > span[aria-hidden=\"true\"] > span");
+        assert.equal(await dotColumns.count(), 2, `${width}px grip retains two six-dot column groups`);
+        const dotState = await dotColumns.evaluateAll((elements) => elements.map((element) => {
+          const style = getComputedStyle(element);
+          return { display: style.display, width: style.width, height: style.height, backgroundImage: style.backgroundImage, backgroundSize: style.backgroundSize };
+        }));
+        assert.deepEqual(dotState[0], { display: "block", width: "16px", height: "24px", backgroundImage: dotState[0].backgroundImage, backgroundSize: "8px 8px" }, `${width}px visible dot group is two columns by three rows`);
+        assert.match(dotState[0].backgroundImage, /radial-gradient/, `${width}px visible dot group draws round dots`);
+        assert.equal(dotState[1].display === "none", compact, `${width}px ${compact ? "hides" : "shows"} the second six-dot group`);
+        if (!compact) {
+          const paw = await exact(paws, `${width}px flat decorative paw`);
         const pawState = await paw.evaluate((element) => {
           const style = getComputedStyle(element);
           const matrix = style.transform.match(/^matrix\(([^)]+)\)$/);
@@ -112,12 +131,22 @@ function register01() {
           return { ariaHidden: element.getAttribute("aria-hidden"), tabIndex: element.tabIndex, pointerEvents: style.pointerEvents, width: style.width, height: style.height, angle: values ? Math.atan2(values[1], values[0]) * 180 / Math.PI : null };
         });
         assert.deepEqual({ ariaHidden: pawState.ariaHidden, tabIndex: pawState.tabIndex, pointerEvents: pawState.pointerEvents }, { ariaHidden: "true", tabIndex: -1, pointerEvents: "none" }, `${width}px paw is decorative and noninteractive`);
-        assert.deepEqual({ width: pawState.width, height: pawState.height }, { width: "44px", height: "44px" }, `${width}px paw keeps its untransformed 44px CSS box`);
-        approximatelyEqual(pawState.angle, 8, 0.5, `${width}px paw rotates eight degrees clockwise`);
-        assert.ok(pawBox.x >= panelBox.x && pawBox.y >= panelBox.y && pawBox.x + pawBox.width <= panelBox.x + panelBox.width && pawBox.y + pawBox.height <= panelBox.y + panelBox.height, `${width}px transformed paw stays contained within History`);
+        }
+        if (!compact) {
+          approximatelyEqual(panelBox.x, buttonBox.x, 1, `${width}px History aligns with its menu button`);
+          approximatelyEqual(panelBox.width, buttonBox.width, 1, `${width}px History follows its menu button width`);
+        }
+        measurements.set(compact ? `compact-${width}` : `desktop-${width}`, { panelWidth: panelBox.width, headingStyle });
         await grip.focus();
         assert.equal(await heading.count(), 1, `${width}px heading stays distinct from the movable grip`);
       });
+    const desktop = measurements.get("desktop-1440");
+    for (const width of [1280, 1175, 390]) {
+      const compact = measurements.get(`compact-${width}`);
+      assert.ok(compact.panelWidth < desktop.panelWidth, `${width}px compact History is narrower than desktop History`);
+      assert.ok(compact.headingStyle.fontSize < desktop.headingStyle.fontSize, `${width}px compact History title is smaller`);
+      assert.ok(compact.headingStyle.fontWeight < desktop.headingStyle.fontWeight, `${width}px compact History title is lighter`);
+    }
   });
 
   test("SC08 terminal menu: disabled controls and their real gap hold the ordinary arrow without effects", async () => {

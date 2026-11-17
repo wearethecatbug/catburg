@@ -6,7 +6,7 @@
   justify-content: center;
   padding: 24px;
   position: fixed;
-  transition: opacity 2.5s ease;
+  transition: opacity 200ms ease;
   z-index: 2000;
 }
 .backdrop.success {
@@ -283,10 +283,11 @@
   z-index: 3;
 }
 .speechBubble {
-  background: #fffdf8;
-  border: 3px solid #5a4785;
+  background: transparent;
+  border: 3px solid transparent;
   border-radius: 48%;
   font-weight: 800;
+  isolation: isolate;
   max-width: 154px;
   padding: 14px 18px;
   position: absolute;
@@ -295,13 +296,32 @@
   top: 3%;
   z-index: 2;
 }
-.speechBubble::after {
-  border-left: 12px solid transparent;
-  border-top: 18px solid #5a4785;
-  bottom: -17px;
+.dialog[data-success-presentation="false"]
+  .speechBubble:not(.retryBubble, .abandonedBubble) {
+  translate: calc(10px / var(--effective-dialog-scale));
+}
+.speechBubble::before {
+  background: #fffdf8;
+  border: 3px solid #5a4785;
+  border-radius: inherit;
   content: "";
-  left: 32%;
+  inset: -3px;
+  pointer-events: none;
   position: absolute;
+  z-index: -1;
+}
+.speechBubble::after {
+  background: #5a4785;
+  clip-path: polygon(0 65%, 100% 0, 100% 100%);
+  content: "";
+  height: 11px;
+  left: -1px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  transform-origin: 100% 50%;
+  width: 12px;
+  z-index: -2;
 }
 .boardActions {
   display: flex;
@@ -344,7 +364,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .backdrop {
-    transition-duration: 2.5s;
     transition-timing-function: step-end;
   }
   .closeButton {
@@ -790,11 +809,14 @@
     top: -21px;
   }
 
+  .retryBubble {
+    transform: translateX(calc(12px / var(--effective-dialog-scale)));
+  }
+
   .abandonedBubble {
-    right: -106px;
-    /* Keep the speech beside the cat even when the text wraps to fewer lines. */
-    top: 128px;
-    transform: translateY(-75%);
+    right: -15px;
+    top: 101px;
+    transform: translateY(-100%);
   }
 
   .imageButton {
@@ -1167,10 +1189,6 @@
     width: auto;
   }
 
-  .speechBubble::after {
-    left: 16%;
-  }
-
   .abandonedBubble {
     transform: none;
   }
@@ -1407,10 +1425,6 @@
     width: auto;
   }
 
-  .speechBubble::after {
-    left: 14%;
-  }
-
   .abandonedBubble {
     transform: none;
   }
@@ -1553,10 +1567,6 @@
     transform: translate(-40px, -30px);
   }
 
-  .speechBubble::after {
-    transform: rotate(90deg) scaleX(-1);
-    transform-origin: center;
-  }
 }
 
 @media (min-width: 601px) and (max-width: 820px) {
@@ -1565,12 +1575,6 @@
     transform: translate(-20px, 10px);
   }
 
-  .speechBubble::after {
-    bottom: 22.3px;
-    left: calc(4% - 24.5px);
-    transform: rotate(90deg);
-    transform-origin: center;
-  }
 }
 
 @media (max-width: 600px) {
@@ -1597,11 +1601,15 @@
     transform: translate(-15px, 10px);
   }
 
+}
+
+@media (min-width: 821px) {
   .speechBubble::after {
-    bottom: 18.3px;
-    left: calc(4% - 22.5px);
-    transform: rotate(90deg);
-    transform-origin: center;
+    height: 14.67px;
+    left: 29%;
+    top: 94%;
+    transform: translate(-100%, -50%) rotate(-54deg);
+    width: 16px;
   }
 }
 
@@ -1772,7 +1780,7 @@
   }
 }
 
-/* Project the wide canvas toward the answer-field eye line below the header. */
+/* Keep the approved wide dialog centered below the header. */
 @media (min-width: 821px) and (min-height: 801px) {
   .backdrop {
     align-items: flex-start;
@@ -1784,10 +1792,10 @@
     --wide-shell-min-top: max(24px, calc(var(--dialog-lane-top, 0px) - var(--header-gap, 0px)));
     --wide-shell-width: min(940px, calc(100vw - 48px), calc((100svh - var(--dialog-lane-top, 0px) - 12px) * 1327 / 1185));
     --wide-shell-height: calc(var(--wide-shell-width) * 1185 / 1327);
-    left: clamp(24px, calc(50vw - var(--wide-shell-width) * 0.2805), calc(100vw - 24px - var(--wide-shell-width)));
-    margin: 0;
+    left: 0;
+    margin-inline: auto;
     position: absolute;
-    right: auto;
+    right: 0;
     top: clamp(var(--wide-shell-min-top), calc(45svh - var(--wide-shell-height) * 0.472), calc(100svh - 24px - var(--wide-shell-height)));
     transform: none;
     width: var(--wide-shell-width);

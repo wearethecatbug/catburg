@@ -1,15 +1,19 @@
 .reward {
-  align-items: flex-start;
-  display: flex;
-  gap: 0;
-  max-width: min(460px, calc(100vw - 24px));
+  display: block;
+  height: 100%;
+  max-width: 100%;
   pointer-events: none;
   position: relative;
+  width: 100%;
 }
 .reward img {
+  bottom: 0;
   height: 240px;
+  left: 50%;
   object-fit: contain;
   object-position: center bottom;
+  position: absolute;
+  transform: translate(-50%, -12px);
   width: 240px;
 }
 .reward p {
@@ -19,93 +23,113 @@
   box-sizing: border-box;
   color: var(--sc-ink);
   font:
-    16px/1.35 system-ui,
+    14px/1.35 system-ui,
     sans-serif;
-  margin: 0 0 0 -2px;
+  bottom: auto;
   font-weight: 800;
+  left: calc(50% + 131px);
+  margin: 0;
   max-width: 180px;
-  min-height: 76px;
-  padding: 16px 22px;
-  position: relative;
+  min-height: 58px;
+  padding: 10px 8px;
+  position: absolute;
   text-align: center;
-  width: 180px;
+  top: calc(100% - 148px);
+  width: calc(50% - 131px);
   z-index: 1;
 }
 .reward p::after {
-  border-left: 12px solid transparent;
-  border-top: 18px solid #5a4785;
-  bottom: 25px;
+  background: #5a4785;
+  border: 0;
+  bottom: auto;
   content: "";
-  left: calc(4% - 21px);
+  clip-path: polygon(0 65%, 100% 0, 100% 100%);
+  height: 11px;
+  left: -1px;
   position: absolute;
-  transform: rotate(90deg);
-  transform-origin: center;
-}
-.reward p::before {
-  content: none;
+  top: 50%;
+  transform: translate(-100%, -50%);
+  transform-origin: 100% 50%;
+  width: 12px;
 }
 
 @media (min-width: 1280px) and (min-height: 801px) {
   .reward img {
-    transform: translateY(-11.36%);
+    transform: translate(-50%, -22px);
+  }
+  .reward p {
+    top: calc(100% - 160px);
   }
 }
 
 @media (max-width: 600px) {
   .reward {
-    align-items: flex-start;
-    max-width: min(100%, calc(100vw - 24px));
-    width: min(100%, calc(100vw - 24px));
+    max-width: 100%;
+    width: 100%;
   }
   .reward img {
-    flex-shrink: 0;
     height: 157px;
-    transform: translateY(-11.36%);
+    transform: translate(-50%, -26px);
     width: 157px;
   }
   .reward p {
-    font-size: 14px;
-    margin-left: -2px;
-    min-height: 64px;
+    font-size: 13px;
+    bottom: 89px;
+    left: calc(50% + 85px);
+    min-height: 50px;
     min-width: 0;
-    padding: 10px;
-    width: min(180px, calc(100vw - 150px));
+    padding: 8px 5px;
+    top: auto;
+    width: min(143px, calc(50% - 85px));
   }
 }
 
-@media (max-width: 600px) {
-  .reward {
-    margin: 0;
-    max-width: min(100%, calc(100vw - 24px));
-  }
+@media (max-width: 420px) {
   .reward p {
-    margin-left: -2px;
+    bottom: 132px;
+    left: auto;
+    right: 0;
+    width: 112px;
   }
 }
 
 @media (max-width: 600px) and (min-height: 601px) {
-  .reward img {
-    transform: translateY(-17%);
+  .reward p {
+    bottom: clamp(89px, calc(132px - (100vw - 390px) * 43 / 118), 132px);
+    left: auto;
+    right: 0;
+    width: clamp(112px, calc(50% - 85px), 143px);
+  }
+}
+
+@media (max-width: 600px) and (min-height: 601px),
+  (max-width: 420px) and (max-height: 600px) {
+  .reward p::after {
+    left: 10%;
+    top: 84%;
+    transform: translate(-100%, -50%) rotate(-37deg);
   }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {
   .reward {
-    max-width: min(360px, calc(100vw - 24px));
+    max-width: 100%;
   }
 
   .reward img {
     height: 152px;
-    transform: translateY(-11.36%);
+    transform: translate(-50%, -12px);
     width: 177px;
   }
 
   .reward p {
+    bottom: 74px;
     font-size: 14px;
-    margin-left: -22px;
+    left: calc(50% + 103px);
     max-width: 150px;
     min-height: 56px;
     padding: 8px 10px;
-    width: min(150px, calc(100vw - 160px));
+    top: auto;
+    width: min(146px, calc(50% - 103px));
   }
 }

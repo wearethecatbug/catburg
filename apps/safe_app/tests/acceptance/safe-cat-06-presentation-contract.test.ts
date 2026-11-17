@@ -185,7 +185,7 @@ test("SC06 presentation: one unresolved challenge reaches concerned at 10,000 ms
   );
 });
 
-test("SC06 presentation: accepted success remains modal during a synchronized 2,500 ms popup and backdrop fade", () => {
+test("SC06 presentation: accepted success remains modal during a synchronized 200 ms popup and backdrop fade", () => {
   const presentationMachineSource = readFileSync(
     resolve(
       process.cwd(),
@@ -193,7 +193,7 @@ test("SC06 presentation: accepted success remains modal during a synchronized 2,
     ),
     "utf8",
   );
-  // Scope the deadline assertion to HINT_AWARDED so another 2,500 ms transition cannot satisfy
+  // Scope the deadline assertion to HINT_AWARDED so another 200 ms transition cannot satisfy
   // the success-handoff contract accidentally.
   const handoffBranch = presentationMachineSource.match(
     /if\s*\(\s*e\.type\s*===\s*"HINT_AWARDED"\s*\)\s*\{([\s\S]*?)\}\s*(?=if\s*\(\s*e\.type\s*===\s*"HINT_SUCCESS_COMPLETE_EARLY"\s*\))/,
@@ -204,8 +204,8 @@ test("SC06 presentation: accepted success remains modal during a synchronized 2,
   );
   assert.match(
     handoffBranch[1],
-    /return\s*\{\s*\.\.\.next,\s*mode\s*:\s*"HINT_SUCCESS_HANDOFF",\s*surface\s*:\s*"hint-dialog",\s*resumeMode\s*:\s*s\.resumeMode,\s*challengeId\s*:\s*s\.challengeId,\s*award\s*:\s*e\.award,\s*\.\.\.clock\(\s*next,\s*now,\s*"hint-success",\s*now\s*\+\s*2_?500\s*\)/,
-    "the HINT_AWARDED return state owns the exact named hint-success deadline at now + 2,500 ms",
+    /return\s*\{\s*\.\.\.next,\s*mode\s*:\s*"HINT_SUCCESS_HANDOFF",\s*surface\s*:\s*"hint-dialog",\s*resumeMode\s*:\s*s\.resumeMode,\s*challengeId\s*:\s*s\.challengeId,\s*award\s*:\s*e\.award,\s*\.\.\.clock\(\s*next,\s*now,\s*"hint-success",\s*now\s*\+\s*200\s*\)/,
+    "the HINT_AWARDED return state owns the exact named hint-success deadline at now + 200 ms",
   );
   assert.match(
     dialogSource,

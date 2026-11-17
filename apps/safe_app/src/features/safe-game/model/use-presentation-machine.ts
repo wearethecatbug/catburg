@@ -34,7 +34,6 @@ export function usePresentationMachine(roundEpoch: number) {
     reducePresentation(null, { type: "ROUND_STARTED", roundEpoch }, now()),
   );
   const current = useRef(presentation);
-  const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const send = useCallback((event: PresentationEvent) => {
     // Rapid interaction events must reduce from the latest state, not a queued render snapshot.
@@ -51,21 +50,36 @@ export function usePresentationMachine(roundEpoch: number) {
   }, [roundEpoch, send]);
 
   useEffect(() => {
-    if (timeout.current) {
-      clearTimeout(timeout.current);
-      timeout.current = null;
-    }
     const token = presentation.timer;
     if (!token || presentation.visibility !== "visible") return;
-    const delay = Math.max(0, token.dueAt - now());
-    timeout.current = setTimeout(() => {
-      timeout.current = null;
-      send(timerExpired(token));
-    }, delay);
+
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleExpiry = () => {
+      const remaining = Math.max(0, token.dueAt - now());
+      timeout = setTimeout(() => {
+        timeout = null;
+        if (cancelled) return;
+
+        // Timers can wake a fraction early. The reducer correctly ignores an
+        // early expiry, so retain ownership here until this token is due.
+        if (now() < token.dueAt) {
+          scheduleExpiry();
+          return;
+        }
+
+        send(timerExpired(token));
+      }, Math.ceil(remaining));
+    };
+
+    scheduleExpiry();
+
     return () => {
-      if (timeout.current) {
-        clearTimeout(timeout.current);
-        timeout.current = null;
+      cancelled = true;
+      if (timeout !== null) {
+        clearTimeout(timeout);
+        timeout = null;
       }
     };
   }, [presentation, send]);

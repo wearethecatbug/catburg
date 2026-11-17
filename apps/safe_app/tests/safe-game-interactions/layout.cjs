@@ -26,41 +26,6 @@ function rgbaAlpha(color) {
   return channels.length === 4 ? channels[3] : 1;
 }
 
-function measuredArtworkWidth(layer, aspectRatio) {
-  const { size } = layer;
-  const [width, height] = size.split(" ");
-  const parsedWidth = Number.parseFloat(width);
-  if (Number.isFinite(parsedWidth) && width.endsWith("px")) {
-    if (height === "auto") return parsedWidth;
-    const parsedHeight = Number.parseFloat(height);
-    if (!Number.isFinite(parsedHeight) || !height.endsWith("px"))
-      throw new Error(`scene artwork needs an automatic or pixel height, received ${size}`);
-    approximatelyEqual(
-      parsedWidth / parsedHeight,
-      aspectRatio,
-      0.01,
-      `scene artwork preserves its source aspect ratio in ${size}`,
-    );
-    return parsedWidth;
-  }
-  // A separate art box may deliberately use `background-size: 100% 100%`.
-  // That is proportional only when the box itself preserves the source ratio.
-  if (size === "100% 100%") {
-    const boxWidth = Number.parseFloat(layer.width);
-    const boxHeight = Number.parseFloat(layer.height);
-    if (!Number.isFinite(boxWidth) || !Number.isFinite(boxHeight))
-      throw new Error(`scene artwork box needs resolved dimensions, received ${layer.width} by ${layer.height}`);
-    approximatelyEqual(
-      boxWidth / boxHeight,
-      aspectRatio,
-      0.01,
-      `scene artwork box preserves its source aspect ratio at ${boxWidth}x${boxHeight}`,
-    );
-    return boxWidth;
-  }
-  throw new Error(`scene artwork needs a resolved proportional size, received ${size}`);
-}
-
 // AC3 permits the decorative scene artwork to be a dedicated element or a route-owner
 // pseudo-element. The public oracle deliberately observes both without selecting an
 // implementation-specific class name.
@@ -68,7 +33,7 @@ async function sceneBackground(page) {
   return page.locator("main").evaluate((main) => {
     const owner = main.parentElement;
     if (!owner) throw new Error("Safe Cat route has no scene background owner");
-    const artPattern = /scene-background-(?:wide|tall)\.webp/;
+    const artPattern = /scene-background-(?:wide|tall|ultrawide)\.webp/;
     const candidates = [owner, ...owner.querySelectorAll("*")];
     const layers = [];
     for (const element of candidates) {
@@ -80,6 +45,8 @@ async function sceneBackground(page) {
           kind: pseudo || "element",
           image: style.backgroundImage,
           size: style.backgroundSize,
+          positionX: style.backgroundPositionX,
+          positionY: style.backgroundPositionY,
           width: style.width,
           height: style.height,
           repeat: style.backgroundRepeat,
@@ -143,9 +110,9 @@ async function opaqueAncestorBackground(locator) {
   });
 }
 
-// Entries contrast with their owned surface; header and grip use the rendered shell stops.
+// Text belongs to the entries/shell surfaces; the non-text move affordance uses the shell stops.
 async function historyContrastMeasurements(entry, heading, handle) {
-  const [entryColor, entrySurface, headingColor, handleColor, shellStops] = await Promise.all([
+  const [entryColor, entrySurface, headingColor, gripColors, shellStops] = await Promise.all([
     entry.evaluate((element) => getComputedStyle(element).color),
     entry.evaluate((element) => {
       const surface = element.closest("[aria-live='polite']");
@@ -153,7 +120,33 @@ async function historyContrastMeasurements(entry, heading, handle) {
       return getComputedStyle(surface).backgroundColor;
     }),
     heading.evaluate((element) => getComputedStyle(element).color),
-    handle.evaluate((element) => getComputedStyle(element).color),
+    handle.evaluate((element) => {
+      const isVisible = (mark) => {
+        const style = getComputedStyle(mark);
+        return (
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          Number.parseFloat(style.opacity) > 0 &&
+          mark.getClientRects().length > 0
+        );
+      };
+      const dots = [...element.querySelectorAll("*")]
+        .filter(
+          (mark) =>
+            isVisible(mark) &&
+            getComputedStyle(mark).backgroundImage.includes("radial-gradient"),
+        )
+        .map((mark) => getComputedStyle(mark).color);
+      const paw = [...element.querySelectorAll("svg")]
+        .filter(
+          (mark) =>
+            isVisible(mark) &&
+            [...mark.querySelectorAll("circle, ellipse, line, path, polygon, polyline, rect")]
+              .some((shape) => isVisible(shape)),
+        )
+        .map((mark) => getComputedStyle(mark).fill);
+      return { dots, paw };
+    }),
     heading.evaluate((element) => {
       const panel = element.closest("section[aria-label='History']");
       if (!panel) throw new Error("History heading has no panel");
@@ -165,11 +158,19 @@ async function historyContrastMeasurements(entry, heading, handle) {
       return stops;
     }),
   ]);
-  return [
-    contrastRatio(entryColor, entrySurface),
-    ...shellStops.map((surface) => contrastRatio(headingColor, surface)),
-    ...shellStops.map((surface) => contrastRatio(handleColor, surface)),
-  ];
+  if (!gripColors.dots.length)
+    throw new Error("History move control has no visible CSS-dot affordance");
+  return {
+    text: [
+      contrastRatio(entryColor, entrySurface),
+      ...shellStops.map((surface) => contrastRatio(headingColor, surface)),
+    ],
+    grip: Object.entries(gripColors).flatMap(([kind, colors]) =>
+      colors.flatMap((color) =>
+        shellStops.map((surface) => ({ kind, ratio: contrastRatio(color, surface) })),
+      ),
+    ),
+  };
 }
 
 function register01() {
@@ -347,10 +348,14 @@ test("each viewport scrolls controls individually before checking reachable geom
   }
 });
 
-test("empty and populated History contrast are collected separately in light and dark", async () => {
+test("empty and populated History text and visible move affordance contrast are collected separately", async () => {
   for (const colorScheme of ["light", "dark"]) {
-    await withSession(
-      { width: 1175, height: 1098 },
+    for (const viewport of [
+      { width: 1440, height: 900, name: "desktop" },
+      { width: 1175, height: 1098, name: "compact" },
+    ])
+      await withSession(
+      viewport,
       { colorScheme, random: 0.041 },
       async ({ page }) => {
         const controls = await gameControls(page);
@@ -401,12 +406,25 @@ test("empty and populated History contrast are collected separately in light and
           page.getByRole("button", { name: "Move History", exact: true }),
         );
         assert.ok(
-          emptyMeasurements.every((ratio) => ratio >= 4.5),
-          `${colorScheme} empty History contrast meets 4.5:1`,
+          emptyMeasurements.text.every((ratio) => ratio >= 4.5),
+          `${colorScheme} ${viewport.name} empty History text contrast meets 4.5:1`,
         );
         assert.ok(
-          populatedMeasurements.every((ratio) => ratio >= 4.5),
-          `${colorScheme} populated History contrast meets 4.5:1`,
+          populatedMeasurements.text.every((ratio) => ratio >= 4.5),
+          `${colorScheme} ${viewport.name} populated History text contrast meets 4.5:1`,
+        );
+        assert.ok(
+          emptyMeasurements.grip.every(({ ratio }) => ratio >= 3),
+          `${colorScheme} ${viewport.name} empty History move affordance meets 3:1`,
+        );
+        assert.ok(
+          populatedMeasurements.grip.every(({ ratio }) => ratio >= 3),
+          `${colorScheme} ${viewport.name} populated History move affordance meets 3:1`,
+        );
+        assert.equal(
+          emptyMeasurements.grip.some(({ kind }) => kind === "paw"),
+          viewport.name === "desktop",
+          `${colorScheme} ${viewport.name} measures the visible paw only where it is rendered`,
         );
       },
     );
@@ -1352,9 +1370,17 @@ test("SC05 D16/D17/D19/D22/D24/D26: visible artwork, scale bands, dial and subti
           .getByRole("heading", { name: "Guess the number", exact: true })
           .boundingBox();
         const safeGap = paintedCatSafeGap(idleAlpha, safeAlpha);
+        const stageScale = width >= 1280 && height > 600
+          ? transformScale(await page.locator("main > div").first().evaluate((element) => getComputedStyle(element).transform))
+          : 1;
+        const expectedContact = width >= 1280 && height > 600
+          ? { minimum: -24.2 * stageScale, maximum: -20 * stageScale, description: "shares the approved lowered LONG_IDLE anchor" }
+          : width < 1280 && height > 600
+          ? { minimum: -24, maximum: -8, description: "shares the approved compact lowered resting anchor" }
+          : { minimum: -8, maximum: 8, description: "rests on the painted safe edge" };
         assert.ok(
-          safeGap >= -8 && safeGap <= 8,
-          `${width}x${height} D16 painted idle cat rests on the painted safe edge: ${safeGap}px`,
+          safeGap >= expectedContact.minimum && safeGap <= expectedContact.maximum,
+          `${width}x${height} D16 painted idle cat ${expectedContact.description}: ${safeGap}px`,
         );
         assertPaintedHeaderClearance({
           catAlpha: idleAlpha,
@@ -1518,11 +1544,17 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
             height,
             description: `${width}px ${mode} D26 art`,
           });
+          const stageScale = width >= 1280 && height > 600
+            ? transformScale(await page.locator("main > div").first().evaluate((element) => getComputedStyle(element).transform))
+            : 1;
           if (mode === "SURRENDERED") {
             const safeGap = paintedCatSafeGap(bounds, safeAlpha);
+            const expectedContact = width >= 1280 && height >= 900
+              ? { minimum: -19 * stageScale, maximum: -16 * stageScale, description: "keeps the approved enlarged-flag overlap" }
+              : { minimum: -8, maximum: 8, description: "remains in the approved safe-contact band" };
             assert.ok(
-              safeGap >= -8 && safeGap <= 8,
-              `${width}x${height} SURRENDERED painted paws remain in the approved -8..8px safe-contact band: ${safeGap}px`,
+              safeGap >= expectedContact.minimum && safeGap <= expectedContact.maximum,
+              `${width}x${height} SURRENDERED painted paws ${expectedContact.description}: ${safeGap}px`,
             );
             if (width === 1920 && height === 1040) {
               const titleText = await exact(
@@ -1537,7 +1569,7 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
                 );
             }
           }
-          samples.push({ label: mode, bounds });
+          samples.push({ label: mode, bounds, stageScale });
         };
         await inspect("PLAYING");
         await clickVisibleArtwork(page, controls.cat);
@@ -1556,15 +1588,124 @@ test("SC05 D19/D26: every public cat outcome has a comparable visible silhouette
         for (const sample of samples.slice(1)) {
           const ratio = (sample.bounds.width * sample.bounds.height) / idleArea;
           const heightRatio = sample.bounds.height / samples[0].bounds.height;
-          assert.ok(
-            sample.label === "WON"
+          const tallSurrendered = sample.label === "SURRENDERED" && width >= 1280 && height >= 900;
+          if (tallSurrendered) {
+            approximatelyEqual(
+              sample.bounds.width / sample.stageScale,
+              220.42,
+              2,
+              `${width}x${height} D19 SURRENDERED retains the approved normalized painted width`,
+            );
+            approximatelyEqual(
+              sample.bounds.height / sample.stageScale,
+              185.11,
+              2,
+              `${width}x${height} D19 SURRENDERED retains the approved normalized painted height`,
+            );
+          }
+          if (!tallSurrendered)
+            assert.ok(
+              sample.label === "WON"
               ? heightRatio >= 0.9 && heightRatio <= 1.65 && ratio >= 0.5 && ratio <= 1.65
               : ratio >= 0.62 && ratio <= 1.65,
-            `${width}px D19 ${sample.label} visible alpha scale remains comparable to idle: area=${ratio}, height=${heightRatio}`,
-          );
+              `${width}px D19 ${sample.label} visible alpha scale remains comparable to idle: area=${ratio}, height=${heightRatio}`,
+            );
         }
       },
     );
+});
+
+test("SC05: tall wide header stays fixed through Give up and New game", async () => {
+  for (const [width, height] of [[1440, 900], [1920, 1040], [2560, 1244]])
+    await withSession(
+      { width, height },
+      { random: 0.041 },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        const heading = page.getByRole("heading", {
+          name: "Guess the number",
+          exact: true,
+        });
+        const headerPosition = async () => {
+          const [title, subtitle] = await Promise.all([
+            heading.boundingBox(),
+            controls.instruction.boundingBox(),
+          ]);
+          assert.ok(title && subtitle, `${width}x${height} header text renders`);
+          return {
+            title: { x: title.x, y: title.y },
+            subtitle: { x: subtitle.x, y: subtitle.y },
+          };
+        };
+
+        const initial = await headerPosition();
+        await controls.surrender.click();
+        await ordinaryOwner(
+          page,
+          "SURRENDERED",
+          `${width}x${height} surrendered header owner`,
+        );
+        assert.deepEqual(
+          await headerPosition(),
+          initial,
+          `${width}x${height} Give up keeps title and subtitle fixed`,
+        );
+
+        await controls.newRound.click();
+        await ordinaryOwner(
+          page,
+          "PLAYING",
+          `${width}x${height} restarted header owner`,
+        );
+        assert.deepEqual(
+          await headerPosition(),
+          initial,
+          `${width}x${height} New game keeps the header frame fixed`,
+        );
+      },
+    );
+});
+
+test("SAFE-CAT-WIDE-DESKTOP-COMPOSITION: 2560 keeps the approved lower lane while the 2200 seam retains the baseline", async () => {
+  await withSession({ width: 2560, height: 1244 }, { random: 0.041 }, async ({ page }) => {
+    const controls = await gameControls(page);
+    const safe = page.getByLabel("Safe closed", { exact: true });
+    const heading = page.getByRole("heading", { name: "Guess the number", exact: true });
+    const [titleBox, safeBox, codeBox, newGameBox] = await Promise.all([
+      heading.boundingBox(),
+      safe.boundingBox(),
+      controls.code.boundingBox(),
+      controls.newRound.boundingBox(),
+    ]);
+    assert.ok(titleBox && safeBox && codeBox && newGameBox, "2560x1244 renders the approved public game landmarks");
+
+    approximatelyEqual(titleBox.x + titleBox.width / 2, 1164, 1.5, "2560x1244 title is centered on the approved lower lane");
+    approximatelyEqual(safeBox.x + safeBox.width / 2, 1164, 1.5, "2560x1244 safe is centered on the approved lower lane");
+    approximatelyEqual(codeBox.x, 856.1, 1.5, "2560x1244 code entry moves with the approved game column");
+    approximatelyEqual(newGameBox.x, 1703.9, 1.5, "2560x1244 menu begins at the approved wide-screen edge");
+    approximatelyEqual(newGameBox.width, 432, 1.5, "2560x1244 menu uses the approved wider controls");
+
+    approximatelyEqual(titleBox.y, 80.65, 1.5, "2560x1244 title retains its approved vertical anchor");
+    approximatelyEqual(safeBox.y, 327.7, 1.5, "2560x1244 safe retains its approved vertical anchor");
+    approximatelyEqual(codeBox.y, 910.9, 1.5, "2560x1244 code entry retains its approved vertical anchor");
+    approximatelyEqual(newGameBox.y, 482.95, 1.5, "2560x1244 menu retains its approved vertical anchor");
+  });
+
+  for (const width of [2199, 2200])
+    await withSession({ width, height: 1244 }, { random: 0.041 }, async ({ page }) => {
+      const controls = await gameControls(page);
+      const safe = page.getByLabel("Safe closed", { exact: true });
+      const heading = page.getByRole("heading", { name: "Guess the number", exact: true });
+      const [titleBox, safeBox, newGameBox] = await Promise.all([
+        heading.boundingBox(),
+        safe.boundingBox(),
+        controls.newRound.boundingBox(),
+      ]);
+      assert.ok(titleBox && safeBox && newGameBox, `${width}x1244 renders the public seam landmarks`);
+      approximatelyEqual(titleBox.x + titleBox.width / 2, width / 2, 1.5, `${width}x1244 title keeps the baseline center at the wide seam`);
+      approximatelyEqual(safeBox.x + safeBox.width / 2, width / 2, 1.5, `${width}x1244 safe keeps the baseline center at the wide seam`);
+      approximatelyEqual(newGameBox.width, 351, 1.5, `${width}x1244 begins the progressive wide layout at the baseline menu width`);
+    });
 });
 
 test("SCV01 AC1/AC2: resting and surrendered painted cats retain safe contact, clearance, and the approved body footprint", async () => {
@@ -1585,7 +1726,17 @@ test("SCV01 AC1/AC2: resting and surrendered painted cats retain safe contact, c
           menu.boundingBox(),
         ]);
         const gap = paintedCatSafeGap(catAlpha, safeAlpha);
-        assert.ok(gap >= -8 && gap <= 8, `${width}x${height} ${label} painted cat-safe contact is ${gap}px`);
+        const stageScale = width >= 1280 && height > 600
+          ? transformScale(await page.locator("main > div").first().evaluate((element) => getComputedStyle(element).transform))
+          : 1;
+        const expectedContact = label === "surrendered" && width >= 1280 && height >= 900
+          ? { minimum: -19 * stageScale, maximum: -16 * stageScale, description: "keeps the approved enlarged-flag overlap" }
+          : label === "resting" && width >= 1280 && height > 600
+          ? { minimum: -25, maximum: -19, description: "shares the approved lowered LONG_IDLE anchor" }
+          : label === "resting" && width < 1280 && height > 600
+          ? { minimum: -24, maximum: -8, description: "shares the approved compact lowered resting anchor" }
+          : { minimum: -8, maximum: 8, description: "retains painted cat-safe contact" };
+        assert.ok(gap >= expectedContact.minimum && gap <= expectedContact.maximum, `${width}x${height} ${label} ${expectedContact.description}: ${gap}px`);
         assertPaintedHeaderClearance({ catAlpha, title, subtitle, width, height, description: `${width}x${height} ${label}` });
         assert.equal(intersects(catAlpha, form, 0), false, `${width}x${height} ${label} does not overlap code form`);
         assert.equal(intersects(catAlpha, menuBox, 0), false, `${width}x${height} ${label} does not overlap menu`);
@@ -2307,24 +2458,29 @@ test("SCV05 AC1: 1074px gameplay group is visible and vertically balanced", asyn
   });
 });
 
-test("SCV05 AC3: responsive scene art is quiet, proportional, and never intercepts gameplay", async () => {
-  for (const [width, height, expectedAsset, expectedArtworkWidth, aspectRatio] of [
-    [1440, 900, "scene-background-wide.webp", 880, 1600 / 900],
-    [1074, 1134, "scene-background-wide.webp", 880, 1600 / 900],
-    [500, 1134, "scene-background-tall.webp", 500 * 0.82, 900 / 1600],
-    [390, 1134, "scene-background-tall.webp", 390 * 0.82, 900 / 1600],
-    [320, 844, "scene-background-tall.webp", 320 * 0.82, 900 / 1600],
+test("full-screen scene art covers the route without intercepting gameplay", async () => {
+  for (const [width, height, expectedAsset] of [
+    [1440, 900, "scene-background-wide.webp"],
+    [1074, 1134, "scene-background-wide.webp"],
+    [1920, 1080, "scene-background-wide.webp"],
+    [1920, 960, "scene-background-ultrawide.webp"],
+    [2560, 1244, "scene-background-ultrawide.webp"],
+    [500, 1134, "scene-background-tall.webp"],
+    [390, 1134, "scene-background-tall.webp"],
+    [320, 844, "scene-background-tall.webp"],
   ])
     await withSession({ width, height }, {}, async ({ page }) => {
       const scene = await sceneBackground(page);
       assert.equal(scene.layers.length, 1, `${width}px exposes one independent scene-art layer`);
       const artwork = scene.layers[0];
       assert.match(artwork.image, new RegExp(expectedAsset.replace(".", "\\.")), `${width}px selects the approved responsive scene asset`);
-      approximatelyEqual(
-        measuredArtworkWidth(artwork, aspectRatio),
-        expectedArtworkWidth,
-        1.5,
-        `${width}px scene artwork uses its approved responsive width`,
+      assert.equal(artwork.size, "cover", `${width}px scene artwork crops without stretching`);
+      assert.equal(artwork.positionX, "50%", `${width}px scene artwork is centered horizontally`);
+      assert.equal(artwork.positionY, "50%", `${width}px scene artwork is centered vertically`);
+      assert.ok(
+        artwork.rect.x <= 0 && artwork.rect.y <= 0 &&
+          artwork.rect.width >= width && artwork.rect.height >= scene.documentHeight,
+        `${width}px scene artwork reaches the full route through the document bottom`,
       );
       assert.equal(artwork.repeat, "no-repeat", `${width}px scene artwork never tiles`);
       assert.ok(
@@ -2414,8 +2570,8 @@ test("SCV05 AC7: compact cat-safe contact has no resize bounce", async () => {
       };
       const firstGap = paintedCatSafeGap(first.cat, first.safe);
       const settledGap = paintedCatSafeGap(afterFrames.cat, afterFrames.safe);
-      assert.ok(firstGap >= -8 && firstGap <= 8, `${width}px first post-resize painted cat-safe contact is ${firstGap}px`);
-      assert.ok(settledGap >= -8 && settledGap <= 8, `${width}px settled painted cat-safe contact is ${settledGap}px`);
+      assert.ok(firstGap >= -24 && firstGap <= -8, `${width}px first post-resize painted cat-safe contact shares the compact lowered resting anchor: ${firstGap}px`);
+      assert.ok(settledGap >= -24 && settledGap <= -8, `${width}px settled painted cat-safe contact shares the compact lowered resting anchor: ${settledGap}px`);
       assert.ok(Math.abs(firstGap - settledGap) <= 2, `${width}px contact does not bounce after the first post-resize frame`);
       settled.push({ width, gap: settledGap });
     }

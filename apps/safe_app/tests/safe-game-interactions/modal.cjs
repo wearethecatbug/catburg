@@ -11,6 +11,35 @@ const { intersects, visibleTextBounds, paintedCatSafeGap, assertPaintedHeaderCle
 
 // These browser assertions use public roles, rendered assets, and geometry only; no test
 // reads the game secret or a reducer-internal answer.
+async function waitForRenderedCatSource(page, expectedFilename) {
+  const deadline = Date.now() + 30_000;
+  let snapshot;
+  while (Date.now() < deadline) {
+    snapshot = await page.evaluate((expected) => {
+      const cats = document.querySelectorAll(
+        'aside[aria-hidden="true"] img[src*="hint-popup-cat-"]',
+      );
+      if (cats.length !== 1) return { count: cats.length, ready: false };
+      const cat = cats[0];
+      const source = cat.currentSrc || cat.src;
+      return {
+        count: 1,
+        source,
+        ready:
+          cat.complete &&
+          cat.naturalWidth > 0 &&
+          cat.naturalHeight > 0 &&
+          source.includes(expected),
+      };
+    }, expectedFilename);
+    if (snapshot.ready) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(
+    `happy cat resource did not become selected and ready: ${JSON.stringify(snapshot)}`,
+  );
+}
+
 async function sc06Dialog(page) {
   const dialog = await exact(
     page.getByRole("dialog", {
@@ -634,10 +663,12 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
         );
         const bubbleStyle = await bubble.evaluate((element) => {
           const style = getComputedStyle(element);
+          const surface = getComputedStyle(element, "::before");
           const tail = getComputedStyle(element, "::after");
           return {
             radius: Number.parseFloat(style.borderTopLeftRadius),
-            background: style.backgroundColor,
+            surfaceBackground: surface.backgroundColor,
+            surfaceBorderWidth: Number.parseFloat(surface.borderTopWidth),
             tail: tail.content,
             tailWidth: Number.parseFloat(tail.width),
             tailHeight: Number.parseFloat(tail.height),
@@ -646,8 +677,9 @@ test("SC06: full responsive matrix preserves one semantic modal, background owne
         if (width > 600) {
           assert.ok(
             bubbleStyle.radius >= 14 &&
-              bubbleStyle.background !== "rgba(0, 0, 0, 0)",
-            `${width}x${height} vignette bubble uses a rounded comic speech surface`,
+              bubbleStyle.surfaceBackground !== "rgba(0, 0, 0, 0)" &&
+              bubbleStyle.surfaceBorderWidth > 0,
+            `${width}x${height} vignette bubble keeps its rounded comic surface in the masking layer`,
           );
           assert.ok(
             bubbleStyle.tail !== "none" &&
@@ -1763,8 +1795,7 @@ test("SC06: desktop and tablet composition use the approved micro-adjustments wh
           lampAlpha,
           lampMetrics,
           bubbleTransform,
-          tailTransform,
-          tailMetrics,
+          tailPresentation,
           actionsTransform,
         ] = await Promise.all([
           content.evaluate((element) => getComputedStyle(element).transform),
@@ -1783,29 +1814,27 @@ test("SC06: desktop and tablet composition use the approved micro-adjustments wh
             };
           }),
           bubble.evaluate((element) => getComputedStyle(element).transform),
-          bubble.evaluate(
-            (element) => getComputedStyle(element, "::after").transform,
-          ),
           bubble.evaluate((element) => {
-            const readTail = (tail) => ({
-              borderBottomWidth: Number.parseFloat(tail.borderBottomWidth),
-              borderLeftWidth: Number.parseFloat(tail.borderLeftWidth),
-              borderRightColor: tail.borderRightColor,
-              borderRightWidth: Number.parseFloat(tail.borderRightWidth),
-              borderTopColor: tail.borderTopColor,
-              borderTopWidth: Number.parseFloat(tail.borderTopWidth),
-              bottom: Number.parseFloat(tail.bottom),
-              content: tail.content,
-              height: Number.parseFloat(tail.height),
-              left: Number.parseFloat(tail.left),
-              top: Number.parseFloat(tail.top),
-              transform: tail.transform,
-              visibility: tail.visibility,
-              width: Number.parseFloat(tail.width),
-            });
+            const surface = getComputedStyle(element, "::before");
+            const tail = getComputedStyle(element, "::after");
             return {
-              inner: readTail(getComputedStyle(element, "::before")),
-              outer: readTail(getComputedStyle(element, "::after")),
+              surface: {
+                background: surface.backgroundColor,
+                borderWidth: Number.parseFloat(surface.borderTopWidth),
+                content: surface.content,
+                zIndex: Number.parseInt(surface.zIndex, 10),
+              },
+              tail: {
+                background: tail.backgroundColor,
+                clipPath: tail.clipPath,
+                content: tail.content,
+                height: Number.parseFloat(tail.height),
+                left: Number.parseFloat(tail.left),
+                top: Number.parseFloat(tail.top),
+                transform: tail.transform,
+                width: Number.parseFloat(tail.width),
+                zIndex: Number.parseInt(tail.zIndex, 10),
+              },
             };
           }),
           actions.evaluate((element) => getComputedStyle(element).transform),
@@ -1892,55 +1921,20 @@ test("SC06: desktop and tablet composition use the approved micro-adjustments wh
             { x: -15, y: 10 },
             `${width}x${height} mobile bubble moves 25px right and 40px down from its former correction`,
           );
-        assert.match(
-          tailTransform,
-          /^matrix\(/,
-          `${width}x${height} narrow bubble tail retains its transformed orientation`,
-        );
-        const tailMatrix = tailTransform
-          .match(/matrix\(([^)]+)\)/)?.[1]
-          .split(",")
-          .map(Number);
         if (bubbleBox) {
-          assert.deepEqual(
-            transformTranslation(tailTransform),
-            { x: 0, y: 0 },
-            `${width}x${height} narrow tail retains its original attachment coordinates`,
-          );
           assert.ok(
-            tailMetrics.outer.content !== "none" &&
-              tailMetrics.outer.visibility !== "hidden" &&
-              tailMetrics.outer.borderLeftWidth === 12 &&
-              tailMetrics.outer.borderRightWidth === 0 &&
-              tailMetrics.outer.borderTopWidth === 18 &&
-              tailMetrics.outer.borderBottomWidth === 0 &&
-              isPurple(tailMetrics.outer.borderTopColor),
-            `${width}x${height} narrow tail retains the approved single purple triangle construction`,
-          );
-          assert.equal(
-            tailMetrics.inner.content,
-            "none",
-            `${width}x${height} narrow tail reuses the reward bubble's single ::after triangle`,
-          );
-          assert.ok(
-            tailMatrix?.length === 6 &&
-              Math.abs(tailMatrix[0]) <= 0.01 &&
-              Math.abs(tailMatrix[1] - 1) <= 0.01 &&
-              Math.abs(tailMatrix[2] + 1) <= 0.01 &&
-              Math.abs(tailMatrix[3]) <= 0.01,
-            `${width}x${height} narrow tail uses the reward bubble's rotate(90deg) orientation`,
-          );
-          approximatelyEqual(
-            tailMetrics.outer.bottom,
-            isTablet ? 22.3 : 18.3,
-            0.01,
-            `${width}x${height} ${isTablet ? "tablet" : "mobile"} tail uses its approved bottom attachment`,
-          );
-          approximatelyEqual(
-            tailMetrics.outer.left,
-            bubbleBox.width * 0.04 - (isTablet ? 24.5 : 22.5),
-            2,
-            `${width}x${height} ${isTablet ? "tablet" : "mobile"} tail uses its approved relative left attachment`,
+            tailPresentation.surface.content !== "none" &&
+              tailPresentation.surface.background !== "rgba(0, 0, 0, 0)" &&
+              tailPresentation.surface.borderWidth > 0 &&
+              tailPresentation.tail.content !== "none" &&
+              tailPresentation.tail.background === "rgb(90, 71, 133)" &&
+              tailPresentation.tail.clipPath ===
+                "polygon(0px 65%, 100% 0px, 100% 100%)" &&
+              tailPresentation.tail.width === 12 &&
+              tailPresentation.tail.height === 11 &&
+              tailPresentation.tail.left === -1 &&
+              tailPresentation.tail.zIndex < tailPresentation.surface.zIndex,
+            `${width}x${height} tablet speech tail is the approved exterior left triangle behind its opaque rim`,
           );
         }
         assert.deepEqual(
@@ -6088,6 +6082,161 @@ test("SC06: desktop challenge cat preserves a loaded square silhouette inside it
     );
 });
 
+test("SC06: approved desktop question and retry tails attach at the bubble rim", async () => {
+  await withSession(
+    { width: 1440, height: 900 },
+    { random: 0.041 },
+    async ({ page }) => {
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      const hint = await sc06Dialog(page);
+      const vignette = hint.dialog.locator('aside[aria-hidden="true"]');
+      const question = await exact(
+        vignette.getByText("Solve this and I’ll give you a hint!", { exact: true }),
+        "desktop decorative question speech",
+      );
+      const readPresentation = async (bubble) =>
+        await bubble.evaluate((element) => {
+          const style = getComputedStyle(element);
+          const surface = getComputedStyle(element, "::before");
+          const tail = getComputedStyle(element, "::after");
+          const box = element.getBoundingClientRect();
+          return {
+            box: { x: box.x, y: box.y, width: box.width, height: box.height },
+            body: {
+              borderWidth: style.borderWidth,
+              fontSize: style.fontSize,
+              height: style.height,
+              padding: style.padding,
+              width: style.width,
+            },
+            surface: {
+              background: surface.backgroundColor,
+              borderColor: surface.borderTopColor,
+              borderWidth: surface.borderTopWidth,
+              content: surface.content,
+              zIndex: Number.parseInt(surface.zIndex, 10),
+            },
+            tail: {
+              background: tail.backgroundColor,
+              clipPath: tail.clipPath,
+              content: tail.content,
+              height: tail.height,
+              left: tail.left,
+              top: tail.top,
+              transform: tail.transform,
+              width: tail.width,
+              zIndex: Number.parseInt(tail.zIndex, 10),
+            },
+          };
+        });
+
+      const questionPresentation = await readPresentation(question);
+      assert.deepEqual(
+        questionPresentation.tail,
+        {
+          background: "rgb(90, 71, 133)",
+          clipPath: "polygon(0px 65%, 100% 0px, 100% 100%)",
+          content: '""',
+          height: "14.6562px",
+          left: "50.4531px",
+          top: "97.75px",
+          transform: "matrix(0.587785, -0.809017, 0.809017, 0.587785, -16, -7.32812)",
+          width: "16px",
+          zIndex: -2,
+        },
+        "desktop question speech uses the approved 16px exterior down-left rim triangle",
+      );
+      assert.deepEqual(
+        questionPresentation.surface,
+        {
+          background: "rgb(255, 253, 248)",
+          borderColor: "rgb(90, 71, 133)",
+          borderWidth: "3px",
+          content: '""',
+          zIndex: -1,
+        },
+        "desktop question speech places the opaque outlined surface over the triangle interior",
+      );
+
+      await hint.answer.fill("not-a-number");
+      await hint.check.click();
+      const retry = await exact(
+        vignette.getByText("Try again — you’ve got this!", { exact: true }),
+        "desktop decorative retry speech",
+      );
+      const retryPresentation = await readPresentation(retry);
+      assert.deepEqual(
+        retryPresentation.body,
+        questionPresentation.body,
+        "desktop retry keeps the question speech body unchanged",
+      );
+      approximatelyEqual(
+        retryPresentation.box.x - questionPresentation.box.x,
+        2,
+        0.05,
+        "desktop retry remains two rendered pixels right of the moved question speech",
+      );
+      for (const [property, expected] of Object.entries({
+        y: questionPresentation.box.y,
+        width: questionPresentation.box.width,
+        height: questionPresentation.box.height,
+      }))
+        approximatelyEqual(
+          retryPresentation.box[property],
+          expected,
+          0.05,
+          `desktop retry preserves its question speech ${property}`,
+        );
+      assert.deepEqual(
+        (({ top, ...tail }) => tail)(retryPresentation.tail),
+        (({ top, ...tail }) => tail)(questionPresentation.tail),
+        "desktop retry shares the approved question-tail construction",
+      );
+      assert.deepEqual(
+        retryPresentation.surface,
+        questionPresentation.surface,
+        "desktop retry preserves the question's opaque rim masking layer",
+      );
+      const answer = solveVisibleQuestion(
+        await hint.dialog.locator("label[for='hint-answer']").innerText(),
+      );
+      await hint.answer.fill(String(answer));
+      await hint.check.click();
+      await page.waitForFunction(
+        (element) => element.dataset.successPresentation === "true",
+        await hint.dialog.elementHandle(),
+      );
+      const success = await exact(
+        vignette.getByText("Great job! You earned a hint!", { exact: true }),
+        "desktop decorative success speech",
+      );
+      const successPresentation = await readPresentation(success);
+      approximatelyEqual(
+        questionPresentation.box.x - successPresentation.box.x,
+        10,
+        0.05,
+        "desktop initial question speech shifts the approved ten rendered pixels right while success stays fixed",
+      );
+      assert.deepEqual(
+        (({ top, ...tail }) => tail)(successPresentation.tail),
+        (({ top, ...tail }) => tail)(questionPresentation.tail),
+        "desktop success shares the approved exterior rim-tail construction",
+      );
+      assert.deepEqual(
+        successPresentation.surface,
+        questionPresentation.surface,
+        "desktop success keeps the opaque outlined surface that hides the triangle inside the bubble",
+      );
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+        true,
+        "desktop question and retry tails do not create horizontal overflow",
+      );
+    },
+  );
+});
+
 test("SC06: wrong-answer feedback never shifts the responsive challenge layout while retry is cleared", async () => {
   const narrowConcernedAsset = "hint-popup-cat-encouraging-1448.png";
   const desktopConcernedAsset = "hint-popup-cat-concerned-640.png";
@@ -6589,7 +6738,7 @@ test("SC06: Random operator creates one fresh deterministic challenge and follow
   );
 });
 
-test("SC06: correct answer immediately replaces the cat behind one full 2,500ms fade, then starts the reward lifetime", async () => {
+test("SC06: correct answer immediately replaces the cat behind one full 200ms fade, then starts the reward lifetime", async () => {
   await withSession(
     { width: 1440, height: 900 },
     { random: 0.041, clockStart: fixedClockStart },
@@ -6690,6 +6839,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
         },
         "the first public pending-success state removes the normal cat and prompt while keeping one happy success vignette",
       );
+      await waitForRenderedCatSource(page, "hint-popup-cat-happy-640.png");
       assert.equal(
         (await sc06RenderedReferences(hint.dialog)).some((reference) =>
           reference.source.includes("hint-popup-cat-happy-640.png"),
@@ -6743,16 +6893,16 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       const initialOpacity = await hint.dialog.evaluate(
         (element) => getComputedStyle(element).opacity,
       );
-      await page.clock.runFor(2499);
+      await page.clock.runFor(199);
       assert.equal(
         await hint.dialog.isVisible(),
         true,
-        "dialog remains modal through 2,499ms of fade",
+        "dialog remains modal through 199ms of fade",
       );
       assert.equal(
         await backdrop.isVisible(),
         true,
-        "presentation backdrop remains active through 2,499ms of the success fade",
+        "presentation backdrop remains active through 199ms of the success fade",
       );
       assert.ok(
         Number(
@@ -6767,7 +6917,7 @@ test("SC06: correct answer immediately replaces the cat behind one full 2,500ms 
       assert.equal(
         await backdrop.count(),
         0,
-        "presentation backdrop unmounts with the dialog at 2,500ms",
+        "presentation backdrop unmounts with the dialog at 200ms",
       );
       assert.equal(
         await page.evaluate(() => document.activeElement?.textContent?.trim()),
@@ -7310,7 +7460,7 @@ test("SC06: every rendered decorative cat image disables native browser dragging
         hint.dialog.getByText("Great job! You earned a hint!", { exact: true }),
         "committed success copy before the reward handoff",
       );
-      await page.clock.runFor(2500);
+      await page.clock.runFor(200);
       await hint.dialog.waitFor({ state: "hidden" });
       const reward = await exact(
         page.getByLabel("New hint reward", { exact: true }),
@@ -7385,7 +7535,7 @@ test("SC06: every rendered ordinary-popup image suppresses selection and native 
   );
 });
 
-test("SC06: Escape can finish success early, while reduced motion keeps the success frame static for the same 2,500ms interval", async () => {
+test("SC06: Escape can finish success early, while reduced motion keeps the success frame static for the same 200ms interval", async () => {
   for (const reduced of [false, true])
     await withSession(
       { width: 390, height: 844 },
@@ -7415,7 +7565,7 @@ test("SC06: Escape can finish success early, while reduced motion keeps the succ
           (element) => getComputedStyle(element).opacity,
         );
         if (reduced) {
-          await page.clock.runFor(2499);
+          await page.clock.runFor(199);
           assert.equal(
             await hint.dialog.evaluate(
               (element) => getComputedStyle(element).opacity,
@@ -7437,11 +7587,13 @@ test("SC06: Escape can finish success early, while reduced motion keeps the succ
     );
 });
 
-test("SC06: reward replaces the normal cat without shrinking its safe-top anchor or covering protected game content", async () => {
+test("SC06: reward centers the cat on the closed safe without covering protected game content", async () => {
   for (const [width, height] of [
     [1440, 900],
-    [1024, 768],
+    [768, 1024],
+    [508, 1111],
     [390, 844],
+    [844, 390],
   ])
     await withSession(
       { width, height },
@@ -7530,8 +7682,14 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
         const safeGap = safeDocument.y -
           (rewardEnvelopeDocument.y + rewardEnvelopeDocument.height);
         assert.ok(
-          safeGap >= -28 && safeGap <= 8,
+          safeGap >= -16 && safeGap <= 8,
           `${width}x${height} lying reward visibly rests across the painted safe edge: ${safeGap}px`,
+        );
+        approximatelyEqual(
+          rewardEnvelopeDocument.x + rewardEnvelopeDocument.width / 2,
+          safeDocument.x + safeDocument.width / 2,
+          3,
+          `${width}x${height} reward cat remains centered on the closed safe independently of its bubble`,
         );
         const factBubble = await exact(
           reward.locator("p"),
@@ -7578,28 +7736,114 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             comic.tailHeight > 0,
           `${width}x${height} reward fact uses a rounded comic dialog bubble with visible tail`,
         );
-        const horizontalGap = bubbleDocument.x - (rewardEnvelopeDocument.x + rewardEnvelopeDocument.width);
-        const verticalOverlap = Math.max(
+        const rewardTail = await factBubble.evaluate((element) => {
+          const bubble = element.getBoundingClientRect();
+          const bubbleStyle = getComputedStyle(element);
+          const tail = getComputedStyle(element, "::after");
+          const width = Number.parseFloat(tail.width);
+          const height = Number.parseFloat(tail.height);
+          const borders = {
+            left: Number.parseFloat(bubbleStyle.borderLeftWidth),
+            top: Number.parseFloat(bubbleStyle.borderTopWidth),
+            width:
+              bubble.width -
+              Number.parseFloat(bubbleStyle.borderLeftWidth) -
+              Number.parseFloat(bubbleStyle.borderRightWidth),
+            height:
+              bubble.height -
+              Number.parseFloat(bubbleStyle.borderTopWidth) -
+              Number.parseFloat(bubbleStyle.borderBottomWidth),
+          };
+          const resolveInset = (value, dimension) =>
+            value.endsWith("%")
+              ? Number.parseFloat(value) * dimension / 100
+              : Number.parseFloat(value);
+          const origin = tail.transformOrigin.split(" ").map(Number.parseFloat);
+          const matrix = tail.transform === "none"
+            ? new DOMMatrixReadOnly()
+            : new DOMMatrixReadOnly(tail.transform);
+          const offset = {
+            x:
+              bubble.x +
+              borders.left +
+              resolveInset(tail.left, borders.width),
+            y:
+              bubble.y +
+              borders.top +
+              resolveInset(tail.top, borders.height),
+          };
+          const vertices = [
+            [0, height * 0.65],
+            [width, 0],
+            [width, height],
+          ].map(([x, y]) => {
+            const point = matrix.transformPoint(
+              new DOMPoint(x - origin[0], y - origin[1]),
+            );
+            return {
+              x: offset.x + origin[0] + point.x,
+              y: offset.y + origin[1] + point.y,
+            };
+          });
+          return {
+            clipPath: tail.clipPath.replaceAll(" ", ""),
+            height,
+            width,
+            bounds: {
+              x: Math.min(...vertices.map((vertex) => vertex.x)),
+              y: Math.min(...vertices.map((vertex) => vertex.y)),
+              width:
+                Math.max(...vertices.map((vertex) => vertex.x)) -
+                Math.min(...vertices.map((vertex) => vertex.x)),
+              height:
+                Math.max(...vertices.map((vertex) => vertex.y)) -
+                Math.min(...vertices.map((vertex) => vertex.y)),
+            },
+          };
+        });
+        assert.equal(
+          rewardTail.clipPath,
+          "polygon(0px65%,100%0px,100%100%)",
+          `${width}x${height} reward tail keeps the approved unified triangular silhouette`,
+        );
+        approximatelyEqual(
+          rewardTail.width,
+          12,
+          0.01,
+          `${width}x${height} reward tail keeps the approved width`,
+        );
+        approximatelyEqual(
+          rewardTail.height,
+          11,
+          0.01,
+          `${width}x${height} reward tail keeps the approved height`,
+        );
+        const rewardTailDocument = {
+          ...rewardTail.bounds,
+          y: rewardTail.bounds.y + postDialogScrollY,
+        };
+        const tailGapX = Math.max(
+          rewardEnvelopeDocument.x -
+            (rewardTailDocument.x + rewardTailDocument.width),
+          rewardTailDocument.x -
+            (rewardEnvelopeDocument.x + rewardEnvelopeDocument.width),
           0,
-          Math.min(bubbleDocument.y + bubbleDocument.height, rewardEnvelopeDocument.y + rewardEnvelopeDocument.height) -
-            Math.max(bubbleDocument.y, rewardEnvelopeDocument.y),
+        );
+        const tailGapY = Math.max(
+          rewardEnvelopeDocument.y -
+            (rewardTailDocument.y + rewardTailDocument.height),
+          rewardTailDocument.y -
+            (rewardEnvelopeDocument.y + rewardEnvelopeDocument.height),
+          0,
+        );
+        assert.ok(
+          Math.hypot(tailGapX, tailGapY) >= 2,
+          `${width}x${height} reward-tail bounds keep at least 2px clear of painted cat alpha: ${tailGapX}/${tailGapY}`,
         );
         assert.equal(
           intersects(bubbleDocument, rewardEnvelopeDocument, 0),
           false,
           `${width}x${height} reward bubble does not intersect its painted cat alpha`,
-        );
-        assert.ok(
-          horizontalGap >= 0,
-          `${width}x${height} reward bubble remains to the right of the painted cat alpha`,
-        );
-        assert.ok(
-          horizontalGap <= Math.max(32, rewardEnvelopeDocument.width * .25),
-          `${width}x${height} reward bubble horizontal gap ${horizontalGap}px remains adjacent to cat alpha`,
-        );
-        assert.ok(
-          verticalOverlap >= Math.min(bubbleDocument.height, rewardEnvelopeDocument.height) * .25,
-          `${width}x${height} reward bubble vertically overlaps cat alpha by ${verticalOverlap}px`,
         );
         for (const [name, protectedBox] of Object.entries({
           title: titleAfterDocument,
@@ -7613,7 +7857,7 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
             `${width}x${height} elevated reward bubble avoids ${name}: bubble=${JSON.stringify(bubbleDocument)}, protected=${JSON.stringify(protectedBox)}`,
           );
         await page.evaluate(() => scrollTo(0, 0));
-        const [titleRewardViewport, subtitleRewardViewport] = await Promise.all(
+        const [titleRewardViewport, subtitleRewardViewport, rewardAtScrollTop, safeAtScrollTop] = await Promise.all(
           [
             page
               .getByRole("heading", {
@@ -7622,6 +7866,8 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
               })
               .boundingBox(),
             controls.instruction.boundingBox(),
+            visibleAlphaBounds(page, rewardComposite),
+            visibleAlphaBounds(page, safe),
           ],
         );
         for (const [state, title, subtitle] of [
@@ -7647,6 +7893,24 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
           2,
           `${width}x${height} title does not jump between normal and reward states`,
         );
+        if (width === 768 && height === 1024) {
+          approximatelyEqual(rewardAtScrollTop.x, 279.4, 3, "768x1024 approved reward cat painted x position");
+          approximatelyEqual(rewardAtScrollTop.y, 193.4, 3, "768x1024 approved reward cat painted y position");
+          approximatelyEqual(rewardAtScrollTop.width, 219.9, 3, "768x1024 approved reward cat painted width");
+          approximatelyEqual(rewardAtScrollTop.height, 141.9, 3, "768x1024 approved reward cat painted height");
+          approximatelyEqual(
+            paintedCatSafeGap(rewardAtScrollTop, safeAtScrollTop),
+            -11.9,
+            3,
+            "768x1024 approved reward cat overlaps the painted safe lid by about twelve pixels",
+          );
+          approximatelyEqual(
+            rewardAtScrollTop.y - (subtitleRewardViewport.y + subtitleRewardViewport.height),
+            2.2,
+            2,
+            "768x1024 reward cat keeps the approved close subtitle clearance without overlap",
+          );
+        }
         await page.clock.runFor(4999 - closeFrameMs);
         assert.equal(
           await reward.isVisible(),
@@ -7664,12 +7928,13 @@ test("SC06: reward replaces the normal cat without shrinking its safe-top anchor
     );
 });
 
-test("SC06: dense narrow widths retain one continuous safe-top anchor for the ordinary and reward cats", async () => {
+test("SC06: dense narrow widths retain ordinary safe-top contact and centered reward placement", async () => {
   const widths = [
-    600, 575, 550, 530, 529, 520, 480, 420, 391, 390, 350, 321, 320,
+    600, 575, 550, 530, 529, 520, 480, 421, 420, 391, 390, 350, 321, 320,
   ];
   const idleAnchors = [];
   const rewardAnchors = [];
+  const rewardBubbles = [];
   const inspectAnchor = async (
     page,
     label,
@@ -7701,10 +7966,20 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
         `${width}x${height} ${label} ${name} renders`,
       );
     const anchor = paintedCatSafeGap(catAlpha, safeAlpha);
+    const contact = label === "reward"
+      ? { minimum: -16, maximum: 8, description: "reward contact" }
+      : { minimum: -24, maximum: -8, description: "compact lowered resting contact" };
     assert.ok(
-      anchor >= -8 && anchor <= 8,
-      `${width}x${height} ${label} painted cat-to-safe gap ${anchor}px remains in the approved -8..8px contact band`,
+      anchor >= contact.minimum && anchor <= contact.maximum,
+      `${width}x${height} ${label} painted cat-to-safe gap ${anchor}px stays in the approved ${contact.description} band`,
     );
+    if (label === "reward")
+      approximatelyEqual(
+        catAlpha.x + catAlpha.width / 2,
+        safeAlpha.x + safeAlpha.width / 2,
+        3,
+        `${width}x${height} reward cat remains centered on the painted safe`,
+      );
     const titleBox = await page
       .getByRole("heading", { name: "Guess the number", exact: true })
       .boundingBox();
@@ -7791,6 +8066,24 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
             919,
           ),
         });
+        const factBubble = await exact(
+          reward.locator("p"),
+          `${width}x919 reward fact bubble`,
+        );
+        rewardBubbles.push({
+          viewportWidth: width,
+          ...(await factBubble.evaluate((element) => {
+            const box = element.getBoundingClientRect();
+            const tail = getComputedStyle(element, "::after");
+            return {
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+              tail: { clipPath: tail.clipPath, transform: tail.transform },
+            };
+          })),
+        });
       },
     );
   for (const anchors of [idleAnchors, rewardAnchors]) {
@@ -7801,13 +8094,18 @@ test("SC06: dense narrow widths retain one continuous safe-top anchor for the or
           `${anchors[index - 1].width}/${anchors[index].width}px ${anchors === idleAnchors ? "idle" : "reward"} safe-top anchor has no breakpoint jump above 2px`,
         );
   }
-  for (const { width, anchor } of rewardAnchors)
-    approximatelyEqual(
-      anchor,
-      idleAnchors.find((sample) => sample.width === width).anchor,
-      2,
-      `${width}px reward retains the ordinary cat safe-top anchor`,
+  const bubble420 = rewardBubbles.find((sample) => sample.viewportWidth === 420);
+  const bubble421 = rewardBubbles.find((sample) => sample.viewportWidth === 421);
+  for (const property of ["x", "y", "width", "height"])
+    assert.ok(
+      Math.abs(bubble420[property] - bubble421[property]) <= 2,
+      `420/421px reward bubble ${property} has no one-pixel breakpoint jump above 2px: ${bubble420[property]}/${bubble421[property]}`,
     );
+  assert.deepEqual(
+    bubble420.tail,
+    bubble421.tail,
+    "420/421px reward bubble retains the same tail direction",
+  );
 });
 
 test("SCV05: short narrow modal keeps card-local overflow and does not create page scrolling", async () => {
@@ -8050,10 +8348,12 @@ test("SCV05: compact hint card is bounded, locally scrollable, and preserves its
     );
 });
 
-test("SCV05: wide Show hint card projects the answer input to the calculation eye anchor", async () => {
+test("SCV05: wide Show hint card stays centered while retaining the calculation eye line", async () => {
   for (const [width, height] of [
     [1440, 900],
     [1800, 1230],
+    [1950, 1111],
+    [2560, 1440],
     [1280, 1100],
     [1074, 1134],
   ])
@@ -8073,15 +8373,14 @@ test("SCV05: wide Show hint card projects the answer input to the calculation ey
         ]);
         assert.ok(shellBox && answerBox && subtitleBox, `${width}x${height} exposes shell, answer, and subtitle geometry`);
         const gutter = 24;
-        const relativeInputX = answerBox.x + answerBox.width / 2 - shellBox.x;
         const relativeInputY = answerBox.y + answerBox.height / 2 - shellBox.y;
-        const expectedX = Math.min(Math.max(width * 0.5 - relativeInputX, gutter), width - gutter - shellBox.width);
         const headerBottom = Math.ceil(subtitleBox.y + subtitleBox.height);
         const minY = Math.max(gutter, headerBottom);
         const expectedY = Math.min(Math.max(height * 0.45 - relativeInputY, minY), height - gutter - shellBox.height);
         assert.ok(
-          Math.abs(shellBox.x - expectedX) <= 3 && Math.abs(shellBox.y - expectedY) <= 3,
-          `${width}x${height} projects the actual answer-input center to the eye anchor`,
+          Math.abs(shellBox.x + shellBox.width / 2 - width / 2) <= 1 &&
+            Math.abs(shellBox.y - expectedY) <= 3,
+          `${width}x${height} centers the whole card while retaining the calculation eye line`,
         );
         assert.ok(
           shellBox.x >= gutter && shellBox.y >= gutter &&
@@ -8324,6 +8623,19 @@ test("SCV03: Give up centers its actions and exposes only the public arithmetic 
           const expectedAnswer = solveVisibleQuestion(
             await hint.dialog.locator("label[for='hint-answer']").innerText(),
           );
+          const originalSpeechPresentation = width > 600 && route === "/" ? await hint.dialog
+            .locator("aside[aria-hidden='true'] > div")
+            .first()
+            .evaluate((element) => {
+              const style = getComputedStyle(element);
+              return {
+                width: style.width,
+                maxWidth: style.maxWidth,
+                padding: style.padding,
+                fontSize: style.fontSize,
+                borderWidth: style.borderWidth,
+              };
+            }) : null;
           const enabledCheckStyle = route === "/" ? await hint.check.evaluate((button) => {
               const style = getComputedStyle(button);
               return [style.backgroundColor, style.backgroundImage, style.color, style.opacity, style.filter].join("|");
@@ -8375,23 +8687,92 @@ test("SCV03: Give up centers its actions and exposes only the public arithmetic 
                 hint.dialog.locator('picture:has(source[srcset*="hint-popup-cat-sad-640.png"])'),
                 "SCV03 desktop sad dialog cat picture",
               );
-              const [bubbleBox, catAlpha, tail] = await Promise.all([
+              const [bubbleBox, dialogBox, catAlpha, speechPresentation, tail] = await Promise.all([
                 bubble.boundingBox(),
+                hint.dialog.boundingBox(),
                 visibleAlphaBounds(page, sadCatPicture),
                 bubble.evaluate((element) => {
+                  const style = getComputedStyle(element);
+                  return {
+                    width: style.width,
+                    maxWidth: style.maxWidth,
+                    padding: style.padding,
+                    fontSize: style.fontSize,
+                    borderWidth: style.borderWidth,
+                  };
+                }),
+                bubble.evaluate((element) => {
+                  const surface = getComputedStyle(element, "::before");
                   const after = getComputedStyle(element, "::after");
-                  return { content: after.content, width: Number.parseFloat(after.width), height: Number.parseFloat(after.height), borderWidth: Number.parseFloat(after.borderTopWidth) };
+                  return {
+                    surface: {
+                      background: surface.backgroundColor,
+                      borderColor: surface.borderTopColor,
+                      borderWidth: surface.borderTopWidth,
+                      content: surface.content,
+                      zIndex: Number.parseInt(surface.zIndex, 10),
+                    },
+                    triangle: {
+                      background: after.backgroundColor,
+                      clipPath: after.clipPath,
+                      content: after.content,
+                      height: Number.parseFloat(after.height),
+                      top: Number.parseFloat(after.top),
+                      width: Number.parseFloat(after.width),
+                      zIndex: Number.parseInt(after.zIndex, 10),
+                    },
+                  };
                 }),
               ]);
-              assert.ok(bubbleBox, "SCV03 desktop abandoned speech has rendered geometry");
+              assert.ok(bubbleBox && dialogBox, "SCV03 desktop abandoned speech has rendered geometry");
+              assert.deepEqual(speechPresentation, originalSpeechPresentation, "SCV03 desktop abandoned speech preserves its original size and type");
               assert.equal(intersects(bubbleBox, catAlpha), false, "SCV03 desktop abandoned speech and sad cat alpha do not overlap");
               assert.ok(
-                (Math.min(bubbleBox.y + bubbleBox.height, catAlpha.y + catAlpha.height) - Math.max(bubbleBox.y, catAlpha.y)) / Math.min(bubbleBox.height, catAlpha.height) >= 0.25,
-                "SCV03 desktop abandoned speech and sad cat alpha overlap vertically by at least one quarter of the smaller height",
+                bubbleBox.x >= dialogBox.x + 12 &&
+                  bubbleBox.y >= dialogBox.y + 12 &&
+                  bubbleBox.x + bubbleBox.width <= dialogBox.x + dialogBox.width - 12 &&
+                  bubbleBox.y + bubbleBox.height <= dialogBox.y + dialogBox.height - 12,
+                "SCV03 desktop abandoned speech stays within the drawn dialog frame",
               );
-              const horizontalGap = Math.max(bubbleBox.x, catAlpha.x) - Math.min(bubbleBox.x + bubbleBox.width, catAlpha.x + catAlpha.width);
-              assert.ok(horizontalGap <= Math.max(24, catAlpha.width * 0.2), "SCV03 desktop abandoned speech stays attached to the sad cat alpha");
-              assert.ok(tail.content !== "none" && (tail.width > 0 || tail.height > 0 || tail.borderWidth > 0), "SCV03 desktop abandoned speech retains a nonempty tail");
+              assert.ok(
+                catAlpha.y - (bubbleBox.y + bubbleBox.height) >= 0 &&
+                  catAlpha.y - (bubbleBox.y + bubbleBox.height) <= Math.max(24, catAlpha.height * 0.15),
+                "SCV03 desktop abandoned speech sits just above the sad cat head",
+              );
+              const horizontalOverlap = Math.min(bubbleBox.x + bubbleBox.width, catAlpha.x + catAlpha.width) - Math.max(bubbleBox.x, catAlpha.x);
+              assert.ok(
+                horizontalOverlap >= Math.min(bubbleBox.width, catAlpha.width) * 0.25 &&
+                  bubbleBox.x + bubbleBox.width >= catAlpha.x + catAlpha.width,
+                "SCV03 desktop abandoned speech aligns with the sad cat's right side",
+              );
+              assert.deepEqual(
+                {
+                  surface: tail.surface,
+                  triangle: (({ top, ...triangle }) => triangle)(tail.triangle),
+                },
+                {
+                  surface: {
+                    background: "rgb(255, 253, 248)",
+                    borderColor: "rgb(90, 71, 133)",
+                    borderWidth: "3px",
+                    content: '""',
+                    zIndex: -1,
+                  },
+                  triangle: {
+                    background: "rgb(90, 71, 133)",
+                    clipPath: "polygon(0px 65%, 100% 0px, 100% 100%)",
+                    content: '""',
+                    height: 14.6562,
+                    width: 16,
+                    zIndex: -2,
+                  },
+                },
+                "SCV03 desktop abandoned speech shares the exterior masked 16px rim triangle",
+              );
+              assert.ok(
+                tail.triangle.top > 0,
+                "SCV03 desktop abandoned triangle remains anchored on the speech rim",
+              );
             }
           }
           if (route === "/") {

@@ -143,10 +143,31 @@
   .prompt { top: 63px; }
 }
 
+@media (min-width: 1280px) and (height > 600px) {
+  .catContainer {
+    --resting-cat-y: 20.5px;
+  }
+}
+
+@media (height > 600px) {
+  .catContainer[data-visual-mode="LONG_IDLE"] .art img,
+  .catContainer[data-visual-mode="PET_MISSED"] .art img,
+  .catContainer[data-visual-mode="PLAYING"] .art img,
+  .catContainer[data-visual-mode="WRONG"] .art img,
+  .catContainer[data-visual-mode="PET_PROMPT"] .art img,
+  .catContainer[data-visual-mode="PET_NORMAL"] .art img,
+  .catContainer[data-visual-mode="PET_NORMAL_LEAVE_GRACE"] .art img,
+  .catContainer[data-visual-mode="PET_PROMPT_SUCCESS"] .art img,
+  .catContainer[data-visual-mode="HINT_ATTENTION"] .art img,
+  .catContainer[data-visual-mode="STORED_HINTS"] .art img {
+    transform: translateY(var(--resting-cat-y, 16px));
+  }
+}
+
 @media (min-width: 1280px) and (height > 800px) {
   .catContainer[data-presentation-mode="PET_PROMPT"] .art img {
     /* Scale around the painted paws so the prompt clears the header and the cat stays on the safe. */
-    transform: scale(0.9);
+    transform: translateY(var(--resting-cat-y, 16px)) scale(0.9);
     transform-origin: center 83%;
   }
 }
@@ -159,7 +180,7 @@
 
 @media (min-width: 1280px) and (min-height: 900px) {
   .catContainer[data-visual-mode="SURRENDERED"] .art img {
-    transform: scale(0.97);
+    transform: translateY(16px) scale(1.07);
   }
 }
 
