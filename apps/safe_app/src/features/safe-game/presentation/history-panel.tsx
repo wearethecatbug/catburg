@@ -15,9 +15,22 @@ type Point = { left: number; top: number };
 type Rect = { bottom: number; left: number; right: number; top: number };
 
 type LaneRefs = {
+  anchorRef: RefObject<HTMLButtonElement | null>;
   characterEffectZoneRef: RefObject<HTMLDivElement | null>;
   headerZoneRef: RefObject<HTMLElement | null>;
   panelLaneRef: RefObject<HTMLDivElement | null>;
+};
+
+type HistoryPanelProps = {
+  attempts: number[];
+  anchorRef: RefObject<HTMLButtonElement | null>;
+  characterEffectZoneRef: RefObject<HTMLDivElement | null>;
+  headerZoneRef: RefObject<HTMLElement | null>;
+  panelLaneRef: RefObject<HTMLDivElement | null>;
+  externalPanelRef?: RefObject<HTMLDivElement | null>;
+  covered?: boolean;
+  onClose: () => void;
+  onActivity: () => void;
 };
 
 function getOffsetParentRect(panel: HTMLDivElement) {
@@ -25,6 +38,16 @@ function getOffsetParentRect(panel: HTMLDivElement) {
   return offsetParent instanceof HTMLElement
     ? offsetParent.getBoundingClientRect()
     : document.documentElement.getBoundingClientRect();
+}
+
+function renderedScale(panel: HTMLDivElement) {
+  const offsetParent = panel.offsetParent;
+  if (!(offsetParent instanceof HTMLElement)) return { x: 1, y: 1 };
+  const rect = offsetParent.getBoundingClientRect();
+  return {
+    x: rect.width / offsetParent.offsetWidth || 1,
+    y: rect.height / offsetParent.offsetHeight || 1,
+  };
 }
 
 function activeEffectExclusion(
@@ -48,7 +71,7 @@ function laneBounds(laneRefs: LaneRefs): Rect | null {
   if (!lane) return null;
   const laneRect = lane.getBoundingClientRect();
   const headerBottom = laneRefs.headerZoneRef.current?.getBoundingClientRect().bottom ?? 0;
-  let top = Math.max(laneRect.top + 8, headerBottom + 8);
+  let top = Math.max(8, laneRect.top + 8, headerBottom + 8);
   const exclusion = activeEffectExclusion(laneRefs.characterEffectZoneRef.current);
   if (
     exclusion &&
@@ -58,35 +81,33 @@ function laneBounds(laneRefs: LaneRefs): Rect | null {
     top = Math.max(top, exclusion.bottom + 8);
   }
   return {
-    bottom: laneRect.bottom,
-    left: laneRect.left + 8,
-    right: laneRect.right - 8,
+    bottom: Math.min(window.innerHeight - 8, laneRect.bottom),
+    left: Math.max(8, laneRect.left + 8),
+    right: Math.min(
+      window.innerWidth - 8,
+      Math.max(
+        laneRect.right - 8,
+        laneRefs.anchorRef.current?.getBoundingClientRect().right ?? 0,
+      ),
+    ),
     top,
   };
 }
 
 function clamp(point: Point, panel: HTMLDivElement, laneRefs: LaneRefs) {
-  // CSS offsets are relative to the containing block, while bounds remain viewport-relative.
-  const width = panel.offsetWidth;
-  const height = panel.offsetHeight;
+  // CSS offsets are unscaled; rendered bounds are viewport-relative.
+  const rect = panel.getBoundingClientRect();
+  const scale = renderedScale(panel);
   const parentRect = getOffsetParentRect(panel);
   const bounds = laneBounds(laneRefs);
   if (!bounds) return point;
+  const minLeft = (bounds.left - parentRect.left) / scale.x;
+  const maxLeft = (bounds.right - parentRect.left - rect.width) / scale.x;
+  const minTop = (bounds.top - parentRect.top) / scale.y;
+  const maxTop = (bounds.bottom - parentRect.top - rect.height) / scale.y;
   return {
-    left: Math.max(
-      bounds.left - parentRect.left,
-      Math.min(
-        point.left,
-        bounds.right - width - parentRect.left,
-      ),
-    ),
-    top: Math.max(
-      bounds.top - parentRect.top,
-      Math.min(
-        point.top,
-        bounds.bottom - height - parentRect.top,
-      ),
-    ),
+    left: Math.max(minLeft, Math.min(point.left, Math.max(minLeft, maxLeft))),
+    top: Math.max(minTop, Math.min(point.top, Math.max(minTop, maxTop))),
   };
 }
 
@@ -96,23 +117,15 @@ export function HistoryPanel({
   characterEffectZoneRef,
   headerZoneRef,
   panelLaneRef,
+  externalPanelRef,
+  covered = false,
   onClose,
   onActivity,
-}: {
-  attempts: number[];
-  anchorRef: RefObject<HTMLButtonElement | null>;
-  characterEffectZoneRef: RefObject<HTMLDivElement | null>;
-  headerZoneRef: RefObject<HTMLElement | null>;
-  panelLaneRef: RefObject<HTMLDivElement | null>;
-  onClose: () => void;
-  onActivity: () => void;
-}) {
+}: HistoryPanelProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const dragHandleRef = useRef<HTMLButtonElement | null>(null);
   const activityFrameRef = useRef<number | null>(null);
-  const revealFrameRef = useRef<number | null>(null);
-  const revealIncludesAnchorRef = useRef(false);
-  const initialRevealExecutedRef = useRef(false);
+  const hasMovedRef = useRef(false);
   const dragRef = useRef<{
     pointerId: number;
     origin: Point;
@@ -120,61 +133,48 @@ export function HistoryPanel({
   } | null>(null);
   const [position, setPosition] = useState<Point | null>(null);
   const laneRefs = useMemo(
-    () => ({ characterEffectZoneRef, headerZoneRef, panelLaneRef }),
-    [characterEffectZoneRef, headerZoneRef, panelLaneRef],
+    () => ({ anchorRef, characterEffectZoneRef, headerZoneRef, panelLaneRef }),
+    [anchorRef, characterEffectZoneRef, headerZoneRef, panelLaneRef],
+  );
+  const setPanelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      panelRef.current = node;
+      if (externalPanelRef) externalPanelRef.current = node;
+    },
+    [externalPanelRef],
   );
 
   const anchoredPosition = useCallback(() => {
-    // Initial placement follows the button in document space; later movement and resize stay
-    // panel-lane-clamped.
     const panel = panelRef.current;
     const parentRect = panel
       ? getOffsetParentRect(panel)
       : document.documentElement.getBoundingClientRect();
-    const buttonRect = anchorRef.current?.getBoundingClientRect();
+    const anchor = anchorRef.current;
+    const buttonRect = anchor?.getBoundingClientRect();
+    const panelRect = panel?.getBoundingClientRect();
+    const scale = panel ? renderedScale(panel) : { x: 1, y: 1 };
+    const bounds = laneBounds(laneRefs);
+    const gap = 8;
+    const belowFits =
+      buttonRect && panelRect && bounds
+        ? buttonRect.bottom + gap + panelRect.height <= bounds.bottom
+        : true;
+    let left = (buttonRect?.left ?? parentRect.left + 12) - parentRect.left;
+    let top = (buttonRect?.bottom ?? parentRect.top + 4) - parentRect.top + gap;
+    if (buttonRect && panelRect && !belowFits) {
+      left = (buttonRect.right - panelRect.width - parentRect.left) / scale.x;
+      top = (buttonRect.top - gap - panelRect.height - parentRect.top) / scale.y;
+      const menuRect = anchor?.closest("nav")?.getBoundingClientRect();
+      const renderedTop = parentRect.top + top * scale.y;
+      if (menuRect && renderedTop + panelRect.height > menuRect.top)
+        top = (menuRect.top - gap - panelRect.height - parentRect.top) / scale.y;
+      return { left, top };
+    }
     return {
-      left: (buttonRect?.left ?? parentRect.left + 12) - parentRect.left,
-      top: (buttonRect?.bottom ?? parentRect.top + 4) - parentRect.top + 8,
+      left: left / scale.x,
+      top: top / scale.y,
     };
-  }, [anchorRef]);
-
-  const scheduleVisibilityReconciliation = useCallback((includeAnchor: boolean) => {
-    revealIncludesAnchorRef.current ||= includeAnchor;
-    if (revealFrameRef.current !== null) return;
-    revealFrameRef.current = requestAnimationFrame(() => {
-      revealFrameRef.current = null;
-      const panel = panelRef.current;
-      const anchor = anchorRef.current;
-      if (!panel?.isConnected || !anchor?.isConnected) return;
-      const panelRect = panel.getBoundingClientRect();
-      const anchorRect = anchor.getBoundingClientRect();
-      const revealAnchor = revealIncludesAnchorRef.current;
-      revealIncludesAnchorRef.current = false;
-      const nearestOffset = (start: number, end: number, viewportSize: number) => {
-        if (start < 0) return start;
-        if (end > viewportSize) return end - viewportSize;
-        return 0;
-      };
-      const combinedWidth = Math.max(panelRect.right, anchorRect.right) - Math.min(panelRect.left, anchorRect.left);
-      const combinedHeight = Math.max(panelRect.bottom, anchorRect.bottom) - Math.min(panelRect.top, anchorRect.top);
-      const revealBoth =
-        revealAnchor &&
-        combinedWidth <= window.innerWidth &&
-        combinedHeight <= window.innerHeight;
-      const left = nearestOffset(
-        revealBoth ? Math.min(panelRect.left, anchorRect.left) : panelRect.left,
-        revealBoth ? Math.max(panelRect.right, anchorRect.right) : panelRect.right,
-        window.innerWidth,
-      );
-      const top = nearestOffset(
-        revealBoth ? Math.min(panelRect.top, anchorRect.top) : panelRect.top,
-        revealBoth ? Math.max(panelRect.bottom, anchorRect.bottom) : panelRect.bottom,
-        window.innerHeight,
-      );
-      if (left !== 0 || top !== 0) window.scrollBy({ left, top });
-      if (revealAnchor) initialRevealExecutedRef.current = true;
-    });
-  }, [anchorRef]);
+  }, [anchorRef, laneRefs]);
 
   useLayoutEffect(() => {
     const panel = panelRef.current;
@@ -184,31 +184,19 @@ export function HistoryPanel({
   useEffect(
     () => () => {
       if (activityFrameRef.current !== null) cancelAnimationFrame(activityFrameRef.current);
-      if (revealFrameRef.current !== null) {
-        cancelAnimationFrame(revealFrameRef.current);
-        revealFrameRef.current = null;
-      }
-      revealIncludesAnchorRef.current = false;
     },
     [],
   );
   useEffect(() => {
-    if (!position) return;
-    if (!initialRevealExecutedRef.current) {
-      scheduleVisibilityReconciliation(true);
-    } else if (!dragRef.current) {
-      scheduleVisibilityReconciliation(false);
-    }
-  }, [position, scheduleVisibilityReconciliation]);
-  useEffect(() => {
     const onResize = () => {
-      if (panelRef.current && position)
-        setPosition(clamp(position, panelRef.current, laneRefs));
-      scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
+      const panel = panelRef.current;
+      if (!panel) return;
+      const next = hasMovedRef.current && position ? position : anchoredPosition();
+      setPosition(clamp(next, panel, laneRefs));
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [laneRefs, position, scheduleVisibilityReconciliation]);
+  }, [anchoredPosition, laneRefs, position]);
 
   function move(next: Point) {
     if (panelRef.current) setPosition(clamp(next, panelRef.current, laneRefs));
@@ -222,7 +210,7 @@ export function HistoryPanel({
     });
   }
 
-  function onPointerDown(event: PointerEvent<HTMLButtonElement>) {
+  function onPointerDown(event: PointerEvent<HTMLElement>) {
     if (!panelRef.current) return;
     const start = position ?? anchoredPosition();
     dragRef.current = {
@@ -233,38 +221,34 @@ export function HistoryPanel({
     event.currentTarget.setPointerCapture(event.pointerId);
   }
 
-  function onPointerMove(event: PointerEvent<HTMLButtonElement>) {
+  function onPointerMove(event: PointerEvent<HTMLElement>) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
     scheduleActivity();
+    hasMovedRef.current = true;
+    const scale = renderedScale(panelRef.current!);
     move({
-      left: drag.start.left + event.clientX - drag.origin.left,
-      top: drag.start.top + event.clientY - drag.origin.top,
+      left: drag.start.left + (event.clientX - drag.origin.left) / scale.x,
+      top: drag.start.top + (event.clientY - drag.origin.top) / scale.y,
     });
   }
 
-  function endPointer(event: PointerEvent<HTMLButtonElement>) {
-    if (dragRef.current?.pointerId === event.pointerId) dragRef.current = null;
+  function endPointer(event: PointerEvent<HTMLElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
     if (activityFrameRef.current !== null) {
       cancelAnimationFrame(activityFrameRef.current);
       activityFrameRef.current = null;
     }
-    scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
   }
 
   function onMoveKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      onClose();
-      anchorRef.current?.focus({ preventScroll: true });
-      return;
-    }
     if (!panelRef.current) return;
     if (event.key === "Home") {
       event.preventDefault();
       const panel = panelRef.current;
       setPosition(panel ? clamp(anchoredPosition(), panel, laneRefs) : anchoredPosition());
-      scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
+      hasMovedRef.current = false;
       return;
     }
     const amount = event.shiftKey ? 1 : 10;
@@ -279,52 +263,79 @@ export function HistoryPanel({
     event.preventDefault();
     const current = position ?? anchoredPosition();
     onActivity();
+    hasMovedRef.current = true;
     move({ left: current.left + offset.left, top: current.top + offset.top });
-    scheduleVisibilityReconciliation(!initialRevealExecutedRef.current);
+  }
+
+  function closeHistory() {
+    onClose();
+    anchorRef.current?.focus({ preventScroll: true });
   }
 
   return (
     <section
-      ref={panelRef}
+      ref={setPanelRef}
       className={styles.logViewContainer}
-      style={position ? { left: position.left, top: position.top } : undefined}
+      style={{
+        ...(position ? { left: position.left, top: position.top } : {}),
+        visibility: covered ? "hidden" : undefined,
+      }}
       aria-label="History"
+      aria-hidden={covered || undefined}
+      inert={covered || undefined}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        closeHistory();
+      }}
     >
-      <div className={styles.header}>
+      <div
+        className={styles.header}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endPointer}
+        onPointerCancel={endPointer}
+      >
         <h2>History</h2>
         <button
           ref={dragHandleRef}
           className={styles.dragHandle}
           type="button"
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endPointer}
-          onPointerCancel={endPointer}
           onKeyDown={onMoveKeyDown}
           aria-label="Move History"
         >
+          <span className={styles.dotGroup} aria-hidden="true">
+            <span className={styles.dots} />
+            <svg
+              className={styles.paw}
+              aria-hidden="true"
+              focusable="false"
+              viewBox="0 0 82 89"
+            >
+              <ellipse cx="22" cy="43" rx="6.4" ry="7.4" />
+              <ellipse cx="35" cy="32" rx="6.5" ry="8.1" />
+              <ellipse cx="50" cy="32" rx="6.5" ry="8.1" />
+              <ellipse cx="62" cy="43" rx="6.4" ry="7.4" />
+              <path d="M42 41C36 41 31 46 28 51C24 57 24 62 28 65C32 68 37 63 42 63C47 63 51 68 55 65C61 61 58 54 54 49C50 44 46 41 42 41Z" />
+            </svg>
+            <span className={styles.dots} />
+          </span>
+        </button>
+        <button
+          className={styles.closeButton}
+          type="button"
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={closeHistory}
+          aria-label="Close History"
+        >
           <svg
             aria-hidden="true"
-            className={styles.gripIcon}
-            fill="currentColor"
             focusable="false"
             viewBox="0 0 24 24"
           >
-            <circle cx="8" cy="6" r="1.5" />
-            <circle cx="16" cy="6" r="1.5" />
-            <circle cx="8" cy="12" r="1.5" />
-            <circle cx="16" cy="12" r="1.5" />
-            <circle cx="8" cy="18" r="1.5" />
-            <circle cx="16" cy="18" r="1.5" />
+            <path d="m6 6 12 12M18 6 6 18" />
           </svg>
         </button>
-        <img
-          className={styles.paw}
-          src="/safe-cat/history-paw-192.webp"
-          alt=""
-          aria-hidden="true"
-          draggable={false}
-        />
       </div>
       <div className={styles.entries} aria-live="polite">
         {attempts.length === 0 ? (

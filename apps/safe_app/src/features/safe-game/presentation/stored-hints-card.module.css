@@ -1,21 +1,34 @@
 .card {
-  background: var(--sc-paper);
+  --stored-hints-preferred-height: 128px;
+  --stored-hints-surface: var(--sc-paper);
+  background: var(--stored-hints-surface);
   border: 2px solid var(--sc-border);
   border-radius: 16px;
   box-sizing: border-box;
+  caret-color: transparent;
   color: var(--sc-ink);
-  padding: 12px;
-  width: 280px;
+  cursor: default;
+  max-height: min(var(--stored-hints-preferred-height), calc(100svh - 24px));
+  overscroll-behavior-y: contain;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  scrollbar-gutter: stable;
+  width: 100%;
   z-index: 20;
 }
 .card h2 {
+  background: var(--stored-hints-surface);
   font:
     700 16px/1.2 ui-rounded,
     "Arial Rounded MT Bold",
     "Trebuchet MS",
     system-ui,
     sans-serif;
-  margin: 0 0 8px;
+  margin: 0 -12px 8px;
+  padding: 12px 12px 8px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 .card ul {
   font:
@@ -24,16 +37,17 @@
     "Segoe UI",
     sans-serif;
   margin: 0;
-  max-height: 72px;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   padding-left: 20px;
 }
 .card li + li {
   margin-top: 6px;
 }
-@media (max-width: 600px) {
-  .card {
-    max-width: calc(100vw - 24px);
-    width: min(296px, calc(100vw - 24px));
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    --stored-hints-surface: #fcf8ff;
+    border-color: #72558e;
+    box-shadow: 0 3px 10px rgb(114 85 142 / 18%);
   }
 }

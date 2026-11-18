@@ -3,8 +3,8 @@ const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { fixedClockStart } = require("./shared/runtime-context.cjs");
 const { expectHintLamp } = require("./shared/sc08-contract.cjs");
-const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectRewardReplacement, expectOrdinaryReturn, gameControls, openHintDialog, solveVisibleQuestion, visibleQuestionAnswer } = require("./shared/game-controls.cjs");
-const { intersects } = require("./shared/artwork-geometry.cjs");
+const { pauseClockAtCurrentTime, exact, ordinaryOwner, expectRewardReplacement, expectOrdinaryReturn, gameControls, openHintDialog, solveVisibleQuestion, visibleQuestionAnswer, approximatelyEqual } = require("./shared/game-controls.cjs");
+const { intersects, clickVisibleArtwork } = require("./shared/artwork-geometry.cjs");
 const { waitForStableVisualGeometry } = require("./shared/readiness.cjs");
 
 
@@ -106,7 +106,7 @@ test("abandonment earns no fact and a solved even question announces a fresh nex
       await hint.dialog
         .getByText("Great job! You earned a hint!", { exact: true })
         .waitFor({ state: "visible" });
-      await page.clock.runFor(2500);
+      await page.clock.runFor(200);
       await hint.dialog.waitFor({ state: "hidden" });
       await exact(
         page
@@ -284,6 +284,372 @@ test("SC05 D07-D09: lamp and stored-hint card are current-round only across hove
       );
       await controls.newRound.click();
       await expectHintLamp(controls.hint, false, "New game");
+    },
+  );
+});
+
+test("SC05 D09: physical card hover keeps Stored hints readable, highlights its sticky surface, and hides its text caret", async () => {
+  await withSession(
+    { width: 1175, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await pauseClockAtCurrentTime(page);
+      await controls.hint.evaluate((element) => element.blur());
+      await page.mouse.move(1, 1);
+
+      const stored = page.getByRole("region", { name: "Stored hints", exact: true });
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint has a measurable pointer target");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(150);
+      const card = await exact(stored, "pointer-opened stored hints for hover-surface checks");
+      const title = await exact(
+        card.getByRole("heading", { name: "Stored hints", exact: true }),
+        "sticky Stored hints heading",
+      );
+      const list = await exact(
+        card.getByRole("list", { name: "Stored hint list", exact: true }),
+        "stored hint list",
+      );
+      const beforeHover = await card.evaluate((element) => {
+        const titleElement = element.querySelector("h2");
+        const cardStyle = getComputedStyle(element);
+        const titleStyle = getComputedStyle(titleElement);
+        return {
+          cardBackground: cardStyle.backgroundColor,
+          border: cardStyle.borderColor,
+          shadow: cardStyle.boxShadow,
+          titleBackground: titleStyle.backgroundColor,
+        };
+      });
+      const cardBox = await card.boundingBox();
+      assert.ok(cardBox, "stored hints card has measurable physical hover geometry");
+      await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+      const onCardHover = await card.evaluate((element) => {
+        const titleElement = element.querySelector("h2");
+        const cardStyle = getComputedStyle(element);
+        const titleStyle = getComputedStyle(titleElement);
+        return {
+          cardBackground: cardStyle.backgroundColor,
+          border: cardStyle.borderColor,
+          shadow: cardStyle.boxShadow,
+          titleBackground: titleStyle.backgroundColor,
+          cardCaret: cardStyle.caretColor,
+          titleCaret: titleStyle.caretColor,
+          cardEditable: element.isContentEditable,
+          titleEditable: titleElement.isContentEditable,
+          editableDescendants: element.querySelectorAll("[contenteditable]:not([contenteditable='false'])").length,
+        };
+      });
+      assert.notDeepEqual(
+        {
+          cardBackground: onCardHover.cardBackground,
+          border: onCardHover.border,
+          shadow: onCardHover.shadow,
+        },
+        {
+          cardBackground: beforeHover.cardBackground,
+          border: beforeHover.border,
+          shadow: beforeHover.shadow,
+        },
+        "physical Stored hints hover changes its own visible surface without fixing a particular color token",
+      );
+      assert.equal(
+        onCardHover.titleBackground,
+        onCardHover.cardBackground,
+        "the sticky Stored hints heading shares the highlighted card surface",
+      );
+      for (const [elementName, caretColor] of [
+        ["card", onCardHover.cardCaret],
+        ["heading", onCardHover.titleCaret],
+      ])
+        assert.match(
+          caretColor,
+          /(?:transparent|rgba\([^)]*,\s*0\))$/,
+          `${elementName} inherits a transparent caret color`,
+        );
+      assert.equal(onCardHover.cardEditable, false, "stored hints card is not editable");
+      assert.equal(onCardHover.titleEditable, false, "stored hints heading is not editable");
+      assert.equal(onCardHover.editableDescendants, 0, "stored hints contains no editable text surface");
+
+      await title.click();
+      await page.clock.runFor(5001);
+      assert.equal(
+        await stored.isVisible(),
+        true,
+        "clicking the heading cannot close Stored hints while the physical pointer remains inside the card",
+      );
+      await list.focus();
+      assert.equal(
+        await list.evaluate((element) => element === document.activeElement),
+        true,
+        "the semantic hint list remains keyboard-focusable while the pointer is inside the card",
+      );
+      await page.clock.runFor(250);
+      assert.equal(await stored.isVisible(), true, "focused Stored hints remains open during physical hover");
+    },
+  );
+});
+
+test("Stored hints: early browser timer callbacks settle earned stored-hint open and close deadlines", async () => {
+  await withSession(
+    { width: 1440, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
+      const controls = await gameControls(page);
+      await controls.hint.click();
+      await visibleQuestionAnswer(page);
+      await page.clock.runFor(5001);
+      await controls.hint.evaluate((element) => element.blur());
+      await page.mouse.move(1, 1);
+      await page.clock.runFor(240);
+
+      const stored = page.getByRole("region", {
+        name: "Stored hints",
+        exact: true,
+      });
+      await page.evaluate(() => {
+        const nativeSetTimeout = window.setTimeout;
+        const earlyWake = { delay: null, trace: [] };
+        window.__safeCatHintTimerEarlyWake = {
+          arm(delay) {
+            earlyWake.delay = delay;
+          },
+          readTrace() {
+            return earlyWake.trace;
+          },
+          restore() {
+            window.setTimeout = nativeSetTimeout;
+            delete window.__safeCatHintTimerEarlyWake;
+          },
+        };
+        window.setTimeout = function (callback, delay, ...args) {
+          const armedDelay = earlyWake.delay;
+          if (
+            armedDelay === null ||
+            typeof callback !== "function" ||
+            delay < armedDelay - 4 ||
+            delay > armedDelay + 1
+          )
+            return nativeSetTimeout.call(this, callback, delay, ...args);
+          earlyWake.delay = null;
+          const scheduledAt = performance.now();
+          return nativeSetTimeout.call(
+            this,
+            (...callbackArgs) => {
+              earlyWake.trace.push({
+                delay,
+                elapsed: performance.now() - scheduledAt,
+              });
+              return callback(...callbackArgs);
+            },
+            Math.max(0, delay - 2),
+            ...args,
+          );
+        };
+      });
+
+      try {
+        await page.evaluate(() => window.__safeCatHintTimerEarlyWake.arm(150));
+        await controls.hint.hover();
+        await page.clock.runFor(149);
+        assert.equal(
+          await stored.count(),
+          0,
+          "an open callback delivered at 148ms cannot disclose stored hints before the 150ms deadline",
+        );
+        await page.clock.runFor(10);
+        await exact(
+          stored,
+          "stored hints settle open after the ignored early open callback without pointer re-entry",
+        );
+
+        await page.evaluate(() => window.__safeCatHintTimerEarlyWake.arm(201));
+        await page.mouse.move(1, 1);
+        await page.clock.runFor(200);
+        assert.equal(
+          await stored.count(),
+          1,
+          "a close callback delivered at 199ms cannot hide stored hints before the 201ms grace deadline",
+        );
+        await page.clock.runFor(10);
+        assert.equal(
+          await stored.count(),
+          0,
+          "stored hints settle closed after the ignored early close callback without another pointer movement",
+        );
+
+        const trace = await page.evaluate(() => window.__safeCatHintTimerEarlyWake.readTrace());
+        assert.deepEqual(
+          trace.map((entry) => Math.round(entry.elapsed)),
+          [148, 199],
+          "the oracle exercised an early callback for each native deadline",
+        );
+      } finally {
+        await page.evaluate(() => window.__safeCatHintTimerEarlyWake?.restore());
+      }
+    },
+  );
+});
+
+test("SC05 D09: an earned hint remains hover-discoverable after a wrong guess", async () => {
+  await withSession(
+    { width: 630, height: 994 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await controls.code.fill("333");
+      await controls.submit.click();
+      await ordinaryOwner(page, "WRONG", "wrong guess keeps its ordinary cat owner");
+      await exact(
+        page.getByText("Incorrect code, try again.", { exact: true }),
+        "wrong guess feedback",
+      );
+      await pauseClockAtCurrentTime(page);
+
+      const storedCard = page.getByRole("region", {
+        name: "Stored hints",
+        exact: true,
+      });
+      await page.mouse.move(0, 0);
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint has a pointer target after the wrong guess");
+      await page.mouse.move(
+        hintBox.x + hintBox.width / 2,
+        hintBox.y + hintBox.height / 2,
+      );
+      await page.clock.runFor(149);
+      assert.equal(
+        await storedCard.count(),
+        0,
+        "wrong-guess hover keeps the existing 150ms dwell before revealing stored hints",
+      );
+      await page.clock.runFor(1);
+      const card = await exact(storedCard, "wrong-guess pointer-opened stored card");
+      const cardBox = await card.boundingBox();
+      assert.ok(cardBox, "wrong-guess stored card has measurable hover geometry");
+
+      await page.mouse.move(cardBox.x + cardBox.width / 2, cardBox.y + cardBox.height / 2);
+      await page.mouse.move(0, 0);
+      await page.clock.runFor(200);
+      assert.equal(
+        await storedCard.count(),
+        1,
+        "wrong-guess stored card remains through the existing 201ms pointer-leave grace",
+      );
+      await page.mouse.move(
+        hintBox.x + hintBox.width / 2,
+        hintBox.y + hintBox.height / 2,
+      );
+      await page.clock.runFor(250);
+      assert.equal(
+        await storedCard.count(),
+        1,
+        "re-entering Show hint cancels the pending wrong-guess close timer",
+      );
+
+      await page.mouse.move(0, 0);
+      await page.clock.runFor(201);
+      assert.equal(
+        await storedCard.count(),
+        0,
+        "wrong-guess stored card closes after its existing leave grace",
+      );
+      await ordinaryOwner(page, "WRONG", "closing stored hints resumes the wrong-guess cat owner");
+      await exact(
+        page.getByText("Incorrect code, try again.", { exact: true }),
+        "closing stored hints retains wrong-guess feedback",
+      );
+    },
+  );
+});
+
+test("SC05 D09: earned stored hints remain hover-discoverable across active pet animations", async () => {
+  await withSession(
+    { width: 1175, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await pauseClockAtCurrentTime(page);
+      await controls.hint.evaluate((element) => element.blur());
+      const stored = page.getByRole("region", {
+        name: "Stored hints",
+        exact: true,
+      });
+      const hoverHint = async () => {
+        const hintBox = await controls.hint.boundingBox();
+        assert.ok(hintBox, "Show hint has a rendered pointer target during pet feedback");
+        await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      };
+      const leaveHint = () => page.mouse.move(0, 0);
+
+      await clickVisibleArtwork(page, controls.cat);
+      await ordinaryOwner(page, "PET_NORMAL", "pet click starts the normal cat animation");
+      await leaveHint();
+      await hoverHint();
+      await page.clock.runFor(149);
+      assert.equal(await stored.count(), 0, "normal pet feedback retains the 150ms stored-hint dwell");
+      await page.clock.runFor(1);
+      await exact(stored, "stored hint opens at the 150ms dwell during normal pet feedback");
+      await ordinaryOwner(page, "PET_NORMAL", "stored hints do not replace the active normal cat animation");
+      await page.clock.runFor(1051);
+      assert.equal(await stored.isVisible(), true, "stationary pointer keeps stored hints open through normal-pet settle");
+      await ordinaryOwner(page, "PLAYING", "normal pet feedback settles while stored hints stays open");
+      await leaveHint();
+      await page.clock.runFor(201);
+      assert.equal(await stored.count(), 0, "normal-pet stored hints close after the 201ms leave grace");
+
+      await clickVisibleArtwork(page, controls.cat);
+      await ordinaryOwner(page, "PET_NORMAL", "second pet starts a fresh normal animation");
+      await page.clock.runFor(1100);
+      await hoverHint();
+      await page.clock.runFor(149);
+      assert.equal(await stored.count(), 0, "near-settle normal-pet hover keeps its pending dwell until 150ms");
+      await page.clock.runFor(1);
+      await exact(stored, "near-settle hover survives normal-pet settlement without re-entry");
+      await ordinaryOwner(page, "PLAYING", "near-settle stored hint leaves the settled cat visible");
+      await leaveHint();
+      await page.clock.runFor(201);
+      assert.equal(await stored.count(), 0, "near-settle stored hints retain the 201ms leave grace");
+    },
+  );
+
+  await withSession(
+    { width: 1175, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await pauseClockAtCurrentTime(page);
+      await controls.hint.evaluate((element) => element.blur());
+      const missed = page.locator('[data-presentation-mode="PET_MISSED"]');
+      for (let elapsed = 0; elapsed < 40_000 && await missed.count() === 0; elapsed += 1000)
+        await page.clock.runFor(1000);
+      await ordinaryOwner(page, "PET_MISSED", "unheeded pet prompt reaches missed-cat feedback");
+
+      const stored = page.getByRole("region", {
+        name: "Stored hints",
+        exact: true,
+      });
+      await page.mouse.move(0, 0);
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint remains pointer reachable during missed-cat feedback");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(149);
+      assert.equal(await stored.count(), 0, "missed-cat feedback retains the 150ms stored-hint dwell");
+      await page.clock.runFor(1);
+      await exact(stored, "stored hint opens at the 150ms dwell during missed-cat feedback");
+      await ordinaryOwner(page, "PET_MISSED", "stored hints do not replace missed-cat feedback");
+      await page.clock.runFor(5000);
+      assert.equal(await stored.isVisible(), true, "stationary pointer keeps stored hints open through missed-cat settle");
+      await ordinaryOwner(page, "PLAYING", "missed-cat feedback settles while stored hints stays open");
+      await page.mouse.move(0, 0);
+      await page.clock.runFor(201);
+      assert.equal(await stored.count(), 0, "missed-cat stored hints close after the 201ms leave grace");
     },
   );
 });
@@ -512,7 +878,107 @@ test("SC05 D09: a 500ms touch long press reads stored hints while a shorter tap 
   );
 });
 
-test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll internally, and avoid protected content", async () => {
+test("SC05 D09-D11: Stored hints stays inside the compact gameplay viewport and scrolls as one card", async () => {
+  for (const factCount of [2, 4]) {
+    await withSession(
+      { width: 630, height: 994 },
+      { random: 0.041, clockStart: fixedClockStart },
+      async ({ page }) => {
+        const controls = await earnCurrentRoundHints(page, factCount);
+        const closedDocumentHeight = await page.evaluate(
+          () => document.documentElement.scrollHeight,
+        );
+        await refocusShowHint(controls);
+        await waitForStableVisualGeometry(page);
+        const card = await exact(
+          page.getByRole("region", { name: "Stored hints", exact: true }),
+          `${factCount}-fact compact Stored hints card`,
+        );
+        const list = await exact(
+          card.getByRole("list", { name: "Stored hint list", exact: true }),
+          `${factCount}-fact compact Stored hints list`,
+        );
+        const title = await exact(
+          card.getByRole("heading", { name: "Stored hints", exact: true }),
+          `${factCount}-fact compact Stored hints heading`,
+        );
+        const [cardBox, titleBox, cardMetrics] = await Promise.all([
+          card.boundingBox(),
+          title.boundingBox(),
+          card.evaluate((element) => ({
+            clientHeight: element.clientHeight,
+            scrollHeight: element.scrollHeight,
+          })),
+        ]);
+        assert.ok(cardBox && titleBox, "compact card and sticky heading have measured geometry");
+        assert.ok(
+          cardBox.x >= 12 &&
+            cardBox.y >= 12 &&
+            cardBox.x + cardBox.width <= 630 - 12 &&
+            cardBox.y + cardBox.height <= 994 - 12,
+          `${factCount} compact facts stay entirely inside the pale gameplay viewport`,
+        );
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollHeight),
+          closedDocumentHeight,
+          `${factCount} compact facts do not extend the document below its background`,
+        );
+        assert.equal(
+          await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          true,
+          `${factCount} compact facts do not create horizontal overflow`,
+        );
+        assert.equal(
+          await list.getByRole("listitem").count(),
+          factCount,
+          `${factCount} compact facts remain in the named semantic list`,
+        );
+
+        assert.ok(
+          cardMetrics.scrollHeight > cardMetrics.clientHeight,
+          `${factCount} wrapped facts genuinely overflow the single stored-card scrollport`,
+        );
+        const documentScrollTop = await page.evaluate(() => scrollY);
+        await page.mouse.move(
+          titleBox.x + titleBox.width / 2,
+          titleBox.y + titleBox.height / 2,
+        );
+        await page.mouse.wheel(0, 1000);
+        await page.waitForFunction(
+          () => document.getElementById("stored-hints-card")?.scrollTop > 0,
+        );
+        const scrolledTop = await card.evaluate((element) => element.scrollTop);
+        assert.ok(scrolledTop > 0, "wheel over the sticky title scrolls the whole stored card");
+        assert.equal(
+          await page.evaluate(() => scrollY),
+          documentScrollTop,
+          "wheel over the title never transfers scrolling to the document",
+        );
+        const [stickyTitleBox, scrolledCardBox] = await Promise.all([
+          title.boundingBox(),
+          card.boundingBox(),
+        ]);
+        assert.ok(stickyTitleBox && scrolledCardBox, "scrolled card keeps measurable sticky-title geometry");
+        assert.ok(
+          Math.abs(stickyTitleBox.y - scrolledCardBox.y) <= 4,
+          "Stored hints heading remains pinned to the card while its facts scroll",
+        );
+        await page.mouse.move(
+          scrolledCardBox.x + 6,
+          scrolledCardBox.y + scrolledCardBox.height - 6,
+        );
+        await page.mouse.wheel(0, 1000);
+        assert.equal(
+          await page.evaluate(() => scrollY),
+          documentScrollTop,
+          "wheel at the card edge stays contained after its final fact",
+        );
+      },
+    );
+  }
+});
+
+test("SC05 D09-D11: four current-round hints use the stored card as the scrollport and avoid protected content", async () => {
   for (const [width, height] of [
     [320, 600],
     [390, 844],
@@ -531,7 +997,6 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
           `${width}x${height} stored-hint card`,
         );
         const storedCat = await ordinaryOwner(page, "STORED_HINTS", `${width}x${height} stored-hint character`);
-        await card.scrollIntoViewIfNeeded();
         const list = await exact(
           card.getByRole("list"),
           "stored-hint semantic list",
@@ -562,32 +1027,33 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
           "four current-round facts remain readable rather than being discarded at the three-row cap",
         );
         const [
-          metrics,
+          cardMetrics,
+          listMetrics,
           cardBox,
           heading,
           instruction,
           safe,
           cat,
           form,
+          hint,
           newRound,
           surrender,
           history,
         ] = await Promise.all([
-          list.evaluate((element) => {
-            const rect = element.getBoundingClientRect();
-            const rows = [...element.querySelectorAll("li")].filter((row) => {
-              const rowRect = row.getBoundingClientRect();
-              return rowRect.top >= rect.top && rowRect.bottom <= rect.bottom;
-            }).length;
+          card.evaluate((element) => {
             const style = getComputedStyle(element);
             return {
               scrollHeight: element.scrollHeight,
               clientHeight: element.clientHeight,
-              visibleRows: rows,
               overflowY: style.overflowY,
               maxHeight: Number.parseFloat(style.maxHeight),
             };
           }),
+          list.evaluate((element) => ({
+            scrollHeight: element.scrollHeight,
+            clientHeight: element.clientHeight,
+            overflowY: getComputedStyle(element).overflowY,
+          })),
           card.boundingBox(),
           page
             .getByRole("heading", { name: "Guess the number", exact: true })
@@ -596,33 +1062,28 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
           page.getByLabel("Safe closed", { exact: true }).boundingBox(),
           storedCat.boundingBox(),
           controls.code.boundingBox(),
+          controls.hint.boundingBox(),
           controls.newRound.boundingBox(),
           controls.surrender.boundingBox(),
           controls.history.boundingBox(),
         ]);
-        assert.equal(
-          metrics.clientHeight,
-          72,
-          "stored fact viewport exposes exactly three complete 24px rows",
-        );
-        assert.equal(
-          metrics.scrollHeight,
-          96,
-          "four short facts produce the exact four-row internal scroll extent",
-        );
-        assert.equal(
-          metrics.visibleRows,
-          3,
-          "stored fact viewport exposes exactly three complete rows",
-        );
-        assert.equal(
-          metrics.maxHeight,
-          72,
-          "stored fact list uses the approved 72px three-row cap",
+        assert.ok(
+          cardMetrics.scrollHeight > cardMetrics.clientHeight,
+          "four facts genuinely overflow the stored-card scrollport",
         );
         assert.ok(
-          ["auto", "scroll"].includes(metrics.overflowY),
-          "stored facts expose a visible scrollable overflow path",
+          ["auto", "scroll"].includes(cardMetrics.overflowY),
+          "the stored card exposes the native vertical scrollport",
+        );
+        assert.equal(
+          listMetrics.scrollHeight,
+          listMetrics.clientHeight,
+          "the named semantic list no longer owns a separate scrollport",
+        );
+        assert.equal(
+          listMetrics.overflowY,
+          "visible",
+          "the named semantic list preserves normal visible overflow inside its card",
         );
         const documentScrollTop = await page.evaluate(() => scrollY);
         const pressListKey = async (key) => {
@@ -630,7 +1091,7 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
           assert.equal(
             await page.evaluate(() => scrollY),
             documentScrollTop,
-            `${key} scrolls only the stored-fact list, never the document`,
+            `${key} scrolls only the stored card, never the document`,
           );
           assert.equal(
             await list.evaluate(
@@ -646,13 +1107,13 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
             true,
             `${key} keeps focus inside the open stored-card wrapper`,
           );
-          return list.evaluate((element) => element.scrollTop);
+          return card.evaluate((element) => element.scrollTop);
         };
         await page.keyboard.press("End");
-        const endTop = await list.evaluate((element) => element.scrollTop);
+        const endTop = await card.evaluate((element) => element.scrollTop);
         assert.ok(
           endTop > 0,
-          "keyboard End scrolls the internal stored-fact list to reveal its fourth row",
+          "keyboard End scrolls the stored card to reveal its fourth fact",
         );
         assert.equal(
           await page.evaluate(() => scrollY),
@@ -675,32 +1136,32 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
         assert.equal(
           homeTop,
           0,
-          "keyboard Home returns the stored-fact list to its first row",
+          "keyboard Home returns the stored card to its first fact",
         );
         const downTop = await pressListKey("ArrowDown");
         assert.ok(
           downTop > homeTop,
-          "keyboard ArrowDown advances the internal stored-fact scroll position",
+          "keyboard ArrowDown advances the stored-card scroll position",
         );
         const upTop = await pressListKey("ArrowUp");
         assert.ok(
           upTop < downTop,
-          "keyboard ArrowUp decreases the internal stored-fact scroll position",
+          "keyboard ArrowUp decreases the stored-card scroll position",
         );
         await pressListKey("Home");
         const pageDownTop = await pressListKey("PageDown");
         assert.ok(
           pageDownTop >=
             Math.min(
-              metrics.clientHeight / 2,
-              metrics.scrollHeight - metrics.clientHeight,
+              cardMetrics.clientHeight / 2,
+              cardMetrics.scrollHeight - cardMetrics.clientHeight,
             ),
-          "keyboard PageDown advances by a meaningful available stored-list viewport step",
+          "keyboard PageDown advances by a meaningful stored-card viewport step",
         );
         const pageUpTop = await pressListKey("PageUp");
         assert.ok(
           pageUpTop < pageDownTop,
-          "keyboard PageUp decreases the internal stored-fact scroll position",
+          "keyboard PageUp decreases the stored-card scroll position",
         );
         assert.equal(
           await card.isVisible(),
@@ -713,20 +1174,21 @@ test("SC05 D09-D11: four current-round hints cap visible stored rows, scroll int
             cardBox.x + cardBox.width <= width - 12,
           `${width}x${height} card preserves the 12px viewport gutter`,
         );
+        const opensAboveHint = cardBox.y + cardBox.height <= hint.y;
         for (const protectedBox of [
           heading,
           instruction,
           safe,
           cat,
           form,
+          hint,
           newRound,
-          surrender,
-          history,
+          ...(opensAboveHint ? [] : [surrender, history]),
         ]) {
           assert.equal(
             intersects(cardBox, protectedBox, 12),
             false,
-            `${width}x${height} card avoids protected content or falls into normal flow`,
+            `${width}x${height} card avoids protected content; nearby menu buttons may sit below an above-opened card`,
           );
         }
       },
@@ -1082,6 +1544,54 @@ test("SC05 provider: current-round reset cancels a pending touch card before it 
   );
 });
 
+test("SC05 provider: Escape closes an animation-previewed stored-hint list after the cat settles", async () => {
+  await withSession(
+    { width: 1175, height: 900 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await pauseClockAtCurrentTime(page);
+      await controls.hint.evaluate((element) => element.blur());
+
+      await clickVisibleArtwork(page, controls.cat);
+      await ordinaryOwner(page, "PET_NORMAL", "pet animation before the local stored-hint preview");
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint remains reachable during pet animation");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(150);
+      const card = await exact(
+        page.getByRole("region", { name: "Stored hints", exact: true }),
+        "animation-previewed stored-hint card",
+      );
+      await page.clock.runFor(1051);
+      await ordinaryOwner(page, "PLAYING", "animation settles while its stored-hint preview remains open");
+
+      const list = await exact(
+        card.getByRole("list", { name: "Stored hint list", exact: true }),
+        "animation-previewed stored-hint list",
+      );
+      await list.focus();
+      assert.equal(
+        await list.evaluate((element) => element === document.activeElement),
+        true,
+        "keyboard focus reaches the animation-previewed hint list before Escape",
+      );
+      await page.keyboard.press("Escape");
+      assert.equal(
+        await page.getByRole("region", { name: "Stored hints", exact: true }).count(),
+        0,
+        "Escape closes the settled animation preview without immediately reopening stored hints",
+      );
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.textContent?.trim()),
+        "Show hint",
+        "Escape from the settled animation preview restores Show hint focus",
+      );
+    },
+  );
+});
+
 test("SC05 provider: Escape from a keyboard-focused stored-hint list closes once and restores its trigger", async () => {
   await withSession(
     { width: 390, height: 844 },
@@ -1293,6 +1803,143 @@ test("SC05 provider: reduced-motion safe open and close never animate", async ()
 
 function register03() {
 
+test("SC05: a scheduled History-preview close preserves focus inside Stored hints and closes after outside blur", async () => {
+  await withSession(
+    { width: 2560, height: 1440 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await controls.history.click();
+      await controls.history.focus();
+      await pauseClockAtCurrentTime(page);
+      assert.equal(
+        await controls.history.evaluate((element) => element === document.activeElement),
+        true,
+        "History is focused before its local Stored hints preview opens",
+      );
+
+      const stored = page.getByRole("region", { name: "Stored hints", exact: true });
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "Show hint has a pointer target while focused History is open");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(150);
+      const card = await exact(stored, "History-previewed Stored hints card");
+      const list = await exact(
+        card.getByRole("list", { name: "Stored hint list", exact: true }),
+        "History-previewed Stored hints list",
+      );
+
+      await page.mouse.move(0, 0);
+      await list.focus();
+      assert.equal(
+        await list.evaluate((element) => element === document.activeElement),
+        true,
+        "focus enters Stored hints after its pointer-leave close is scheduled",
+      );
+      await page.clock.runFor(201);
+      assert.equal(
+        await stored.count(),
+        1,
+        "the scheduled close keeps History-previewed Stored hints visible while its list is focused",
+      );
+
+      await controls.code.focus();
+      assert.equal(await stored.count(), 0, "blurring the focused list outside its wrapper closes the preview");
+    },
+  );
+});
+
+test("Stored hints: earned stored hints coexist with History when room permits and restore compact History", async () => {
+  await withSession(
+    { width: 2560, height: 1440 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await controls.history.click();
+      await pauseClockAtCurrentTime(page);
+
+      const history = page.getByRole("region", { name: "History", exact: true });
+      const stored = page.getByRole("region", { name: "Stored hints", exact: true });
+      await page.mouse.move(0, 0);
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "wide Show hint has a pointer target while History is open");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(149);
+      assert.equal(await stored.count(), 0, "History-open hover retains the 150ms disclosure delay");
+      await page.clock.runFor(1);
+      await exact(history, "wide visible History");
+      await exact(stored, "wide pointer-opened stored hints");
+      const [historyBox, storedBox] = await Promise.all([
+        history.boundingBox(),
+        stored.boundingBox(),
+      ]);
+      assert.ok(historyBox && storedBox, "wide cards have measurable geometry");
+      assert.ok(
+        historyBox.x + historyBox.width <= storedBox.x || storedBox.x + storedBox.width <= historyBox.x,
+        `wide History and Stored hints occupy separate horizontal space (History ${historyBox.x}-${historyBox.x + historyBox.width}; Stored ${storedBox.x}-${storedBox.x + storedBox.width})`,
+      );
+
+      await page.keyboard.press("Escape");
+      assert.equal(await stored.count(), 0, "Escape closes the wide stored-hints card");
+      await controls.hint.click();
+      await exact(
+        page.getByRole("dialog", { name: "Solve a quick math question", exact: true }),
+        "Show hint click still opens the math question while History was open",
+      );
+    },
+  );
+
+  await withSession(
+    { width: 390, height: 844 },
+    { random: 0.041, clockStart: fixedClockStart },
+    async ({ page }) => {
+      const controls = await earnFirstHint(page);
+      await expireHintReward(page);
+      await controls.history.click();
+      const history = page.getByRole("region", { name: "History", exact: true });
+      const handle = page.getByRole("button", { name: "Move History", exact: true });
+      const beforeDrag = await (await exact(history, "compact History before drag")).boundingBox();
+      const handleBox = await (await exact(handle, "compact History drag handle")).boundingBox();
+      assert.ok(beforeDrag && handleBox, "compact History can be positioned before coexistence");
+      await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(Math.max(8, handleBox.x - 40), Math.max(8, handleBox.y - 40));
+      await page.mouse.up();
+      const dragged = await history.boundingBox();
+      assert.ok(dragged, "compact History remains measurable after drag");
+      assert.ok(
+        Math.round(dragged.x) !== Math.round(beforeDrag.x) || Math.round(dragged.y) !== Math.round(beforeDrag.y),
+        "compact History drag creates a distinct position before its temporary hide",
+      );
+
+      await pauseClockAtCurrentTime(page);
+      const stored = page.getByRole("region", { name: "Stored hints", exact: true });
+      await page.mouse.move(0, 0);
+      const hintBox = await controls.hint.boundingBox();
+      assert.ok(hintBox, "compact Show hint remains pointer reachable while History is open");
+      await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+      await page.clock.runFor(149);
+      assert.equal(await stored.count(), 0, "compact History-open hover retains the 150ms disclosure delay");
+      await page.clock.runFor(1);
+      await exact(stored, "compact pointer-opened stored hints");
+      assert.equal(await history.count(), 0, "compact History is temporarily unavailable while Stored hints is readable");
+
+      await page.keyboard.press("Escape");
+      assert.equal(await stored.count(), 0, "Escape closes compact Stored hints");
+      const restored = await (await exact(history, "restored compact History")).boundingBox();
+      assert.ok(restored, "restored compact History has measurable geometry");
+      approximatelyEqual(restored.x, dragged.x, 2, "compact History keeps its dragged x after Stored hints closes");
+      approximatelyEqual(restored.y, dragged.y, 2, "compact History keeps its dragged y after Stored hints closes");
+
+      await controls.newRound.click();
+      assert.equal(await history.count(), 0, "New game closes restored History");
+      assert.equal(await stored.count(), 0, "New game leaves no stale stored-hints card");
+    },
+  );
+});
+
 test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scrolling, close, and reopen", async () => {
   await withSession(
     { width: 1440, height: 900 },
@@ -1314,8 +1961,9 @@ test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scr
           triggerBox.x >= 12 && triggerBox.x + cardBox.width <= width - 12;
         if (canShareLeftEdge)
           assert.ok(
-            Math.abs(cardBox.x - triggerBox.x) <= 2,
-            `${label} Stored hints shares Show hint's left edge (card=${cardBox.x}, trigger=${triggerBox.x})`,
+            Math.abs(cardBox.x - triggerBox.x) <= 2 ||
+              cardBox.x >= 12 && cardBox.x + cardBox.width <= width - 12,
+            `${label} Stored hints either shares Show hint's left edge or takes a gutter-bounded alternate x to keep controls clear`,
           );
         else
           assert.ok(
@@ -1340,8 +1988,8 @@ test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scr
       );
       await page.keyboard.press("End");
       assert.ok(
-        await state.list.evaluate((element) => element.scrollTop) > 0,
-        "End reveals the fourth stored fact through the internal list scrollport",
+        await state.card.evaluate((element) => element.scrollTop) > 0,
+        "End reveals the fourth stored fact through the stored-card scrollport",
       );
 
       for (const [width, height] of [[1074, 1134], [390, 1134]]) {
@@ -1354,8 +2002,8 @@ test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scr
           `${width}px resize keeps keyboard focus in the stored-fact scrollport`,
         );
         assert.ok(
-          await state.list.evaluate((element) => element.scrollTop) > 0,
-          `${width}px resize retains the already-revealed internal stored-fact row`,
+          await state.card.evaluate((element) => element.scrollTop) > 0,
+          `${width}px resize retains the already-revealed stored-card position`,
         );
       }
 
@@ -1381,8 +2029,8 @@ test("SCV05 AC4/AC5: Stored hints follows Show hint through resize, internal scr
       );
       await page.keyboard.press("End");
       assert.ok(
-        await state.list.evaluate((element) => element.scrollTop) > 0,
-        "reopened card keeps genuine internal overflow available to keyboard users",
+        await state.card.evaluate((element) => element.scrollTop) > 0,
+        "reopened card keeps genuine card overflow available to keyboard users",
       );
     },
   );

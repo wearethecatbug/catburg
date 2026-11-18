@@ -3,7 +3,7 @@ const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { fixedClockStart } = require("./shared/runtime-context.cjs");
 const { waitForStableVisualGeometry } = require("./shared/readiness.cjs");
-const { exact, ordinaryOwner, gameControls, openHintDialog, approximatelyEqual } = require("./shared/game-controls.cjs");
+const { exact, ordinaryOwner, gameControls, openHintDialog, visibleQuestionAnswer, approximatelyEqual } = require("./shared/game-controls.cjs");
 const { clickVisibleArtwork } = require("./shared/artwork-geometry.cjs");
 
 
@@ -99,17 +99,23 @@ async function assertHistoryGrip(page, description) {
     return {
       text: element.innerText.trim(),
       pseudoContents,
-      hasVisibleIcon: [...element.querySelectorAll("svg, img, [role='img']")].some(
-        (icon) =>
-          icon instanceof Element &&
-          getComputedStyle(icon).display !== "none" &&
-          getComputedStyle(icon).visibility !== "hidden" &&
-          Number.parseFloat(getComputedStyle(icon).opacity) > 0 &&
-          icon.getClientRects().length > 0 &&
-          (!(icon instanceof SVGSVGElement) ||
-            [...icon.querySelectorAll("circle, ellipse, line, path, polygon, polyline, rect")].some(
+      hasVisibleDecoration: [...element.querySelectorAll("*")].some(
+        (mark) => {
+          const style = getComputedStyle(mark);
+          const visible =
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            Number.parseFloat(style.opacity) > 0 &&
+            mark.getClientRects().length > 0;
+          if (!visible) return false;
+          if (style.backgroundImage.includes("radial-gradient")) return true;
+          return (
+            mark instanceof SVGSVGElement &&
+            [...mark.querySelectorAll("circle, ellipse, line, path, polygon, polyline, rect")].some(
               (shape) => shape.getClientRects().length > 0 && shape.checkVisibility(visibilityOptions),
-            )),
+            )
+          );
+        },
       ),
     };
   });
@@ -117,7 +123,7 @@ async function assertHistoryGrip(page, description) {
     (content) => /^[^\p{L}\p{N}\s]+$/u.test(content),
   );
   assert.ok(
-    hasSymbolGrip || grip.hasVisibleIcon,
+    hasSymbolGrip || grip.hasVisibleDecoration,
     `${description} renders a non-text grip rather than another textual action label`,
   );
   await handle.focus();
@@ -154,9 +160,13 @@ test("controlled clock rejects obsolete pet-settle callbacks across restart and 
   );
 });
 
-test("History anchors eight document pixels below its button and Home restores the anchor", async () => {
+test("History falls back above-right without moving the page and Home restores the anchor", async () => {
   await withSession({ width: 390, height: 844 }, {}, async ({ page }) => {
     const controls = await gameControls(page);
+    const closedDocumentHeight = await page.evaluate(
+      () => document.documentElement.scrollHeight,
+    );
+    const closedScrollY = await page.evaluate(() => scrollY);
     await controls.history.click();
     await waitForStableVisualGeometry(page);
     const panel = page.getByRole("region", { name: "History", exact: true });
@@ -164,28 +174,66 @@ test("History anchors eight document pixels below its button and Home restores t
       name: "Move History",
       exact: true,
     });
-    const [initialPanelBox, historyButtonBox, initialScrollY] =
+    const [initialPanelBox, historyButtonBox, openedDocumentHeight, openedScrollY] =
       await Promise.all([
         panel.boundingBox(),
         controls.history.boundingBox(),
+        page.evaluate(() => document.documentElement.scrollHeight),
         page.evaluate(() => scrollY),
       ]);
-    approximatelyEqual(
-      initialPanelBox.y +
-        initialScrollY -
-        (historyButtonBox.y + initialScrollY + historyButtonBox.height),
-      8,
-      1,
-      "History retains its eight-pixel document anchor within device-pixel rounding",
+    assert.ok(initialPanelBox && historyButtonBox, "History and its trigger have measured compact geometry");
+    assert.equal(
+      openedDocumentHeight,
+      closedDocumentHeight,
+      "opening compact History does not extend the document below the scene",
+    );
+    assert.equal(openedScrollY, closedScrollY, "opening compact History does not scroll the page");
+    assert.ok(
+      initialPanelBox.y + initialPanelBox.height <= historyButtonBox.y - 7,
+      "compact History opens above its trigger with the approved eight-pixel gap",
+    );
+    const visibleLane = { left: 12, right: 390 - 12 };
+    const triggerRight = historyButtonBox.x + historyButtonBox.width;
+    assert.ok(
+      triggerRight >= visibleLane.left + initialPanelBox.width &&
+        triggerRight <= visibleLane.right,
+      "compact History's trigger right edge fits the established visible lane",
+    );
+    const expectedRight = Math.min(
+      Math.max(triggerRight, visibleLane.left + initialPanelBox.width),
+      visibleLane.right,
+    );
+    const expectedPanelX = expectedRight - initialPanelBox.width;
+    const isRightAnchored = (panelBox) =>
+      Math.abs(panelBox.x - expectedPanelX) <= 2;
+    assert.equal(
+      isRightAnchored(initialPanelBox),
+      true,
+      "compact History right-aligns with its trigger when that alignment fits the visible lane",
+    );
+    assert.equal(
+      isRightAnchored({ ...initialPanelBox, x: initialPanelBox.x - 20 }),
+      false,
+      "a compact History panel shifted left inside the visible lane is not right-aligned to its trigger",
     );
     await handle.focus();
     await page.keyboard.press("Home");
     const restoredPanelBox = await panel.boundingBox();
     approximatelyEqual(
-      restoredPanelBox.y + (await page.evaluate(() => scrollY)),
-      initialPanelBox.y + initialScrollY,
+      restoredPanelBox.y,
+      initialPanelBox.y,
       1,
-      "Home restores the History document anchor within device-pixel rounding",
+      "Home restores the compact History viewport anchor within device-pixel rounding",
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollHeight),
+      closedDocumentHeight,
+      "Home does not extend the document below the scene",
+    );
+    assert.equal(
+      await page.evaluate(() => scrollY),
+      closedScrollY,
+      "Home does not scroll the page",
     );
   });
 });
@@ -367,6 +415,146 @@ test("SCV02 History uses a visible non-text grip without duplicating its readabl
   }
 });
 
+test("SCV02 History header drags as one surface while Close restores its opener", async () => {
+  await withSession({ width: 1280, height: 900 }, {}, async ({ page, context }) => {
+    const controls = await gameControls(page);
+    const closedScrollY = await page.evaluate(() => scrollY);
+    await controls.history.click();
+    const panel = await exact(
+      page.getByRole("region", { name: "History", exact: true }),
+      "History panel with its restyled header",
+    );
+    const heading = await exact(
+      panel.getByRole("heading", { name: "History", exact: true }),
+      "History title drag area",
+    );
+    const close = await exact(
+      panel.getByRole("button", { name: "Close History", exact: true }),
+      "History close action",
+    );
+    const [before, headingBox] = await Promise.all([
+      panel.boundingBox(),
+      heading.boundingBox(),
+    ]);
+    assert.ok(before && headingBox, "History header has measurable geometry");
+    await page.mouse.move(
+      headingBox.x + headingBox.width / 2,
+      headingBox.y + headingBox.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      headingBox.x + headingBox.width / 2 - 60,
+      headingBox.y + headingBox.height / 2 - 40,
+    );
+    await page.mouse.up();
+    const afterTitleDrag = await panel.boundingBox();
+    assert.ok(
+      Math.round(afterTitleDrag.x) !== Math.round(before.x) ||
+        Math.round(afterTitleDrag.y) !== Math.round(before.y),
+      "dragging the History title moves the whole panel",
+    );
+
+    const grip = await exact(
+      panel.getByRole("button", { name: "Move History", exact: true }),
+      "History centered drag grip",
+    );
+    const [movedHeadingBox, gripBox, closeBox] = await Promise.all([
+      heading.boundingBox(),
+      grip.boundingBox(),
+      close.boundingBox(),
+    ]);
+    assert.ok(
+      movedHeadingBox && gripBox && closeBox,
+      "History header keeps title, grip, and Close geometry after a drag",
+    );
+    assert.ok(
+      closeBox.x - (gripBox.x + gripBox.width) > 2,
+      "History header keeps a real open span between its grip and Close action",
+    );
+    const headerGap = {
+      x: (gripBox.x + gripBox.width + closeBox.x) / 2,
+      y: movedHeadingBox.y + movedHeadingBox.height / 2,
+    };
+    await page.mouse.move(headerGap.x, headerGap.y);
+    await page.mouse.down();
+    await page.mouse.move(headerGap.x - 35, headerGap.y + 25);
+    await page.mouse.up();
+    const afterHeaderDrag = await panel.boundingBox();
+    assert.ok(
+      Math.round(afterHeaderDrag.x) !== Math.round(afterTitleDrag.x) ||
+        Math.round(afterHeaderDrag.y) !== Math.round(afterTitleDrag.y),
+      "the open span of the History header also drags the panel",
+    );
+
+    const touchHeadingBox = await heading.boundingBox();
+    assert.ok(touchHeadingBox, "History title remains a touch drag target");
+    const beforeTouchDrag = await panel.boundingBox();
+    const touchStart = {
+      x: Math.round(touchHeadingBox.x + touchHeadingBox.width / 2),
+      y: Math.round(touchHeadingBox.y + touchHeadingBox.height / 2),
+      id: 13,
+    };
+    const client = await context.newCDPSession(page);
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [touchStart],
+    });
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{
+        ...touchStart,
+        x: touchStart.x + (beforeTouchDrag.x < 500 ? 32 : -32),
+        y: touchStart.y + (beforeTouchDrag.y < 400 ? 26 : -26),
+      }],
+    });
+    await client.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
+    });
+    const afterTouchDrag = await panel.boundingBox();
+    assert.ok(
+      Math.round(afterTouchDrag.x) !== Math.round(beforeTouchDrag.x) ||
+        Math.round(afterTouchDrag.y) !== Math.round(beforeTouchDrag.y),
+      "touch dragging the History title moves the whole panel",
+    );
+
+    await close.click();
+    assert.equal(
+      await panel.count(),
+      0,
+      "Close History removes the panel instead of beginning a drag",
+    );
+    assert.equal(
+      await controls.history.evaluate((element) => document.activeElement === element),
+      true,
+      "Close History restores focus to the History opener",
+    );
+    assert.equal(
+      await page.evaluate(() => scrollY),
+      closedScrollY,
+      "Close History restores focus without scrolling the page",
+    );
+
+    await controls.history.click();
+    const keyboardClose = await exact(
+      page.getByRole("button", { name: "Close History", exact: true }),
+      "reopened History close action",
+    );
+    await keyboardClose.focus();
+    await page.keyboard.press("Enter");
+    assert.equal(
+      await panel.count(),
+      0,
+      "keyboard activation of Close History removes the panel",
+    );
+    assert.equal(
+      await controls.history.evaluate((element) => document.activeElement === element),
+      true,
+      "keyboard Close History restores focus to the History opener",
+    );
+  });
+});
+
 test("SCV02 /safe smoke keeps the History grip reachable without horizontal overflow", async () => {
   for (const viewport of [
     { width: 1440, height: 900 },
@@ -451,6 +639,110 @@ test("SC05 provider: desktop History pointer and keyboard movements visibly upda
       "desktop ArrowUp visibly moves the inline History panel up",
     );
   });
+});
+
+test("History coverage keeps keyboard focus reachable", async () => {
+  for (const focusedControl of ["history grip", "code input"]) {
+    await withSession(
+      { width: 390, height: 844 },
+      { random: 0.041, clockStart: fixedClockStart },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        await visibleQuestionAnswer(page);
+        await page.clock.runFor(5001);
+        await controls.history.click();
+
+        const history = await exact(
+          page.getByRole("region", { name: "History", exact: true }),
+          `${focusedControl} visible History`,
+        );
+        const hiddenHistory = page.locator('section[aria-label="History"]');
+        const handle = await exact(
+          page.getByRole("button", { name: "Move History", exact: true }),
+          `${focusedControl} History grip`,
+        );
+        const before = await history.boundingBox();
+        const beforeScrollY = await page.evaluate(() => scrollY);
+        assert.ok(before, `${focusedControl} History has compact geometry before preview`);
+
+        const expectedFocus = focusedControl === "history grip" ? controls.hint : controls.code;
+        await (focusedControl === "history grip" ? handle : controls.code).focus();
+        assert.equal(
+          await (focusedControl === "history grip" ? handle : controls.code).evaluate(
+            (element) => element === document.activeElement,
+          ),
+          true,
+          `${focusedControl} establishes its requested focus baseline`,
+        );
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          focusedControl !== "history grip",
+          `${focusedControl} establishes the expected focus baseline`,
+        );
+
+        const hintBox = await controls.hint.boundingBox();
+        assert.ok(hintBox, `${focusedControl} Show hint has a physical hover target`);
+        await page.mouse.move(0, 0);
+        await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+        await page.clock.runFor(150);
+
+        await exact(
+          page.getByRole("region", { name: "Stored hints", exact: true }),
+          `${focusedControl} compact Stored hints preview`,
+        );
+        assert.equal(await hiddenHistory.count(), 1, `${focusedControl} keeps History mounted while covered`);
+        assert.equal(await hiddenHistory.evaluate((element) => getComputedStyle(element).visibility), "hidden");
+        assert.equal(await hiddenHistory.getAttribute("aria-hidden"), "true");
+        assert.equal(await hiddenHistory.getAttribute("inert"), "");
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} keeps focus on its existing visible control while History is covered`,
+        );
+        assert.equal(await page.evaluate(() => scrollY), beforeScrollY, `${focusedControl} cover does not scroll the page`);
+
+        await page.keyboard.press("Escape");
+        assert.equal(
+          await page.getByRole("region", { name: "Stored hints", exact: true }).count(),
+          0,
+          `${focusedControl} Escape closes only the preview`,
+        );
+        const restored = await exact(
+          page.getByRole("region", { name: "History", exact: true }),
+          `${focusedControl} restored History`,
+        );
+        assert.equal(await hiddenHistory.getAttribute("aria-hidden"), null);
+        assert.equal(await hiddenHistory.getAttribute("inert"), null);
+        assert.equal(await hiddenHistory.evaluate((element) => getComputedStyle(element).visibility), "visible");
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} Escape leaves focus on the visible control instead of the page body`,
+        );
+        const after = await restored.boundingBox();
+        assert.deepEqual(after, before, `${focusedControl} Escape restores History without moving it`);
+        assert.equal(await page.evaluate(() => scrollY), beforeScrollY, `${focusedControl} Escape does not scroll the page`);
+
+        for (let step = 0; step < 8; step += 1) {
+          if (
+            await page.evaluate(() => {
+              const active = document.activeElement;
+              return active instanceof HTMLElement &&
+                active.getAttribute("aria-label") === "Move History" &&
+                active.closest('section[aria-label="History"]') !== null;
+            })
+          ) break;
+          await page.keyboard.press("Tab");
+        }
+        assert.equal(
+          await handle.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} keyboard Tab reaches the restored History grip`,
+        );
+      },
+    );
+  }
 });
 
 // These browser assertions use public roles, rendered assets, and geometry only; no test

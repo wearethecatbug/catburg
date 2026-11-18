@@ -268,7 +268,7 @@ export function HintChallengeDialog({
               />
             )}
             <div
-              className={`${styles.speechBubble} ${abandoned ? styles.abandonedBubble : ""}`}
+              className={`${styles.speechBubble} ${abandoned ? styles.abandonedBubble : ""} ${!abandoned && !displaysSuccess && retryVisible ? styles.retryBubble : ""}`}
             >
               {displaysSuccess
                 ? "Great job! You earned a hint!"

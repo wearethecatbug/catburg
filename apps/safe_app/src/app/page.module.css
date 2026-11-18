@@ -19,21 +19,21 @@
     width: 100%;
 }
 .background::before {
-    aspect-ratio: 16 / 9;
-    background: url('/safe-cat/scene-background-wide.webp') center / 100% 100% no-repeat;
+    background: url('/safe-cat/scene-background-wide.webp') center / cover no-repeat;
     content: "";
-    inset: 0 auto auto 50%;
+    inset: 0;
     opacity: 0.32;
     pointer-events: none;
     position: absolute;
-    transform: translateX(-50%);
-    width: min(880px, 82%, 90vw);
     z-index: -1;
 }
 @media (max-width:600px) {
     .background::before {
-        aspect-ratio: 9 / 16;
         background-image: url('/safe-cat/scene-background-tall.webp');
-        width: min(460px, 82%, 90vw);
+    }
+}
+@media (min-width: 1920px) and (min-height: 900px) and (min-aspect-ratio: 2/1) {
+    .background::before {
+        background-image: url('/safe-cat/scene-background-ultrawide.webp');
     }
 }
