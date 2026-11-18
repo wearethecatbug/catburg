@@ -215,6 +215,21 @@
     }
 }
 
+@media (width > 430px) and (width <= 600px) {
+    .taskIdentity {
+        padding: 48px 62px 14px;
+    }
+
+    .taskListArrowButton[aria-label="Select previous task"] {
+        margin-inline-start: 10px;
+    }
+
+    .mobileFoxBody,
+    .mobileFoxPaws {
+        left: -28px;
+    }
+}
+
 @media (width > 320px) and (width <= 430px) {
     .taskIdentity {
         /* The reserved bottom rail keeps the title clear of both arrows, so only the fox needs an inline berth. */
