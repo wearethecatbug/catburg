@@ -50,6 +50,9 @@ export default function TaskDashboard() {
                             <img className={styles.shelfPlantNextLeft} src="/cattasks/shelf/plant-next-left.png" alt="" loading="lazy"/>
                             <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
                             <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
+                            <span className={styles.shelfBooks}/>
+                            <span className={styles.shelfLantern}/>
+                            <span className={styles.shelfHouse}/>
                             <img className={styles.shelfOwl} src="/cattasks/shelf/owl.png" alt="" loading="lazy"/>
                         </div>
                         <div className={styles.mobileShelfDecoration}>

@@ -144,6 +144,20 @@
     display: none;
 }
 
+.shelfBooks,
+.shelfLantern,
+.shelfHouse {
+    /* Each decoration crops the shared atlas instead of duplicating sticker assets. */
+    position: absolute;
+    z-index: 2;
+    display: none;
+    pointer-events: none;
+    user-select: none;
+    background-image: url('/cattasks/shelf/cozy-stickers.png');
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 2px 1px rgba(78, 67, 32, .16));
+}
+
 .catalogueShelfDecoration {
     display: none;
 }
@@ -310,27 +324,27 @@
     }
 
     .shelfPlantPreviousLeft {
-        bottom: -21px;
-        left: calc(var(--previous-anchor) - 110px);
-        width: 78px;
+        bottom: -14.5px;
+        left: calc(var(--previous-anchor) - 96px);
+        width: 58px;
     }
 
     .shelfPlantPreviousRight {
-        bottom: 18px;
-        left: calc(var(--previous-anchor) + 31px);
-        width: 56px;
+        bottom: 15.5px;
+        left: calc(var(--previous-anchor) + 34px);
+        width: 48.42px;
     }
 
     .shelfPlantNextLeft {
-        bottom: 18px;
-        left: calc(var(--next-anchor) - 89px);
-        width: 57px;
+        bottom: 10.53px;
+        left: calc(var(--next-anchor) - 77px);
+        width: 43px;
     }
 
     .shelfPlantNextRight {
-        bottom: -24px;
-        left: calc(var(--next-anchor) + 31px);
-        width: 59px;
+        bottom: -17.2px;
+        left: calc(var(--next-anchor) + 37px);
+        width: 42px;
     }
 
     .shelfLeafPair {
@@ -360,29 +374,6 @@
     .shelfBracketLeft { left: 10px; }
     .shelfBracketRight { right: 10px; }
 
-    .shelfPlantPreviousLeft {
-        bottom: -15px;
-        left: calc(var(--previous-anchor) - 53px);
-        width: 58px;
-    }
-
-    .shelfPlantPreviousRight {
-        bottom: 15px;
-        left: calc(var(--previous-anchor) + 25px);
-        width: 42px;
-    }
-
-    .shelfPlantNextLeft {
-        bottom: 15px;
-        left: calc(var(--next-anchor) - 67px);
-        width: 43px;
-    }
-
-    .shelfPlantNextRight {
-        bottom: -16px;
-        left: calc(var(--next-anchor) + 17px);
-        width: 42px;
-    }
 }
 
 @media (min-width: 1151px) {
@@ -393,14 +384,45 @@
     }
 }
 
-@media (min-width: 1440px) {
+@media (min-width: 1221px) {
+    .shelfDecoration .shelfBooks {
+        display: block;
+        bottom: 12px;
+        left: calc(var(--task-shelf-previous-anchor) + 90px);
+        width: 77px;
+        height: 55.51162790697675px;
+        background-size: 555.6279069767442px 185.2093023255814px;
+        background-position: -51.93023255813954px -124.06976744186046px;
+    }
+
     .shelfDecoration .shelfOwl {
         display: block;
-        /* Leave a 16px berth before the inward edge of the right plant group. */
         right: calc(var(--task-shelf-next-inset) + 105px);
-        bottom: 20px;
+        bottom: 15px;
         width: 52.8px;
         z-index: 3;
+    }
+}
+
+@media (min-width: 1440px) {
+    .shelfDecoration .shelfLantern {
+        display: block;
+        bottom: 15px;
+        left: calc(var(--task-shelf-previous-anchor) + 179px);
+        width: 40px;
+        height: 56.8944099378882px;
+        background-size: 539.6273291925465px 179.87577639751552px;
+        background-position: -6.708074534161491px -114.78260869565217px;
+    }
+
+    .shelfDecoration .shelfHouse {
+        display: block;
+        right: calc(var(--task-shelf-next-inset) + 166px);
+        bottom: 15px;
+        width: 59px;
+        height: 55.612440191387556px;
+        background-size: 613.1483253588516px 204.3827751196172px;
+        background-position: -223.57894736842104px -72.55023923444975px;
     }
 }
 
