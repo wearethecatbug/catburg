@@ -10,4 +10,12 @@ module.exports = {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
   },
+  overrides: [
+    {
+      files: ["**/*.cjs"],
+      rules: {
+        "@typescript-eslint/no-require-imports": "off",
+      },
+    },
+  ],
 };
