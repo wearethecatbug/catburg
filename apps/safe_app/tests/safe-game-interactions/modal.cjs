@@ -6085,8 +6085,9 @@ test("SC06: desktop challenge cat preserves a loaded square silhouette inside it
 test("SC06: approved desktop question and retry tails attach at the bubble rim", async () => {
   await withSession(
     { width: 1440, height: 900 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -6234,6 +6235,7 @@ test("SC06: approved desktop question and retry tails attach at the bubble rim",
         vignette.getByText("Great job! You earned a hint!", { exact: true }),
         "desktop decorative success speech",
       );
+      const successClock = await page.evaluate(() => Date.now());
       const successPresentation = await readPresentation(success);
       approximatelyEqual(
         questionPresentation.box.x - successPresentation.box.x,
@@ -6255,6 +6257,11 @@ test("SC06: approved desktop question and retry tails attach at the bubble rim",
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
         true,
         "desktop question and retry tails do not create horizontal overflow",
+      );
+      assert.equal(
+        await page.evaluate(() => Date.now()),
+        successClock,
+        "desktop success-speech inspection remains inside the transient success frame",
       );
     },
   );
@@ -6975,8 +6982,9 @@ test("SC06: correct answer immediately replaces the cat behind one full 200ms fa
 test("SC06 P2: pending success keeps keyboard focus in the public math modal", async () => {
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const hint = await sc06Dialog(page);
@@ -7002,6 +7010,7 @@ test("SC06 P2: pending success keeps keyboard focus in the public math modal", a
         hint.dialog.getByText("Great job! You earned a hint!", { exact: true }),
         "pending-success public confirmation",
       );
+      const pendingSuccessClock = await page.evaluate(() => Date.now());
       assert.equal(
         await hint.answer.isDisabled(),
         true,
@@ -7070,6 +7079,11 @@ test("SC06 P2: pending success keeps keyboard focus in the public math modal", a
         await page.keyboard.press(key);
         await assertModalFocus(`pending-success ${key}`);
       }
+      assert.equal(
+        await page.evaluate(() => Date.now()),
+        pendingSuccessClock,
+        "pending-success focus inspection remains inside the transient success frame",
+      );
       await close.click();
       await hint.dialog.waitFor({ state: "hidden" });
       assert.equal(
@@ -7223,8 +7237,9 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
 
   await withSession(
     { width: 390, height: 844 },
-    { random: 0.041 },
+    { random: 0.041, clockStart: fixedClockStart },
     async ({ page }) => {
+      await pauseClockAtCurrentTime(page);
       const controls = await gameControls(page);
       await controls.hint.click();
       const abandoned = await sc06Dialog(page);
@@ -7294,6 +7309,7 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
         successCopy,
         "inactive success presentation before its stale synthetic submit",
       );
+      const inactiveSuccessClock = await page.evaluate(() => Date.now());
       assert.equal(
         await successCopy.evaluate(
           (element) => element.closest("aside[aria-hidden='true']") !== null,
@@ -7337,6 +7353,11 @@ test("SC06 Copilot: programmatic submits cannot replace active-abandoned or inac
         await successful.answer.getAttribute("aria-invalid"),
         null,
         "an inactive-success submit cannot introduce retry-invalid state",
+      );
+      assert.equal(
+        await page.evaluate(() => Date.now()),
+        inactiveSuccessClock,
+        "inactive-success submit inspection remains inside the transient success frame",
       );
     },
   );

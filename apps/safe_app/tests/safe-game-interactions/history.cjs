@@ -192,13 +192,29 @@ test("History falls back above-right without moving the page and Home restores t
       initialPanelBox.y + initialPanelBox.height <= historyButtonBox.y - 7,
       "compact History opens above its trigger with the approved eight-pixel gap",
     );
+    const visibleLane = { left: 12, right: 390 - 12 };
+    const triggerRight = historyButtonBox.x + historyButtonBox.width;
     assert.ok(
-      Math.abs(
-        initialPanelBox.x + initialPanelBox.width -
-          (historyButtonBox.x + historyButtonBox.width),
-      ) <= 2 ||
-        initialPanelBox.x >= 12 && initialPanelBox.x + initialPanelBox.width <= 390 - 12,
-      "compact History shares the trigger's right edge unless the visible gutters constrain it",
+      triggerRight >= visibleLane.left + initialPanelBox.width &&
+        triggerRight <= visibleLane.right,
+      "compact History's trigger right edge fits the established visible lane",
+    );
+    const expectedRight = Math.min(
+      Math.max(triggerRight, visibleLane.left + initialPanelBox.width),
+      visibleLane.right,
+    );
+    const expectedPanelX = expectedRight - initialPanelBox.width;
+    const isRightAnchored = (panelBox) =>
+      Math.abs(panelBox.x - expectedPanelX) <= 2;
+    assert.equal(
+      isRightAnchored(initialPanelBox),
+      true,
+      "compact History right-aligns with its trigger when that alignment fits the visible lane",
+    );
+    assert.equal(
+      isRightAnchored({ ...initialPanelBox, x: initialPanelBox.x - 20 }),
+      false,
+      "a compact History panel shifted left inside the visible lane is not right-aligned to its trigger",
     );
     await handle.focus();
     await page.keyboard.press("Home");
