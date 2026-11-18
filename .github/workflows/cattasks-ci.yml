@@ -1,0 +1,67 @@
+name: CatTasks CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/cattasks/**'
+      - '.github/workflows/cattasks-ci.yml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/cattasks/**'
+      - '.github/workflows/cattasks-ci.yml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  cattasks-lint:
+    name: CatTasks lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: '24'
+
+      - name: Select pinned pnpm
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global corepack@0.35.0
+          corepack enable
+          corepack pnpm --version
+
+      - name: Install CatTasks dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack pnpm --filter cattasks... install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
+
+      - name: Lint CatTasks
+        working-directory: apps/cattasks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node node_modules/next/dist/bin/next lint --no-cache
+
+      - name: Lint shelf CommonJS contract
+        working-directory: apps/cattasks
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Default Next lint targets omit tests; retain explicit CJS coverage.
+          node node_modules/next/dist/bin/next lint --no-cache --file tests/shelf-composition-browser-contract.cjs
