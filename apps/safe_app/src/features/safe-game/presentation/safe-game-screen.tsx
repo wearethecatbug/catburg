@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RoundSource } from "../domain";
 import { SafeGameProvider } from "../model/safe-game-provider";
 import { useSafeGameContext } from "../model/safe-game-context";
@@ -40,6 +40,16 @@ function SafeGameScreenContent() {
   useEffect(() => {
     if (presentation.mode !== "HISTORY") setHistoryCovered(false);
   }, [presentation.mode]);
+
+  const handleHistoryCovered = useCallback((covered: boolean) => {
+    if (
+      covered &&
+      historyPanelRef.current?.contains(document.activeElement)
+    ) {
+      controller.hintButtonRef.current?.focus({ preventScroll: true });
+    }
+    setHistoryCovered(covered);
+  }, [controller.hintButtonRef]);
 
   useLayoutEffect(() => {
     if (!dialogActive) return;
@@ -120,7 +130,7 @@ function SafeGameScreenContent() {
             {hintsExhausted && <p aria-hidden="true" className={styles.earnedHint}>No further hints are available.</p>}
           </div>
           <div ref={panelLaneRef} className={`${styles.panelLane} ${presentation.mode === "HISTORY" ? styles.panelLaneOpen : ""}`}>
-            <div className={styles.menuRegion}><GameMenu historyPanelRef={historyPanelRef} onHistoryCovered={setHistoryCovered} /></div>
+            <div className={styles.menuRegion}><GameMenu historyPanelRef={historyPanelRef} onHistoryCovered={handleHistoryCovered} /></div>
             {presentation.mode === "HISTORY" && <HistoryPanel attempts={state.attempts} anchorRef={controller.historyButtonRef} headerZoneRef={headerZoneRef} panelLaneRef={panelLaneRef} characterEffectZoneRef={characterEffectZoneRef} externalPanelRef={historyPanelRef} covered={historyCovered} onClose={controller.toggleHistory} onActivity={controller.historyActivity} />}
           </div>
         </div>
@@ -132,6 +142,10 @@ function SafeGameScreenContent() {
   );
 }
 
-export default function SafeGameScreen({ roundSource }: { roundSource?: RoundSource }) {
+type SafeGameScreenProps = {
+  roundSource?: RoundSource;
+};
+
+export default function SafeGameScreen({ roundSource }: SafeGameScreenProps) {
   return <SafeGameProvider roundSource={roundSource}><SafeGameScreenContent /></SafeGameProvider>;
 }

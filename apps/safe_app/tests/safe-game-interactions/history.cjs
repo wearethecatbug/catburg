@@ -3,7 +3,7 @@ const test = require("node:test");
 const { withSession } = require("./shared/session.cjs");
 const { fixedClockStart } = require("./shared/runtime-context.cjs");
 const { waitForStableVisualGeometry } = require("./shared/readiness.cjs");
-const { exact, ordinaryOwner, gameControls, openHintDialog, approximatelyEqual } = require("./shared/game-controls.cjs");
+const { exact, ordinaryOwner, gameControls, openHintDialog, visibleQuestionAnswer, approximatelyEqual } = require("./shared/game-controls.cjs");
 const { clickVisibleArtwork } = require("./shared/artwork-geometry.cjs");
 
 
@@ -623,6 +623,110 @@ test("SC05 provider: desktop History pointer and keyboard movements visibly upda
       "desktop ArrowUp visibly moves the inline History panel up",
     );
   });
+});
+
+test("History coverage keeps keyboard focus reachable", async () => {
+  for (const focusedControl of ["history grip", "code input"]) {
+    await withSession(
+      { width: 390, height: 844 },
+      { random: 0.041, clockStart: fixedClockStart },
+      async ({ page }) => {
+        const controls = await gameControls(page);
+        await controls.hint.click();
+        await visibleQuestionAnswer(page);
+        await page.clock.runFor(5001);
+        await controls.history.click();
+
+        const history = await exact(
+          page.getByRole("region", { name: "History", exact: true }),
+          `${focusedControl} visible History`,
+        );
+        const hiddenHistory = page.locator('section[aria-label="History"]');
+        const handle = await exact(
+          page.getByRole("button", { name: "Move History", exact: true }),
+          `${focusedControl} History grip`,
+        );
+        const before = await history.boundingBox();
+        const beforeScrollY = await page.evaluate(() => scrollY);
+        assert.ok(before, `${focusedControl} History has compact geometry before preview`);
+
+        const expectedFocus = focusedControl === "history grip" ? controls.hint : controls.code;
+        await (focusedControl === "history grip" ? handle : controls.code).focus();
+        assert.equal(
+          await (focusedControl === "history grip" ? handle : controls.code).evaluate(
+            (element) => element === document.activeElement,
+          ),
+          true,
+          `${focusedControl} establishes its requested focus baseline`,
+        );
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          focusedControl !== "history grip",
+          `${focusedControl} establishes the expected focus baseline`,
+        );
+
+        const hintBox = await controls.hint.boundingBox();
+        assert.ok(hintBox, `${focusedControl} Show hint has a physical hover target`);
+        await page.mouse.move(0, 0);
+        await page.mouse.move(hintBox.x + hintBox.width / 2, hintBox.y + hintBox.height / 2);
+        await page.clock.runFor(150);
+
+        await exact(
+          page.getByRole("region", { name: "Stored hints", exact: true }),
+          `${focusedControl} compact Stored hints preview`,
+        );
+        assert.equal(await hiddenHistory.count(), 1, `${focusedControl} keeps History mounted while covered`);
+        assert.equal(await hiddenHistory.evaluate((element) => getComputedStyle(element).visibility), "hidden");
+        assert.equal(await hiddenHistory.getAttribute("aria-hidden"), "true");
+        assert.equal(await hiddenHistory.getAttribute("inert"), "");
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} keeps focus on its existing visible control while History is covered`,
+        );
+        assert.equal(await page.evaluate(() => scrollY), beforeScrollY, `${focusedControl} cover does not scroll the page`);
+
+        await page.keyboard.press("Escape");
+        assert.equal(
+          await page.getByRole("region", { name: "Stored hints", exact: true }).count(),
+          0,
+          `${focusedControl} Escape closes only the preview`,
+        );
+        const restored = await exact(
+          page.getByRole("region", { name: "History", exact: true }),
+          `${focusedControl} restored History`,
+        );
+        assert.equal(await hiddenHistory.getAttribute("aria-hidden"), null);
+        assert.equal(await hiddenHistory.getAttribute("inert"), null);
+        assert.equal(await hiddenHistory.evaluate((element) => getComputedStyle(element).visibility), "visible");
+        assert.equal(
+          await expectedFocus.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} Escape leaves focus on the visible control instead of the page body`,
+        );
+        const after = await restored.boundingBox();
+        assert.deepEqual(after, before, `${focusedControl} Escape restores History without moving it`);
+        assert.equal(await page.evaluate(() => scrollY), beforeScrollY, `${focusedControl} Escape does not scroll the page`);
+
+        for (let step = 0; step < 8; step += 1) {
+          if (
+            await page.evaluate(() => {
+              const active = document.activeElement;
+              return active instanceof HTMLElement &&
+                active.getAttribute("aria-label") === "Move History" &&
+                active.closest('section[aria-label="History"]') !== null;
+            })
+          ) break;
+          await page.keyboard.press("Tab");
+        }
+        assert.equal(
+          await handle.evaluate((element) => element === document.activeElement),
+          true,
+          `${focusedControl} keyboard Tab reaches the restored History grip`,
+        );
+      },
+    );
+  }
 });
 
 // These browser assertions use public roles, rendered assets, and geometry only; no test

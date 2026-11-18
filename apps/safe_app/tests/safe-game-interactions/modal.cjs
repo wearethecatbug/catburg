@@ -7784,15 +7784,20 @@ test("SC06: reward centers the cat on the closed safe without covering protected
           const tail = getComputedStyle(element, "::after");
           const width = Number.parseFloat(tail.width);
           const height = Number.parseFloat(tail.height);
+          const logicalBubble = {
+            width: Number.parseFloat(bubbleStyle.width),
+            height: Number.parseFloat(bubbleStyle.height),
+          };
+          const scale = bubble.width / logicalBubble.width;
           const borders = {
             left: Number.parseFloat(bubbleStyle.borderLeftWidth),
             top: Number.parseFloat(bubbleStyle.borderTopWidth),
             width:
-              bubble.width -
+              logicalBubble.width -
               Number.parseFloat(bubbleStyle.borderLeftWidth) -
               Number.parseFloat(bubbleStyle.borderRightWidth),
             height:
-              bubble.height -
+              logicalBubble.height -
               Number.parseFloat(bubbleStyle.borderTopWidth) -
               Number.parseFloat(bubbleStyle.borderBottomWidth),
           };
@@ -7805,14 +7810,8 @@ test("SC06: reward centers the cat on the closed safe without covering protected
             ? new DOMMatrixReadOnly()
             : new DOMMatrixReadOnly(tail.transform);
           const offset = {
-            x:
-              bubble.x +
-              borders.left +
-              resolveInset(tail.left, borders.width),
-            y:
-              bubble.y +
-              borders.top +
-              resolveInset(tail.top, borders.height),
+            x: borders.left + resolveInset(tail.left, borders.width),
+            y: borders.top + resolveInset(tail.top, borders.height),
           };
           const vertices = [
             [0, height * 0.65],
@@ -7827,19 +7826,34 @@ test("SC06: reward centers the cat on the closed safe without covering protected
               y: offset.y + origin[1] + point.y,
             };
           });
+          let ancestor = element.parentElement;
+          const ancestorTransforms = [];
+          while (ancestor) {
+            ancestorTransforms.push(getComputedStyle(ancestor).transform);
+            ancestor = ancestor.parentElement;
+          }
           return {
+            ancestorTransforms,
             clipPath: tail.clipPath.replaceAll(" ", ""),
             height,
+            scaleX: scale,
+            scaleY: bubble.height / logicalBubble.height,
             width,
             bounds: {
-              x: Math.min(...vertices.map((vertex) => vertex.x)),
-              y: Math.min(...vertices.map((vertex) => vertex.y)),
+              x:
+                bubble.x +
+                Math.min(...vertices.map((vertex) => vertex.x)) * scale,
+              y:
+                bubble.y +
+                Math.min(...vertices.map((vertex) => vertex.y)) * scale,
               width:
-                Math.max(...vertices.map((vertex) => vertex.x)) -
-                Math.min(...vertices.map((vertex) => vertex.x)),
+                (Math.max(...vertices.map((vertex) => vertex.x)) -
+                  Math.min(...vertices.map((vertex) => vertex.x))) *
+                scale,
               height:
-                Math.max(...vertices.map((vertex) => vertex.y)) -
-                Math.min(...vertices.map((vertex) => vertex.y)),
+                (Math.max(...vertices.map((vertex) => vertex.y)) -
+                  Math.min(...vertices.map((vertex) => vertex.y))) *
+                scale,
             },
           };
         });
@@ -7860,6 +7874,31 @@ test("SC06: reward centers the cat on the closed safe without covering protected
           0.01,
           `${width}x${height} reward tail keeps the approved height`,
         );
+        approximatelyEqual(
+          rewardTail.scaleX,
+          rewardTail.scaleY,
+          0.001,
+          `${width}x${height} reward bubble keeps one rendered coordinate scale`,
+        );
+        if (width > 600) {
+          const stageScale = transformScale(
+            rewardTail.ancestorTransforms.find(
+              (transform) => transformScale(transform) !== 1,
+            ) || "none",
+          );
+          approximatelyEqual(
+            rewardTail.bounds.width,
+            rewardTail.width * stageScale,
+            0.05,
+            `${width}x${height} reward tail physical width follows the ancestor stage scale`,
+          );
+          approximatelyEqual(
+            rewardTail.bounds.height,
+            rewardTail.height * stageScale,
+            0.05,
+            `${width}x${height} reward tail physical height follows the ancestor stage scale`,
+          );
+        }
         const rewardTailDocument = {
           ...rewardTail.bounds,
           y: rewardTail.bounds.y + postDialogScrollY,
