@@ -150,7 +150,6 @@ async function assertSparseShelf(page, width, minimumTitleClearance, expectedAss
 async function assertArrowKeyboardNavigation(page) {
   const allTasks = page.getByRole("button", {name: "All tasks"});
   const previous = page.getByRole("button", {name: "Select previous task"});
-  const next = page.getByRole("button", {name: "Select next task"});
   await allTasks.focus();
   await page.keyboard.press("Tab");
   assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Select previous task", "Tab from All tasks reaches the actual previous arrow");
