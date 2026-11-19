@@ -5,7 +5,7 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
-    color: #254532;
+    color: var(--cattasks-ink);
 }
 
 .taskDetailsContainer {
@@ -16,9 +16,9 @@
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    border: 1px solid #cedacf;
+    border: 1px solid var(--cattasks-border);
     border-radius: 24px;
-    background: #fafbfb;
+    background: var(--cattasks-panel);
     box-shadow: 0 8px 22px rgba(37, 69, 50, .10);
 }
 
@@ -28,7 +28,7 @@
     flex: 0 0 auto;
     align-items: stretch;
     min-height: 70px;
-    border-bottom: 1px solid #cedacf;
+    border-bottom: 1px solid var(--cattasks-border);
 }
 
 .btnContainer > button {
@@ -45,36 +45,36 @@
 }
 
 .mainBtnInfo {
-    border-left: 1px solid #cedacf;
+    border-left: 1px solid var(--cattasks-border);
 }
 
 .mainBtnMySolution {
     border: 0;
-    border-left: 1px solid #cedacf;
+    border-left: 1px solid var(--cattasks-border);
     border-bottom: 3px solid transparent;
     background: transparent;
-    color: #254532;
+    color: var(--cattasks-ink);
     cursor: pointer;
 }
 
-.mainBtnMySolution:hover { background: rgba(214, 225, 212, .44); }
-.mainBtnMySolution[aria-pressed="true"] { border-bottom-color: #356b48; background: #e7eee0; }
-.mainBtnMySolution:disabled { color: #6d7d6f; cursor: not-allowed; opacity: .8; }
+.mainBtnMySolution:hover { background: var(--cattasks-hover); }
+.mainBtnMySolution[aria-pressed="true"] { border-bottom-color: var(--cattasks-accent); background: var(--cattasks-selected); }
+.mainBtnMySolution:disabled { color: var(--cattasks-muted-ink); cursor: not-allowed; opacity: .8; }
 
 .buttonMinimizeBase {
     position: static;
     border: 0;
-    border-left: 1px solid #cedacf;
-    background: #fafbfb;
-    color: #254532;
+    border-left: 1px solid var(--cattasks-border);
+    background: var(--cattasks-panel);
+    color: var(--cattasks-ink);
     cursor: pointer;
 }
 
-.buttonMinimizeBase:hover { background: rgba(214, 225, 212, .44); }
+.buttonMinimizeBase:hover { background: var(--cattasks-hover); }
 .btnContainer > button:focus-visible {
     position: relative;
     z-index: 1;
-    outline: 2px solid #356b48;
+    outline: 2px solid var(--cattasks-accent);
     outline-offset: -3px;
 }
 
@@ -95,7 +95,7 @@
     border: 0;
     background: transparent;
     box-sizing: border-box;
-    color: #254532;
+    color: var(--cattasks-ink);
     font: 400 20px/1.48 system-ui, sans-serif;
     scrollbar-gutter: stable;
 }
@@ -110,7 +110,7 @@
 
 .challengeHeading {
     margin: 0 0 14px;
-    color: #254532;
+    color: var(--cattasks-ink);
     font: 700 28px/1.2 system-ui, sans-serif;
 }
 
@@ -135,7 +135,7 @@
 .taskInfoPre {
     min-width: 0;
     margin: 0;
-    color: #254532;
+    color: var(--cattasks-ink);
     font: inherit;
     white-space: pre-wrap;
     word-break: normal;
@@ -161,7 +161,7 @@
     justify-content: space-between;
     gap: 16px;
     margin: 0 0 16px;
-    color: #6d7d6f;
+    color: var(--cattasks-muted-ink);
     font: 500 14px/1.35 system-ui, sans-serif;
 }
 
@@ -196,7 +196,7 @@
     min-height: 56px;
     padding: 0 16px;
     cursor: pointer;
-    color: #254532;
+    color: var(--cattasks-ink);
     font: 700 18px/1.25 system-ui, sans-serif;
     list-style: none;
 }
@@ -207,8 +207,8 @@
     width: 8px;
     height: 8px;
     margin: -4px 3px 0 0;
-    border-right: 2px solid #356b48;
-    border-bottom: 2px solid #356b48;
+    border-right: 2px solid var(--cattasks-accent);
+    border-bottom: 2px solid var(--cattasks-accent);
     content: '';
     transform: rotate(45deg);
     transition: transform 160ms ease;
@@ -217,7 +217,7 @@
 .hint[open] summary::after { transform: rotate(225deg); }
 
 .hint summary:focus-visible {
-    outline: 2px solid #356b48;
+    outline: 2px solid var(--cattasks-accent);
     outline-offset: -4px;
 }
 

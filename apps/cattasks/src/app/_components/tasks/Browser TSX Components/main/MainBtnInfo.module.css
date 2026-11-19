@@ -2,7 +2,7 @@
     border: 0;
     border-bottom: 3px solid transparent;
     background: transparent;
-    color: #254532;
+    color: var(--cattasks-ink);
     cursor: pointer;
     font: 500 18px/1 system-ui, sans-serif;
     padding: 22px 18px 18px;
@@ -13,18 +13,18 @@
 }
 
 .default:hover {
-    background: rgba(214, 225, 212, .44);
+    background: var(--cattasks-hover);
 }
 
 .disabled {
     opacity: 0.8;
     cursor: not-allowed;
-    color: #6d7d6f;
+    color: var(--cattasks-muted-ink);
 }
 
 .active {
-    border-bottom-color: #356b48;
+    border-bottom-color: var(--cattasks-accent);
 }
 .active:hover {
-    background: rgba(214, 225, 212, .44);
+    background: var(--cattasks-hover);
 }

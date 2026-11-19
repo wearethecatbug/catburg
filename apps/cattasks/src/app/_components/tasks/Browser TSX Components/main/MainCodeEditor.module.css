@@ -16,9 +16,9 @@
 .solutionCard {
     width: 100%;
     overflow: hidden;
-    border: 1px solid #cedacf;
+    border: 1px solid var(--cattasks-border);
     border-radius: 18px;
-    background: #fafbfb;
+    background: var(--cattasks-panel);
     box-shadow: 0 8px 22px rgba(37, 69, 50, .10);
     height: 100%;
     display: flex;
@@ -32,8 +32,8 @@
     gap: 16px;
     min-height: 72px;
     padding: 12px 18px;
-    border-bottom: 1px solid #cedacf;
-    background: #ebefe9;
+    border-bottom: 1px solid var(--cattasks-border);
+    background: var(--cattasks-panel-subtle);
 }
 
 .solutionHeader > div:first-child {
@@ -48,7 +48,7 @@
 .solutionHeading,
 .languageLabel {
     margin: 0;
-    color: #234b36;
+    color: var(--cattasks-ink-strong);
 }
 
 .solutionHeading {
@@ -61,7 +61,7 @@
 }
 
 .codeMarker {
-    color: #234b36;
+    color: var(--cattasks-ink-strong);
     font: 400 20px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
@@ -101,7 +101,7 @@
 
     border: 0;
     border-radius: 0;
-    background: #fafbfb;
+    background: var(--cattasks-panel);
     box-shadow: none;
 }
 

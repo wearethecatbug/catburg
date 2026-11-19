@@ -1,9 +1,9 @@
 .btnSolution {
     cursor: pointer;
     border: 0;
-    border-top: 1px solid #cedacf;
+    border-top: 1px solid var(--cattasks-border);
     background: transparent;
-    color: #254532;
+    color: var(--cattasks-ink);
     font: 500 16px/1 system-ui, sans-serif;
     padding: 16px 18px;
     text-align: left;
@@ -11,7 +11,7 @@
 }
 
 .btnSolution:hover {
-    background: rgba(214, 225, 212, .44);
+    background: var(--cattasks-hover);
 }
 
 /* активная кнопка в обычном состоянии */
@@ -23,11 +23,11 @@
 
 /* активная кнопка при ховере — селектор специфичнее и всегда победит */
 .btnSolution.active:hover {
-    background: rgba(214, 225, 212, .44);
+    background: var(--cattasks-hover);
 }
 
 .disabled {
     opacity: 0.8;
     cursor: not-allowed;
-    color: #6d7d6f;
+    color: var(--cattasks-muted-ink);
 }

@@ -23,7 +23,7 @@
     padding: 0;
     border: 0;
     background: transparent;
-    color: #234b36;
+    color: var(--cattasks-ink-strong);
     font: inherit;
     font-size: 18px;
     font-weight: 600;
@@ -68,7 +68,7 @@
 }
 
 .allTasksButton:focus-visible {
-    outline: 3px solid #356b48;
+    outline: 3px solid var(--cattasks-accent);
     outline-offset: 4px;
 }
 
