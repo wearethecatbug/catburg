@@ -30,11 +30,6 @@ export default function MainTaskSolutionEditor({
     const contentSizeListenerRef = React.useRef<IDisposable | null>(null);
     const layoutListenerRef = React.useRef<IDisposable | null>(null);
     const mountFrameRef = React.useRef<number | null>(null);
-    const monacoRef = React.useRef<Parameters<OnMount>[1] | null>(null);
-
-    React.useEffect(() => {
-        monacoRef.current?.editor.setTheme(themeName);
-    }, [themeName]);
 
     const updateEditorHeight = React.useCallback((editorInstance = editorRef.current) => {
         if (!editorInstance || editorRef.current !== editorInstance) return;
@@ -59,7 +54,6 @@ export default function MainTaskSolutionEditor({
         layoutListenerRef.current = null;
         mountFrameRef.current = null;
         editorRef.current = null;
-        monacoRef.current = null;
     }, []);
 
     const handleBeforeMount = React.useCallback<BeforeMount>((monaco) => {
@@ -67,9 +61,7 @@ export default function MainTaskSolutionEditor({
     }, []);
 
     const handleMount = React.useCallback<OnMount>(
-        (editorInstance, monaco) => {
-            monacoRef.current = monaco;
-            monaco.editor.setTheme(themeName);
+        (editorInstance) => {
             if (mountFrameRef.current !== null) cancelAnimationFrame(mountFrameRef.current);
             contentSizeListenerRef.current?.dispose();
             layoutListenerRef.current?.dispose();
@@ -82,7 +74,7 @@ export default function MainTaskSolutionEditor({
                 updateEditorHeight(editorInstance);
             });
         },
-        [themeName, updateEditorHeight],
+        [updateEditorHeight],
     );
 
     return (
@@ -92,6 +84,7 @@ export default function MainTaskSolutionEditor({
                 <Monaco
                     height="100%"
                     value={value}
+                    theme={themeName}
                     beforeMount={handleBeforeMount}
                     onMount={handleMount}
                     defaultLanguage="javascript"

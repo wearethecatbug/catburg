@@ -108,6 +108,9 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     assert.equal(before.theme, "light"); assert.equal(before.overflow, 0);
     await page.getByRole("button", {name: "Give up: Показать решение", exact: true}).click();
     await page.locator("[class*='taskSolutionContainer'] .monaco-editor").waitFor({state: "visible"});
+    const activeGiveUp = page.getByRole("button", {name: "Give up: Показано решение", exact: true});
+    assert.equal(await activeGiveUp.getAttribute("aria-pressed"), "true", "opening the readonly solution selects the real Give up control");
+    assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(23, 61, 40)", "Light retains the approved active Give up ink");
     const withSolution = await surface(page);
     assert.equal(withSolution.editorPaints.length, 2, "the editable and readonly Monaco paths are both present");
     assert.ok(withSolution.editorPaints.every(editor => editor.backgroundColor === light.editor), "both Monaco paths retain the Light renderer");
@@ -117,6 +120,8 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     assert.deepEqual({page: changed.outer.backgroundColor, panel: changed.panel.backgroundColor}, {page: dark.page, panel: dark.panel});
     assert.equal(changed.editorPaints.length, 2, "both Monaco paths stay mounted after the switch");
     assert.ok(changed.editorPaints.every(editor => editor.backgroundColor === dark.editor), "both Monaco paths render the approved dark paint");
+    assert.equal(await activeGiveUp.getAttribute("aria-pressed"), "true", "theme changes retain the real selected Give up state");
+    assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(225, 234, 227)", "Dark active Give up uses the approved visible ink");
     assert.deepEqual(changed.models, withSolution.models, "draft, solution, and Monaco model versions survive the switch");
     assert.deepEqual(changed.editorSelections, withSolution.editorSelections, "editor selections survive the switch");
     await toggle(page, "Switch to light theme");
@@ -128,6 +133,8 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     await page.locator("[data-cattasks-theme='light']").waitFor();
     const keyboardRestored = await surface(page);
     assert.deepEqual(keyboardRestored.models, withSolution.models); assert.deepEqual(keyboardRestored.editorSelections, withSolution.editorSelections);
+    assert.equal(await activeGiveUp.getAttribute("aria-pressed"), "true", "returning to Light retains the real selected Give up state");
+    assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(23, 61, 40)", "returning to Light restores the approved active Give up ink");
     await (await toggle(page, "Switch to dark theme")).click();
     await page.locator("[data-cattasks-theme='dark']").waitFor();
     await page.getByRole("button", {name: "My solution", exact: true}).click();
@@ -179,6 +186,31 @@ test("Dark preference persists, paints the meadow, and preserves a bright lanter
     assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "dark");
     assertDiagnostics(diagnostics, 2);
   } finally { await context.close(); await browser.close(); }
+});
+
+test("inline theme boot paints persisted Dark before blocked React bundles hydrate", {timeout: 60_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const valid = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const corrupt = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const unavailable = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  try {
+    await valid.addInitScript(([key]) => localStorage.setItem(key, "dark"), [themeStorageKey]);
+    await corrupt.addInitScript(([key]) => localStorage.setItem(key, "corrupt"), [themeStorageKey]);
+    await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
+    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
+      let bundles = 0;
+      await context.route("**/_next/static/**/*.js", route => { bundles += 1; return route.fulfill({contentType: "application/javascript", body: ""}); });
+      const page = await context.newPage();
+      const response = await page.goto(baseUrl, {waitUntil: "commit"});
+      assert.equal(response?.status(), 200, "the real server response starts before React bundles are released");
+      const serverHtml = await response?.text();
+      assert.match(serverHtml || "", /cattasks-theme/, "the real server HTML contains the inline theme boot contract");
+      await page.locator(`[data-cattasks-theme='${expectedTheme}']`).waitFor();
+      assert.equal(await page.locator("[class*='background']").evaluate(element => getComputedStyle(element).backgroundColor), expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
+      assert.ok(bundles > 0, "all external Next static JavaScript bundles were intercepted before React could hydrate");
+      await page.close();
+    }
+  } finally { await valid.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
 
 test("Bad or unavailable storage falls back safely; narrow All tasks scrolls without clipping", {timeout: 60_000}, async () => {

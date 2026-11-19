@@ -49,6 +49,8 @@
 }
 
 :global([data-cattasks-theme='dark']) .fileButton { background: #273f48; color: #e1eae3; }
+:global([data-cattasks-theme='dark']) .fileInput:hover .fileButton { background: #314650; }
+:global([data-cattasks-theme='dark']) .fileInput:has(input:disabled):hover .fileButton { background: #273f48; }
 :global([data-cattasks-theme='dark']) .fileSelection { color: #a9c1be; }
 :global([data-cattasks-theme='dark']) .notice,
 :global([data-cattasks-theme='dark']) .error { color: #e9aaa1; }

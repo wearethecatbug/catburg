@@ -10,6 +10,7 @@ import {CatTasksThemeContext, type CatTasksTheme} from './CatTasksTheme';
 import ThemeToggle from './ThemeToggle';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
+const themePrepaintScript = "try{if(window.localStorage.getItem('cattasks-theme')==='dark')document.currentScript?.parentElement?.setAttribute('data-cattasks-theme','dark')}catch{}";
 
 function readStoredTheme(): CatTasksTheme {
     try {
@@ -45,7 +46,8 @@ export default function TaskDashboard() {
     return (
         <TaskProvider>
             <CatTasksThemeContext.Provider value={themeValue}>
-            <div className={styles.taskDashboardRoot} data-cattasks-theme={theme}>
+            <div className={styles.taskDashboardRoot} data-cattasks-theme={theme} suppressHydrationWarning>
+                <script dangerouslySetInnerHTML={{__html: themePrepaintScript}}/>
                 <div className={styles.decorationLayer} aria-hidden="true">
                     <span className={styles.ambientLight}/>
                     <span className={styles.windowLight}>

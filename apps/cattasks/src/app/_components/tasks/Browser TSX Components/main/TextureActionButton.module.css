@@ -165,4 +165,7 @@
     --action-rim-bottom: rgb(13 35 28 / 28%);
 }
 
+:global([data-cattasks-theme='dark']) .button[data-result="success"] { --action-border: #7fa787; --action-hover-border: #a0c5a5; }
+:global([data-cattasks-theme='dark']) .button[data-result="failure"] { --action-border: #d68b7b; --action-hover-border: #ecaa98; --action-ink: #ffd8cf; }
+
 :global([data-cattasks-theme='dark']) .button:focus-visible { outline-color: #e7c88f; }

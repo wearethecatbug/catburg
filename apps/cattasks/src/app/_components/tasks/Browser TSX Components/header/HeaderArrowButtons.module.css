@@ -232,6 +232,11 @@
 
 :global([data-cattasks-theme='dark']) .arrowButton:focus-visible:not(:disabled) { outline-color: #e7c88f; }
 
+@media (hover: hover) {
+    :global([data-cattasks-theme='dark']) .arrowButton:hover:not(:disabled) .directionArrow,
+    :global([data-cattasks-theme='dark']) .arrowButton:active:not(:disabled) .directionArrow { color: #e1eae3; }
+}
+
 @media (max-width: 600px) {
     :global([data-cattasks-theme='dark']) .arrowButton {
         border-color: #896d55;
