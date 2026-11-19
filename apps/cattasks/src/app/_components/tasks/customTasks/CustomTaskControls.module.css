@@ -27,3 +27,28 @@
 .error { color: #8b2418; font-weight: 400; }
 .formActions { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (max-width: 420px) { .actions, .formActions { display: grid; } .actions button, .fileInput, .form button { width: 100%; } }
+
+:global([data-cattasks-theme='dark']) .actions button,
+:global([data-cattasks-theme='dark']) .fileInput,
+:global([data-cattasks-theme='dark']) .form,
+:global([data-cattasks-theme='dark']) .field input,
+:global([data-cattasks-theme='dark']) .field textarea,
+:global([data-cattasks-theme='dark']) .field select {
+    border-color: #55716f;
+    background: #10262f;
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .actions > button:first-child,
+:global([data-cattasks-theme='dark']) .form button[type='submit'],
+:global([data-cattasks-theme='dark']) .retry {
+    border-color: #74947a;
+    background: #74947a;
+    box-shadow: inset 0 1px 0 rgb(225 234 227 / .25), 0 2px 0 #46644f;
+    color: #0d231c;
+}
+
+:global([data-cattasks-theme='dark']) .fileButton { background: #273f48; color: #e1eae3; }
+:global([data-cattasks-theme='dark']) .fileSelection { color: #a9c1be; }
+:global([data-cattasks-theme='dark']) .notice,
+:global([data-cattasks-theme='dark']) .error { color: #e9aaa1; }

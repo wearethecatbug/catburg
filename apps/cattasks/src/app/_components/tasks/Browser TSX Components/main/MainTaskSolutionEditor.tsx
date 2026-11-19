@@ -5,6 +5,8 @@ import type {BeforeMount, OnMount} from '@monaco-editor/react';
 import type {editor, IDisposable} from 'monaco-editor';
 import styles from './MainTaskSolutionEditor.module.css';
 import type {TaskSolution} from '../../catalog/taskCatalog';
+import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {defineCatTasksThemes, getMonacoThemeName} from './monacoTheme';
 
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
@@ -21,11 +23,18 @@ export default function MainTaskSolutionEditor({
                                                    value,
                                                    solution,
                                                }: MainTaskSolutionEditorProps) {
+    const {theme} = useCatTasksTheme();
+    const themeName = getMonacoThemeName(theme);
     const [editorHeight, setEditorHeight] = React.useState(MIN_EDITOR_HEIGHT);
     const editorRef = React.useRef<editor.IStandaloneCodeEditor | null>(null);
     const contentSizeListenerRef = React.useRef<IDisposable | null>(null);
     const layoutListenerRef = React.useRef<IDisposable | null>(null);
     const mountFrameRef = React.useRef<number | null>(null);
+    const monacoRef = React.useRef<Parameters<OnMount>[1] | null>(null);
+
+    React.useEffect(() => {
+        monacoRef.current?.editor.setTheme(themeName);
+    }, [themeName]);
 
     const updateEditorHeight = React.useCallback((editorInstance = editorRef.current) => {
         if (!editorInstance || editorRef.current !== editorInstance) return;
@@ -50,25 +59,17 @@ export default function MainTaskSolutionEditor({
         layoutListenerRef.current = null;
         mountFrameRef.current = null;
         editorRef.current = null;
+        monacoRef.current = null;
     }, []);
 
     const handleBeforeMount = React.useCallback<BeforeMount>((monaco) => {
-        monaco.editor.defineTheme('catTasksTheme', {
-            base: 'vs',
-            inherit: true,
-            rules: [],
-            colors: {
-                // скроллбары
-                'scrollbarSlider.background': '#129e1aa8',
-                'scrollbarSlider.hoverBackground': '#129e1acc',
-                'scrollbarSlider.activeBackground': '#129e1aff',
-            },
-        });
+        defineCatTasksThemes(monaco);
     }, []);
 
     const handleMount = React.useCallback<OnMount>(
         (editorInstance, monaco) => {
-            monaco.editor.setTheme('catTasksTheme');
+            monacoRef.current = monaco;
+            monaco.editor.setTheme(themeName);
             if (mountFrameRef.current !== null) cancelAnimationFrame(mountFrameRef.current);
             contentSizeListenerRef.current?.dispose();
             layoutListenerRef.current?.dispose();
@@ -81,7 +82,7 @@ export default function MainTaskSolutionEditor({
                 updateEditorHeight(editorInstance);
             });
         },
-        [updateEditorHeight],
+        [themeName, updateEditorHeight],
     );
 
     return (

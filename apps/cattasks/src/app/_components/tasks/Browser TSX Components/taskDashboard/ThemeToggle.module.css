@@ -1,0 +1,58 @@
+.themeToggle {
+    position: absolute;
+    z-index: 4;
+    top: 10px;
+    right: 12px;
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid rgb(67 96 69 / .38);
+    border-radius: 14px;
+    background: linear-gradient(145deg, #fff9df, #f6e8ae);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .84), 0 3px 9px rgb(35 61 40 / .2);
+    cursor: pointer;
+}
+
+.themeToggle[data-theme='dark'] {
+    border-color: rgb(190 213 207 / .38);
+    background: linear-gradient(145deg, #31515b, #172e38);
+    box-shadow: inset 0 1px 0 rgb(223 238 230 / .14), 0 3px 9px rgb(3 16 22 / .42);
+}
+
+.themeToggle img {
+    position: relative;
+    z-index: 1;
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+
+.skyMark {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    z-index: 2;
+    color: #a76325;
+    font-size: 13px;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 1px 0 rgb(255 255 255 / .5);
+}
+
+.themeToggle[data-theme='dark'] .skyMark {
+    color: #f0dca2;
+    text-shadow: 0 1px 5px rgb(255 234 174 / .65);
+}
+
+.themeToggle:focus-visible {
+    outline: 3px solid var(--cattasks-focus-ring);
+    outline-offset: 3px;
+}
+
+@media (forced-colors: active) {
+    .themeToggle { border: 2px solid ButtonText; background: ButtonFace; }
+    .skyMark { color: ButtonText; text-shadow: none; }
+}

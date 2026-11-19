@@ -138,3 +138,31 @@
     .button:disabled, .button[data-pending="true"]:disabled { opacity: 1; border-color: GrayText; color: GrayText; }
     .button[data-pending="true"] .icon::after { border-color: currentColor; border-inline-end-color: transparent; border-inline-end-style: none; }
 }
+
+:global([data-cattasks-theme='dark']) .button {
+    --action-texture-strength-default: .22;
+    --action-face-top: #314650;
+    --action-face-bottom: #1d343d;
+    --action-hover-top: #3a525d;
+    --action-hover-bottom: #263f49;
+    --action-border: #5b7779;
+    --action-hover-border: #74947a;
+    --action-ink: #e1eae3;
+    --action-rim-top: rgb(225 234 227 / 18%);
+    --action-rim-bottom: rgb(4 17 22 / 45%);
+}
+
+:global([data-cattasks-theme='dark']) .button[data-variant='run'] {
+    --action-texture-strength-default: .18;
+    --action-face-top: #74947a;
+    --action-face-bottom: #617d69;
+    --action-hover-top: #87a58a;
+    --action-hover-bottom: #6e8b73;
+    --action-border: #91ac91;
+    --action-hover-border: #b2c7a3;
+    --action-ink: #0d231c;
+    --action-rim-top: rgb(225 234 227 / 28%);
+    --action-rim-bottom: rgb(13 35 28 / 28%);
+}
+
+:global([data-cattasks-theme='dark']) .button:focus-visible { outline-color: #e7c88f; }

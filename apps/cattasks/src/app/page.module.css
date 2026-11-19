@@ -6,6 +6,11 @@
     background: var(--cattasks-page-background);
 }
 
+.background:has([data-cattasks-theme='dark']) {
+    --cattasks-page-background: #10262f;
+    --cattasks-focus-ring: #e7c88f;
+}
+
 .pageDashboardRoot {
     min-height: 100dvh;
     width: 100%;

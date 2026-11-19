@@ -1,0 +1,30 @@
+import type {Monaco} from '@monaco-editor/react';
+import type {CatTasksTheme} from '../taskDashboard/CatTasksTheme';
+
+const configuredMonacoInstances = new WeakSet<object>();
+
+export const getMonacoThemeName = (theme: CatTasksTheme): string => theme === 'dark' ? 'catTasksDark' : 'vs-light';
+
+export function defineCatTasksThemes(monaco: Monaco): void {
+    if (configuredMonacoInstances.has(monaco)) return;
+    configuredMonacoInstances.add(monaco);
+    monaco.editor.defineTheme('catTasksDark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [],
+        colors: {
+            'editor.background': '#10262F',
+            'editor.foreground': '#E1EAE3',
+            'editorLineNumber.foreground': '#78918E',
+            'editorLineNumber.activeForeground': '#E1EAE3',
+            'editor.selectionBackground': '#273F48',
+            'editor.inactiveSelectionBackground': '#273F4888',
+            'editorCursor.foreground': '#E7C88F',
+            'editorIndentGuide.background1': '#273F48',
+            'editorIndentGuide.activeBackground1': '#74947A',
+            'scrollbarSlider.background': '#74947A88',
+            'scrollbarSlider.hoverBackground': '#74947Acc',
+            'scrollbarSlider.activeBackground': '#A9C1BE',
+        },
+    });
+}

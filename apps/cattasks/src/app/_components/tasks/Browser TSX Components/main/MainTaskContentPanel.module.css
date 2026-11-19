@@ -228,6 +228,18 @@
     font: 400 16px/1.5 system-ui, sans-serif;
 }
 
+:global([data-cattasks-theme='dark']) .hint {
+    border-color: #426069;
+    background: #213943;
+}
+
+:global([data-cattasks-theme='dark']) .hint[open] {
+    border-color: #74947a;
+    background: #273f48;
+}
+
+:global([data-cattasks-theme='dark']) .hint p { color: #a9c1be; }
+
 .noHints { margin: 0; }
 .editorHost {
     display: flex;
