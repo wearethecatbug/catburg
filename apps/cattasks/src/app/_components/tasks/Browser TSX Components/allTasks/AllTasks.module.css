@@ -74,7 +74,7 @@
 .backButton::before { content: ''; position: absolute; inset: 3px 5px auto; height: 12px; border-radius: 20px 20px 50% 50%; background: linear-gradient(180deg, rgba(255, 255, 255, .45), transparent); pointer-events: none; }
 .backButton:hover { transform: translateY(-2px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .95), inset 0 -2px 0 rgba(180, 105, 53, .18), 0 6px 0 #a96b3c, 0 11px 16px rgba(107, 66, 36, .18); }
 .backButton:active { transform: translateY(3px); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .8), 0 1px 0 #a96b3c, 0 3px 6px rgba(107, 66, 36, .12); }
-.backButton:focus-visible { outline: 3px solid #356b48; outline-offset: 4px; }
+.backButton:focus-visible { outline: 3px solid var(--cattasks-accent); outline-offset: 4px; }
 .backArrow { margin: 0; font-size: 24px; line-height: 1; }
 
 @media (width > 601px) {
@@ -182,15 +182,15 @@
     gap: 18px;
     width: min(1428px, calc(100% - 108px));
     margin: 29px auto;
-    color: #26332c;
+    color: var(--cattasks-control-text);
     align-items: stretch;
 }
 
 .filters, .taskList {
     min-width: 0;
-    border: 1px solid #d1dcd2;
+    border: 1px solid var(--cattasks-catalogue-border);
     border-radius: 24px;
-    background: #f7f9f6;
+    background: var(--cattasks-catalogue-surface);
     box-shadow: 0 8px 22px rgb(45 77 57 / .09);
 }
 
@@ -204,7 +204,7 @@
     border-radius: 18px;
     padding: 0 16px 0 40px;
     background: #fcfdfb;
-    color: #26332c;
+    color: var(--cattasks-control-text);
     font: inherit;
 }
 .searchLabel::before, .searchLabel::after { position: absolute; z-index: 1; pointer-events: none; content: ''; }
@@ -231,7 +231,7 @@
 .allDifficultiesButton[aria-pressed='true'] { border-color: #93aa7b; background: #e4edd8; color: #2f4f2d; font-weight: 700; }
 .allDifficultiesButton:hover { border-color: #879e72; background: #edf3e4; }
 .allDifficultiesButton:active { transform: translateY(1px); }
-.allDifficultiesButton:focus-visible, .difficultyOption:focus-visible, .pagination button:focus-visible { outline: 2px solid #356b48; outline-offset: 3px; }
+.allDifficultiesButton:focus-visible, .difficultyOption:focus-visible, .pagination button:focus-visible { outline: 2px solid var(--cattasks-accent); outline-offset: 3px; }
 .difficultyOptions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
 .difficultyOption {
     display: grid;
@@ -292,7 +292,7 @@
 .message h3 { margin: 0; color: #244b35; font-size: 20px; line-height: 1.3; }
 .message p { margin: 0; }
 .message button { min-height: 40px; padding: 0 14px; border-radius: 10px; background: #24743f; color: #fff; }
-.pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px -16px -16px; padding: 14px 24px; border-top: 1px solid #dee6de; background: #f7f9f6; color: #5c412b; user-select: none; caret-color: transparent; }
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px -16px -16px; padding: 14px 24px; border-top: 1px solid #dee6de; background: var(--cattasks-catalogue-surface); color: #5c412b; user-select: none; caret-color: transparent; }
 .pageRange { font-size: 14px; font-weight: 700; }
 .pageControls { display: flex; align-items: center; gap: 6px; }
 .pageControls button { display: grid; width: 36px; height: 36px; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 10px; background: transparent; color: #6e411d; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }

@@ -3,6 +3,18 @@
     --task-shelf-arrow-inset: 10px;
     --task-shelf-previous-anchor: 122px;
     --task-shelf-next-inset: 102px;
+    --cattasks-ink: #254532;
+    --cattasks-ink-strong: #234b36;
+    --cattasks-muted-ink: #6d7d6f;
+    --cattasks-panel: #fafbfb;
+    --cattasks-panel-subtle: #ebefe9;
+    --cattasks-border: #cedacf;
+    --cattasks-hover: rgba(214, 225, 212, .44);
+    --cattasks-selected: #e7eee0;
+    --cattasks-accent: #356b48;
+    --cattasks-catalogue-surface: #f7f9f6;
+    --cattasks-catalogue-border: #d1dcd2;
+    --cattasks-control-text: #26332c;
     caret-color: transparent;
     position: relative;
     display: flex;
@@ -454,8 +466,8 @@
     overflow: hidden;
     min-height: 100dvh;
     height: auto;
-    color: #254532;
-    background: radial-gradient(ellipse at 72% 7%, rgba(251, 249, 241, .92), transparent 36%), linear-gradient(135deg, #d6e1d4 0%, #e3ebe2 68%, #dce6d7 100%);
+    color: var(--cattasks-ink);
+    background: radial-gradient(ellipse at 72% 7%, rgba(251, 249, 241, .92), transparent 36%), linear-gradient(135deg, var(--cattasks-page-background) 0%, #e3ebe2 68%, #dce6d7 100%);
 }
 
 .headerContainer, .mainContainer, .footerContainer { position: relative; }

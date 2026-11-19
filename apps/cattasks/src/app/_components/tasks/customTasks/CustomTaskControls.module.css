@@ -13,7 +13,7 @@
 .fileInput input { position: absolute; width: 1px; height: 1px; padding: 0; clip-path: inset(50%); }
 .fileInput:focus-within { outline: 2px solid #386b43; outline-offset: 2px; }
 .fileSelection { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 8px; color: #485247; font-size: 13px; font-weight: 500; }
-.fileButton { display: inline-grid; min-height: 36px; place-items: center; padding: 0 12px; border: 1px solid #cdc2ab; border-radius: 12px; background: #f3eedf; color: #254532; font-weight: 700; }
+.fileButton { display: inline-grid; min-height: 36px; place-items: center; padding: 0 12px; border: 1px solid #cdc2ab; border-radius: 12px; background: #f3eedf; color: var(--cattasks-ink); font-weight: 700; }
 .fileInput:hover .fileButton { background: #ebe5d2; }
 .fileInput:has(input:disabled) { cursor: not-allowed; opacity: .58; }
 .fileInput:has(input:disabled):hover .fileButton { background: #f3eedf; }
@@ -22,7 +22,7 @@
 .storageError p { margin: 0; }
 .form { display: grid; gap: 12px; padding: 16px; border: 1px solid #c5d0c8; border-radius: 16px; background: #edf3ea; }
 .field { display: grid; gap: 5px; font-weight: 700; }
-.field input, .field textarea, .field select { width: 100%; box-sizing: border-box; border: 1px solid #9ba7a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: #26332c; font: inherit; }
+.field input, .field textarea, .field select { width: 100%; box-sizing: border-box; border: 1px solid #9ba7a0; border-radius: 10px; padding: 9px 10px; background: #fff; color: var(--cattasks-control-text); font: inherit; }
 .field textarea { min-height: 76px; resize: vertical; }
 .error { color: #8b2418; font-weight: 400; }
 .formActions { display: flex; flex-wrap: wrap; gap: 10px; }
