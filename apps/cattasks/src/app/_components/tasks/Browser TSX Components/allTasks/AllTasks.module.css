@@ -435,8 +435,93 @@
     .allDifficultiesButton:active { transform: none; }
 }
 
+:global([data-cattasks-theme='dark']) .pageTitle {
+    color: #e1eae3;
+    background: transparent;
+    -webkit-text-fill-color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .backButton {
+    border-color: #55716f;
+    background: linear-gradient(180deg, #35525a, #213b43);
+    box-shadow: inset 0 1px 0 rgb(225 234 227 / .18), 0 4px 0 #10262f, 0 8px 12px rgb(4 17 22 / .34);
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .searchLabel input,
+:global([data-cattasks-theme='dark']) .allDifficultiesButton {
+    border-color: #55716f;
+    background: #10262f;
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .difficultyFilterHeader > span,
+:global([data-cattasks-theme='dark']) .filterGroup legend,
+:global([data-cattasks-theme='dark']) .taskDescription h3,
+:global([data-cattasks-theme='dark']) .message h3 {
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .difficultyOption { color: #a9c1be; }
+:global([data-cattasks-theme='dark']) .difficultyOptionSelected { color: #e1eae3; }
+
+:global([data-cattasks-theme='dark']) .filterOption:has(input:checked),
+:global([data-cattasks-theme='dark']) .currentRow,
+:global([data-cattasks-theme='dark']) .difficultyHeading,
+:global([data-cattasks-theme='dark']) .topic,
+:global([data-cattasks-theme='dark']) .currentMarker,
+:global([data-cattasks-theme='dark']) .ordinal {
+    background: #273f48;
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .row,
+:global([data-cattasks-theme='dark']) .columnHeadings,
+:global([data-cattasks-theme='dark']) .pagination {
+    border-color: #426069;
+    color: #a9c1be;
+}
+
+:global([data-cattasks-theme='dark']) .taskDescription p,
+:global([data-cattasks-theme='dark']) .message,
+:global([data-cattasks-theme='dark']) .openIcon {
+    color: #a9c1be;
+}
+
+:global([data-cattasks-theme='dark']) .openButton,
+:global([data-cattasks-theme='dark']) .message button {
+    border-color: #74947a;
+    background: #74947a;
+    box-shadow: inset 0 1px 0 rgb(225 234 227 / .25), 0 2px 0 #46644f;
+    color: #0d231c;
+}
+
+:global([data-cattasks-theme='dark']) .pageControls button { color: #e1eae3; }
+:global([data-cattasks-theme='dark']) .pageControls button:hover:not(:disabled) {
+    border-color: #74947a;
+    background: #314650;
+    color: #e1eae3;
+}
+:global([data-cattasks-theme='dark']) .pageControls button:disabled { color: #7f9996; }
+:global([data-cattasks-theme='dark']) .pageControls .currentPage {
+    border-color: #55716f;
+    background: #273f48;
+    color: #e1eae3;
+}
+
+:global([data-cattasks-theme='dark']) .shelfStickers img,
+:global([data-cattasks-theme='dark']) .backRabbit,
+:global([data-cattasks-theme='dark']) .compactCandles,
+:global([data-cattasks-theme='dark']) .backMascot,
+:global([data-cattasks-theme='dark']) .backControl::before,
+:global([data-cattasks-theme='dark']) .backControl::after,
+:global([data-cattasks-theme='dark']) .pageTitle::after {
+    filter: saturate(.58) brightness(.76);
+}
+
 @media (forced-colors: active) {
-    .pageTitle {
+    .pageTitle,
+    :global([data-cattasks-theme='dark']) .pageTitle {
         color: CanvasText;
         background: none;
         -webkit-text-fill-color: CanvasText;

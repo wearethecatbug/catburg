@@ -5,6 +5,8 @@ import type {BeforeMount, OnMount} from '@monaco-editor/react';
 import type {editor, IDisposable} from 'monaco-editor';
 import styles from './MainTaskSolutionEditor.module.css';
 import type {TaskSolution} from '../../catalog/taskCatalog';
+import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {defineCatTasksThemes, getMonacoThemeName} from './monacoTheme';
 
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
@@ -21,6 +23,8 @@ export default function MainTaskSolutionEditor({
                                                    value,
                                                    solution,
                                                }: MainTaskSolutionEditorProps) {
+    const {theme} = useCatTasksTheme();
+    const themeName = getMonacoThemeName(theme);
     const [editorHeight, setEditorHeight] = React.useState(MIN_EDITOR_HEIGHT);
     const editorRef = React.useRef<editor.IStandaloneCodeEditor | null>(null);
     const contentSizeListenerRef = React.useRef<IDisposable | null>(null);
@@ -53,22 +57,11 @@ export default function MainTaskSolutionEditor({
     }, []);
 
     const handleBeforeMount = React.useCallback<BeforeMount>((monaco) => {
-        monaco.editor.defineTheme('catTasksTheme', {
-            base: 'vs',
-            inherit: true,
-            rules: [],
-            colors: {
-                // скроллбары
-                'scrollbarSlider.background': '#129e1aa8',
-                'scrollbarSlider.hoverBackground': '#129e1acc',
-                'scrollbarSlider.activeBackground': '#129e1aff',
-            },
-        });
+        defineCatTasksThemes(monaco);
     }, []);
 
     const handleMount = React.useCallback<OnMount>(
-        (editorInstance, monaco) => {
-            monaco.editor.setTheme('catTasksTheme');
+        (editorInstance) => {
             if (mountFrameRef.current !== null) cancelAnimationFrame(mountFrameRef.current);
             contentSizeListenerRef.current?.dispose();
             layoutListenerRef.current?.dispose();
@@ -91,6 +84,7 @@ export default function MainTaskSolutionEditor({
                 <Monaco
                     height="100%"
                     value={value}
+                    theme={themeName}
                     beforeMount={handleBeforeMount}
                     onMount={handleMount}
                     defaultLanguage="javascript"

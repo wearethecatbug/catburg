@@ -4,21 +4,50 @@ import Header from '@/app/_components/tasks/Browser TSX Components/header/Header
 import Main from '@/app/_components/tasks/Browser TSX Components/main/Main';
 import Footer from '@/app/_components/tasks/Browser TSX Components/footer/Footer';
 import {TaskProvider} from '../../context/TaskProvider';
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import AllTasks, {AllTasksHeader} from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
+import {CatTasksThemeContext, type CatTasksTheme} from './CatTasksTheme';
+import ThemeToggle from './ThemeToggle';
+
+const THEME_STORAGE_KEY = 'cattasks-theme';
+const themePrepaintScript = "try{if(window.localStorage.getItem('cattasks-theme')==='dark')document.currentScript?.parentElement?.setAttribute('data-cattasks-theme','dark')}catch{}";
+
+function readStoredTheme(): CatTasksTheme {
+    try {
+        return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+    } catch {
+        return 'light';
+    }
+}
 
 export default function TaskDashboard() {
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
+    const [theme, setTheme] = useState<CatTasksTheme>('light');
     const allTasksButtonRef = useRef<HTMLButtonElement>(null);
     const showAllTasks = useCallback(() => setIsAllTasksOpen(true), []);
     const returnToTask = useCallback(() => {
         setIsAllTasksOpen(false);
         requestAnimationFrame(() => allTasksButtonRef.current?.focus());
     }, []);
+    useEffect(() => {
+        setTheme(readStoredTheme());
+    }, []);
+    const toggleTheme = useCallback(() => {
+        const nextTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(nextTheme);
+        try {
+            window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+        } catch {
+            // Storage is optional: a visible local selection still works for this session.
+        }
+    }, [theme]);
+    const themeValue = useMemo(() => ({theme, toggleTheme}), [theme, toggleTheme]);
 
     return (
         <TaskProvider>
-            <div className={styles.taskDashboardRoot}>
+            <CatTasksThemeContext.Provider value={themeValue}>
+            <div className={styles.taskDashboardRoot} data-cattasks-theme={theme} suppressHydrationWarning>
+                <script dangerouslySetInnerHTML={{__html: themePrepaintScript}}/>
                 <div className={styles.decorationLayer} aria-hidden="true">
                     <span className={styles.ambientLight}/>
                     <span className={styles.windowLight}>
@@ -39,6 +68,7 @@ export default function TaskDashboard() {
                         allTasksButtonRef={allTasksButtonRef}
                     />
                 )}
+                <ThemeToggle/>
                 <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
                     {!isAllTasksOpen && (
                         <>
@@ -77,6 +107,7 @@ export default function TaskDashboard() {
                 {isAllTasksOpen && <AllTasks onBack={returnToTask}/>}
                 <Footer className={styles.footerContainer}></Footer>
             </div>
+            </CatTasksThemeContext.Provider>
         </TaskProvider>
     );
 }

@@ -9,6 +9,8 @@ import MainBtnTest from "@/app/_components/tasks/Browser TSX Components/main/Mai
 import TaskOutput from "@/app/_components/tasks/Browser TSX Components/main/TaskOutput";
 import {runIsolatedTask, type IsolatedTaskRequest} from "../../lib/IsolatedTaskRunner";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {defineCatTasksThemes, getMonacoThemeName} from './monacoTheme';
 
 const Monaco = dynamic(() => import('@monaco-editor/react'), {ssr: false});
 
@@ -23,6 +25,7 @@ type PendingAction = {
 };
 
 export default function MainCodeEditor({className}: MainCodeEditorProps) {
+    const {theme} = useCatTasksTheme();
     const {
         selectedTask,
         selectedWorkspace,
@@ -89,6 +92,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
     };
 
     const configureJavaScriptDefaults = useCallback<BeforeMount>((monaco) => {
+        defineCatTasksThemes(monaco);
         const {javascriptDefaults} = monaco.languages.typescript;
         if (configuredJavaScriptDefaults.current === javascriptDefaults) return;
 
@@ -148,7 +152,7 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                         onMount={trackOwnedModel}
                         value={value}
                         onChange={handleEditorChange}
-                        theme="vs-light"
+                        theme={getMonacoThemeName(theme)}
                         options={{
                             automaticLayout: true,
                             minimap: {enabled: false},

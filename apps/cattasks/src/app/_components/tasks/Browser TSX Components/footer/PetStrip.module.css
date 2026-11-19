@@ -88,3 +88,13 @@
 @media (prefers-reduced-motion: reduce) {
     .dog[data-pet-state], .odor, .fly { animation: none; transition: none; }
 }
+
+:global([data-cattasks-theme='dark']) .petStrip {
+    border-color: #55716f;
+    background: linear-gradient(180deg, rgb(39 63 72 / .96), rgb(23 46 56 / .96));
+    box-shadow: 0 0 0 1px #426069, inset 0 1px 0 rgb(225 234 227 / .12), 0 5px 14px rgb(4 17 22 / .3);
+}
+
+:global([data-cattasks-theme='dark']) .petStrip::after { background: rgb(169 193 190 / .34); }
+
+:global([data-cattasks-theme='dark']) .feedButton:focus-visible { outline-color: #e7c88f; color: #e1eae3; }

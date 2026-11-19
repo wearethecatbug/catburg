@@ -42,6 +42,17 @@
     --action-hover-border: #78946f;
 }
 
+:global([data-cattasks-theme='dark']) .code { background: #10262f; }
+
+:global([data-cattasks-theme='dark']) .panel .restore {
+    --action-face-top: #314650;
+    --action-face-bottom: #1d343d;
+    --action-hover-top: #3a525d;
+    --action-hover-bottom: #263f49;
+    --action-border: #5b7779;
+    --action-hover-border: #74947a;
+}
+
 @media (max-width: 600px) {
     .panel { padding: 18px; }
     .panel h2 { font-size: 20px; }
