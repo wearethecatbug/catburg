@@ -2,11 +2,17 @@
 
 import {createContext, useContext} from 'react';
 
-export type CatTasksTheme = 'light' | 'dark';
+export const catTasksThemes = ['light', 'dark', 'khorne'] as const;
+
+export type CatTasksTheme = (typeof catTasksThemes)[number];
+
+export function getCatTasksTheme(value: string | null): CatTasksTheme {
+    return catTasksThemes.find(theme => theme === value) ?? 'light';
+}
 
 export type CatTasksThemeContextValue = {
     readonly theme: CatTasksTheme;
-    readonly toggleTheme: () => void;
+    readonly setTheme: (theme: CatTasksTheme) => void;
 };
 
 export const CatTasksThemeContext = createContext<CatTasksThemeContextValue | null>(null);

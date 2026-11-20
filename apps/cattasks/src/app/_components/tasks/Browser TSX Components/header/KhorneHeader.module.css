@@ -1,0 +1,33 @@
+.dashboardShell { position: relative; z-index: 3; container: khorne-dashboard-header / inline-size; width: min(100%, var(--khorne-workspace-width, 1120px)); min-width: 0; margin-inline: auto; }
+.catalogueShell { position: relative; z-index: 3; container: khorne-catalogue-header / inline-size; width: 100%; min-width: 0; margin-inline: auto; color: #f6e8cb; font-family: Georgia, 'Times New Roman', serif; }
+.catalogueShell, .catalogueShell * { box-sizing: border-box; }
+.catalogueHeader { position: relative; min-height: 168px; isolation: isolate; }
+.catalogueSurface { --catalogue-left-start: clamp(178px, 23%, 360px); --catalogue-right-start: clamp(184px, 23%, 360px); position: absolute; z-index: 0; inset: 86px 12px 23px; overflow: hidden; background: linear-gradient(180deg, #33221a, #1b1411 65%, #100a09); clip-path: polygon(1.5% 0, 98.5% 0, 100% 19%, 100% 100%, 0 100%, 0 19%); box-shadow: inset 0 1px 0 #b17d42; }
+.catalogueBase { --slice-height: 58px; position: absolute; z-index: 0; inset: 0; }
+.catalogueVentShell { position: absolute; z-index: 1; top: 3px; bottom: 2px; overflow: hidden; }
+.catalogueVentLeft { left: var(--catalogue-left-start); width: calc(50% - 65px - var(--catalogue-left-start)); }
+.catalogueVentRight { right: var(--catalogue-right-start); width: calc(50% - 65px - var(--catalogue-right-start)); transform: scaleX(-1); }
+.catalogueVentFrame { --slice-height: 53px; position: absolute; z-index: 1; inset: 0; }
+.catalogueVent { position: absolute; z-index: 0; top: auto; right: 7%; bottom: 2px; left: 7%; height: calc(38px + clamp(0px, calc(100cqi - 1060px), 540px) * .0037037); background-color: #5e1110; background-image: url('/cattasks/themes/khorne/task-header/vent-arch-tile.png'); background-repeat: repeat-x; background-size: auto 100%; background-position: left top; filter: saturate(1.15) brightness(1.04); }
+.cataloguePlaque, .catalogueBackMount { position: absolute; z-index: 3; top: 54px; height: 76px; isolation: isolate; }
+.cataloguePlaque { left: 22px; display: grid; width: clamp(190px, 23%, 330px); place-items: center; padding: 12px 22px; text-align: center; }
+.cataloguePlaque::before { position: absolute; z-index: -1; inset: 7px; background: linear-gradient(rgb(21 17 14 / .65), rgb(21 17 14 / .78)), url('/cattasks/themes/khorne/task-header/panel-surface.png') center / cover; content: ''; }
+.catalogueBackMount { right: 22px; width: clamp(142px, 17.5%, 224px); }
+.catalogueMount { --slice-height: 76px; position: absolute; inset: 0; }
+.title { position: relative; z-index: 1; margin: 0; color: #f6e8cb; font: 700 clamp(29px, 2.9cqi, 47px)/1.04 Georgia, 'Times New Roman', serif; letter-spacing: -.02em; }
+.aquila { position: absolute; z-index: 4; top: 90px; left: 50%; width: clamp(128px, 9.65%, 154px); aspect-ratio: 3 / 1; transform: translateX(-50%); filter: drop-shadow(0 2px 2px rgb(0 0 0 / .55)); pointer-events: none; }
+.aquila img { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; }
+.catalogueBack { position: absolute; z-index: 4; top: 70px; right: 22px; display: inline-flex; width: clamp(142px, 17.5%, 224px); height: 64px; align-items: center; justify-content: center; border: 0; background: transparent; color: #f6e8cb; cursor: pointer; font: 700 clamp(16px, 1.65cqi, 22px)/1 Georgia, 'Times New Roman', serif; isolation: isolate; }
+.backFace { position: absolute; z-index: -2; inset: 6px 7px; overflow: hidden; background: linear-gradient(155deg, #b52a1c, #7c1110 58%, #260d0c); clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 12px)); }
+.backFace > span { position: absolute; inset: 0; opacity: .22; mix-blend-mode: screen; }
+.backFrame { --slice-height: 64px; position: absolute; z-index: -1; inset: 0; }
+.backCopy { position: relative; display: inline-flex; align-items: center; gap: 9px; text-shadow: 0 1px 1px rgb(0 0 0 / .65); }
+.catalogueBack:hover { filter: brightness(1.12); }
+.catalogueBack:active .backCopy { transform: translateY(1px); }
+.catalogueBack:focus-visible { outline: 2px solid #ffc47a; outline-offset: 4px; }
+
+@container khorne-catalogue-header (max-width: 960px) { .cataloguePlaque { top: 56px; left: 15px; height: 68px; } .catalogueBackMount { top: 76px; right: 15px; height: 52px; } .catalogueBack { top: 76px; right: 15px; height: 52px; } .catalogueMount { --slice-height: 68px; } .backFrame { --slice-height: 52px; } .catalogueSurface { --catalogue-left-start: 125px; --catalogue-right-start: 125px; } }
+@container khorne-catalogue-header (max-width: 800px) { .catalogueHeader { min-height: 146px; } .catalogueSurface { display: block; top: 79px; bottom: auto; height: 49px; clip-path: polygon(0 52%, 25% 52%, 31% 0, 69% 0, 75% 52%, 100% 52%, 100% 100%, 0 100%); } .catalogueBase { --slice-height: 49px; } .catalogueVentShell { display: none; } .cataloguePlaque { top: 62px; left: 8px; width: clamp(120px, 38%, 220px); min-height: 64px; height: 64px; padding-inline: 12px; } .title { font-size: clamp(23px, 5.8cqi, 34px); } .aquila { top: 89px; display: block; width: clamp(40px, calc(100cqi - 345px), 85px); } .catalogueBackMount { top: 66px; right: 8px; width: clamp(112px, 35%, 176px); height: 44px; } .catalogueBack { top: 66px; right: 8px; width: clamp(112px, 35%, 176px); height: 44px; font-size: clamp(14px, 3.6cqi, 17px); } .catalogueMount { --slice-height: 64px; } .backFrame { --slice-height: 44px; } }
+@container khorne-catalogue-header (max-width: 380px) { .backCopy { gap: 5px; } .cataloguePlaque { width: 116px; } .title { font-size: 23px; } }
+@container khorne-dashboard-header (max-width: 800px) { .catalogueRail { --slice-height: 14px; bottom: 0; clip-path: inset(0 0 2px); } }
+@media (forced-colors: active) { .catalogueSurface, .backFace { background: Canvas; } .catalogueBack { color: ButtonText; } .catalogueBack:focus-visible { outline-color: Highlight; } }

@@ -44,6 +44,9 @@
 
 :global([data-cattasks-theme='dark']) .code { background: #10262f; }
 
+:global([data-cattasks-theme='khorne']) .code { background: #171514; color: #f4ead2; }
+:global([data-cattasks-theme='khorne']) .error { color: #f0a18d; }
+
 :global([data-cattasks-theme='dark']) .panel .restore {
     --action-face-top: #314650;
     --action-face-bottom: #1d343d;
@@ -51,6 +54,18 @@
     --action-hover-bottom: #263f49;
     --action-border: #5b7779;
     --action-hover-border: #74947a;
+}
+
+:global([data-cattasks-theme='khorne']) .panel .restore {
+    --action-face-top: var(--cattasks-panel-subtle);
+    --action-face-bottom: var(--cattasks-panel);
+    --action-hover-top: #4a2b24;
+    --action-hover-bottom: var(--cattasks-selected);
+    --action-border: var(--cattasks-border);
+    --action-hover-border: var(--cattasks-accent);
+    --action-ink: var(--cattasks-ink);
+    --action-rim-top: rgb(244 234 210 / .16);
+    --action-rim-bottom: rgb(0 0 0 / .48);
 }
 
 @media (max-width: 600px) {

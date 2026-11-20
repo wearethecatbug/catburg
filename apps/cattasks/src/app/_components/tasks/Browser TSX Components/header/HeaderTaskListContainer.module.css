@@ -28,6 +28,36 @@
     color: var(--cattasks-ink-strong);
 }
 
+/* Khorne uses the supplied nine-slice only as an overlay, so a long title keeps its existing grid geometry. */
+:global([data-cattasks-theme='khorne']) .taskIdentity {
+    position: relative;
+    z-index: 0;
+    padding: 16px 28px;
+    background: linear-gradient(180deg, rgb(74 43 36 / .95), rgb(31 27 24 / .95));
+    box-shadow: 0 8px 18px rgb(0 0 0 / .34);
+}
+:global([data-cattasks-theme='khorne']) .taskIdentity::after {
+    position: absolute; z-index: -1; inset: 0; border: 12px solid transparent;
+    border-image: var(--khorne-frame-image) 25% / 12px stretch; content: ''; pointer-events: none;
+}
+@media (min-width: 1151px) {
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer {
+        position: relative;
+        isolation: isolate;
+    }
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer > * { position: relative; z-index: 1; }
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer::before,
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer::after {
+        position: absolute; z-index: 0; bottom: 14px; width: 13%; height: 30px;
+        border-block: 4px solid #9a6937; background: repeating-linear-gradient(90deg, transparent 0 11px, rgb(0 0 0 / .72) 11px 15px), linear-gradient(180deg, #180b0b, #721915 65%, #180b0b); clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 100%, 0 100%); content: ''; pointer-events: none;
+    }
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer::before { left: 4%; }
+    :global([data-cattasks-theme='khorne']) .headerTaskListContainer::after { right: 4%; }
+}
+@media (max-width: 600px) {
+    :global([data-cattasks-theme='khorne']) .taskIdentity { padding: 12px 24px 38px; }
+}
+
 .taskNumber {
     font-family: Inter, system-ui, sans-serif;
     font-size: 20px;

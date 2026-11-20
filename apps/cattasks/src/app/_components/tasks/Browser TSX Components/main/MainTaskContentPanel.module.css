@@ -78,6 +78,54 @@
     outline-offset: -3px;
 }
 
+.khorneTabBar {
+    grid-template-columns: minmax(0, 1fr) 76px;
+    min-height: 48px;
+    overflow: visible;
+    border-color: var(--khorne-metal, #8c683a);
+    background: linear-gradient(180deg, var(--khorne-neutral-high, #29231f), var(--khorne-neutral-low, #1f1b18));
+}
+
+.khorneTabBar > button {
+    min-height: 48px;
+    min-width: 76px;
+    padding-inline: 4px;
+    border-color: #6c5940;
+    background: transparent;
+    color: #f4ead2;
+}
+
+.khorneTabs {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: minmax(44px, .75fr) minmax(44px, .75fr) minmax(76px, 1.5fr);
+}
+
+.khorneTab {
+    position: relative;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 7px;
+    border: 0;
+    border-inline-end: 1px solid #6c5940;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: #f4ead2;
+    font: 700 14px/1.1 Inter, system-ui, sans-serif;
+    cursor: pointer;
+}
+
+.khorneTab[aria-selected='true'] {
+    border-bottom-color: var(--khorne-metal-bright, #e4bf6d);
+    background: linear-gradient(180deg, var(--khorne-primary-high, #941e18), var(--khorne-primary, #4a1714));
+    box-shadow: inset 0 1px rgb(244 234 210 / .2);
+}
+
+.khorneTab:hover:not(:disabled) { background-color: rgb(244 234 210 / .08); }
+.khorneTab[aria-selected='true']:hover:not(:disabled) { background: linear-gradient(180deg, #ab2b22, #5a1a16); }
+.khorneTab:disabled { color: #887e73; cursor: not-allowed; }
+.khorneTab:focus-visible { z-index: 1; outline: 3px solid var(--khorne-focus, #f0c879); outline-offset: -3px; }
+
 .contentContainerBase {
     display: flex;
     flex: 1 1 auto;
@@ -115,8 +163,8 @@
 }
 
 @media (min-width: 1151px) {
-    .btnContainer,
-    .btnContainer > button {
+    .btnContainer:not(.khorneTabBar),
+    .btnContainer:not(.khorneTabBar) > button {
         min-height: 60px;
     }
 
@@ -240,6 +288,22 @@
 
 :global([data-cattasks-theme='dark']) .hint p { color: #a9c1be; }
 
+:global([data-cattasks-theme='khorne']) .hint {
+    border-color: var(--cattasks-border);
+    background: var(--cattasks-panel-subtle);
+}
+
+:global([data-cattasks-theme='khorne']) .hint[open] {
+    border-color: var(--cattasks-accent);
+    background: var(--cattasks-selected);
+}
+
+:global([data-cattasks-theme='khorne']) .hint p { color: var(--cattasks-muted-ink); }
+
+:global([data-cattasks-theme='khorne']) .taskDetailsContainer { overflow: hidden; border-color: transparent; border-radius: 0; background: linear-gradient(180deg, #29231f, #1f1b18); clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+:global([data-cattasks-theme='khorne']) .taskDetailsContainer::after { position: absolute; z-index: 2; inset: 0; border: 12px solid transparent; border-image: url('/cattasks/themes/khorne/chrome/panel-frame-cropped.png') 96 / 12px stretch; content: ''; pointer-events: none; }
+:global([data-cattasks-theme='khorne']) .btnContainer { border-bottom-color: var(--khorne-metal); }
+
 .noHints { margin: 0; }
 .editorHost {
     display: flex;
@@ -284,8 +348,8 @@
 
 @media (max-width: 600px) {
     .taskDetailsContainer { border-radius: 18px; }
-    .btnContainer { min-height: 56px; }
-    .btnContainer > button { min-height: 56px; }
+    .btnContainer:not(.khorneTabBar) { min-height: 56px; }
+    .btnContainer:not(.khorneTabBar) > button { min-height: 56px; }
     .contentContainerFrame { padding: 22px; font-size: 16px; }
     .taskDescriptionContainer { padding: 18px; }
     .challengeHeading { margin-bottom: 10px; font-size: 20px; }

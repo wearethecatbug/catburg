@@ -44,6 +44,44 @@
     background: #10262f url('/cattasks/night-meadow.png') center / cover fixed;
 }
 
+.taskDashboardRoot[data-cattasks-theme='khorne'] {
+    --khorne-workspace-width: min(1600px, calc(100% - clamp(16px, 3.125vw, 64px)));
+    --khorne-frame-image: url('/cattasks/themes/khorne/frame.svg');
+    --khorne-primary: #55120e;
+    --khorne-primary-high: #851d16;
+    --khorne-neutral-low: #191a18;
+    --khorne-neutral-high: #30312c;
+    --khorne-metal: #b98a4b;
+    --khorne-metal-bright: #e4bf6d;
+    --khorne-focus: #f0c879;
+    --khorne-selection: #3d211d;
+    --cattasks-ink: #f4ead2;
+    --cattasks-ink-strong: #f4ead2;
+    --cattasks-muted-ink: #c9c1b4;
+    --cattasks-panel: #1f1b18;
+    --cattasks-panel-subtle: #29231f;
+    --cattasks-border: #8c683a;
+    --cattasks-hover: rgb(198 166 106 / .18);
+    --cattasks-selected: #3d211d;
+    --cattasks-accent: #d58b3a;
+    --cattasks-catalogue-surface: #181918;
+    --cattasks-catalogue-border: #8c683a;
+    --cattasks-control-text: #f4ead2;
+    background: #171514;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] {
+    background: #171514 url('/cattasks/themes/khorne/task/background-desktop.webp') center / cover fixed;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] {
+    background: #171514 url('/cattasks/themes/khorne/all-tasks/background-desktop.webp') center / cover fixed;
+}
+
+@media (forced-colors: active) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'] { --khorne-frame-image: none; }
+}
+
 .taskDashboardRoot :where(input:not([type]), input[type='text'], input[type='search'], textarea, [contenteditable]:not([contenteditable='false'])) {
     caret-color: auto;
 }
@@ -82,6 +120,10 @@
     overflow: hidden;
     pointer-events: none;
     user-select: none;
+}
+
+.khorneScene {
+    display: none;
 }
 
 .windowLight {
@@ -412,6 +454,348 @@
     }
 }
 
+.taskDashboardRoot[data-cattasks-theme='khorne'] .decorationLayer,
+.taskDashboardRoot[data-cattasks-theme='khorne'] .shelfDecoration,
+.taskDashboardRoot[data-cattasks-theme='khorne'] .mobileShelfDecoration,
+.taskDashboardRoot[data-cattasks-theme='khorne'] .catalogueShelfDecoration {
+    display: none;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'] .viewportDecoration {
+    display: none;
+    background: none;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'] .shelf {
+    border-color: #8c683a;
+    background: linear-gradient(180deg, #3b3028, #211a17 62%, #171211);
+    box-shadow: inset 0 1px 0 rgb(244 234 210 / .17), inset 0 -1px 0 rgb(0 0 0 / .6), 0 5px 8px -3px rgb(0 0 0 / .5);
+}
+
+/* Prevent pre-hydration Khorne from flashing the legacy shelf or capybara header. */
+.taskDashboardRoot[data-cattasks-theme='khorne'] .shelf,
+.taskDashboardRoot[data-cattasks-theme='khorne'] [data-legacy-header] { display: none; }
+
+.taskDashboardRoot[data-cattasks-theme='khorne'] .khorneScene {
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    display: none;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    background: #171514 center / cover no-repeat;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneScene[data-khorne-scene='task'],
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneScene[data-khorne-scene='all-tasks'] {
+    display: block;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneScene[data-khorne-scene='task'] {
+    background-image: url('/cattasks/themes/khorne/task/background-mobile.webp');
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneScene[data-khorne-scene='all-tasks'] {
+    background-image: url('/cattasks/themes/khorne/all-tasks/background-mobile.webp');
+}
+
+.khorneFigure {
+    display: none;
+    overflow: hidden;
+}
+
+.khorneFigureArt {
+    position: absolute;
+    display: block;
+    max-width: none;
+    height: auto;
+    pointer-events: none;
+    user-select: none;
+}
+
+.khorneFigure[data-khorne-figure='task-marine'] > .khorneFigureArt {
+    top: -16.39%;
+    left: -4.24%;
+    width: 108.2%;
+}
+
+.khorneFigure[data-khorne-figure='task-hound-lower'] > .khorneFigureArt {
+    top: -93%;
+    left: -1.02%;
+    width: 102%;
+    clip-path: polygon(0 45.3638%, 46.3458% 45.3638%, 49.2869% 44.5792%, 50.9804% 44.3652%, 54.3672% 45.2924%, 57.1301% 45.1498%, 59.7148% 47.2183%, 68.4492% 47.2183%, 70.4100% 45.8631%, 72.9055% 45.2924%, 87.3440% 45.2924%, 88.7701% 47.0756%, 100% 47.0756%, 100% 100%, 0 100%);
+}
+
+.khorneFigure[data-khorne-figure='task-hound-upper'] > .khorneFigureArt {
+    top: -21.9%;
+    left: -77.6%;
+    width: 182.14%;
+    clip-path: polygon(0 0, 100% 0, 100% 47.0756%, 88.7701% 47.0756%, 87.3440% 45.2924%, 72.9055% 45.2924%, 70.4100% 45.8631%, 68.4492% 47.2183%, 59.7148% 47.2183%, 57.1301% 45.1498%, 54.3672% 45.2924%, 50.9804% 44.3652%, 49.2869% 44.5792%, 46.3458% 45.3638%, 0 45.3638%);
+}
+
+.khorneFigure[data-khorne-figure='catalogue-marine'] > .khorneFigureArt {
+    top: -1.87%;
+    left: -11.2%;
+    width: 129.56%;
+}
+
+.khorneFigure[data-khorne-figure='catalogue-daemon'] > .khorneFigureArt {
+    top: -2.32%;
+    left: -3.29%;
+    width: 105.65%;
+}
+
+.khorneFigureLayer {
+    display: none;
+}
+
+.khorneLowerScene {
+    display: none;
+}
+
+@media (min-width: 601px) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneScene[data-khorne-scene='task'] {
+        background-image: url('/cattasks/themes/khorne/task/background-tablet.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneScene[data-khorne-scene='all-tasks'] {
+        background-image: url('/cattasks/themes/khorne/all-tasks/background-tablet.webp');
+    }
+}
+
+@media (min-width: 1151px) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneScene[data-khorne-scene='task'] {
+        background-image: url('/cattasks/themes/khorne/task/background-desktop.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneScene[data-khorne-scene='all-tasks'] {
+        background-image: url('/cattasks/themes/khorne/all-tasks/background-desktop.webp');
+    }
+
+}
+
+/*
+ * The wide scene is deliberately CSS-only.  It uses the art's known alpha bounds
+ * (rather than sampling pixels during resize) and reserves the editor envelope
+ * before a silhouette is allowed to cross a decorative rim.
+ */
+@media (min-width: 601px) and (width < 2200px), (min-width: 601px) and (height < 740px) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene {
+        display: block;
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        min-height: clamp(198px, 19vw, 264px);
+        margin: 12px auto 0;
+        overflow: clip;
+        pointer-events: none;
+        background: #171514 center / 100% 100% scroll no-repeat;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneLowerScene {
+        background-image: url('/cattasks/themes/khorne/task/background-desktop.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneLowerScene {
+        background-image: url('/cattasks/themes/khorne/all-tasks/background-desktop.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene > div {
+        display: none;
+        position: relative;
+        justify-content: center;
+        align-items: end;
+        width: min(100%, var(--khorne-workspace-width));
+        height: clamp(198px, 19vw, 264px);
+        margin: 0 auto;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneLowerScene > [data-khorne-figure-scene='task'],
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneLowerScene > [data-khorne-figure-scene='all-tasks'] {
+        display: flex;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene .khorneFigure {
+        display: block;
+        position: absolute;
+        bottom: 0;
+        background: center / contain no-repeat;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='task-marine'] {
+        left: calc(50% - clamp(192px, 18vw, 246px));
+        width: clamp(150px, 14vw, 196px);
+        aspect-ratio: 1037 / 1086;
+        background-image: url('/cattasks/themes/khorne/task/marine.webp');
+        background-size: 108.2% auto;
+        background-position: -4.24% -16.4%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='task-hound-lower'] {
+        left: calc(50% + clamp(18px, 3vw, 52px));
+        width: clamp(178px, 16.5vw, 228px);
+        aspect-ratio: 1100 / 671;
+        background-image: url('/cattasks/themes/khorne/task/daemon.webp');
+        background-size: 102% auto;
+        background-position: -1.02% -93%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='task-hound-upper'] {
+        left: calc(50% + clamp(54px, 5vw, 90px));
+        bottom: 0;
+        width: clamp(150px, 14vw, 196px);
+        aspect-ratio: 616 / 539;
+        background-image: url('/cattasks/themes/khorne/task/daemon.webp');
+        background-size: 182.14% auto;
+        background-position: -77.6% -21.9%;
+        transform: none;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='catalogue-marine'],
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='catalogue-daemon'] {
+        width: clamp(154px, 14.5vw, 204px);
+        aspect-ratio: 866 / 1338;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='catalogue-marine'] {
+        right: calc(50% + 24px);
+        background-image: url('/cattasks/themes/khorne/all-tasks/marine.webp');
+        background-size: 129.56% auto;
+        background-position: -11.2% -1.87%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene [data-khorne-figure='catalogue-daemon'] {
+        left: calc(50% + 24px);
+        background-image: url('/cattasks/themes/khorne/all-tasks/daemon.webp');
+        background-size: 105.65% auto;
+        background-position: -3.29% -2.32%;
+    }
+}
+
+@media (min-width: 2200px) and (min-height: 740px) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'] {
+        --khorne-side-gutter: max(0px, calc((100vw - var(--khorne-workspace-width)) / 2));
+        /* Matches the painted floor in the desktop bridge at 1200/1440px heights. */
+        --khorne-ground-inset: max(20px, calc(20vh - 212px));
+        /* Keep the catalogue pair inside its real side gutter at 2304px while retaining 605/741px at 1200/1440px tall 2560px previews. */
+        --khorne-catalogue-figure-height: min(clamp(361px, calc(203.33vh - 1835px), 741px), calc(56.67vh - 75px));
+        --khorne-catalogue-marine-width: min(clamp(234px, calc(130.83vh - 1179px), 480px), clamp(234px, calc(36.68vh - 48.54px), 480px));
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer {
+        position: fixed;
+        z-index: 2;
+        inset: 0;
+        display: block;
+        overflow: hidden;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer > div {
+        display: none;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] .khorneFigureLayer > [data-khorne-figure-scene='task'],
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] .khorneFigureLayer > [data-khorne-figure-scene='all-tasks'] {
+        display: block;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer .khorneFigure {
+        display: block;
+        position: absolute;
+        bottom: var(--khorne-ground-inset);
+        pointer-events: none;
+        background: center / contain no-repeat;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='task-marine'] {
+        left: calc(var(--khorne-side-gutter) - min(480px, calc(var(--khorne-side-gutter) + 12px)) + 12px);
+        width: min(480px, calc(var(--khorne-side-gutter) + 12px));
+        aspect-ratio: 1037 / 1086;
+        background-image: url('/cattasks/themes/khorne/task/marine.webp');
+        background-size: 108.2% auto;
+        background-position: -4.24% -16.4%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='task-hound-lower'] {
+        left: calc(100% - var(--khorne-side-gutter) - 12px);
+        bottom: calc(var(--khorne-ground-inset) - 4px);
+        width: min(470px, calc(var(--khorne-side-gutter) + 12px));
+        aspect-ratio: 1100 / 671;
+        background-image: url('/cattasks/themes/khorne/task/daemon.webp');
+        background-size: 102% auto;
+        background-position: -1.02% -93%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='task-hound-upper'] {
+        left: calc(100% - var(--khorne-side-gutter) + 48px);
+        width: min(244px, calc(var(--khorne-side-gutter) - 56px));
+        aspect-ratio: 616 / 539;
+        background-image: url('/cattasks/themes/khorne/task/daemon.webp');
+        background-size: 182.14% auto;
+        background-position: -77.6% -21.9%;
+        transform: rotate(-13deg);
+        transform-origin: 48% 100%;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-marine'],
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-daemon'] {
+        height: var(--khorne-catalogue-figure-height);
+        bottom: var(--khorne-ground-inset);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-marine'] {
+        left: calc(var(--khorne-side-gutter) - var(--khorne-catalogue-marine-width) + 11px);
+        aspect-ratio: 866 / 1338;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-daemon'] {
+        right: calc(var(--khorne-side-gutter) - 333px);
+        bottom: calc(var(--khorne-ground-inset) - 4px);
+        aspect-ratio: 1062 / 1340;
+    }
+
+    /* The bridge is width-covered above 2:1 and height-covered below it. */
+    @media (min-aspect-ratio: 2 / 1) {
+        .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='task-hound-upper'] {
+            top: calc(50vh + 10.22vw - 225px);
+        }
+    }
+
+    @media (max-aspect-ratio: 2 / 1) {
+        .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='task-hound-upper'] {
+            top: calc(58.5vh - 24px);
+        }
+    }
+
+    /* While catalogue panes are beside the scene, only their 11px decorative rim may overlap.
+       The concave clips return to the full silhouette below the panes, preserving the sword over the track. */
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-marine'][data-khorne-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% var(--khorne-catalogue-clip-top), var(--khorne-catalogue-clip-edge) var(--khorne-catalogue-clip-top), var(--khorne-catalogue-clip-edge) var(--khorne-catalogue-clip-bottom), 100% var(--khorne-catalogue-clip-bottom), 100% 100%, 0 100%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneFigureLayer [data-khorne-figure='catalogue-daemon'][data-khorne-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 var(--khorne-catalogue-clip-bottom), var(--khorne-catalogue-clip-edge) var(--khorne-catalogue-clip-bottom), var(--khorne-catalogue-clip-edge) var(--khorne-catalogue-clip-top), 0 var(--khorne-catalogue-clip-top));
+    }
+}
+
+/* Crop wrappers only reveal the nested source image; never paint a second legacy background. */
+.taskDashboardRoot[data-cattasks-theme='khorne'] :is(.khorneFigureLayer, .khorneLowerScene) .khorneFigure {
+    background: none;
+}
+
+@media (max-width: 600px) {
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] {
+        background-image: url('/cattasks/themes/khorne/task/background-mobile.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] {
+        background-image: url('/cattasks/themes/khorne/all-tasks/background-mobile.webp');
+    }
+}
+
 @media (min-width: 1151px) {
     .taskDashboardRoot[data-cattasks-theme='dark'] .viewportDecoration {
         background-image: url('/cattasks/night-meadow.png');
@@ -535,7 +919,7 @@
     background: radial-gradient(ellipse at 72% 7%, rgba(251, 249, 241, .92), transparent 36%), linear-gradient(135deg, var(--cattasks-page-background) 0%, #e3ebe2 68%, #dce6d7 100%);
 }
 
-.headerContainer, .mainContainer, .footerContainer { position: relative; }
+.headerContainer, .mainContainer, .footerContainer { position: relative; z-index: 1; }
 .headerContainer { min-height: 137px; height: auto; }
 .taskDashboardRoot > .headerContainer { padding-bottom: 0; }
 .mainContainer { flex: 1 1 auto; min-height: 0; }
@@ -568,6 +952,14 @@
 @media (min-width: 1221px) {
     .taskDashboardRoot > .headerContainer {
         min-height: 176px;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] > .headerContainer {
+        min-height: 128px;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='khorne'] [aria-label='Pet feeding strip'] {
+        max-inline-size: 940px;
     }
 }
 

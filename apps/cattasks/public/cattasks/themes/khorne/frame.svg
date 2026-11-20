@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <title>brass-red nine-slice metal frame</title>
+  <desc>Transparent center; 24-unit corner regions. Use border-image-slice:25% without fill. Straight sides stretch, rivets stay within corners.</desc>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#E8BD73"/>
+      <stop offset=".14" stop-color="#9A6937"/>
+      <stop offset=".48" stop-color="#382016"/>
+      <stop offset=".66" stop-color="#9A6937"/>
+      <stop offset="1" stop-color="#382016"/>
+    </linearGradient>
+  </defs>
+  <path fill="#090A0C" fill-rule="evenodd" d="M12 0H84L96 12V84L84 96H12L0 84V12Z M19 10H77L86 19V77L77 86H19L10 77V19Z"/>
+  <path fill="url(#metal)" fill-rule="evenodd" d="M12 2H84L94 12V84L84 94H12L2 84V12Z M19 10H77L86 19V77L77 86H19L10 77V19Z"/>
+  <path fill="none" stroke="#E8BD73" stroke-width="1" opacity=".82" d="M13 3H83L93 13V83L83 93H13L3 83V13Z"/>
+  <path fill="none" stroke="#382016" stroke-width="2" d="M16 7H80L89 16V80L80 89H16L7 80V16Z"/>
+  <path fill="none" stroke="#682F24" stroke-width="2" d="M19 11H77L85 19V77L77 85H19L11 77V19Z"/>
+  <path fill="none" stroke="#E8BD73" stroke-width="1" opacity=".48" d="M20 13H76L83 20V76L76 83H20L13 76V20Z"/>
+  <g fill="#382016" stroke="#100F10" stroke-width="1">
+    <circle cx="12" cy="12" r="3"/><circle cx="84" cy="12" r="3"/>
+    <circle cx="12" cy="84" r="3"/><circle cx="84" cy="84" r="3"/>
+  </g>
+  <g fill="#EAC07A">
+    <circle cx="11.5" cy="11.4" r="1.4"/><circle cx="83.5" cy="11.4" r="1.4"/>
+    <circle cx="11.5" cy="83.4" r="1.4"/><circle cx="83.5" cy="83.4" r="1.4"/>
+  </g>
+</svg>

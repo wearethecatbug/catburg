@@ -25,6 +25,15 @@
     flex-direction: column;
 }
 
+:global([data-cattasks-theme='khorne']) .codeEditorContainer { max-width: none; }
+:global([data-cattasks-theme='khorne']) .solutionCard { position: relative; overflow: hidden; border-color: transparent; border-radius: 0; background: #1f1b18; clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+:global([data-cattasks-theme='khorne']) .solutionCard::after { position: absolute; z-index: 3; inset: 0; border: 12px solid transparent; border-image: url('/cattasks/themes/khorne/chrome/panel-frame-cropped.png') 96 / 12px stretch; content: ''; pointer-events: none; }
+:global([data-cattasks-theme='khorne']) .solutionHeader { border-bottom-color: #644136; background: #29231f; }
+:global([data-cattasks-theme='khorne']) .solutionHeader { min-height: 56px; padding: 8px 16px; }
+:global([data-cattasks-theme='khorne']) .solutionHeading { font-size: 21px; }
+:global([data-cattasks-theme='khorne']) .languageLabel { padding: 8px 12px; border: 1px solid #8c683a; background: #171514; color: #f4ead2; font-size: 15px; font-weight: 650; }
+:global([data-cattasks-theme='khorne']) .buttonsRow { gap: 10px; min-height: 44px; }
+
 .solutionHeader {
     display: flex;
     align-items: center;
@@ -237,6 +246,7 @@
 
     .codeMarker { font-size: 15px; }
     .languageLabel { color: #506c58; font-size: 14px; }
+    :global([data-cattasks-theme='khorne']) .languageLabel { color: #f4ead2; }
 
     .buttonsRow {
         grid-template-columns: repeat(2, minmax(0, 100px));

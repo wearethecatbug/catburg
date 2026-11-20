@@ -24,6 +24,10 @@
     color: var(--cattasks-ink);
 }
 
+:global([data-cattasks-theme='khorne']) .btnSolution.active {
+    color: var(--cattasks-ink);
+}
+
 
 /* активная кнопка при ховере — селектор специфичнее и всегда победит */
 .btnSolution.active:hover {
