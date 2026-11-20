@@ -580,7 +580,7 @@
  * (rather than sampling pixels during resize) and reserves the editor envelope
  * before a silhouette is allowed to cross a decorative rim.
  */
-@media (min-width: 601px) and (max-width: 2199px), (min-width: 601px) and (max-height: 739px) {
+@media (min-width: 601px) and (width < 2200px), (min-width: 601px) and (height < 740px) {
     .taskDashboardRoot[data-cattasks-theme='khorne'] .khorneLowerScene {
         display: block;
         position: relative;

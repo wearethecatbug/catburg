@@ -1,6 +1,6 @@
 'use client';
 
-import {useRef, useState, type KeyboardEvent} from 'react';
+import {useLayoutEffect, useRef, useState, type KeyboardEvent} from 'react';
 import {catTasksThemes, useCatTasksTheme, type CatTasksTheme} from './CatTasksTheme';
 import styles from './ThemeToggle.module.css';
 import Image from 'next/image';
@@ -13,28 +13,27 @@ export default function ThemeToggle() {
     const isDark = theme === 'dark';
     const label = theme[0].toUpperCase() + theme.slice(1);
 
+    useLayoutEffect(() => {
+        if (isOpen) firstOptionRef.current?.focus();
+    }, [isOpen]);
+
     const chooseTheme = (nextTheme: CatTasksTheme) => {
         setTheme(nextTheme);
         setIsOpen(false);
-        requestAnimationFrame(() => triggerRef.current?.focus());
+        triggerRef.current?.focus();
     };
 
-    const openChooser = () => {
-        setIsOpen(open => {
-            if (!open) requestAnimationFrame(() => firstOptionRef.current?.focus());
-            return !open;
-        });
-    };
+    const openChooser = () => setIsOpen(open => !open);
 
     const closeChooser = (event: KeyboardEvent<HTMLDivElement>) => {
-        if (event.key !== 'Escape') return;
+        if (!isOpen || event.key !== 'Escape') return;
         event.preventDefault();
         setIsOpen(false);
-        requestAnimationFrame(() => triggerRef.current?.focus());
+        triggerRef.current?.focus();
     };
 
     return (
-        <div className={styles.themeChooser} data-theme={theme}>
+        <div className={styles.themeChooser} data-theme={theme} onKeyDown={closeChooser}>
             <button
                 ref={triggerRef}
                 type="button"
@@ -54,7 +53,7 @@ export default function ThemeToggle() {
                 )}
             </button>
             {isOpen && (
-                <div id="cattasks-theme-options" className={styles.themeOptions} role="group" aria-label="Themes" onKeyDown={closeChooser}>
+                <div id="cattasks-theme-options" className={styles.themeOptions} role="group" aria-label="Themes">
                     {catTasksThemes.map((option, index) => {
                         const optionLabel = option[0].toUpperCase() + option.slice(1);
                         const isSelected = option === theme;

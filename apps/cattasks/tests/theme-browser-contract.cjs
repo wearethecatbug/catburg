@@ -167,12 +167,11 @@ async function paintDelta(page, visible, hidden) {
 }
 
 function cataloguePaintStrips(filters, list, allowance = 14) {
-  const height = Math.max(1, Math.floor(Math.min(filters.height, list.height)));
   return {
-    leftRim: {x: Math.max(0, Math.floor(filters.x - 1)), y: Math.floor(filters.y), width: allowance + 1, height},
-    leftInterior: {x: Math.floor(filters.x + allowance), y: Math.floor(filters.y), width: 32, height},
-    rightRim: {x: Math.floor(list.x + list.width - allowance), y: Math.floor(list.y), width: allowance + 1, height},
-    rightInterior: {x: Math.floor(list.x + list.width - allowance - 32), y: Math.floor(list.y), width: 32, height},
+    leftRim: {x: Math.max(0, Math.floor(filters.x - 1)), y: Math.floor(filters.y), width: allowance + 1, height: Math.max(1, Math.floor(filters.height))},
+    leftInterior: {x: Math.floor(filters.x + allowance), y: Math.floor(filters.y), width: Math.max(1, Math.floor(filters.width - allowance)), height: Math.max(1, Math.floor(filters.height))},
+    rightRim: {x: Math.floor(list.x + list.width - allowance), y: Math.floor(list.y), width: allowance + 1, height: Math.max(1, Math.floor(list.height))},
+    rightInterior: {x: Math.floor(list.x), y: Math.floor(list.y), width: Math.max(1, Math.floor(list.width - allowance)), height: Math.max(1, Math.floor(list.height))},
   };
 }
 
@@ -297,6 +296,7 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     const diagnostics = await prepare(page);
     const before = await surface(page);
     const trigger = await themeTrigger(page);
+    const triggerLabel = await trigger.getAttribute("aria-label");
     await trigger.focus();
     await page.keyboard.press("Enter");
     const choices = page.getByRole("group", {name: "Themes", exact: true});
@@ -304,11 +304,15 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     assert.equal(await choices.getByRole("button").count(), 3, "only the three shipped choices are available");
     assert.equal(await choices.locator("button[aria-pressed='true']").count(), 1, "the current choice has one accessible selected state");
     assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).getAttribute("aria-pressed"), "true", "the initial selected choice is Light");
+    await choices.getByRole("button", {name: "Light", exact: true}).and(page.locator(":focus")).waitFor({state: "visible"});
+    await page.keyboard.press("Shift+Tab");
+    await page.waitForFunction(label => document.activeElement?.getAttribute("aria-label") === label, triggerLabel);
     await page.keyboard.press("Escape");
+    await choices.waitFor({state: "hidden"});
     assert.equal(await page.getByRole("group", {name: "Themes", exact: true}).count(), 0, "Escape closes the theme choices");
-    const triggerLabel = await trigger.getAttribute("aria-label");
     await page.waitForFunction(label => document.activeElement?.getAttribute("aria-label") === label, triggerLabel);
     assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), triggerLabel, "Escape restores focus to the trigger");
+    assert.equal((await surface(page)).theme, "light", "Escape from the trigger retains the selected Light theme");
     await chooseTheme(page, "Khorne");
     const khorne = await surface(page);
     assert.equal(khorne.theme, "khorne");
@@ -317,8 +321,7 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     assert.deepEqual(khorne.models, before.models, "selecting Khorne preserves the existing Monaco model");
     assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "khorne", "the real Khorne choice persists its value");
     await page.waitForFunction(() => performance.getEntriesByType("resource").some(entry => entry.name.includes("/cattasks/themes/khorne/")));
-    const taskAssets = await khorneAssets(page);
-    assert.ok(taskAssets.length > 0, "Task loads Khorne's public art instead of a preview screenshot");
+    assert.ok((await khorneAssets(page)).length > 0, "Task loads Khorne's public art instead of a preview screenshot");
     await waitForJavaScriptWorker(page);
     await page.reload({waitUntil: "domcontentloaded"});
     await page.locator("[data-cattasks-theme='khorne']").waitFor();
@@ -328,7 +331,8 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     await page.getByRole("button", {name: "All tasks", exact: true}).click();
     await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
     assert.equal((await surface(page)).theme, "khorne", "catalogue keeps the selected Khorne theme");
-    await page.waitForFunction(previous => performance.getEntriesByType("resource").some(entry => entry.name.includes("/cattasks/themes/khorne/") && !previous.includes(entry.name)), taskAssets);
+    await page.waitForFunction(() => performance.getEntriesByType("resource").some(entry => new URL(entry.name).pathname === "/cattasks/themes/khorne/all-tasks/background-desktop.webp"));
+    assert.ok((await khorneAssets(page)).some(asset => asset.endsWith("/all-tasks/background-desktop.webp")), "catalogue navigation loads the active All tasks desktop background rather than an unrelated new Khorne resource");
     assert.equal((await surface(page)).overflow, 0, "Khorne catalogue retains the existing wide geometry");
     const catalogueHeader = page.locator("header[data-khorne-header='catalogue']");
     const catalogueTitle = catalogueHeader.getByRole("heading", {name: "All tasks", exact: true});
@@ -604,10 +608,28 @@ test("Khorne moves scenes below the pet strip on constrained desktop and hides t
       assert.ok(figures.every(figure => figure.y >= strip.y + strip.height - 1), `${width}px Task decorations sit below the pet strip instead of narrowing the workspace`);
     }
 
-    await page.setViewportSize({width: 430, height: 900});
+    await page.setViewportSize({width: 800, height: 900});
     await nextPaint(page);
     await page.getByRole("button", {name: "All tasks", exact: true}).click();
     await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    const touchFilters = page.getByRole("button", {name: "Filters", exact: true});
+    if (await touchFilters.count() && await touchFilters.isVisible() && await touchFilters.getAttribute("aria-expanded") === "false") await touchFilters.click();
+    const touchRadio = page.getByRole("radio", {name: "All topics", exact: true});
+    await touchRadio.waitFor({state: "visible"});
+    const touchLabel = await touchRadio.evaluate(radio => {
+      const label = radio.closest("label") || document.querySelector(`label[for="${radio.id}"]`);
+      if (!label) throw new Error("the real All topics radio has no label target");
+      const box = label.getBoundingClientRect();
+      return {width: box.width, height: box.height};
+    });
+    assert.ok(touchLabel.width >= 44 && touchLabel.height >= 44, "800px touch All topics label keeps a 44px target");
+    await page.emulateMedia({forcedColors: "active"});
+    assert.notEqual(await touchRadio.evaluate(radio => getComputedStyle(radio).appearance), "none", "forced-colors Khorne uses the native radio appearance");
+    await page.emulateMedia({forcedColors: "none"});
+    if (await touchFilters.count() && await touchFilters.getAttribute("aria-expanded") === "true") await touchFilters.click();
+
+    await page.setViewportSize({width: 430, height: 900});
+    await nextPaint(page);
     const filters = page.getByRole("button", {name: "Filters", exact: true});
     await filters.focus();
     await page.keyboard.press("Enter");

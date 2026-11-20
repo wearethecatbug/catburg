@@ -770,6 +770,14 @@
     :global([data-cattasks-theme='khorne']) .filterOption { min-height: 32px; font-size: 14px; }
 }
 
+@container (max-width: 859px) {
+    :global([data-cattasks-theme='khorne']) .filterOption { min-height: 44px; }
+}
+
+@media (any-pointer: coarse) {
+    :global([data-cattasks-theme='khorne']) .filterOption { min-height: 44px; }
+}
+
 @container (max-width: 700px) {
     :global([data-cattasks-theme='khorne']) .catalogueLayout { gap: 10px; }
     :global([data-cattasks-theme='khorne']) .filtersToggle {
@@ -838,5 +846,15 @@
         border-color: Highlight;
         -webkit-mask-image: none;
         mask-image: none;
+    }
+    :global([data-cattasks-theme='khorne']) .filterOption input,
+    :global([data-cattasks-theme='khorne']) .filterOption input:checked {
+        appearance: auto;
+        width: auto;
+        height: auto;
+        border: initial;
+        background: initial;
+        accent-color: Highlight;
+        forced-color-adjust: auto;
     }
 }
