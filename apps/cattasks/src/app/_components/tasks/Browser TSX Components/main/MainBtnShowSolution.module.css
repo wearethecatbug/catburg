@@ -10,6 +10,14 @@
     text-decoration: underline;
 }
 
+:global([data-cattasks-theme='nurgle']) .btnSolution {
+    border-color: var(--khorne-metal, #b69854);
+    background: linear-gradient(180deg, var(--khorne-neutral-high, #29301e), var(--khorne-neutral-low, #151a10));
+    color: var(--cattasks-ink);
+}
+:global([data-cattasks-theme='nurgle']) .btnSolution:hover:not(:disabled) { border-color: var(--khorne-focus, #9db66a); }
+:global([data-cattasks-theme='nurgle']) .btnSolution:focus-visible { outline-color: var(--khorne-focus, #9db66a); }
+
 .btnSolution:hover {
     background: var(--cattasks-hover);
 }

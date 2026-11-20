@@ -7,7 +7,7 @@ import Footer from '@/app/_components/tasks/Browser TSX Components/footer/Footer
 import {TaskProvider} from '../../context/TaskProvider';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import AllTasks, {AllTasksHeader} from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
-import {CatTasksThemeContext, catTasksThemes, getCatTasksTheme, type CatTasksTheme} from './CatTasksTheme';
+import {CatTasksThemeContext, catTasksThemes, getCatTasksTheme, isWarhammerTheme, type CatTasksTheme} from './CatTasksTheme';
 import ThemeToggle from './ThemeToggle';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
@@ -15,6 +15,10 @@ const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattas
 
 function KhorneFigure({figure, src}: {figure: string; src: string}) {
     return <span className={styles.khorneFigure} data-khorne-figure={figure}><img className={styles.khorneFigureArt} src={src} alt="" loading="lazy" decoding="async"/></span>;
+}
+
+function NurgleFigure({figure, src}: {figure: string; src: string}) {
+    return <span className={styles.nurgleFigure} data-nurgle-figure={figure}><img className={styles.nurgleFigureArt} src={src} alt="" loading="lazy" decoding="async"/></span>;
 }
 
 function readStoredTheme(): CatTasksTheme {
@@ -49,23 +53,23 @@ export default function TaskDashboard() {
     const themeValue = useMemo(() => ({theme, setTheme: selectTheme}), [theme, selectTheme]);
 
     useLayoutEffect(() => {
-        if (theme !== 'khorne' || !isAllTasksOpen) return;
+        if (!isWarhammerTheme(theme) || !isAllTasksOpen) return;
 
         const dashboard = dashboardRef.current;
         if (!dashboard) return;
 
         const sidebar = dashboard.querySelector<HTMLElement>('aside');
         const taskList = dashboard.querySelector<HTMLElement>("[aria-labelledby='taskListTitle']");
-        const marine = dashboard.querySelector<HTMLElement>("[data-khorne-figure-scene='all-tasks'] > [data-khorne-figure='catalogue-marine']");
-        const daemon = dashboard.querySelector<HTMLElement>("[data-khorne-figure-scene='all-tasks'] > [data-khorne-figure='catalogue-daemon']");
+        const marine = dashboard.querySelector<HTMLElement>(`[data-${theme}-figure-scene='all-tasks'] > [data-${theme}-figure='catalogue-marine']`);
+        const daemon = dashboard.querySelector<HTMLElement>(`[data-${theme}-figure-scene='all-tasks'] > [data-${theme}-figure='catalogue-daemon']`);
         if (!sidebar || !taskList || !marine || !daemon) return;
 
         const figures = [marine, daemon];
         const clearClips = () => figures.forEach((figure) => {
-            delete figure.dataset.khorneCatalogueClipped;
-            figure.style.removeProperty('--khorne-catalogue-clip-top');
-            figure.style.removeProperty('--khorne-catalogue-clip-bottom');
-            figure.style.removeProperty('--khorne-catalogue-clip-edge');
+            delete figure.dataset[`${theme}CatalogueClipped`];
+            figure.style.removeProperty(`--${theme}-catalogue-clip-top`);
+            figure.style.removeProperty(`--${theme}-catalogue-clip-bottom`);
+            figure.style.removeProperty(`--${theme}-catalogue-clip-edge`);
         });
         const constrain = (figure: HTMLElement, edge: number, top: number, bottom: number) => {
             const bounds = figure.getBoundingClientRect();
@@ -73,10 +77,10 @@ export default function TaskDashboard() {
             const clipTop = Math.max(0, Math.min(bounds.height, top - bounds.top));
             const clipBottom = Math.max(clipTop, Math.min(bounds.height, bottom - bounds.top));
             if (clipTop === clipBottom) return;
-            figure.dataset.khorneCatalogueClipped = 'true';
-            figure.style.setProperty('--khorne-catalogue-clip-top', `${clipTop}px`);
-            figure.style.setProperty('--khorne-catalogue-clip-bottom', `${clipBottom}px`);
-            figure.style.setProperty('--khorne-catalogue-clip-edge', `${Math.max(0, Math.min(bounds.width, edge - bounds.left))}px`);
+            figure.dataset[`${theme}CatalogueClipped`] = 'true';
+            figure.style.setProperty(`--${theme}-catalogue-clip-top`, `${clipTop}px`);
+            figure.style.setProperty(`--${theme}-catalogue-clip-bottom`, `${clipBottom}px`);
+            figure.style.setProperty(`--${theme}-catalogue-clip-edge`, `${Math.max(0, Math.min(bounds.width, edge - bounds.left))}px`);
         };
         const update = () => {
             clearClips();
@@ -86,7 +90,7 @@ export default function TaskDashboard() {
             const listBounds = taskList.getBoundingClientRect();
             const panelTop = Math.min(sidebarBounds.top, listBounds.top);
             const panelBottom = Math.max(sidebarBounds.bottom, listBounds.bottom);
-            // The approved rim overlap is 11px; below the panels the sword remains uncut over the track.
+            // The approved rim overlap is 11px; below the panels silhouettes remain uncut over the track.
             constrain(marine, sidebarBounds.left + 11, panelTop, panelBottom);
             constrain(daemon, listBounds.right - 11, panelTop, panelBottom);
         };
@@ -120,7 +124,8 @@ export default function TaskDashboard() {
                 <script dangerouslySetInnerHTML={{__html: themePrepaintScript}}/>
                 <div className={styles.khorneScene} data-khorne-scene="task" aria-hidden="true"/>
                 <div className={styles.khorneScene} data-khorne-scene="all-tasks" aria-hidden="true"/>
-                <div className={styles.khorneFigureLayer} aria-hidden="true">
+                <div className={styles.nurgleScene} data-nurgle-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true"/>
+                {theme === 'khorne' && <div className={styles.khorneFigureLayer} aria-hidden="true">
                     <div data-khorne-figure-scene="task">
                         <KhorneFigure figure="task-marine" src="/cattasks/themes/khorne/task/marine.webp"/>
                         <KhorneFigure figure="task-hound-upper" src="/cattasks/themes/khorne/task/daemon.webp"/>
@@ -130,7 +135,7 @@ export default function TaskDashboard() {
                         <KhorneFigure figure="catalogue-marine" src="/cattasks/themes/khorne/all-tasks/marine.webp"/>
                         <KhorneFigure figure="catalogue-daemon" src="/cattasks/themes/khorne/all-tasks/daemon.webp"/>
                     </div>
-                </div>
+                </div>}
                 <div className={styles.decorationLayer} aria-hidden="true">
                     <span className={styles.ambientLight}/>
                     <span className={styles.windowLight}>
@@ -142,9 +147,10 @@ export default function TaskDashboard() {
                     <span className={styles.foliageBottomLeft}/>
                     <span className={styles.foliageBottomRight}/>
                 </div>
-                {theme === 'khorne' ? (
+                {isWarhammerTheme(theme) ? (
                     <KhorneDashboardHeader
                         className={styles.headerContainer}
+                        theme={theme}
                         isAllTasksOpen={isAllTasksOpen}
                         onAllTasks={showAllTasks}
                         onBack={returnToTask}
@@ -160,7 +166,7 @@ export default function TaskDashboard() {
                     />
                 )}
                 <ThemeToggle/>
-                {theme !== 'khorne' && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
+                {!isWarhammerTheme(theme) && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
                     {!isAllTasksOpen && (
                         <>
                         <div className={styles.shelfDecoration}>
@@ -197,7 +203,7 @@ export default function TaskDashboard() {
                 <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
                 {isAllTasksOpen && <AllTasks onBack={returnToTask}/>}
                 <Footer className={styles.footerContainer}></Footer>
-                <div className={styles.khorneLowerScene} data-khorne-scene-layout="lower" aria-hidden="true">
+                {theme === 'khorne' && <div className={styles.khorneLowerScene} data-khorne-scene-layout="lower" aria-hidden="true">
                     <div data-khorne-figure-scene="task">
                         <KhorneFigure figure="task-marine" src="/cattasks/themes/khorne/task/marine.webp"/>
                         <KhorneFigure figure="task-hound-upper" src="/cattasks/themes/khorne/task/daemon.webp"/>
@@ -207,7 +213,16 @@ export default function TaskDashboard() {
                         <KhorneFigure figure="catalogue-marine" src="/cattasks/themes/khorne/all-tasks/marine.webp"/>
                         <KhorneFigure figure="catalogue-daemon" src="/cattasks/themes/khorne/all-tasks/daemon.webp"/>
                     </div>
-                </div>
+                </div>}
+                {theme === 'nurgle' && <div className={styles.nurgleFigureStage} data-nurgle-figure-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true">
+                    {isAllTasksOpen ? <>
+                        <NurgleFigure figure="catalogue-marine" src="/cattasks/themes/nurgle/all-tasks/marine.webp"/>
+                        <NurgleFigure figure="catalogue-daemon" src="/cattasks/themes/nurgle/all-tasks/daemon.webp"/>
+                    </> : <>
+                        <NurgleFigure figure="task-marine" src="/cattasks/themes/nurgle/task/marine.webp"/>
+                        <NurgleFigure figure="task-daemon" src="/cattasks/themes/nurgle/task/daemon.webp"/>
+                    </>}
+                </div>}
             </div>
             </CatTasksThemeContext.Provider>
         </TaskProvider>

@@ -117,10 +117,42 @@ async function expectText(page, roleName, pattern) {
   assert.match(label || "", pattern, "the trigger reports the selected theme in its accessible name");
 }
 
+async function expectShippedThemeChoices(choices) {
+  const names = ["Light", "Dark", "Khorne", "Nurgle"];
+  const buttons = choices.getByRole("button");
+  assert.equal(await buttons.count(), names.length, "exactly four theme controls are exposed");
+  for (const [index, name] of names.entries()) {
+    const option = choices.getByRole("button", {name, exact: true});
+    assert.equal(await option.count(), 1, `${name} is exposed as one accessible theme control`);
+    assert.equal(await option.evaluate((element, ordinal) => [...element.parentElement.querySelectorAll("button")].indexOf(element), index), index, `${name} keeps its approved option order`);
+  }
+}
+
 async function khorneAssets(page) {
   return page.evaluate(() => performance.getEntriesByType("resource")
     .map(entry => entry.name)
     .filter(name => name.includes("/cattasks/themes/khorne/")));
+}
+
+async function themeAssets(page, theme) {
+  return page.evaluate(activeTheme => performance.getEntriesByType("resource")
+    .map(entry => new URL(entry.name).pathname)
+    .filter(path => path.includes(`/cattasks/themes/${activeTheme}/`)), theme);
+}
+
+async function visibleGeometry(page, selector, attribute) {
+  return page.locator(selector).evaluateAll((elements, attributeName) => elements
+    .filter(element => {
+      const style = getComputedStyle(element), box = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+    })
+    .map(element => {
+      const box = element.getBoundingClientRect();
+      return {
+        name: element.getAttribute(attributeName), x: box.x, y: box.y, width: box.width, height: box.height,
+        right: box.right, bottom: box.bottom, pointerEvents: getComputedStyle(element).pointerEvents,
+      };
+    }), attribute);
 }
 
 async function visibleKhorneGeometry(page, selector) {
@@ -173,6 +205,43 @@ function cataloguePaintStrips(filters, list, allowance = 14) {
     rightRim: {x: Math.floor(list.x + list.width - allowance), y: Math.floor(list.y), width: allowance + 1, height: Math.max(1, Math.floor(list.height))},
     rightInterior: {x: Math.floor(list.x), y: Math.floor(list.y), width: Math.max(1, Math.floor(list.width - allowance)), height: Math.max(1, Math.floor(list.height))},
   };
+}
+
+async function figurePaintChanges(page, selector, strips) {
+  await page.locator(`${selector}:visible img`).evaluateAll(images => Promise.all(images.map(image => image.decode())));
+  const capture = async () => Object.fromEntries(await Promise.all(Object.entries(strips)
+    .map(async ([name, clip]) => [name, await page.screenshot({clip, caret: "hide"})])));
+  const painted = await capture();
+  await page.locator(selector).evaluateAll(elements => elements.forEach(element => {
+    element.__themeOracleVisibility = {value: element.style.getPropertyValue("visibility"), priority: element.style.getPropertyPriority("visibility")};
+    element.style.setProperty("visibility", "hidden", "important");
+  }));
+  let unpainted;
+  try { unpainted = await capture(); }
+  finally {
+    await page.locator(selector).evaluateAll(elements => elements.forEach(element => {
+      const saved = element.__themeOracleVisibility;
+      if (saved) element.style.setProperty("visibility", saved.value, saved.priority);
+      delete element.__themeOracleVisibility;
+    }));
+  }
+  return Object.fromEntries(await Promise.all(Object.keys(strips).map(async name => [name, await paintDelta(page, painted[name], unpainted[name])])));
+}
+
+async function sampledPanelColor(page, locator) {
+  const box = await locator.boundingBox();
+  assert.ok(box && box.width >= 24 && box.height >= 24, "a real painted panel is available for contrast sampling");
+  const clip = {x: Math.floor(box.x + box.width - 18), y: Math.floor(box.y + box.height - 18), width: 12, height: 12};
+  const image = await page.screenshot({clip, caret: "hide"});
+  return page.evaluate(async encoded => {
+    const source = new Image(); source.src = `data:image/png;base64,${encoded}`; await source.decode();
+    const canvas = document.createElement("canvas"); canvas.width = source.width; canvas.height = source.height;
+    const context = canvas.getContext("2d"); context.drawImage(source, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const sums = [0, 0, 0];
+    for (let index = 0; index < pixels.length; index += 4) for (let channel = 0; channel < 3; channel += 1) sums[channel] += pixels[index + channel];
+    return `rgb(${sums.map(value => Math.round(value / (pixels.length / 4))).join(", ")})`;
+  }, image.toString("base64"));
 }
 
 function luminance(color) {
@@ -301,7 +370,7 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     await page.keyboard.press("Enter");
     const choices = page.getByRole("group", {name: "Themes", exact: true});
     await choices.waitFor({state: "visible"});
-    assert.equal(await choices.getByRole("button").count(), 3, "only the three shipped choices are available");
+    await expectShippedThemeChoices(choices);
     assert.equal(await choices.locator("button[aria-pressed='true']").count(), 1, "the current choice has one accessible selected state");
     assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).getAttribute("aria-pressed"), "true", "the initial selected choice is Light");
     await choices.getByRole("button", {name: "Light", exact: true}).and(page.locator(":focus")).waitFor({state: "visible"});
@@ -392,6 +461,189 @@ test("fresh non-Khorne and compact Khorne boots do not transfer hidden Khorne fi
         if (scenario.name === "visible Khorne desktop") {
           assert.equal((await visibleKhorneGeometry(page, "[data-khorne-figure]")).length, 3, "visible desktop Khorne renders its actual three-piece side composition");
         }
+        assertDiagnostics(diagnostics);
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
+});
+
+test("Nurgle is the fourth native choice with real Task/catalogue state, one rail, and responsive scene boundaries", {timeout: 120_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 2560, height: 1200}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const figureSelector = "[data-nurgle-figure]";
+  const nurgle = "[data-warhammer-variant='nurgle']";
+  try {
+    const diagnostics = await prepare(page);
+    const trigger = await themeTrigger(page);
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const choices = page.getByRole("group", {name: "Themes", exact: true});
+    await choices.waitFor({state: "visible"});
+    await expectShippedThemeChoices(choices);
+    assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).evaluate(element => document.activeElement === element), true, "opening the Nurgle chooser puts focus on the first native option");
+    for (let index = 0; index < 3; index += 1) await page.keyboard.press("Tab");
+    const nurgleChoice = choices.getByRole("button", {name: "Nurgle", exact: true});
+    assert.equal(await nurgleChoice.evaluate(element => document.activeElement === element), true, "keyboard traversal reaches the native Nurgle choice");
+    await page.keyboard.press("Escape");
+    await choices.waitFor({state: "hidden"});
+    assert.equal(await page.evaluate(label => document.activeElement?.getAttribute("aria-label") === label, await trigger.getAttribute("aria-label")), true, "Escape from Nurgle restores focus to the theme trigger");
+    await trigger.focus(); await page.keyboard.press("Enter");
+    assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).evaluate(element => document.activeElement === element), true, "reopening the Nurgle chooser resets keyboard focus to its first option");
+    for (let index = 0; index < 3; index += 1) await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await page.locator("[data-cattasks-theme='nurgle']").waitFor();
+    await expectCurrentTheme(page, "Nurgle");
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "nurgle", "the native Nurgle choice persists the valid preference");
+    const taskHeader = page.locator(`header${nurgle}[data-khorne-header='task']`);
+    const taskRail = page.locator(`${nurgle}[data-khorne-rail]`);
+    const taskAquila = page.locator(`${nurgle}[data-khorne-aquila]`);
+    assert.equal(await taskHeader.count(), 1, "Nurgle Task has one integrated live header");
+    assert.equal(await taskRail.count(), 1, "Nurgle Task has one shared riveted rail");
+    assert.equal(await taskAquila.count(), 1, "Nurgle Task has its supplied shared Aquila");
+    assert.equal(await taskAquila.locator("img").getAttribute("src"), "/cattasks/themes/nurgle/aquila.png", "Nurgle Task uses the supplied shared Aquila path");
+    const railHandle = await taskRail.elementHandle();
+    const taskHeaderBox = await taskHeader.boundingBox();
+    const taskFigures = await visibleGeometry(page, figureSelector, "data-nurgle-figure");
+    assert.equal(taskFigures.length, 2, "wide Nurgle Task exposes its indivisible marine and daemon/fly figures only");
+    assert.ok(taskFigures.every(figure => figure.bottom >= 1140 && figure.bottom <= 1220 && figure.pointerEvents === "none"), "wide Nurgle Task figures are grounded and click-through");
+    const taskFigureImages = page.locator(`${figureSelector}:visible img`);
+    assert.equal(await taskFigureImages.count(), 2, "wide Nurgle Task exposes exactly two decoded figure images");
+    assert.deepEqual((await taskFigureImages.evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())), ["/cattasks/themes/nurgle/task/daemon.webp", "/cattasks/themes/nurgle/task/marine.webp"], "wide Nurgle Task uses the two supplied Task figure paths");
+    await taskFigureImages.evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    assert.ok((await themeAssets(page, "nurgle")).some(path => path === "/cattasks/themes/nurgle/task/background-desktop.webp"), "Nurgle Task paints its real supplied desktop backdrop");
+    assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, "Nurgle Task leaves no painted legacy shelf or mascot composition");
+    const taskPanel = page.locator("[class*='taskDetailsContainer']");
+    const taskReadability = await taskPanel.evaluate(panel => {
+      const heading = panel.querySelector("h2, h3");
+      const description = panel.querySelector("pre");
+      if (!heading || !description) throw new Error("Nurgle Task needs a real heading and description for contrast verification");
+      return {heading: getComputedStyle(heading).color, description: getComputedStyle(description).color};
+    });
+    const taskPanelPaint = await sampledPanelColor(page, taskPanel);
+    assertNormalTextContrast(taskReadability.heading, [taskPanelPaint], "Nurgle Task heading against sampled panel paint");
+    assertNormalTextContrast(taskReadability.description, [taskPanelPaint], "Nurgle Task description against sampled panel paint");
+
+    const initialModels = (await surface(page)).models;
+    await page.getByRole("tab", {name: "Hint", exact: true}).click();
+    assert.equal(await page.getByRole("tab", {name: "Hint", exact: true}).getAttribute("aria-selected"), "true", "Nurgle retains the real task tab state");
+    await page.getByRole("tab", {name: "My solution", exact: true}).click();
+    await page.getByRole("button", {name: "Save current code", exact: true}).click();
+    await page.getByRole("button", {name: "Test Code", exact: true}).click();
+    await page.locator("[data-variant='test'][data-result='success']").waitFor({state: "attached"});
+
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    await nextPaint(page);
+    const catalogueHeader = page.locator(`header${nurgle}[data-khorne-header='catalogue']`);
+    const catalogueRail = page.locator(`${nurgle}[data-khorne-rail]`);
+    const catalogueAquila = page.locator(`${nurgle}[data-khorne-aquila]`);
+    assert.equal(await catalogueHeader.count(), 1, "Nurgle catalogue uses its distinct integrated header");
+    assert.equal(await catalogueRail.count(), 1, "Nurgle catalogue retains one shared riveted rail");
+    assert.equal(await catalogueAquila.count(), 1, "Nurgle catalogue keeps the supplied Aquila in its catalogue header placement");
+    assert.equal(await catalogueAquila.locator("img").getAttribute("src"), "/cattasks/themes/nurgle/aquila.png", "Nurgle catalogue reuses the supplied shared Aquila path");
+    assert.equal(await railHandle.evaluate((rail, selector) => rail === document.querySelector(selector), `${nurgle}[data-khorne-rail]`), true, "Task to catalogue retains the same shared beam element");
+    const [catalogueHeaderBox, catalogueAquilaBox] = await Promise.all([catalogueHeader.boundingBox(), catalogueAquila.boundingBox()]);
+    assert.ok(taskHeaderBox && catalogueHeaderBox && catalogueAquilaBox && Math.abs(taskHeaderBox.y + taskHeaderBox.height - (catalogueHeaderBox.y + catalogueHeaderBox.height)) <= 1, "Task and catalogue headers share their lower edge while Aquila remains visibly placed");
+    const catalogueFigures = await visibleGeometry(page, figureSelector, "data-nurgle-figure");
+    assert.equal(catalogueFigures.length, 2, "wide Nurgle catalogue exposes its indivisible marine and plaguebearer/nurglings group");
+    assert.ok(catalogueFigures.every(figure => figure.bottom >= 1140 && figure.bottom <= 1220 && figure.pointerEvents === "none"), "wide Nurgle catalogue figures are grounded and click-through");
+    await page.locator(`${figureSelector}:visible img`).evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    assert.deepEqual((await page.locator(`${figureSelector}:visible img`).evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())), ["/cattasks/themes/nurgle/all-tasks/daemon.webp", "/cattasks/themes/nurgle/all-tasks/marine.webp"], "wide Nurgle catalogue uses the two supplied catalogue figure paths");
+    assert.ok((await themeAssets(page, "nurgle")).some(path => path === "/cattasks/themes/nurgle/all-tasks/background-desktop.webp"), "Nurgle catalogue paints its real supplied desktop backdrop");
+    const [filtersBox, listBox] = await Promise.all([
+      page.getByLabel("Task filters", {exact: true}).boundingBox(),
+      page.locator("[aria-labelledby='taskListTitle']").boundingBox(),
+    ]);
+    assert.ok(filtersBox && listBox, "Nurgle's live catalogue panes provide paint bounds");
+    const paintChanges = await figurePaintChanges(page, figureSelector, cataloguePaintStrips(filtersBox, listBox));
+    assert.ok(paintChanges.leftRim + paintChanges.rightRim > 0, `Nurgle figures visibly enter at least one approved catalogue pane rim (${JSON.stringify(paintChanges)})`);
+    assert.equal(paintChanges.leftInterior + paintChanges.rightInterior, 0, `Nurgle figures never paint the catalogue interiors beyond the rim allowance (${JSON.stringify(paintChanges)})`);
+    const catalogueList = page.locator("[aria-labelledby='taskListTitle']");
+    const catalogueReadability = await catalogueList.evaluate(panel => {
+      const heading = panel.querySelector("li h3");
+      const description = panel.querySelector("li p");
+      if (!heading || !description) throw new Error("Nurgle catalogue needs a real task heading and blurb for contrast verification");
+      return {heading: getComputedStyle(heading).color, description: getComputedStyle(description).color};
+    });
+    const cataloguePanelPaint = await sampledPanelColor(page, catalogueList);
+    assertNormalTextContrast(catalogueReadability.heading, [cataloguePanelPaint], "Nurgle catalogue task heading against sampled list paint");
+    assertNormalTextContrast(catalogueReadability.description, [cataloguePanelPaint], "Nurgle catalogue blurb against sampled list paint");
+    const search = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+    await search.fill("fixture 1");
+    await page.getByRole("radio", {name: "Not started", exact: true}).check();
+    await page.getByRole("button", {name: "Next page", exact: true}).click();
+    await chooseTheme(page, "Dark"); await chooseTheme(page, "Nurgle");
+    assert.equal(await search.inputValue(), "fixture 1", "Nurgle round-trip retains the live catalogue search");
+    assert.equal(await page.getByRole("radio", {name: "Not started", exact: true}).isChecked(), true, "Nurgle round-trip retains the real catalogue filter");
+    assert.equal(await page.getByRole("button", {name: "2", exact: true}).getAttribute("aria-current"), "page", "Nurgle round-trip retains the live catalogue page");
+    await page.getByRole("button", {name: "Back to task", exact: true}).click();
+    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor({state: "visible"});
+    assert.deepEqual((await surface(page)).models, initialModels, "Nurgle Task/catalogue navigation retains the same Monaco model state");
+
+    for (const width of [1920, 1440]) {
+      await page.setViewportSize({width, height: 1200}); await nextPaint(page);
+      const strip = await page.getByLabel("Pet feeding strip", {exact: true}).boundingBox();
+      const figures = await visibleGeometry(page, figureSelector, "data-nurgle-figure");
+      assert.ok(strip && figures.length === 2 && figures.every(figure => figure.y >= strip.y + strip.height - 1), `${width}px Nurgle uses the normal-flow lower scene rather than narrowing the workspace`);
+    }
+    await page.setViewportSize({width: 768, height: 900}); await nextPaint(page);
+    assert.match(await page.locator("[data-cattasks-theme='nurgle'] [data-nurgle-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /nurgle\/task\/background-tablet\.webp/, "Nurgle Task uses its supplied tablet backdrop at tablet width");
+    await page.setViewportSize({width: 430, height: 932}); await nextPaint(page);
+    assert.equal((await visibleGeometry(page, figureSelector, "data-nurgle-figure")).length, 0, "430px Nurgle Task hides decorative figures");
+    assert.match(await page.locator("[data-cattasks-theme='nurgle'] [data-nurgle-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /nurgle\/task\/background-mobile\.webp/, "Nurgle Task uses its supplied mobile backdrop at compact width");
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    await page.setViewportSize({width: 800, height: 900}); await nextPaint(page);
+    assert.match(await page.locator("[data-cattasks-theme='nurgle'] [data-nurgle-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /nurgle\/all-tasks\/background-tablet\.webp/, "Nurgle catalogue uses its supplied tablet backdrop at tablet width");
+    const radio = page.getByRole("radio", {name: "All topics", exact: true});
+    if (!await radio.isVisible()) await page.getByRole("button", {name: "Filters", exact: true}).click();
+    const label = await radio.evaluate(element => {
+      const target = element.closest("label") || document.querySelector(`label[for="${element.id}"]`);
+      const box = target?.getBoundingClientRect(); return box && {width: box.width, height: box.height};
+    });
+    assert.ok(label && label.width >= 44 && label.height >= 44, "Nurgle compact catalogue keeps the native radio label at least 44px");
+    await page.emulateMedia({forcedColors: "active"});
+    assert.notEqual(await radio.evaluate(element => getComputedStyle(element).appearance), "none", "forced-colors Nurgle uses the native radio appearance");
+    await page.emulateMedia({forcedColors: "none"});
+    for (const viewport of [{width: 430, height: 932}, {width: 320, height: 820}]) {
+      await page.setViewportSize(viewport); await nextPaint(page);
+      assert.equal((await visibleGeometry(page, figureSelector, "data-nurgle-figure")).length, 0, `${viewport.width}px Nurgle catalogue hides decorative figures`);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${viewport.width}px Nurgle catalogue has no horizontal overflow`);
+    }
+    assert.match(await page.locator("[data-cattasks-theme='nurgle'] [data-nurgle-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /nurgle\/all-tasks\/background-mobile\.webp/, "Nurgle catalogue uses its supplied mobile backdrop at compact width");
+    assertDiagnostics(diagnostics, 1);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("only active visible-or-near Nurgle page figures transfer", {timeout: 120_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const origin = new URL(baseUrl).origin;
+  const figures = [
+    "/cattasks/themes/nurgle/task/marine.webp", "/cattasks/themes/nurgle/task/daemon.webp",
+    "/cattasks/themes/nurgle/all-tasks/marine.webp", "/cattasks/themes/nurgle/all-tasks/daemon.webp",
+  ];
+  const inactiveKhorneScene = [
+    "/cattasks/themes/khorne/task/background-desktop.webp", "/cattasks/themes/khorne/task/marine.webp", "/cattasks/themes/khorne/task/daemon.webp",
+    "/cattasks/themes/khorne/all-tasks/background-desktop.webp", "/cattasks/themes/khorne/all-tasks/marine.webp", "/cattasks/themes/khorne/all-tasks/daemon.webp",
+  ];
+  const scenarios = [
+    {name: "Light", theme: null, viewport: {width: 1440, height: 900}, expected: []},
+    {name: "Dark", theme: "dark", viewport: {width: 1440, height: 900}, expected: []},
+    {name: "Khorne", theme: "khorne", viewport: {width: 2560, height: 1200}, expected: []},
+    {name: "Nurgle compact", theme: "nurgle", viewport: {width: 430, height: 932}, expected: []},
+    {name: "Nurgle wide Task", theme: "nurgle", viewport: {width: 2560, height: 1200}, expected: figures.slice(0, 2)},
+  ];
+  try {
+    for (const scenario of scenarios) {
+      const context = await browser.newContext({viewport: scenario.viewport, reducedMotion: "reduce"});
+      try {
+        if (scenario.theme) await context.addInitScript(([key, value]) => localStorage.setItem(key, value), [themeStorageKey, scenario.theme]);
+        const page = await context.newPage(), requests = new Set();
+        page.on("request", request => { const url = new URL(request.url()); if (url.origin === origin) requests.add(url.pathname); });
+        const diagnostics = await prepare(page); await nextPaint(page);
+        assert.deepEqual(figures.filter(path => requests.has(path)), scenario.expected, `${scenario.name} transfers only Nurgle figures usable at boot`);
+        if (scenario.theme === "nurgle") assert.deepEqual(inactiveKhorneScene.filter(path => requests.has(path)), [], `${scenario.name} never transfers an inactive Khorne backdrop or figure`);
         assertDiagnostics(diagnostics);
       } finally { await context.close(); }
     }
@@ -592,6 +844,64 @@ test("Khorne keeps a 1600px workspace, aligned beam and grounded desktop scene t
   } finally { await context.close(); await browser.close(); }
 });
 
+test("Khorne and Nurgle keep the persistent rail and lower header edge through the catalogue compact boundary", {timeout: 120_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const boxWithinOnePixel = (actual, expected, message) => {
+    assert.ok(actual && expected, `${message}: both boxes are measurable`);
+    for (const dimension of ["x", "y", "width", "height"]) {
+      assert.ok(Math.abs(actual[dimension] - expected[dimension]) <= 1, `${message}: ${dimension} changed from ${expected[dimension]} to ${actual[dimension]}`);
+    }
+  };
+  try {
+    for (const theme of ["khorne", "nurgle"]) {
+      for (const width of [831, 854]) {
+        const context = await browser.newContext({viewport: {width, height: 900}, reducedMotion: "reduce"});
+        try {
+          const page = await context.newPage();
+          const diagnostics = await prepare(page);
+          await chooseTheme(page, theme[0].toUpperCase() + theme.slice(1));
+          await nextPaint(page);
+          const variant = `[data-warhammer-variant='${theme}']`;
+          const taskHeader = page.locator(`header${variant}[data-khorne-header='task']`);
+          const rail = page.locator(`${variant}[data-khorne-rail]`);
+          const allTasks = taskHeader.getByRole("button", {name: "All tasks", exact: true});
+
+          assert.equal(await taskHeader.count(), 1, `${theme} ${width}px starts with one Task header`);
+          assert.equal(await rail.count(), 1, `${theme} ${width}px starts with one shared rail`);
+          await nextPaint(page);
+          const railHandle = await rail.elementHandle();
+          const taskRailBox = await rail.boundingBox();
+          const taskHeaderBox = await taskHeader.boundingBox();
+          assert.ok(railHandle && taskRailBox && taskHeaderBox, `${theme} ${width}px Task rail and header are measurable`);
+          assert.equal((await surface(page)).overflow, 0, `${theme} ${width}px Task has no horizontal overflow`);
+
+          await allTasks.click();
+          const catalogueHeader = page.locator(`header${variant}[data-khorne-header='catalogue']`);
+          const back = catalogueHeader.getByRole("button", {name: "Back to task", exact: true});
+          await back.waitFor({state: "visible"});
+          await nextPaint(page);
+          const catalogueRailBox = await rail.boundingBox();
+          const catalogueHeaderBox = await catalogueHeader.boundingBox();
+          const backBox = await back.boundingBox();
+          boxWithinOnePixel(catalogueRailBox, taskRailBox, `${theme} ${width}px Task → catalogue preserves the shared rail geometry`);
+          assert.ok(catalogueHeaderBox && Math.abs((catalogueHeaderBox.y + catalogueHeaderBox.height) - (taskHeaderBox.y + taskHeaderBox.height)) <= 1, `${theme} ${width}px Task → catalogue preserves the lower header edge`);
+          assert.ok(backBox && backBox.width >= 44 && backBox.height >= 44, `${theme} ${width}px catalogue Back to task remains a 44px target`);
+          assert.equal(await railHandle.evaluate((element, selector) => element === document.querySelector(selector), `${variant}[data-khorne-rail]`), true, `${theme} ${width}px keeps the exact same mounted rail element`);
+          assert.equal((await surface(page)).overflow, 0, `${theme} ${width}px catalogue has no horizontal overflow`);
+
+          await back.click();
+          await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor({state: "visible"});
+          await allTasks.and(page.locator(":focus")).waitFor({state: "visible"});
+          await nextPaint(page);
+          boxWithinOnePixel(await rail.boundingBox(), taskRailBox, `${theme} ${width}px catalogue → Task restores the shared rail geometry`);
+          assert.equal((await surface(page)).overflow, 0, `${theme} ${width}px returned Task has no horizontal overflow`);
+          assertDiagnostics(diagnostics);
+        } finally { await context.close(); }
+      }
+    }
+  } finally { await browser.close(); }
+});
+
 test("Khorne moves scenes below the pet strip on constrained desktop and hides them on compact catalogue", {timeout: 90_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1920, height: 1200}, reducedMotion: "reduce"});
@@ -723,18 +1033,20 @@ test("Khorne keeps real hints, active Give up, and enabled Restore readable", {t
   } finally { await context.close(); await browser.close(); }
 });
 
-test("inline theme boot paints persisted Dark and Khorne before blocked React bundles hydrate", {timeout: 60_000}, async () => {
+test("inline theme boot paints persisted Dark, Khorne, and Nurgle before blocked React bundles hydrate", {timeout: 90_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const valid = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const khorne = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const nurgle = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const corrupt = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const unavailable = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   try {
     await valid.addInitScript(([key]) => localStorage.setItem(key, "dark"), [themeStorageKey]);
     await khorne.addInitScript(([key]) => localStorage.setItem(key, "khorne"), [themeStorageKey]);
+    await nurgle.addInitScript(([key]) => localStorage.setItem(key, "nurgle"), [themeStorageKey]);
     await corrupt.addInitScript(([key]) => localStorage.setItem(key, "corrupt"), [themeStorageKey]);
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
-    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
+    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [nurgle, "nurgle", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
       let bundles = 0;
       const loadedAssets = [];
       await context.route("**/_next/static/**/*.js", route => { bundles += 1; return route.fulfill({contentType: "application/javascript", body: ""}); });
@@ -748,15 +1060,17 @@ test("inline theme boot paints persisted Dark and Khorne before blocked React bu
       const outerPaint = await page.locator("[class*='background']").evaluate(element => getComputedStyle(element).backgroundColor);
       if (expectedPage) assert.equal(outerPaint, expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
       else {
-        assert.notEqual(outerPaint, light.page, "Khorne's outer page is painted before React can hydrate");
-        assert.match(await page.locator("[data-khorne-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /cattasks\/themes\/khorne\//, "Khorne's own scene is painted before React can hydrate");
-        assert.ok(loadedAssets.includes("/cattasks/themes/khorne/task/background-desktop.webp"), "the persisted Khorne page loads its own scene before React hydration");
-        assert.ok(!loadedAssets.includes("/cattasks/desktop-meadow.png"), "the persisted Khorne page does not load the Light desktop meadow");
+        assert.notEqual(outerPaint, light.page, `${expectedTheme} outer page is painted before React can hydrate`);
+        const sceneSelector = expectedTheme === "nurgle" ? "[data-cattasks-theme='nurgle'] [data-nurgle-scene='task']" : "[data-khorne-scene='task']";
+        assert.match(await page.locator(sceneSelector).evaluate(element => getComputedStyle(element).backgroundImage), new RegExp(`cattasks/themes/${expectedTheme}/`), `${expectedTheme} own scene is painted before React can hydrate`);
+        assert.ok(loadedAssets.includes(`/cattasks/themes/${expectedTheme}/task/background-desktop.webp`), `the persisted ${expectedTheme} page loads its own scene before React hydration`);
+        assert.ok(!loadedAssets.includes("/cattasks/desktop-meadow.png"), `the persisted ${expectedTheme} page does not load the Light desktop meadow`);
+        if (expectedTheme === "nurgle") assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, "prehydrated Nurgle leaves no painted legacy shelf or mascot");
       }
       assert.ok(bundles > 0, "all external Next static JavaScript bundles were intercepted before React could hydrate");
       await page.close();
     }
-  } finally { await valid.close(); await khorne.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
+  } finally { await valid.close(); await khorne.close(); await nurgle.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
 
 test("Bad or unavailable storage falls back safely; narrow All tasks scrolls without clipping", {timeout: 60_000}, async () => {

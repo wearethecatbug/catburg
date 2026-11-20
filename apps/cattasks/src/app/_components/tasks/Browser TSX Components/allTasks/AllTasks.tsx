@@ -6,8 +6,9 @@ import type {TaskDifficulty} from '../../catalog/taskCatalog';
 import {useTaskContext} from '../../context/TaskProvider';
 import {CustomTaskControls} from '../../customTasks/CustomTaskControls';
 import styles from './AllTasks.module.css';
-import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {isWarhammerTheme, useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
 import {WarhammerCatalogHeader} from '../header/KhorneHeader';
+import {CatalogueFieldArt, CatalogueHeadingArt, CatalogueMetalButton, CatalogueOpenArrow, CatalogueSelectedRowArt} from './controlsV3/AllTasksControlsV3';
 
 type AllTasksProps = {
     readonly className?: string;
@@ -30,7 +31,7 @@ function getCatalogueExcerpt(description: string) {
 export function AllTasksHeader({className, onBack}: AllTasksProps) {
     const {theme} = useCatTasksTheme();
 
-    if (theme === 'khorne') {
+    if (isWarhammerTheme(theme)) {
         return <WarhammerCatalogHeader className={className} onBack={onBack}/>;
     }
 
@@ -87,6 +88,8 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     }, [availableTopicFilters, topic]);
 
     const allDifficultiesSelected = difficultyFilters.every(difficulty => selectedDifficulties.has(difficulty));
+    const useV3Controls = isWarhammerTheme(theme);
+    const controlsTheme = theme === 'nurgle' ? 'green' : 'ember';
 
     const toggleDifficulty = (difficulty: TaskDifficulty) => {
         setSelectedDifficulties(current => {
@@ -161,10 +164,10 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     return (
         <main
             className={`${styles.catalogueMain} ${className ?? ''}`}
-            data-khorne-catalogue={theme === 'khorne' ? '' : undefined}
-            data-khorne-workspace={theme === 'khorne' ? '' : undefined}
+            data-khorne-catalogue={useV3Controls ? '' : undefined}
+            data-khorne-workspace={useV3Controls ? '' : undefined}
         >
-            <div className={styles.catalogueLayout}>
+            <div className={`${styles.catalogueLayout} ${useV3Controls ? 'ct-controls' : ''}`} data-theme={useV3Controls ? controlsTheme : undefined}>
             <button
                 type="button"
                 className={styles.filtersToggle}
@@ -181,43 +184,73 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
             >
                 <label className={styles.searchLabel}>
                     <span>Search tasks</span>
-                    <input
-                        ref={searchRef}
-                        type="search"
-                        value={query}
-                        onChange={event => {
-                            setQuery(event.target.value);
-                            setPage(1);
-                        }}
-                        placeholder="Search tasks..."
-                    />
+                    <span className={styles.searchField}>
+                        {useV3Controls && <CatalogueFieldArt/>}
+                        <input
+                            ref={searchRef}
+                            type="search"
+                            value={query}
+                            onChange={event => {
+                                setQuery(event.target.value);
+                                setPage(1);
+                            }}
+                            placeholder="Search tasks..."
+                        />
+                    </span>
                 </label>
                 <fieldset className={styles.difficultyFilter}>
                     <legend className={styles.visuallyHidden}>Difficulty</legend>
                     <div className={styles.difficultyFilterHeader}>
                         <span>Difficulty</span>
-                        <button
-                            type="button"
-                            className={styles.allDifficultiesButton}
-                            aria-pressed={allDifficultiesSelected}
-                            onClick={selectAllDifficulties}
-                        >
-                            All
-                        </button>
+                        {useV3Controls ? (
+                            <CatalogueMetalButton
+                                type="button"
+                                className={styles.allDifficultiesButton}
+                                frame="compact"
+                                tone={allDifficultiesSelected ? 'selected' : 'neutral'}
+                                aria-pressed={allDifficultiesSelected}
+                                onClick={selectAllDifficulties}
+                            >
+                                All
+                            </CatalogueMetalButton>
+                        ) : (
+                            <button
+                                type="button"
+                                className={styles.allDifficultiesButton}
+                                aria-pressed={allDifficultiesSelected}
+                                onClick={selectAllDifficulties}
+                            >
+                                All
+                            </button>
+                        )}
                     </div>
                     <div className={styles.difficultyOptions}>
                         {difficultyFilters.map(difficulty => {
                             const isSelected = selectedDifficulties.has(difficulty);
-                            return (
-                                <button
+                            const difficultyClassName = `${styles.difficultyOption} ${isSelected ? styles.difficultyOptionSelected : ''}`;
+                            const difficultyContents = <><span className={`${styles.difficultyBar} ${styles[`difficultyBar${difficulty}`]}`} aria-hidden="true"/><span>{difficulty}</span></>;
+
+                            return useV3Controls ? (
+                                <CatalogueMetalButton
                                     type="button"
-                                    className={`${styles.difficultyOption} ${isSelected ? styles.difficultyOptionSelected : ''}`}
+                                    className={difficultyClassName}
+                                    frame="compact"
+                                    tone={allDifficultiesSelected ? 'neutral' : isSelected ? 'selected' : 'neutral'}
                                     aria-pressed={isSelected}
                                     key={difficulty}
                                     onClick={() => toggleDifficulty(difficulty)}
                                 >
-                                    <span className={`${styles.difficultyBar} ${styles[`difficultyBar${difficulty}`]}`} aria-hidden="true"/>
-                                    <span>{difficulty}</span>
+                                    {difficultyContents}
+                                </CatalogueMetalButton>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className={difficultyClassName}
+                                    aria-pressed={isSelected}
+                                    key={difficulty}
+                                    onClick={() => toggleDifficulty(difficulty)}
+                                >
+                                    {difficultyContents}
                                 </button>
                             );
                         })}
@@ -240,7 +273,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                         </label>
                     ))}
                 </fieldset>
-                <CustomTaskControls/>
+                <CustomTaskControls useV3Controls={useV3Controls}/>
                 <fieldset className={styles.filterGroup}>
                     <legend>Status</legend>
                     {statusFilters.map(option => (
@@ -262,6 +295,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
             <section className={styles.taskList} aria-labelledby="taskListTitle" ref={taskListRef} tabIndex={-1}>
                 <h2 id="taskListTitle" className={styles.visuallyHidden}>Task list</h2>
                 <div className={styles.columnHeadings} aria-hidden="true">
+                    {useV3Controls && <CatalogueHeadingArt/>}
                     <span className={styles.ordinalHeading}>#</span><span>Task</span><span className={styles.topicHeading}>Topic</span><span>Status</span><span/>
                 </div>
                 <div className={styles.taskResults}>
@@ -291,10 +325,11 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                                 key={row.id}
                                 aria-current={row.isCurrent ? 'true' : undefined}
                             >
+                                {useV3Controls && row.isCurrent && <CatalogueSelectedRowArt/>}
                                 <span className={styles.ordinal} data-task-ordinal>{String(row.ordinal).padStart(2, '0')}</span>
                                 <div className={styles.taskDescription}>
                                     <h3>{row.title}</h3>
-                                    <p>{theme === 'khorne' ? getCatalogueExcerpt(row.description) : row.description}</p>
+                                    <p>{isWarhammerTheme(theme) ? getCatalogueExcerpt(row.description) : row.description}</p>
                                 </div>
                                 <div className={styles.rowMeta}>
                                     <span className={styles.topic}>{row.topic}</span>
@@ -304,9 +339,15 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                                     </span>
                                 </div>
                                 {row.isCurrent ? (
-                                    <button type="button" className={styles.openButton} onClick={() => openTask(row.id)}>
-                                        Open <span aria-hidden="true">→</span>
-                                    </button>
+                                    useV3Controls ? (
+                                        <CatalogueMetalButton type="button" className={styles.openButton} frame="wide" tone="accent" onClick={() => openTask(row.id)}>
+                                            Open <CatalogueOpenArrow full/>
+                                        </CatalogueMetalButton>
+                                    ) : (
+                                        <button type="button" className={styles.openButton} onClick={() => openTask(row.id)}>
+                                            Open <span aria-hidden="true">→</span>
+                                        </button>
+                                    )
                                 ) : (
                                     <button type="button" className={styles.openIcon} onClick={() => openTask(row.id)} aria-label={`Open ${row.title}`}>
                                         <span aria-hidden="true">›</span>

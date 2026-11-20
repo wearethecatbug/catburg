@@ -9,7 +9,7 @@ import MainBtnInfo from '@/app/_components/tasks/Browser TSX Components/main/Mai
 import {combineClassNames} from '@/app/_components/tasks/shared/utils/combineClassNames';
 import CollapsedTaskSpine from './CollapsedTaskSpine';
 import MainTaskSavedSolution from './MainTaskSavedSolution';
-import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {isWarhammerTheme, useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
 
 type Props = React.HTMLAttributes<HTMLDivElement>;
 
@@ -26,7 +26,7 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
     } = useTaskContext();
 
     const isTaskSelected = Boolean(selectedTask);
-    const useKhorneTabs = theme === 'khorne';
+    const useKhorneTabs = isWarhammerTheme(theme);
     // The reference solution is opened by the existing Give up action, not by a
     // separate tab. Keep that action/state intact while exposing its containing
     // Task tab as the active tab to assistive technology.

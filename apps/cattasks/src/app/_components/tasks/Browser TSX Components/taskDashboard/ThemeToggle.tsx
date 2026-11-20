@@ -1,7 +1,7 @@
 'use client';
 
 import {useLayoutEffect, useRef, useState, type KeyboardEvent} from 'react';
-import {catTasksThemes, useCatTasksTheme, type CatTasksTheme} from './CatTasksTheme';
+import {catTasksThemes, isWarhammerTheme, useCatTasksTheme, type CatTasksTheme} from './CatTasksTheme';
 import styles from './ThemeToggle.module.css';
 import Image from 'next/image';
 
@@ -43,8 +43,8 @@ export default function ThemeToggle() {
                 aria-controls="cattasks-theme-options"
                 onClick={openChooser}
             >
-                {theme === 'khorne' ? (
-                    <Image src="/cattasks/themes/khorne/icon.svg" alt="" aria-hidden="true" width={28} height={28} unoptimized/>
+                {isWarhammerTheme(theme) ? (
+                    <Image src={`/cattasks/themes/${theme}/icon.svg`} alt="" aria-hidden="true" width={28} height={28} unoptimized/>
                 ) : (
                     <>
                         <span className={styles.skyMark} aria-hidden="true">{isDark ? '☾' : '☀'}</span>
@@ -66,7 +66,7 @@ export default function ThemeToggle() {
                                 key={option}
                                 onClick={() => chooseTheme(option)}
                             >
-                                {option === 'khorne' ? <Image src="/cattasks/themes/khorne/icon.svg" alt="" aria-hidden="true" width={20} height={20} unoptimized/> : <span className={styles.optionMark} aria-hidden="true">{option === 'dark' ? '☾' : '☀'}</span>}
+                                {isWarhammerTheme(option) ? <Image src={`/cattasks/themes/${option}/icon.svg`} alt="" aria-hidden="true" width={20} height={20} unoptimized/> : <span className={styles.optionMark} aria-hidden="true">{option === 'dark' ? '☾' : '☀'}</span>}
                                 {optionLabel}
                             </button>
                         );

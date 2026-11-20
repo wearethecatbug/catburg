@@ -11,3 +11,10 @@
     margin-inline: auto;
     padding-inline: 0;
 }
+
+:global([data-cattasks-theme='nurgle']) .footerContainer {
+    width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+    max-width: 1600px;
+    margin-inline: auto;
+    padding-inline: 0;
+}

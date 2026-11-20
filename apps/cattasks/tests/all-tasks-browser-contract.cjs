@@ -143,17 +143,20 @@ async function catalogueGridTextOrigins(page) {
       range.selectNodeContents(node);
       return range.getBoundingClientRect().left;
     };
-    const headerCells = [...heading.children];
+    const headingCells = [...heading.querySelectorAll(":scope > span")];
     return {
       headingDisplay: getComputedStyle(heading).display,
       headingTemplate: getComputedStyle(heading).gridTemplateColumns,
-      headers: [textLeft(headerCells[1]), textLeft(headerCells[2]), textLeft(headerCells[3])],
+      headers: [textLeft(headingCells[1]), textLeft(headingCells[2]), textLeft(headingCells[3])],
       rows: rows.map(row => {
-        const rowCells = [...row.children];
+        const task = row.querySelector("[class*='taskDescription'] h3");
+        const topic = row.querySelector("[class*='topic']");
+        const status = row.querySelector("[class*='status']");
+        if (!task || !topic || !status) throw new Error("Every desktop catalogue row must expose Task, Topic, and Status text");
         return {
           isCurrent: row.getAttribute("aria-current") === "true",
           template: getComputedStyle(row).gridTemplateColumns,
-          values: [textLeft(rowCells[1]), textLeft(rowCells[2]), textLeft(rowCells[3])],
+          values: [textLeft(task), textLeft(topic), textLeft(status)],
         };
       }),
     };
@@ -370,6 +373,146 @@ test("All tasks difficulty is an accessible multi-select applied before eight-ro
     assert.deepEqual(diagnostics.failedResponses, []);
   } finally {
     await context.close();
+    await browser.close();
+  }
+});
+
+test("Warhammer catalogue v3 controls keep real filtering state and scoped painted surfaces", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+
+  try {
+    for (const scenario of [
+      {name: "Khorne", controlsTheme: "ember"},
+      {name: "Nurgle", controlsTheme: "green"},
+    ]) {
+      const context = await browser.newContext({viewport: {width: 1440, height: 1000}});
+      const page = await context.newPage();
+      const diagnostics = await prepare(page, route => route.fulfill({contentType: "application/json", body: JSON.stringify(mixedDifficultyCatalog)}));
+
+      try {
+        const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+        assert.equal(response.status(), 200, `${scenario.name} starts from the isolated loopback fixture`);
+
+        const themeTrigger = page.getByRole("button", {name: /Choose theme.*current:/i});
+        await themeTrigger.click();
+        await page.getByRole("group", {name: "Themes", exact: true}).getByRole("button", {name: scenario.name, exact: true}).click();
+        await page.getByRole("button", {name: "All tasks", exact: true}).click();
+
+        const controls = page.locator(`.ct-controls[data-theme='${scenario.controlsTheme}']`);
+        await controls.waitFor({state: "visible"});
+        assert.equal(await page.locator(".ct-controls[data-theme='light'], .ct-controls[data-theme='dark']").count(), 0, `${scenario.name} does not leak Light or Dark controls into the catalogue`);
+
+        const search = controls.getByRole("searchbox", {name: "Search tasks", exact: true});
+        const difficulty = controls.getByRole("group", {name: "Difficulty", exact: true});
+        const all = difficulty.getByRole("button", {name: "All", exact: true});
+        const easy = difficulty.getByRole("button", {name: "Easy", exact: true});
+        const medium = difficulty.getByRole("button", {name: "Medium", exact: true});
+        const hard = difficulty.getByRole("button", {name: "Hard", exact: true});
+        const newTask = controls.getByRole("button", {name: /New task/i});
+        const file = controls.getByLabel("Import tasks JSON");
+        const exportTasks = controls.getByRole("button", {name: /Export tasks|Export recovery JSON/i});
+        const currentRow = controls.locator("li[aria-current='true']");
+        const open = currentRow.getByRole("button", {name: "Open", exact: true});
+
+        for (const control of [search, all, easy, medium, hard, newTask, file, exportTasks, open]) await control.waitFor({state: "visible"});
+        assert.equal(await file.getAttribute("accept"), "application/json", "the visible v3 import treatment retains the native JSON file chooser");
+        assert.deepEqual(await Promise.all([all, easy, medium, hard].map(control => control.getAttribute("aria-pressed"))), ["true", "true", "true", "true"], "All remains derived from the three live difficulty memberships");
+        assert.equal(await currentRow.count(), 1, "the real current task remains the single selected row");
+        assert.equal(await controls.evaluate(root => {
+          const headings = [...root.querySelectorAll("[aria-hidden='true']")];
+          return headings.some(heading => /^\s*#\s*Task\s*Topic\s*Status\s*$/.test(heading.textContent ?? ""));
+        }), true, "the v3 metal heading keeps all four live catalogue labels");
+
+        const paint = locator => locator.evaluate(node => {
+          const layers = [node, ...node.querySelectorAll("*")].map(element => {
+            const style = getComputedStyle(element);
+            return style.backgroundImage === "none" ? null : style.backgroundImage;
+          }).filter(Boolean);
+          return layers[0] ?? "none";
+        });
+        const allAmber = await paint(all);
+        const initialDifficultyPaints = await Promise.all([easy, medium, hard].map(paint));
+        assert.ok(initialDifficultyPaints.every(signature => signature !== allAmber), "when all memberships are active, only the compact All control carries the amber selected paint");
+
+        await medium.click();
+        assert.equal(await medium.getAttribute("aria-pressed"), "false", "the real Medium membership toggles off");
+        assert.equal(await all.getAttribute("aria-pressed"), "false", "All becomes unpressed when the live subset is partial");
+        const partialPaints = await Promise.all([all, easy, medium, hard].map(paint));
+        assert.equal(partialPaints[1], partialPaints[3], "the remaining Easy and Hard memberships share the amber selected paint");
+        assert.notEqual(partialPaints[1], partialPaints[2], "a removed Medium membership is visibly neutral rather than amber");
+        assert.equal(partialPaints[0], partialPaints[2], "All uses the neutral paint for a partial subset");
+
+        await easy.click();
+        await hard.click();
+        assert.deepEqual(await Promise.all([all, easy, medium, hard].map(control => control.getAttribute("aria-pressed"))), ["false", "false", "false", "false"], "the user can leave the difficulty selection empty instead of it silently resetting to All");
+        const emptyDifficultyPaints = await Promise.all([easy, medium, hard].map(paint));
+        assert.equal(new Set(emptyDifficultyPaints).size, 1, "an empty selection has no surviving amber difficulty member");
+
+        await all.click();
+        await page.getByText("1–8 of 10 tasks", {exact: true}).waitFor({state: "visible"});
+        await search.fill("medium array");
+        await page.getByText("Medium array sum", {exact: true}).waitFor({state: "visible"});
+        assert.equal(await controls.locator("li").count(), 1, "the styled search field still drives the real catalogue filtering state");
+        await search.fill("");
+
+        const selectedPaint = await currentRow.evaluate(row => {
+          const candidates = [row, ...row.querySelectorAll("*")];
+          return candidates.map(node => getComputedStyle(node).backgroundImage).find(value => /rgb\(96, 37, 29\)|rgb\(50, 27, 22\)|rgb\(101, 37, 27\)|rgb\(53, 21, 16\)/.test(value)) ?? null;
+        });
+        assert.ok(selectedPaint, "the current row paints a burgundy selected treatment instead of a Light/Dark or green selection");
+
+        const metaLayering = await currentRow.evaluate(row => {
+          const art = [...row.children].find(child => child.getAttribute("aria-hidden") === "true");
+          if (!art) return null;
+          const artStyle = getComputedStyle(art);
+          const labels = [
+            {kind: "topic", accepts: ["Arrays", "Strings", "Numbers", "Logic", "Uncategorized"]},
+            {kind: "status", accepts: ["Not started", "In progress", "Completed"]},
+            {kind: "marker", accepts: ["Current task"]},
+          ].map(({kind, accepts}) => {
+            const node = [...row.querySelectorAll("span")].find(candidate => accepts.includes(candidate.textContent?.trim() ?? ""));
+            if (!node) return {kind, found: false};
+            const box = node.getBoundingClientRect();
+            const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+            let layered = false;
+            for (let ancestor = node; ancestor && ancestor !== row; ancestor = ancestor.parentElement) {
+              const style = getComputedStyle(ancestor);
+              if (style.position !== "static" && Number(style.zIndex) > Number(artStyle.zIndex)) layered = true;
+            }
+            return {kind, found: true, visible: box.width > 0 && box.height > 0, hit: Boolean(hit && (node.contains(hit) || hit.contains(node))), layered};
+          });
+          return {artPointerEvents: artStyle.pointerEvents, labels};
+        });
+        assert.ok(metaLayering, "the selected-row art is attached to the current row");
+        assert.equal(metaLayering.artPointerEvents, "none", "the selected-row art cannot intercept the live current-row metadata");
+        assert.deepEqual(metaLayering.labels, [
+          {kind: "topic", found: true, visible: true, hit: true, layered: true},
+          {kind: "status", found: true, visible: true, hit: true, layered: true},
+          {kind: "marker", found: true, visible: true, hit: true, layered: true},
+        ], "desktop current-row topic, status, and current marker remain visibly above decorative art");
+
+        const openArt = await open.evaluate(button => {
+          const art = [...button.children].find(child => child.getAttribute("aria-hidden") === "true");
+          if (!art) return null;
+          const box = button.getBoundingClientRect(), artBox = art.getBoundingClientRect(), style = getComputedStyle(art);
+          return {position: style.position, pointerEvents: style.pointerEvents, hasArea: artBox.width > 0 && artBox.height > 0, withinButton: artBox.left >= box.left && artBox.top >= box.top && artBox.right <= box.right && artBox.bottom <= box.bottom};
+        });
+        assert.deepEqual(openArt, {position: "absolute", pointerEvents: "none", hasArea: true, withinButton: true}, "the visible native Open button retains its attached decorative frame geometry");
+
+        await page.setViewportSize({width: 430, height: 932});
+        await assertHorizontallyReachable(page, open, `${scenario.name} v3 Open at 430px`);
+        const openBox = await open.boundingBox();
+        assert.ok(openBox && openBox.height >= 44, `${scenario.name} v3 Open preserves its 44px native hit target at 430px`);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${scenario.name} v3 controls have no horizontal overflow at 430px`);
+        assert.deepEqual(diagnostics.consoleErrors, []);
+        assert.deepEqual(diagnostics.pageErrors, []);
+        assert.deepEqual(diagnostics.failedRequests, []);
+        assert.deepEqual(diagnostics.failedResponses, []);
+      } finally {
+        await context.close();
+      }
+    }
+  } finally {
     await browser.close();
   }
 });

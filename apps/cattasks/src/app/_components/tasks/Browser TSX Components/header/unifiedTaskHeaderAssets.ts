@@ -9,6 +9,7 @@ export const ASSET_MAP = {
     'button-square.png': {width: 1351, height: 1164, bounds: [162, 166, 1185, 985]},
     'back-button-housing.png': {width: 1888, height: 833, bounds: [71, 101, 1819, 720], directory: 'khorne/task-header'},
     'back-button-mount.png': {width: 2172, height: 724, bounds: [61, 103, 2111, 609], directory: 'khorne/task-header'},
+    'right-armor-cap.png': {width: 1774, height: 887, bounds: [207, 167, 1545, 720], directory: 'khorne/task-header'},
     'control-metal-face.png': {width: 2022, height: 778, bounds: [109, 118, 1915, 655], directory: 'khorne/task-header'},
     'header-base.png': {width: 2172, height: 724, bounds: [30, 304, 2143, 415], directory: 'khorne/task-header'},
     'panel-surface.png': {width: 1448, height: 1086, bounds: [0, 0, 1448, 1086], directory: 'khorne/task-header'},

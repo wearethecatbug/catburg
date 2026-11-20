@@ -78,6 +78,40 @@
     background: #171514 url('/cattasks/themes/khorne/all-tasks/background-desktop.webp') center / cover fixed;
 }
 
+.taskDashboardRoot[data-cattasks-theme='nurgle'] {
+    --khorne-workspace-width: min(1600px, calc(100% - clamp(16px, 3.125vw, 64px)));
+    --khorne-frame-image: url('/cattasks/themes/khorne/frame.svg');
+    --khorne-primary: #641b1a;
+    --khorne-primary-high: #85322a;
+    --khorne-neutral-low: #151a10;
+    --khorne-neutral-high: #29301e;
+    --khorne-metal: #b69854;
+    --khorne-metal-bright: #e0c878;
+    --khorne-focus: #e4d184;
+    --khorne-selection: #354022;
+    --cattasks-ink: #f3ecd2;
+    --cattasks-ink-strong: #f3ecd2;
+    --cattasks-muted-ink: #c6c7ac;
+    --cattasks-panel: #202617;
+    --cattasks-panel-subtle: #29301e;
+    --cattasks-border: #5d6540;
+    --cattasks-hover: rgb(157 182 106 / .18);
+    --cattasks-selected: #354022;
+    --cattasks-accent: #9db66a;
+    --cattasks-catalogue-surface: #151a10;
+    --cattasks-catalogue-border: #5d6540;
+    --cattasks-control-text: #f3ecd2;
+    background: #151a10;
+}
+
+.taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='task'] {
+    --nurgle-scene-background: url('/cattasks/themes/nurgle/task/background-mobile.webp');
+}
+
+.taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='all-tasks'] {
+    --nurgle-scene-background: url('/cattasks/themes/nurgle/all-tasks/background-mobile.webp');
+}
+
 @media (forced-colors: active) {
     .taskDashboardRoot[data-cattasks-theme='khorne'] { --khorne-frame-image: none; }
 }
@@ -466,6 +500,45 @@
     background: none;
 }
 
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .decorationLayer,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .shelfDecoration,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .mobileShelfDecoration,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .catalogueShelfDecoration,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .viewportDecoration,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .shelf,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] [data-legacy-header] {
+    display: none;
+}
+
+.nurgleScene {
+    display: none;
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    background: #151a10 center / cover no-repeat;
+    background-image: var(--nurgle-scene-background);
+}
+
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleScene { display: block; }
+
+.nurgleFigureStage,
+.nurgleFigure {
+    display: none;
+}
+
+.nurgleFigureArt {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    object-fit: contain;
+    pointer-events: none;
+    user-select: none;
+}
+
 .taskDashboardRoot[data-cattasks-theme='khorne'] .shelf {
     border-color: #8c683a;
     background: linear-gradient(180deg, #3b3028, #211a17 62%, #171211);
@@ -786,6 +859,139 @@
     background: none;
 }
 
+@media (min-width: 601px) {
+    .taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='task'] {
+        --nurgle-scene-background: url('/cattasks/themes/nurgle/task/background-tablet.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='all-tasks'] {
+        --nurgle-scene-background: url('/cattasks/themes/nurgle/all-tasks/background-tablet.webp');
+    }
+}
+
+@media (min-width: 1151px) {
+    .taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='task'] {
+        --nurgle-scene-background: url('/cattasks/themes/nurgle/task/background-desktop.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='all-tasks'] {
+        --nurgle-scene-background: url('/cattasks/themes/nurgle/all-tasks/background-desktop.webp');
+    }
+}
+
+/* The lower scene remains in document flow until both viewport dimensions can reserve side gutters. */
+@media (min-width: 601px) and (width < 2200px), (min-width: 601px) and (height < 740px) {
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleFigureStage {
+        position: relative;
+        z-index: 1;
+        display: block;
+        width: 100%;
+        min-height: clamp(198px, 19vw, 264px);
+        margin: 12px auto 0;
+        overflow: clip;
+        pointer-events: none;
+        background: #151a10 center bottom / cover scroll no-repeat;
+        background-image: var(--nurgle-scene-background);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleFigure {
+        position: absolute;
+        display: block;
+        bottom: 0;
+    }
+
+    /* Visible feet, not the transparent canvas bottom, meet the painted floor. */
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='task-marine'] {
+        left: calc(50% - clamp(196px, 18vw, 250px));
+        width: clamp(142px, 13.5vw, 190px);
+        aspect-ratio: 427 / 640;
+        transform: translateY(2.8125%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='task-daemon'] {
+        left: calc(50% + clamp(18px, 3vw, 54px));
+        width: clamp(156px, 15vw, 214px);
+        aspect-ratio: 1;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-marine'] {
+        right: calc(50% + 24px);
+        width: clamp(142px, 13.5vw, 190px);
+        aspect-ratio: 427 / 640;
+        transform: translateY(4.84375%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-daemon'] {
+        left: calc(50% + 24px);
+        width: clamp(152px, 14.5vw, 204px);
+        aspect-ratio: 585 / 640;
+        transform: translateY(1.71875%);
+    }
+}
+
+@media (min-width: 2200px) and (min-height: 740px) {
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] {
+        --nurgle-side-gutter: max(0px, calc((100vw - var(--khorne-workspace-width)) / 2));
+        --nurgle-ground-inset: max(20px, calc(20vh - 212px));
+        --nurgle-side-figure-width: min(460px, calc(var(--nurgle-side-gutter) + 11px));
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleFigureStage {
+        position: fixed;
+        z-index: 2;
+        inset: 0;
+        display: block;
+        overflow: hidden;
+        pointer-events: none;
+        user-select: none;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleFigure {
+        position: absolute;
+        display: block;
+        bottom: var(--nurgle-ground-inset);
+        pointer-events: none;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='task-marine'] {
+        left: calc(var(--nurgle-side-gutter) - var(--nurgle-side-figure-width) + 11px);
+        width: var(--nurgle-side-figure-width);
+        aspect-ratio: 427 / 640;
+        transform: translateY(2.8125%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='task-daemon'] {
+        left: calc(100% - var(--nurgle-side-gutter) - 11px);
+        width: var(--nurgle-side-figure-width);
+        aspect-ratio: 1;
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-marine'] {
+        /* The canvas has a transparent right edge; place its visible sword into the 11px metal rim. */
+        left: calc(var(--nurgle-side-gutter) - var(--nurgle-side-figure-width) + 29px);
+        width: var(--nurgle-side-figure-width);
+        aspect-ratio: 427 / 640;
+        transform: translateY(4.84375%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-daemon'] {
+        /* Move the opaque blade toward the protected rim; the observer still clips at list right - 11px. */
+        left: calc(100% - var(--nurgle-side-gutter) - 31px);
+        width: var(--nurgle-side-figure-width);
+        aspect-ratio: 585 / 640;
+        transform: translateY(1.71875%);
+    }
+
+    /* The 11px approved rim overlap is clipped to the real list and filters panes. */
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-marine'][data-nurgle-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% var(--nurgle-catalogue-clip-top), var(--nurgle-catalogue-clip-edge) var(--nurgle-catalogue-clip-top), var(--nurgle-catalogue-clip-edge) var(--nurgle-catalogue-clip-bottom), 100% var(--nurgle-catalogue-clip-bottom), 100% 100%, 0 100%);
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] [data-nurgle-figure='catalogue-daemon'][data-nurgle-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 var(--nurgle-catalogue-clip-bottom), var(--nurgle-catalogue-clip-edge) var(--nurgle-catalogue-clip-bottom), var(--nurgle-catalogue-clip-edge) var(--nurgle-catalogue-clip-top), 0 var(--nurgle-catalogue-clip-top));
+    }
+}
+
 @media (max-width: 600px) {
     .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='task'] {
         background-image: url('/cattasks/themes/khorne/task/background-mobile.webp');
@@ -793,6 +999,10 @@
 
     .taskDashboardRoot[data-cattasks-theme='khorne'][data-cattasks-page='all-tasks'] {
         background-image: url('/cattasks/themes/khorne/all-tasks/background-mobile.webp');
+    }
+
+    .taskDashboardRoot[data-cattasks-theme='nurgle'] .nurgleFigureStage {
+        display: none;
     }
 }
 

@@ -102,3 +102,98 @@
     :global([data-cattasks-theme='khorne']) .actions > button:first-child:focus-visible,
     :global([data-cattasks-theme='khorne']) .fileInput:focus-within { outline-color: Highlight; }
 }
+
+:global([data-cattasks-theme='nurgle']) .actions button,
+:global([data-cattasks-theme='nurgle']) .fileInput,
+:global([data-cattasks-theme='nurgle']) .form button,
+:global([data-cattasks-theme='nurgle']) .retry { border-color: var(--cattasks-border); background: var(--cattasks-panel); color: var(--cattasks-ink); }
+:global([data-cattasks-theme='nurgle']) .actions > button:first-child,
+:global([data-cattasks-theme='nurgle']) .form button[type='submit'],
+:global([data-cattasks-theme='nurgle']) .retry { border-color: var(--khorne-metal, #b69854); background: linear-gradient(174deg, var(--khorne-primary-high, #7a2b21) 0%, #641b1a 56%, var(--khorne-primary, #4a1714) 100%); box-shadow: inset 0 1px 0 rgb(243 236 210 / .18), 0 2px 0 #3b120f, 0 4px 8px rgb(0 0 0 / .28); }
+:global([data-cattasks-theme='nurgle']) .fileInput,
+:global([data-cattasks-theme='nurgle']) .form { background: var(--khorne-neutral-low, #151a10); }
+:global([data-cattasks-theme='nurgle']) .field input,
+:global([data-cattasks-theme='nurgle']) .field textarea,
+:global([data-cattasks-theme='nurgle']) .field select,
+:global([data-cattasks-theme='nurgle']) .fileButton { border-color: var(--cattasks-border); background: #151a10; color: var(--cattasks-ink); }
+:global([data-cattasks-theme='nurgle']) .fileInput:hover .fileButton { background: var(--cattasks-panel-subtle); }
+:global([data-cattasks-theme='nurgle']) .fileInput:has(input:disabled):hover .fileButton { background: #151a10; }
+:global([data-cattasks-theme='nurgle']) .fileSelection { color: var(--cattasks-muted-ink); }
+:global([data-cattasks-theme='nurgle']) .error { color: #efb2a1; }
+:global([data-cattasks-theme='nurgle']) .actions > button:first-child:focus-visible,
+:global([data-cattasks-theme='nurgle']) .fileInput:focus-within { outline: 3px solid var(--khorne-focus, #9db66a); outline-offset: 3px; }
+:global([data-cattasks-theme='nurgle']) .actions > button:first-child,
+:global([data-cattasks-theme='nurgle']) .form button[type='submit'],
+:global([data-cattasks-theme='nurgle']) .retry { min-height: 48px; border: 8px solid transparent; border-image: var(--khorne-frame-image) 25% / 8px stretch; border-radius: 0; }
+:global([data-cattasks-theme='nurgle']) .actions > button:first-child::after { display: none; }
+
+/* The art components are enabled by AllTasks only beneath its local
+   .ct-controls root; these rules intentionally do not change Light/Dark. */
+:global(.ct-controls[data-theme]) .actions > button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: #f8ecd0;
+    text-align: center;
+}
+
+:global(.ct-controls[data-theme]) .actions > button:first-child {
+    place-items: center start;
+    padding-inline: 16px;
+    text-align: left;
+}
+
+:global(.ct-controls[data-theme]) .actions > button:first-child::before,
+:global(.ct-controls[data-theme]) .actions > button:first-child::after {
+    content: none;
+    display: none;
+}
+
+:global(.ct-controls[data-theme]) .fileInput {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+:global(.ct-controls[data-theme]) .fileInput > :not(input):not(.fileSelection) {
+    position: relative;
+    z-index: 1;
+}
+
+:global(.ct-controls[data-theme]) .fileSelection {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #312d23, #1f2119);
+    color: #e2d4b6;
+}
+
+:global(.ct-controls[data-theme='green']) .fileSelection {
+    background: linear-gradient(180deg, #3d3e2e, #2d3123);
+}
+
+:global(.ct-controls[data-theme]) .fileInput::before {
+    content: none;
+}
+
+:global(.ct-controls[data-theme]) .fileSelection > :not([aria-hidden]) {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

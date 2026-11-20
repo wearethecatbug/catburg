@@ -21,21 +21,38 @@
     color: var(--text);
     font-family: Georgia, 'Times New Roman', serif;
 }
+.viewport[data-warhammer-variant='nurgle'] {
+    --surface: #1d2416;
+    --surface-light: #3b462b;
+    --surface-deep: #10150c;
+    --button-surface: #394226;
+    --back-surface: #661815;
+    --back-light: #943428;
+    --text: #f2ebd0;
+    --text-muted: #d4c48c;
+    --focus: #d5c467;
+    --edge: #a58a4d;
+}
 
 .viewport, .viewport * { box-sizing: border-box; }
-.header { --back-extra: clamp(0px, calc(100cqi - 1060px), 540px); --back-width: calc(208px + var(--back-extra) * .0444444); --back-height: calc(64px + var(--back-extra) * .0074074); --back-x: calc(12px + var(--back-extra) * .0074074); position: relative; display: grid; justify-items: center; min-height: 168px; padding: 54px 0 14px; isolation: isolate; }
+.header { --back-extra: clamp(0px, calc(100cqi - 1060px), 540px); --back-width: calc(208px + var(--back-extra) * .0444444); --back-height: calc(64px + var(--back-extra) * .0074074); --back-x: calc(12px + var(--back-extra) * .0074074); --armor-cap-width: calc(128px + var(--back-extra) * .0222222); position: relative; display: grid; justify-items: center; min-height: 168px; padding: 54px 0 14px; isolation: isolate; }
 .artwork { position: relative; display: block; width: 100%; height: 100%; overflow: hidden; pointer-events: none; user-select: none; }
 .artwork img { position: absolute; display: block; max-width: none; pointer-events: none; user-select: none; }
 .sliced { display: grid; grid-template-columns: min(calc(var(--slice-height) * var(--art-cap-ratio)), 29%) minmax(1px, 1fr) min(calc(var(--slice-height) * var(--art-cap-ratio)), 29%); pointer-events: none; user-select: none; }
+.sliced[data-khorne-rail] > .artwork:nth-child(2)::after { --rail-rivet-size: calc(var(--slice-height) * .1905); --rail-rivet-pitch: calc(var(--slice-height) * 1.3333); content: ''; position: absolute; z-index: 1; inset: 0; pointer-events: none; background-image: radial-gradient(circle calc(var(--rail-rivet-size) * .5) at 50% 50%, #fff0b1 0 10%, #dca851 24%, #9a6a2d 47%, #5b3918 70%, rgb(22 13 7 / .25) 89%, transparent 100%); background-position: center calc(var(--slice-height) * .1111); background-repeat: space no-repeat; background-size: var(--rail-rivet-pitch) var(--rail-rivet-size); }
 .metal { filter: saturate(.85) sepia(.12) brightness(.9) drop-shadow(0 2px 2px rgb(0 0 0 / .45)); }
 .accent { filter: saturate(1.25) brightness(1.02); }
-.railSurface { position: absolute; z-index: 0; inset: 86px 12px 23px; background: linear-gradient(180deg, var(--surface-light), var(--surface) 65%, var(--surface-deep)); clip-path: polygon(1.5% 0, 98.5% 0, 100% 19%, 100% 100%, 0 100%, 0 19%); box-shadow: inset 0 1px 0 var(--edge); }
-.vent { --vent-red-height: calc(38px + clamp(0px, calc(100cqi - 1060px), 540px) * .0037037); position: absolute; top: 91px; z-index: 1; width: calc((100% - var(--plaque-width)) / 2 + 28px); height: 64px; pointer-events: none; }
+.railSurface { position: absolute; z-index: 0; inset: 86px 12px 23px; background: linear-gradient(180deg, var(--surface-light), var(--surface) 65%, var(--surface-deep)); clip-path: polygon(1.5% 0, calc(100% - var(--armor-cap-width) * .42) 0, 100% 100%, 0 100%, 0 19%); box-shadow: inset 0 1px 0 var(--edge); }
+.vent { --vent-red-height: calc(38px + clamp(0px, calc(100cqi - 1060px), 540px) * .0037037); position: absolute; top: 91px; z-index: 1; width: calc((100% - var(--plaque-width)) / 2 + 8px); height: 64px; pointer-events: none; }
 .ventLeft { left: 12px; }
-.ventRight { right: 12px; transform: scaleX(-1); }
+.ventRight { right: calc(12px + var(--armor-cap-width) * .58); width: calc((100% - var(--plaque-width)) / 2 + 8px - var(--armor-cap-width) * .58); overflow: hidden; transform: scaleX(-1); }
 .vent > .artwork { position: absolute; inset: 0; }
+.ventRight > .artwork { inset: 0 0 0 auto; width: calc(100% + var(--armor-cap-width) * .58); }
 .vent > .artwork:first-child { z-index: 1; }
 .vent > .ventInsert { position: absolute; z-index: 0; top: auto; right: 6%; bottom: 13px; left: 6%; width: auto; height: var(--vent-red-height); background-color: #5e1110; background-image: url('/cattasks/themes/khorne/task-header/vent-arch-tile.png'); background-repeat: repeat-x; background-size: auto 100%; background-position: left top; }
+.titleShoulder { position: absolute; z-index: 2; top: 91px; width: calc(64px * 410 / 379); height: 64px; }
+.titleShoulderLeft { left: calc(50% - var(--plaque-width) / 2 - calc(64px * 410 / 379) + 52px); }
+.titleShoulderRight { left: calc(50% + var(--plaque-width) / 2 - 52px); transform: scaleX(-1); }
 .plaque { position: relative; z-index: 4; width: var(--plaque-width); min-height: var(--plaque-height); isolation: isolate; }
 .plaqueSurface { position: absolute; z-index: -1; inset: 4px 5px; background: radial-gradient(ellipse at 50% 12%, rgb(255 255 255 / .04%), transparent 70%), linear-gradient(145deg, var(--surface-light), var(--surface) 55%, var(--surface-deep)); clip-path: polygon(calc(var(--plaque-height) * .36 - 4px) 0, calc(100% - var(--plaque-height) * .36 + 4px) 0, 100% 42%, calc(100% - var(--plaque-height) * .36 + 4px) 100%, calc(var(--plaque-height) * .36 - 4px) 100%, 0 42%); }
 .titleFrame { --slice-height: var(--plaque-height); position: absolute; z-index: 2; inset: 0; }
@@ -48,6 +65,8 @@
 .buttonSurface { position: absolute; z-index: -1; inset: 4px; background: linear-gradient(155deg, var(--button-surface), var(--surface-deep)); clip-path: polygon(13% 0, 87% 0, 100% 13%, 100% 87%, 87% 100%, 13% 100%, 0 87%, 0 13%); }
 .buttonFrame { --slice-height: 50px; position: absolute; z-index: 0; inset: 0; }
 .buttonContent { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; gap: 9px; pointer-events: none; text-shadow: 0 1px 1px rgb(0 0 0 / .6); }
+.armorCap { position: absolute; z-index: 2; top: 88px; right: 12px; width: var(--armor-cap-width); height: 68px; }
+.backMount { --slice-height: calc(var(--back-height) + 12px); position: absolute; z-index: 2; top: calc(142px - var(--back-height)); left: calc(var(--back-x) - 8px); width: calc(var(--back-width) + 16px); height: calc(var(--back-height) + 12px); }
 .back { position: absolute; z-index: 5; top: calc(148px - var(--back-height)); left: var(--back-x); width: var(--back-width); height: var(--back-height); font-size: 21px; font-weight: 700; }
 .back .buttonFrame { --slice-height: var(--back-height); }
 .back .buttonSurface { background: linear-gradient(155deg, var(--back-light), var(--back-surface) 55%, var(--surface-deep)); clip-path: polygon(4% 0, 96% 0, 100% 16%, 100% 84%, 96% 100%, 4% 100%, 0 84%, 0 16%); }
@@ -71,8 +90,8 @@
 .crest img { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; }
 .beam { --slice-height: 24px; position: absolute; z-index: 3; right: 0; bottom: 2px; left: 0; height: var(--slice-height); }
 
-@container unified-task-header (max-width: 960px) { .header { --plaque-width: 560px; } .back { left: 15px; width: 112px; height: 44px; font-size: 16px; } .back .buttonFrame { --slice-height: 44px; } .name { font-size: 26px; } .name[data-long='true'] { font-size: 22px; } }
-@container unified-task-header (max-width: 800px) { .header { --plaque-width: calc(100% - 16px); --plaque-height: 94px; --nav-width: 52px; min-height: 146px; padding: 40px 0 12px; } .back { top: 0; left: 8px; width: clamp(96px, calc(100cqi - 280px), 128px); height: 44px; font-size: 16px; } .back .buttonFrame { --slice-height: 36px; inset: 4px 0; height: 36px; } .back .buttonSurface { inset: 8px 4px; } .crest { top: 9px; width: clamp(96px, calc(100cqi - 280px), 130px); height: auto; aspect-ratio: 3.324; } .main { min-height: calc(var(--plaque-height) - 24px); } .railSurface, .vent { display: none; } .beam { --slice-height: 14px; bottom: 0; clip-path: inset(0 0 2px); } .name { font-size: 24px; } .name[data-long='true'] { font-size: 22px; } }
+@container unified-task-header (max-width: 960px) { .header { --plaque-width: 560px; } .back { left: 15px; width: 112px; height: 44px; font-size: 16px; } .backMount { --slice-height: 56px; top: 98px; left: 7px; width: 128px; height: 56px; } .back .buttonFrame { --slice-height: 44px; } .name { font-size: 26px; } .name[data-long='true'] { font-size: 22px; } }
+@container unified-task-header (max-width: 800px) { .header { --plaque-width: calc(100% - 16px); --plaque-height: 94px; --nav-width: 52px; min-height: 146px; padding: 40px 0 12px; } .back { top: 0; left: 8px; width: clamp(96px, calc(100cqi - 280px), 128px); height: 44px; font-size: 16px; } .backMount { --slice-height: 42px; top: 1px; left: 4px; width: calc(clamp(96px, calc(100cqi - 280px), 128px) + 8px); height: 42px; } .back .buttonFrame { --slice-height: 36px; inset: 4px 0; height: 36px; } .back .buttonSurface { inset: 8px 4px; } .crest { top: 9px; width: clamp(96px, calc(100cqi - 280px), 130px); height: auto; aspect-ratio: 3.324; } .main { min-height: calc(var(--plaque-height) - 24px); } .railSurface, .vent, .titleShoulder, .armorCap { display: none; } .beam { --slice-height: 14px; bottom: 0; clip-path: inset(0 0 2px); } .name { font-size: 24px; } .name[data-long='true'] { font-size: 22px; } }
 @container unified-task-header (max-width: 500px) { .number { font-size: 11px; line-height: 15px; letter-spacing: .08em; } .name { font-size: 22px; line-height: 1.07; } .name[data-long='true'] { font-size: 20px; } .copy { gap: 3px; padding-inline: 6px; } }
 @container unified-task-header (max-width: 380px) { .back { width: 112px; font-size: 15px; } .name { font-size: 21px; } .name[data-long='true'] { font-size: 19px; } }
 @container unified-task-header (max-width: 350px) { .back { width: 96px; font-size: 14px; } .name { font-size: 20px; } .name[data-long='true'] { font-size: 18px; } }
