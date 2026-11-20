@@ -169,3 +169,67 @@
 :global([data-cattasks-theme='dark']) .button[data-result="failure"] { --action-border: #d68b7b; --action-hover-border: #ecaa98; --action-ink: #ffd8cf; }
 
 :global([data-cattasks-theme='dark']) .button:focus-visible { outline-color: #e7c88f; }
+
+:global([data-cattasks-theme='khorne']) .button {
+    --action-texture-strength-default: .2;
+    --action-face-top: var(--khorne-neutral-high);
+    --action-face-bottom: var(--khorne-neutral-low);
+    --action-hover-top: #4a3a2e;
+    --action-hover-bottom: #2b211c;
+    --action-border: var(--khorne-metal);
+    --action-hover-border: var(--khorne-metal-bright);
+    --action-ink: #f4ead2;
+    --action-rim-top: rgb(244 234 210 / 18%);
+    --action-rim-bottom: rgb(0 0 0 / 48%);
+}
+
+:global([data-cattasks-theme='khorne']) .button[data-variant='run'] {
+    --action-face-top: var(--khorne-primary-high);
+    --action-face-bottom: #721915;
+    --action-hover-top: #ab2b22;
+    --action-hover-bottom: #841b17;
+    --action-border: var(--khorne-metal);
+    --action-hover-border: var(--khorne-focus);
+    --action-ink: #f4ead2;
+}
+
+:global([data-cattasks-theme='khorne']) .button[data-result="success"] { --action-border: var(--khorne-metal); --action-hover-border: var(--khorne-focus); }
+:global([data-cattasks-theme='khorne']) .button[data-result="failure"] { --action-border: #d37561; --action-hover-border: #f0a18d; --action-ink: #ffe0d8; }
+:global([data-cattasks-theme='khorne']) .button:focus-visible { outline-color: var(--khorne-focus); }
+:global([data-cattasks-theme='khorne']) .button {
+    flex-basis: 100px;
+    width: 100px;
+    min-height: 44px;
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-size: 16px;
+}
+
+:global([data-cattasks-theme='khorne']) .button::before,
+:global([data-cattasks-theme='khorne']) .button::after {
+    inset: 3px 0;
+    border: 1px solid var(--action-border);
+    border-radius: 0;
+    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+:global([data-cattasks-theme='khorne']) .button::before {
+    background: linear-gradient(180deg, var(--action-face-top), var(--action-face-bottom));
+    filter: none;
+    mix-blend-mode: normal;
+    opacity: 1;
+}
+
+:global([data-cattasks-theme='khorne']) .button::after {
+    border-color: rgb(244 234 210 / .32);
+    box-shadow: inset 0 1px 0 var(--action-rim-top), inset 0 -2px 0 var(--action-rim-bottom), 0 3px 0 rgb(0 0 0 / .45);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    :global([data-cattasks-theme='khorne']) .button:not(:disabled):hover::before {
+        background: linear-gradient(180deg, var(--action-hover-top), var(--action-hover-bottom));
+    }
+}

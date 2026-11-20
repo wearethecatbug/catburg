@@ -12,6 +12,8 @@
     background: transparent;
 }
 
+.legacyHeader {}
+
 .allTasksButton {
     grid-column: 1;
     position: relative;
@@ -71,6 +73,15 @@
     outline: 3px solid var(--cattasks-accent);
     outline-offset: 4px;
 }
+
+:global([data-cattasks-theme='khorne']) .allTasksButton {
+    min-height: 48px; padding: 5px 14px; border: 8px solid transparent;
+    border-image: var(--khorne-frame-image) 25% / 8px stretch;
+    background: linear-gradient(180deg, #941e18, #4a1714); box-shadow: 0 3px 0 rgb(0 0 0 / .42); color: #f4ead2;
+}
+:global([data-cattasks-theme='khorne']) .allTasksButton:hover { color: #f4ead2; filter: brightness(1.1); }
+/* The arrow head shares the padded flex item's origin at every breakpoint. */
+:global([data-cattasks-theme='khorne']) .allTasksButton::after { left: 14px; }
 
 @media (min-width: 1221px) {
     .headerContainer {
@@ -168,10 +179,21 @@
 
     .allTasksButton {
         min-height: 44px;
+        max-width: calc(100% - 52px);
         gap: 10px;
     }
 
     .headerTaskContainer {
         min-height: 64px;
     }
+}
+
+/* Reserve ThemeToggle's 44px lane before the compact header asks its live button to grow. */
+@media (max-width: 1220px) {
+    :global([data-cattasks-theme='khorne']) .allTasksButton {
+        width: auto;
+        max-width: calc(100% - 68px);
+        box-sizing: border-box;
+    }
+
 }

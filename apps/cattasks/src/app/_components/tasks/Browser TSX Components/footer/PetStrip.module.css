@@ -98,3 +98,27 @@
 :global([data-cattasks-theme='dark']) .petStrip::after { background: rgb(169 193 190 / .34); }
 
 :global([data-cattasks-theme='dark']) .feedButton:focus-visible { outline-color: #e7c88f; color: #e1eae3; }
+
+:global([data-cattasks-theme='khorne']) .petStrip {
+    max-inline-size: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+    min-block-size: clamp(70px, 5vw, 82px);
+    border: 2px solid #a87c3c;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgb(42 38 33 / .98), rgb(16 17 15 / .98));
+    box-shadow: inset 0 1px 0 rgb(244 234 210 / .14), 0 5px 14px rgb(0 0 0 / .38);
+}
+
+:global([data-cattasks-theme='khorne'][data-cattasks-page]) [aria-label='Pet feeding strip'].petStrip {
+    inline-size: 100%;
+    max-inline-size: none;
+}
+
+:global([data-cattasks-theme='khorne']) .petStrip::after { background: rgb(198 166 106 / .34); }
+:global([data-cattasks-theme='khorne']) .track { inset-inline: 72px; }
+:global([data-cattasks-theme='khorne']) .feedButton:focus-visible { outline-color: #d58b3a; color: #f4ead2; }
+:global([data-cattasks-theme='khorne']) .grassOne,
+:global([data-cattasks-theme='khorne']) .grassTwo,
+:global([data-cattasks-theme='khorne']) .grassThree,
+:global([data-cattasks-theme='khorne']) .grassFour,
+:global([data-cattasks-theme='khorne']) .grassFive,
+:global([data-cattasks-theme='khorne']) .grassSix { filter: grayscale(1) sepia(.45) saturate(.52) brightness(.5); }

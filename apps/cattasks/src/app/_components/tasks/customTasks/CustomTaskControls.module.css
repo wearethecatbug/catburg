@@ -54,3 +54,51 @@
 :global([data-cattasks-theme='dark']) .fileSelection { color: #a9c1be; }
 :global([data-cattasks-theme='dark']) .notice,
 :global([data-cattasks-theme='dark']) .error { color: #e9aaa1; }
+
+:global([data-cattasks-theme='khorne']) .actions button,
+:global([data-cattasks-theme='khorne']) .fileInput,
+:global([data-cattasks-theme='khorne']) .form button,
+:global([data-cattasks-theme='khorne']) .retry {
+    border-color: #8c683a;
+    background: #1f1b18;
+    color: #f4ead2;
+}
+
+:global([data-cattasks-theme='khorne']) .actions > button:first-child,
+:global([data-cattasks-theme='khorne']) .form button[type='submit'],
+:global([data-cattasks-theme='khorne']) .retry {
+    border-color: var(--khorne-metal);
+    background: linear-gradient(174deg, var(--khorne-primary-high) 0%, #721915 56%, var(--khorne-primary) 100%);
+    box-shadow: inset 0 1px 0 rgb(244 234 210 / .18), 0 2px 0 #4a1714, 0 4px 8px rgb(0 0 0 / .28);
+    color: #f4ead2;
+}
+
+:global([data-cattasks-theme='khorne']) .fileInput,
+:global([data-cattasks-theme='khorne']) .form { background: var(--khorne-neutral-low); }
+:global([data-cattasks-theme='khorne']) .field input,
+:global([data-cattasks-theme='khorne']) .field textarea,
+:global([data-cattasks-theme='khorne']) .field select,
+:global([data-cattasks-theme='khorne']) .fileButton { border-color: #8c683a; background: #171514; color: #f4ead2; }
+:global([data-cattasks-theme='khorne']) .fileInput:hover .fileButton { background: #29231f; }
+:global([data-cattasks-theme='khorne']) .fileInput:has(input:disabled):hover .fileButton { background: #171514; }
+:global([data-cattasks-theme='khorne']) .fileSelection { color: #c9c1b4; }
+:global([data-cattasks-theme='khorne']) .error { color: #f0a18d; }
+
+:global([data-cattasks-theme='khorne']) .actions > button:first-child:focus-visible,
+:global([data-cattasks-theme='khorne']) .fileInput:focus-within {
+    outline: 3px solid var(--khorne-focus);
+    outline-offset: 3px;
+}
+
+:global([data-cattasks-theme='khorne']) .actions > button:first-child,
+:global([data-cattasks-theme='khorne']) .form button[type='submit'],
+:global([data-cattasks-theme='khorne']) .retry {
+    min-height: 48px; border: 8px solid transparent; border-image: var(--khorne-frame-image) 25% / 8px stretch; border-radius: 0;
+}
+
+:global([data-cattasks-theme='khorne']) .actions > button:first-child::after { display: none; }
+
+@media (forced-colors: active) {
+    :global([data-cattasks-theme='khorne']) .actions > button:first-child:focus-visible,
+    :global([data-cattasks-theme='khorne']) .fileInput:focus-within { outline-color: Highlight; }
+}

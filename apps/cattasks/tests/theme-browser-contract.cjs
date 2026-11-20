@@ -8,9 +8,10 @@ const light = {page: "rgb(214, 225, 212)", panel: "rgb(250, 251, 251)", editor: 
 const dark = {page: "rgb(16, 38, 47)", panel: "rgb(23, 46, 56)", editor: "rgb(16, 38, 47)"};
 const catalog = {version: 1, tasks: Array.from({length: 24}, (_, index) => ({
   id: `theme-${index + 1}`, title: `Theme fixture ${index + 1}`,
-  description: "Inert fixture; this oracle never executes entered code.", entryPoint: "echo",
+  description: "Inert fixture; only its fixed starter code runs in the runner assertion.", entryPoint: "echo",
   starterCode: `function echo(value) { return value + ${index + 1}; }`,
   solution: `function echo(value) { return value + ${index + 1}; }`,
+  ...(index === 0 ? {hints: ["This inert hint makes the real accordion reachable without executing code."]} : {}),
   tests: [{args: ["fixture"], expected: `fixture${index + 1}`}],
 }))};
 
@@ -88,12 +89,108 @@ async function waitForJavaScriptWorker(page) {
     if (!worker) throw new Error("the JavaScript worker did not initialize");
   });
 }
-async function toggle(page, action) {
-  const control = page.getByRole("button", {name: action, exact: true});
-  assert.equal(await page.getByRole("button", {name: /Switch to (light|dark) theme/}).count(), 1, "one dynamic theme action is exposed");
+async function themeTrigger(page) {
+  const control = page.getByRole("button", {name: /Choose theme.*current:/i});
+  assert.equal(await control.count(), 1, "one labelled theme trigger is exposed");
   const box = await control.boundingBox();
   assert.ok(box && box.width >= 44 && box.height >= 44, "the real action has a 44px target");
   return control;
+}
+
+async function chooseTheme(page, name) {
+  const trigger = await themeTrigger(page);
+  await trigger.click();
+  const choices = page.getByRole("group", {name: "Themes", exact: true});
+  await choices.waitFor({state: "visible"});
+  const option = choices.getByRole("button", {name, exact: true});
+  await option.click();
+  await page.locator(`[data-cattasks-theme='${name.toLowerCase()}']`).waitFor();
+  await expectCurrentTheme(page, name);
+}
+
+async function expectCurrentTheme(page, name) {
+  await expectText(page, /Choose theme.*current:/i, new RegExp(`current:\\s*${name}`, "i"));
+}
+
+async function expectText(page, roleName, pattern) {
+  const label = await page.getByRole("button", {name: roleName}).getAttribute("aria-label");
+  assert.match(label || "", pattern, "the trigger reports the selected theme in its accessible name");
+}
+
+async function khorneAssets(page) {
+  return page.evaluate(() => performance.getEntriesByType("resource")
+    .map(entry => entry.name)
+    .filter(name => name.includes("/cattasks/themes/khorne/")));
+}
+
+async function visibleKhorneGeometry(page, selector) {
+  return page.locator(selector).evaluateAll(elements => elements
+    .filter(element => {
+      const style = getComputedStyle(element), box = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+    })
+    .map(element => {
+      const box = element.getBoundingClientRect();
+      return {
+        name: element.getAttribute("data-khorne-figure"),
+        x: box.x, y: box.y, width: box.width, height: box.height,
+        right: box.right, bottom: box.bottom,
+        pointerEvents: getComputedStyle(element).pointerEvents,
+      };
+    }));
+}
+
+async function nextPaint(page) {
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+async function paintDelta(page, visible, hidden) {
+  return page.evaluate(async ([visiblePng, hiddenPng]) => {
+    const decode = async encoded => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${encoded}`;
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = image.width; canvas.height = image.height;
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      return canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data;
+    };
+    const [withFigures, withoutFigures] = await Promise.all([decode(visiblePng), decode(hiddenPng)]);
+    let changed = 0;
+    for (let index = 0; index < withFigures.length; index += 4) {
+      // Chromium may round an otherwise identical composited pixel by one 8-bit level.
+      // Treat only a perceptible channel delta as figure paint, preserving the zero-leak oracle.
+      if (Math.abs(withFigures[index] - withoutFigures[index]) > 1 || Math.abs(withFigures[index + 1] - withoutFigures[index + 1]) > 1 || Math.abs(withFigures[index + 2] - withoutFigures[index + 2]) > 1 || Math.abs(withFigures[index + 3] - withoutFigures[index + 3]) > 1) changed += 1;
+    }
+    return changed;
+  }, [visible.toString("base64"), hidden.toString("base64")]);
+}
+
+function cataloguePaintStrips(filters, list, allowance = 14) {
+  const height = Math.max(1, Math.floor(Math.min(filters.height, list.height)));
+  return {
+    leftRim: {x: Math.max(0, Math.floor(filters.x - 1)), y: Math.floor(filters.y), width: allowance + 1, height},
+    leftInterior: {x: Math.floor(filters.x + allowance), y: Math.floor(filters.y), width: 32, height},
+    rightRim: {x: Math.floor(list.x + list.width - allowance), y: Math.floor(list.y), width: allowance + 1, height},
+    rightInterior: {x: Math.floor(list.x + list.width - allowance - 32), y: Math.floor(list.y), width: 32, height},
+  };
+}
+
+function luminance(color) {
+  const values = color.match(/^rgba?\(([^)]+)\)$/i)?.[1].split(",").slice(0, 3).map(value => Number(value.trim()))
+    ?? (/^#([\da-f]{6})$/i.test(color) ? [1, 3, 5].map(index => Number.parseInt(color.slice(index, index + 2), 16)) : null);
+  assert.ok(values?.every(value => Number.isFinite(value)), `expected a concrete CSS color, received ${color}`);
+  return values.map(value => value / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+}
+
+function assertNormalTextContrast(foreground, backgrounds, label) {
+  const foregroundLuminance = luminance(foreground);
+  for (const background of backgrounds) {
+    const backgroundLuminance = luminance(background);
+    const ratio = (Math.max(foregroundLuminance, backgroundLuminance) + .05) / (Math.min(foregroundLuminance, backgroundLuminance) + .05);
+    assert.ok(ratio >= 4.5, `${label}: ${foreground} on ${background} has ${ratio.toFixed(2)}:1 contrast; normal text requires at least 4.5:1`);
+  }
 }
 
 test("Light baseline and one pointer/keyboard switch preserve state and Monaco models", {timeout: 60_000}, async () => {
@@ -114,8 +211,7 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     const withSolution = await surface(page);
     assert.equal(withSolution.editorPaints.length, 2, "the editable and readonly Monaco paths are both present");
     assert.ok(withSolution.editorPaints.every(editor => editor.backgroundColor === light.editor), "both Monaco paths retain the Light renderer");
-    await (await toggle(page, "Switch to dark theme")).click();
-    await page.locator("[data-cattasks-theme='dark']").waitFor();
+    await chooseTheme(page, "Dark");
     const changed = await surface(page);
     assert.deepEqual({page: changed.outer.backgroundColor, panel: changed.panel.backgroundColor}, {page: dark.page, panel: dark.panel});
     assert.equal(changed.editorPaints.length, 2, "both Monaco paths stay mounted after the switch");
@@ -124,27 +220,33 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(225, 234, 227)", "Dark active Give up uses the approved visible ink");
     assert.deepEqual(changed.models, withSolution.models, "draft, solution, and Monaco model versions survive the switch");
     assert.deepEqual(changed.editorSelections, withSolution.editorSelections, "editor selections survive the switch");
-    await toggle(page, "Switch to light theme");
+    const trigger = await themeTrigger(page);
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Tab");
-    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Switch to light theme", "keyboard traversal returns to the actual theme control");
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), await trigger.getAttribute("aria-label"), "keyboard traversal returns to the actual theme trigger");
     assert.deepEqual(await page.evaluate(() => ({focusVisible: document.activeElement?.matches(":focus-visible"), outlineColor: getComputedStyle(document.activeElement).outlineColor})), {focusVisible: true, outlineColor: "rgb(231, 200, 143)"}, "keyboard focus uses the approved amber ring");
     await page.keyboard.press("Enter");
+    const choices = page.getByRole("group", {name: "Themes", exact: true});
+    await choices.waitFor({state: "visible"});
+    const lightChoice = choices.getByRole("button", {name: "Light", exact: true});
+    assert.equal(await lightChoice.evaluate(element => document.activeElement === element), true, "opening with the keyboard reaches the first named theme choice");
+    assert.equal(await lightChoice.getAttribute("aria-pressed"), "false", "the Light choice accurately reports the current Dark selection");
+    await page.keyboard.press("Enter");
     await page.locator("[data-cattasks-theme='light']").waitFor();
+    await expectCurrentTheme(page, "Light");
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), await trigger.getAttribute("aria-label"), "choosing a theme returns keyboard focus to the real trigger");
     const keyboardRestored = await surface(page);
     assert.deepEqual(keyboardRestored.models, withSolution.models); assert.deepEqual(keyboardRestored.editorSelections, withSolution.editorSelections);
     assert.equal(await activeGiveUp.getAttribute("aria-pressed"), "true", "returning to Light retains the real selected Give up state");
     assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(23, 61, 40)", "returning to Light restores the approved active Give up ink");
-    await (await toggle(page, "Switch to dark theme")).click();
-    await page.locator("[data-cattasks-theme='dark']").waitFor();
+    await chooseTheme(page, "Dark");
     await page.getByRole("button", {name: "My solution", exact: true}).click();
     await page.getByRole("button", {name: "Save current code", exact: true}).click();
     const savedCode = page.getByLabel("Saved solution code", {exact: true});
     await savedCode.waitFor({state: "visible"});
     assert.equal((await savedCode.textContent())?.trim(), catalog.tasks[0].starterCode, "the saved snapshot retains the original inert draft");
     assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(16, 38, 47)", color: "rgb(225, 234, 227)"}, "Dark saved code is visibly rendered with the approved editor foreground");
-    await (await toggle(page, "Switch to light theme")).click();
-    await page.locator("[data-cattasks-theme='light']").waitFor();
+    await chooseTheme(page, "Light");
     assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(255, 255, 255)", color: light.pet}, "returning to Light restores the existing saved-code paint");
     assertDiagnostics(diagnostics);
   } finally { await context.close(); await browser.close(); }
@@ -157,8 +259,7 @@ test("Dark preference persists, paints the meadow, and preserves a bright lanter
   try {
     const diagnostics = await prepare(page);
     assert.equal((await surface(page)).theme, "light", "a first visit starts in Light before persistence is exercised");
-    await (await toggle(page, "Switch to dark theme")).click();
-    await page.locator("[data-cattasks-theme='dark']").waitFor();
+    await chooseTheme(page, "Dark");
     const darkSurface = await surface(page);
     assert.deepEqual({page: darkSurface.outer.backgroundColor, panel: darkSurface.panel.backgroundColor, editor: darkSurface.editorPaints[0].backgroundColor}, dark);
     assert.match(await page.locator("[class*='viewportDecoration']").evaluate(element => getComputedStyle(element).backgroundImage), /night-meadow\.png/);
@@ -188,29 +289,452 @@ test("Dark preference persists, paints the meadow, and preserves a bright lanter
   } finally { await context.close(); await browser.close(); }
 });
 
-test("inline theme boot paints persisted Dark before blocked React bundles hydrate", {timeout: 60_000}, async () => {
+test("Khorne is a keyboard-accessible persisted choice with distinct Task and catalogue art", {timeout: 60_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    const before = await surface(page);
+    const trigger = await themeTrigger(page);
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const choices = page.getByRole("group", {name: "Themes", exact: true});
+    await choices.waitFor({state: "visible"});
+    assert.equal(await choices.getByRole("button").count(), 3, "only the three shipped choices are available");
+    assert.equal(await choices.locator("button[aria-pressed='true']").count(), 1, "the current choice has one accessible selected state");
+    assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).getAttribute("aria-pressed"), "true", "the initial selected choice is Light");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.getByRole("group", {name: "Themes", exact: true}).count(), 0, "Escape closes the theme choices");
+    const triggerLabel = await trigger.getAttribute("aria-label");
+    await page.waitForFunction(label => document.activeElement?.getAttribute("aria-label") === label, triggerLabel);
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), triggerLabel, "Escape restores focus to the trigger");
+    await chooseTheme(page, "Khorne");
+    const khorne = await surface(page);
+    assert.equal(khorne.theme, "khorne");
+    assert.notEqual(khorne.outer.backgroundColor, light.page, "Khorne owns its outer page paint");
+    assert.notEqual(khorne.panel.backgroundColor, light.panel, "Khorne owns its panel paint");
+    assert.deepEqual(khorne.models, before.models, "selecting Khorne preserves the existing Monaco model");
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "khorne", "the real Khorne choice persists its value");
+    await page.waitForFunction(() => performance.getEntriesByType("resource").some(entry => entry.name.includes("/cattasks/themes/khorne/")));
+    const taskAssets = await khorneAssets(page);
+    assert.ok(taskAssets.length > 0, "Task loads Khorne's public art instead of a preview screenshot");
+    await waitForJavaScriptWorker(page);
+    await page.reload({waitUntil: "domcontentloaded"});
+    await page.locator("[data-cattasks-theme='khorne']").waitFor();
+    await waitForJavaScriptWorker(page);
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "khorne", "a normal reload retains the selected Khorne preference");
+    assert.ok((await khorneAssets(page)).some(asset => asset.endsWith("/task/background-desktop.webp")), "the persisted Task view loads Khorne's own wide scene");
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
+    assert.equal((await surface(page)).theme, "khorne", "catalogue keeps the selected Khorne theme");
+    await page.waitForFunction(previous => performance.getEntriesByType("resource").some(entry => entry.name.includes("/cattasks/themes/khorne/") && !previous.includes(entry.name)), taskAssets);
+    assert.equal((await surface(page)).overflow, 0, "Khorne catalogue retains the existing wide geometry");
+    const catalogueHeader = page.locator("header[data-khorne-header='catalogue']");
+    const catalogueTitle = catalogueHeader.getByRole("heading", {name: "All tasks", exact: true});
+    const catalogueBack = catalogueHeader.getByRole("button", {name: "Back to task", exact: true});
+    assert.equal(await catalogueHeader.count(), 1, "Khorne catalogue uses its own integrated header");
+    const [titleBox, backBox] = await Promise.all([catalogueTitle.boundingBox(), catalogueBack.boundingBox()]);
+    assert.ok(titleBox && backBox && titleBox.x + titleBox.width <= backBox.x && Math.min(titleBox.y + titleBox.height, backBox.y + backBox.height) > Math.max(titleBox.y, backBox.y), "the live catalogue title remains left of, and vertically aligned with, its Back to task action");
+    assert.equal(await page.locator("[class*='shelfStickers'], [class*='backRabbit'], [class*='compactCandles'], [data-catalogue-back-capybara]").count(), 0, "Khorne catalogue has no former shelf or mascot decoration");
+    assert.equal(await page.locator("[class*='difficultyBar']:visible").count(), 0, "Khorne difficulty choices do not retain the former green bars");
+    const selectedDifficulty = page.getByRole("button", {name: "Easy", exact: true});
+    assert.notEqual(await selectedDifficulty.evaluate(element => getComputedStyle(element).color), "rgb(47, 81, 51)", "Khorne selected difficulty does not retain the former green ink");
+    const search = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+    await search.fill("fixture 1");
+    await page.getByRole("radio", {name: "Not started", exact: true}).check();
+    assert.equal(await page.getByRole("button", {name: "1", exact: true}).getAttribute("aria-current"), "page", "changing a filter resets the catalogue to its first page");
+    await page.getByRole("button", {name: "Next page", exact: true}).click();
+    const secondPage = page.getByRole("button", {name: "2", exact: true});
+    assert.equal(await secondPage.getAttribute("aria-current"), "page", "the fixture reaches a genuine second catalogue page");
+    await chooseTheme(page, "Dark");
+    assert.equal(await search.inputValue(), "fixture 1", "theme selection preserves the live catalogue search state");
+    assert.equal(await page.getByRole("radio", {name: "Not started", exact: true}).isChecked(), true, "theme selection preserves a non-default catalogue filter");
+    assert.equal(await secondPage.getAttribute("aria-current"), "page", "theme selection preserves the current catalogue page when its result set still permits it");
+    assertDiagnostics(diagnostics, 2);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("fresh non-Khorne and compact Khorne boots do not transfer hidden Khorne figures", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const figurePaths = [
+    "/cattasks/themes/khorne/task/marine.webp",
+    "/cattasks/themes/khorne/task/daemon.webp",
+    "/cattasks/themes/khorne/all-tasks/marine.webp",
+    "/cattasks/themes/khorne/all-tasks/daemon.webp",
+  ];
+  const origin = new URL(baseUrl).origin;
+  const scenarios = [
+    {name: "fresh Light desktop", viewport: {width: 1440, height: 900}, theme: null, figures: []},
+    {name: "fresh Dark desktop", viewport: {width: 1440, height: 900}, theme: "dark", figures: []},
+    {name: "fresh Khorne at 430px", viewport: {width: 430, height: 900}, theme: "khorne", figures: []},
+    {name: "visible Khorne desktop", viewport: {width: 2560, height: 1200}, theme: "khorne", figures: figurePaths.slice(0, 2)},
+  ];
+  try {
+    for (const scenario of scenarios) {
+      const context = await browser.newContext({viewport: scenario.viewport, reducedMotion: "reduce"});
+      try {
+        if (scenario.theme) await context.addInitScript(([key, theme]) => localStorage.setItem(key, theme), [themeStorageKey, scenario.theme]);
+        const page = await context.newPage();
+        const requests = new Set();
+        page.on("request", request => {
+          const url = new URL(request.url());
+          if (url.origin === origin) requests.add(url.pathname);
+        });
+        const diagnostics = await prepare(page);
+        await nextPaint(page);
+        const requestedFigures = figurePaths.filter(path => requests.has(path));
+        assert.deepEqual(requestedFigures, scenario.figures, `${scenario.name} requests exactly the Khorne figure assets that can be visibly used at boot`);
+        if (scenario.name === "visible Khorne desktop") {
+          assert.equal((await visibleKhorneGeometry(page, "[data-khorne-figure]")).length, 3, "visible desktop Khorne renders its actual three-piece side composition");
+        }
+        assertDiagnostics(diagnostics);
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
+});
+
+test("Khorne replaces the legacy header with live navigation, runner controls, and task tabs", {timeout: 60_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+    const header = page.locator("header[data-khorne-header]");
+    const allTasks = page.getByRole("button", {name: "All tasks", exact: true});
+    const previous = page.getByRole("button", {name: "Select previous task", exact: true});
+    const next = page.getByRole("button", {name: "Select next task", exact: true});
+    const title = header.getByRole("heading", {name: catalog.tasks[0].title, exact: true});
+
+    await header.waitFor({state: "visible"});
+    assert.equal(await header.count(), 1, "Khorne has one replacement header");
+    assert.equal(await title.count(), 1, "the task title remains a live heading in the replacement header");
+    assert.equal(await header.getByRole("button", {name: "All tasks", exact: true}).count(), 1, "All tasks belongs to the integrated header");
+    assert.equal(await header.getByRole("button", {name: "Select previous task", exact: true}).count(), 1, "previous task belongs to the central header composition");
+    assert.equal(await header.getByRole("button", {name: "Select next task", exact: true}).count(), 1, "next task belongs to the central header composition");
+    for (const control of [allTasks, previous, next]) {
+      const box = await control.boundingBox();
+      assert.ok(box && box.width >= 44 && box.height >= 44, "integrated header actions retain a keyboard-sized target");
+    }
+    assert.equal(await page.locator("[class*='taskShelf'], [class*='catalogueShelf'], [class*='mascotCanvas'], [class*='mobileFoxBody']").count(), 0, "Khorne does not leave the former shelf or mascots below the replacement header");
+    await next.click();
+    await page.getByRole("heading", {name: catalog.tasks[1].title, exact: true}).waitFor({state: "visible"});
+    await previous.click();
+    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor({state: "visible"});
+
+    const tablist = page.getByRole("tablist", {name: "Task panel", exact: true});
+    const taskTab = tablist.getByRole("tab", {name: "Task", exact: true});
+    const hintTab = tablist.getByRole("tab", {name: "Hint", exact: true});
+    const solutionTab = tablist.getByRole("tab", {name: "My solution", exact: true});
+    assert.equal(await tablist.count(), 1, "the task switcher exposes one tablist");
+    assert.equal(await taskTab.getAttribute("aria-selected"), "true", "Task starts selected");
+    assert.equal(await page.getByRole("button", {name: "Hide task", exact: true}).count(), 1, "Hide task remains a distinct action outside the tablist");
+    const tabPaint = await Promise.all([taskTab, hintTab].map(tab => tab.evaluate(element => ({background: getComputedStyle(element).backgroundImage, border: getComputedStyle(element).borderBottomColor}))));
+    assert.notDeepEqual(tabPaint[0], tabPaint[1], "the active Task tab has distinct active paint");
+    await taskTab.focus();
+    await page.keyboard.press("ArrowRight");
+    assert.equal(await hintTab.getAttribute("aria-selected"), "true", "ArrowRight activates Hint through the real tab state");
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("role")), "tab", "tab keyboard navigation moves focus to the selected tab");
+    await page.keyboard.press("End");
+    assert.equal(await solutionTab.getAttribute("aria-selected"), "true", "End activates My solution through the real tab state");
+    const solutionPanelId = await solutionTab.getAttribute("aria-controls");
+    assert.ok(solutionPanelId, "the selected tab names its panel");
+    const solutionPanel = page.locator(`[id="${solutionPanelId}"]`);
+    assert.equal(await solutionPanel.getAttribute("role"), "tabpanel", "the named panel has tabpanel semantics");
+    assert.equal(await solutionPanel.getAttribute("aria-labelledby"), await solutionTab.getAttribute("id"), "the selected panel points back to its tab");
+    assert.equal(await solutionPanel.getAttribute("hidden"), null, "the selected panel is available to the user");
+
+    const testCode = page.getByRole("button", {name: "Test Code", exact: true});
+    const runCode = page.getByRole("button", {name: "Run Code", exact: true});
+    for (const control of [testCode, runCode]) {
+      const box = await control.boundingBox();
+      assert.ok(box && box.width >= 44 && box.height >= 44, "the real runner control keeps an accessible target");
+      assert.equal(await control.isEnabled(), true, "the real runner control remains enabled for the inert fixture");
+    }
+    await page.waitForFunction(() => window.monaco?.editor.getModels()[0]?.getValue().includes("function echo"));
+    await testCode.click();
+    await page.locator("[data-variant='test'][data-result='success']").waitFor({state: "attached"});
+    const output = page.locator("section[aria-labelledby='taskOutputHeading']");
+    const beforeRun = (await output.textContent())?.trim();
+    await runCode.click();
+    await page.waitForFunction(previous => {
+      const output = document.querySelector("section[aria-labelledby='taskOutputHeading']")?.textContent?.trim();
+      return Boolean(output && output !== previous);
+    }, beforeRun);
+
+    await page.getByRole("button", {name: "Hide task", exact: true}).click();
+    const showTask = page.getByRole("button", {name: "Show task", exact: true});
+    await showTask.waitFor({state: "visible"});
+    await showTask.focus();
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "Show task", "Show task remains reachable outside the hidden panel");
+    await showTask.click();
+    await taskTab.waitFor({state: "visible"});
+
+    await allTasks.click();
+    const allTasksTitle = page.getByRole("heading", {name: "All tasks", exact: true});
+    const back = page.getByRole("button", {name: "Back to task", exact: true});
+    await allTasksTitle.waitFor({state: "visible"});
+    const catalogueHeader = page.locator("header[data-khorne-header]");
+    assert.equal(await catalogueHeader.count(), 1, "catalogue also uses one Khorne header");
+    assert.equal(await catalogueHeader.getByRole("heading", {name: "All tasks", exact: true}).count(), 1, "catalogue heading stays live inside the replacement header");
+    assert.equal(await catalogueHeader.getByRole("button", {name: "Back to task", exact: true}).count(), 1, "catalogue return action belongs to the replacement header");
+    assert.equal(await page.locator("[class*='taskShelf'], [class*='catalogueShelf'], [class*='mascotCanvas'], [class*='mobileFoxBody']").count(), 0, "catalogue removes the former shelf and mascots as well");
+    await back.click();
+    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await allTasks.evaluate(element => document.activeElement === element), true, "returning from the catalogue restores focus to All tasks");
+    assert.equal((await surface(page)).theme, "khorne", "the integrated return control retains the selected Khorne theme");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Khorne keeps a 1600px workspace, aligned beam and grounded desktop scene through live navigation", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 2560, height: 1200}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+    await nextPaint(page);
+
+    const taskRail = page.locator("[data-khorne-rail]");
+    const taskWorkspace = page.locator("[data-khorne-workspace]:visible");
+    assert.equal(await taskRail.count(), 1, "Task exposes one shared riveted beam");
+    assert.equal(await taskWorkspace.count(), 1, "Task exposes one measurable content workspace");
+    const taskRailHandle = await taskRail.elementHandle();
+    const taskRailBox = await taskRail.boundingBox(), taskWorkspaceBox = await taskWorkspace.boundingBox();
+    assert.ok(taskRailHandle && taskRailBox && taskWorkspaceBox, "Task rail and workspace are visibly measurable");
+    assert.ok(Math.abs(taskWorkspaceBox.width - 1600) <= 1, "Task workspace reaches, but does not exceed, the approved 1600px desktop cap");
+
+    const taskVents = await visibleKhorneGeometry(page, "[data-khorne-vent]");
+    assert.equal(taskVents.length, 2, "Task has its two measurable red vent inserts");
+    for (const vent of taskVents) assert.ok(vent.height >= 38 && vent.height <= 40, "Task red inserts retain the approved 38–40px desktop height");
+
+    const taskFigures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
+    assert.deepEqual(taskFigures.map(figure => figure.name).sort(), ["task-hound-lower", "task-hound-upper", "task-marine"], "Task exposes three independently placed decorations");
+    const figure = name => taskFigures.find(candidate => candidate.name === name);
+    const marine = figure("task-marine"), upperHound = figure("task-hound-upper"), lowerHound = figure("task-hound-lower");
+    assert.ok(Math.abs(marine.bottom - 1172) <= 16, "Task marine is grounded on the painted floor rather than floating");
+    assert.ok(Math.abs(lowerHound.bottom - 1176) <= 16, "Task lower hound is grounded on the painted floor rather than floating");
+    assert.ok(upperHound.bottom <= lowerHound.bottom - 120, "Task upper hound remains significantly above the lower hound on its parapet");
+    assert.ok(taskFigures.every(candidate => candidate.pointerEvents === "none"), "Task decorative figures do not intercept real controls");
+
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    await nextPaint(page);
+    const catalogueRail = page.locator("[data-khorne-rail]");
+    const catalogueWorkspace = page.locator("[data-khorne-workspace]:visible");
+    assert.equal(await catalogueRail.count(), 1, "catalogue retains the one shared riveted beam");
+    assert.equal(await catalogueWorkspace.count(), 1, "catalogue exposes one measurable content workspace");
+    const catalogueRailBox = await catalogueRail.boundingBox(), catalogueWorkspaceBox = await catalogueWorkspace.boundingBox();
+    assert.ok(catalogueRailBox && catalogueWorkspaceBox, "catalogue rail and workspace are visibly measurable");
+    assert.ok(Math.abs(catalogueWorkspaceBox.width - 1600) <= 1, "catalogue workspace reaches, but does not exceed, the approved 1600px desktop cap");
+    assert.ok(Math.abs(catalogueRailBox.x - taskRailBox.x) <= 1 && Math.abs(catalogueRailBox.y - taskRailBox.y) <= 1 && Math.abs(catalogueRailBox.width - taskRailBox.width) <= 1, "the catalogue keeps the Task beam at the identical desktop position and width");
+    assert.equal(await taskRailHandle.evaluate((rail, selector) => rail === document.querySelector(selector), "[data-khorne-rail]"), true, "navigation retains the same persistent beam element rather than swapping a duplicate");
+
+    const catalogueVents = await visibleKhorneGeometry(page, "[data-khorne-vent]");
+    assert.equal(catalogueVents.length, 2, "catalogue has its two measurable red vent inserts");
+    for (const vent of catalogueVents) assert.ok(vent.height >= 38 && vent.height <= 40, "catalogue red inserts retain the approved 38–40px desktop height");
+    assert.ok(catalogueVents.every((vent, index) => Math.abs(vent.height - taskVents[index].height) <= 1), "Task and catalogue red inserts remain equal-height through navigation");
+
+    const [catalogueTitle, aquila, catalogueBack] = await Promise.all([
+      page.getByRole("heading", {name: "All tasks", exact: true}).boundingBox(),
+      page.locator("[data-khorne-aquila]").boundingBox(),
+      page.getByRole("button", {name: "Back to task", exact: true}).boundingBox(),
+    ]);
+    assert.ok(catalogueTitle && aquila && catalogueBack, "catalogue title, central aquila, and real return action are visible");
+    assert.ok(catalogueTitle.x + catalogueTitle.width <= aquila.x && aquila.x + aquila.width <= catalogueBack.x, "catalogue keeps title left, aquila centred, and Back to task right");
+
+    const catalogueFigures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
+    assert.deepEqual(catalogueFigures.map(candidate => candidate.name).sort(), ["catalogue-daemon", "catalogue-marine"], "catalogue exposes its two independent side figures");
+    const catalogueMarine = catalogueFigures.find(candidate => candidate.name === "catalogue-marine"), catalogueDaemon = catalogueFigures.find(candidate => candidate.name === "catalogue-daemon");
+    assert.ok(Math.abs(catalogueMarine.bottom - 1172) <= 16 && Math.abs(catalogueDaemon.bottom - 1176) <= 16, "catalogue side figures are grounded on the painted floor");
+    assert.ok(catalogueFigures.every(candidate => candidate.pointerEvents === "none"), "catalogue figures are click-through decoration");
+    const [filtersBox, listBox] = await Promise.all([
+      page.getByLabel("Task filters", {exact: true}).boundingBox(),
+      page.locator("[aria-labelledby='taskListTitle']").boundingBox(),
+    ]);
+    assert.ok(filtersBox && listBox, "the live filter and task-list panes provide paint bounds for the catalogue scene");
+    const strips = cataloguePaintStrips(filtersBox, listBox);
+    await page.locator("[data-khorne-figure]:visible img").evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    const capture = async () => Object.fromEntries(await Promise.all(Object.entries(strips)
+      .map(async ([name, clip]) => [name, await page.screenshot({clip, caret: "hide"})])));
+    const painted = await capture();
+    await page.locator("[data-khorne-figure]").evaluateAll(elements => elements.forEach(element => {
+      element.__khorneOracleVisibility = {value: element.style.getPropertyValue("visibility"), priority: element.style.getPropertyPriority("visibility")};
+      element.style.setProperty("visibility", "hidden", "important");
+    }));
+    let unpainted;
+    try { unpainted = await capture(); }
+    finally {
+      await page.locator("[data-khorne-figure]").evaluateAll(elements => elements.forEach(element => {
+        const saved = element.__khorneOracleVisibility;
+        if (saved) element.style.setProperty("visibility", saved.value, saved.priority);
+        delete element.__khorneOracleVisibility;
+      }));
+    }
+    const paintChanges = Object.fromEntries(await Promise.all(Object.keys(strips)
+      .map(async name => [name, await paintDelta(page, painted[name], unpainted[name])])));
+    assert.ok(paintChanges.leftRim + paintChanges.rightRim > 0, "at least one catalogue figure visibly enters its narrow allowed pane rim");
+    assert.equal(paintChanges.leftInterior + paintChanges.rightInterior, 0, `figure paint never enters the work interior beyond the 14px allowance (${JSON.stringify(paintChanges)})`);
+
+    await page.getByRole("button", {name: "Back to task", exact: true}).click();
+    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor({state: "visible"});
+    await nextPaint(page);
+    const returnedRail = await page.locator("[data-khorne-rail]").boundingBox();
+    assert.ok(returnedRail && Math.abs(returnedRail.x - taskRailBox.x) <= 1 && Math.abs(returnedRail.y - taskRailBox.y) <= 1 && Math.abs(returnedRail.width - taskRailBox.width) <= 1, "Task → catalogue → Task preserves the shared beam geometry");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Khorne moves scenes below the pet strip on constrained desktop and hides them on compact catalogue", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1920, height: 1200}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+    for (const width of [1920, 1440]) {
+      await page.setViewportSize({width, height: 1200});
+      await nextPaint(page);
+      const strip = await page.getByLabel("Pet feeding strip", {exact: true}).boundingBox();
+      const figures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
+      assert.ok(strip && figures.length === 3, `${width}px Task retains the three decorations in normal document flow`);
+      assert.ok(figures.every(figure => figure.y >= strip.y + strip.height - 1), `${width}px Task decorations sit below the pet strip instead of narrowing the workspace`);
+    }
+
+    await page.setViewportSize({width: 430, height: 900});
+    await nextPaint(page);
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    const filters = page.getByRole("button", {name: "Filters", exact: true});
+    await filters.focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await filters.getAttribute("aria-expanded"), "true", "430px compact Filters opens from the keyboard");
+    await page.getByRole("searchbox", {name: "Search tasks", exact: true}).waitFor({state: "visible"});
+    await page.keyboard.press(" ");
+    assert.equal(await filters.getAttribute("aria-expanded"), "false", "430px compact Filters closes from the keyboard");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, "430px catalogue has no horizontal overflow");
+    assert.equal((await visibleKhorneGeometry(page, "[data-khorne-figure]")).length, 0, "430px catalogue hides decorative figures");
+
+    await page.setViewportSize({width: 320, height: 844});
+    await nextPaint(page);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, "320px catalogue has no horizontal overflow");
+    assert.equal((await visibleKhorneGeometry(page, "[data-khorne-figure]")).length, 0, "320px catalogue hides decorative figures");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Khorne keeps real hints, active Give up, and enabled Restore readable", {timeout: 60_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+
+    await page.getByRole("tab", {name: "Hint", exact: true}).click();
+    const hint = page.locator("details").filter({has: page.getByText("Hint 1", {exact: true})});
+    await hint.waitFor({state: "visible"});
+    const collapsedHint = await hint.evaluate(element => {
+      const style = getComputedStyle(element), summary = element.querySelector("summary");
+      if (!summary) throw new Error("the real hint accordion has no summary");
+      return {foreground: getComputedStyle(summary).color, background: style.backgroundColor};
+    });
+    assertNormalTextContrast(collapsedHint.foreground, [collapsedHint.background], "collapsed Khorne hint summary");
+    await hint.locator("summary").click();
+    const openHint = await hint.evaluate(element => {
+      const style = getComputedStyle(element), summary = element.querySelector("summary"), body = element.querySelector("p");
+      if (!summary || !body) throw new Error("the open real hint accordion is incomplete");
+      return {summary: getComputedStyle(summary).color, body: getComputedStyle(body).color, background: style.backgroundColor};
+    });
+    assertNormalTextContrast(openHint.summary, [openHint.background], "open Khorne hint summary");
+    assertNormalTextContrast(openHint.body, [openHint.background], "open Khorne hint body");
+
+    await page.getByRole("button", {name: "Give up: Показать решение", exact: true}).click();
+    const giveUp = page.getByRole("button", {name: "Give up: Показано решение", exact: true});
+    const taskTabs = page.getByRole("tablist", {name: "Task panel", exact: true});
+    const taskTab = taskTabs.getByRole("tab", {name: "Task", exact: true});
+    const taskPanelId = await taskTab.getAttribute("aria-controls");
+    assert.ok(taskPanelId, "the real Task tab continues to name its panel after Give up");
+    const taskPanel = page.locator(`[id="${taskPanelId}"]`);
+    assert.equal(await taskTab.getAttribute("aria-selected"), "true", "Give up presents the reference solution through the selected Task tab");
+    assert.equal(await taskTab.getAttribute("tabindex"), "0", "the selected Task tab remains keyboard-tabbable");
+    assert.equal(await taskTabs.locator("[role='tab'][aria-selected='true']").count(), 1, "Give up retains exactly one selected task tab");
+    assert.equal(await taskTabs.locator("[role='tab'][tabindex='0']").count(), 1, "Give up retains exactly one tabbable task tab");
+    assert.equal(await taskPanel.getAttribute("role"), "tabpanel", "the reference solution stays in the labelled Task tabpanel");
+    assert.equal(await taskPanel.getAttribute("aria-labelledby"), await taskTab.getAttribute("id"), "the Task tabpanel remains labelled by its live Task tab");
+    await taskPanel.locator(".monaco-editor").waitFor({state: "visible"});
+    const selectedGiveUp = await giveUp.evaluate(element => {
+      const panel = document.querySelector("[class*='taskDetailsContainer']");
+      if (!panel) throw new Error("the real task control panel is missing");
+      return {foreground: getComputedStyle(element).color, background: getComputedStyle(panel).backgroundColor};
+    });
+    assertNormalTextContrast(selectedGiveUp.foreground, [selectedGiveUp.background], "selected Khorne Give up");
+
+    await taskTab.click();
+    await page.getByText(catalog.tasks[0].description, {exact: true}).waitFor({state: "visible"});
+    assert.equal(await taskTab.getAttribute("aria-selected"), "true", "returning through the real Task tab restores its selected state");
+    assert.equal(await taskPanel.locator(".monaco-editor").count(), 0, "returning through Task removes the reference solution from the description tabpanel");
+
+    await page.getByRole("tab", {name: "My solution", exact: true}).click();
+    const restore = page.getByRole("button", {name: "Restore to editor", exact: true});
+    assert.equal(await restore.isDisabled(), true, "Restore remains unavailable before an inert draft is saved");
+    await page.getByRole("button", {name: "Save current code", exact: true}).click();
+    await page.waitForFunction(() => [...document.querySelectorAll("button")].some(button => button.textContent?.trim() === "Restore to editor" && !button.disabled));
+    assert.equal(await restore.isDisabled(), false, "saving the inert draft enables the real Restore action");
+    const restorePaint = await restore.evaluate(element => {
+      const style = getComputedStyle(element);
+      const resolveColor = name => {
+        const probe = document.createElement("span");
+        probe.style.color = `var(${name})`;
+        element.append(probe);
+        const color = getComputedStyle(probe).color;
+        probe.remove();
+        return color;
+      };
+      return {foreground: style.color, endpoints: ["--action-face-top", "--action-face-bottom", "--action-hover-top", "--action-hover-bottom"].map(resolveColor)};
+    });
+    assertNormalTextContrast(restorePaint.foreground, restorePaint.endpoints, "enabled Khorne Restore gradient endpoints");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("inline theme boot paints persisted Dark and Khorne before blocked React bundles hydrate", {timeout: 60_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const valid = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const khorne = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const corrupt = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const unavailable = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   try {
     await valid.addInitScript(([key]) => localStorage.setItem(key, "dark"), [themeStorageKey]);
+    await khorne.addInitScript(([key]) => localStorage.setItem(key, "khorne"), [themeStorageKey]);
     await corrupt.addInitScript(([key]) => localStorage.setItem(key, "corrupt"), [themeStorageKey]);
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
-    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
+    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
       let bundles = 0;
+      const loadedAssets = [];
       await context.route("**/_next/static/**/*.js", route => { bundles += 1; return route.fulfill({contentType: "application/javascript", body: ""}); });
       const page = await context.newPage();
-      const response = await page.goto(baseUrl, {waitUntil: "commit"});
+      page.on("response", response => loadedAssets.push(new URL(response.url()).pathname));
+      const response = await page.goto(baseUrl, {waitUntil: "load"});
       assert.equal(response?.status(), 200, "the real server response starts before React bundles are released");
       const serverHtml = await response?.text();
       assert.match(serverHtml || "", /cattasks-theme/, "the real server HTML contains the inline theme boot contract");
       await page.locator(`[data-cattasks-theme='${expectedTheme}']`).waitFor();
-      assert.equal(await page.locator("[class*='background']").evaluate(element => getComputedStyle(element).backgroundColor), expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
+      const outerPaint = await page.locator("[class*='background']").evaluate(element => getComputedStyle(element).backgroundColor);
+      if (expectedPage) assert.equal(outerPaint, expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
+      else {
+        assert.notEqual(outerPaint, light.page, "Khorne's outer page is painted before React can hydrate");
+        assert.match(await page.locator("[data-khorne-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /cattasks\/themes\/khorne\//, "Khorne's own scene is painted before React can hydrate");
+        assert.ok(loadedAssets.includes("/cattasks/themes/khorne/task/background-desktop.webp"), "the persisted Khorne page loads its own scene before React hydration");
+        assert.ok(!loadedAssets.includes("/cattasks/desktop-meadow.png"), "the persisted Khorne page does not load the Light desktop meadow");
+      }
       assert.ok(bundles > 0, "all external Next static JavaScript bundles were intercepted before React could hydrate");
       await page.close();
     }
-  } finally { await valid.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
+  } finally { await valid.close(); await khorne.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
 
 test("Bad or unavailable storage falls back safely; narrow All tasks scrolls without clipping", {timeout: 60_000}, async () => {
@@ -229,7 +753,7 @@ test("Bad or unavailable storage falls back safely; narrow All tasks scrolls wit
     assert.equal((await surface(page)).overflow, 0, "390px catalogue has no horizontal clipping");
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     assert.ok(await page.evaluate(() => window.scrollY > 0), "the extended catalogue really scrolls");
-    await (await toggle(page, "Switch to dark theme")).click();
+    await chooseTheme(page, "Dark");
     assert.equal((await surface(page)).theme, "dark", "catalogue retains the same actual control");
     const titlePaint = await page.getByRole("heading", {name: "All tasks", exact: true}).evaluate(element => {
       const style = getComputedStyle(element);
@@ -240,9 +764,12 @@ test("Bad or unavailable storage falls back safely; narrow All tasks scrolls wit
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
     const blockedPage = await unavailable.newPage(), blockedDiagnostics = await prepare(blockedPage);
     assert.equal((await surface(blockedPage)).theme, "light");
-    const control = await toggle(blockedPage, "Switch to dark theme"); await control.focus();
+    const control = await themeTrigger(blockedPage); await control.focus();
     assert.equal(await blockedPage.evaluate(() => document.activeElement?.matches(":focus-visible")), true, "320px switch retains keyboard focus");
-    await blockedPage.keyboard.press("Enter"); assert.equal((await surface(blockedPage)).theme, "dark", "storage failure does not disable the local switch");
+    await blockedPage.keyboard.press("Enter");
+    await blockedPage.getByRole("group", {name: "Themes", exact: true}).waitFor({state: "visible"});
+    await blockedPage.getByRole("button", {name: "Dark", exact: true}).click();
+    assert.equal((await surface(blockedPage)).theme, "dark", "storage failure does not disable the local switch");
     assert.equal((await surface(blockedPage)).overflow, 0, "320px task view has no horizontal clipping");
     assertDiagnostics(blockedDiagnostics);
   } finally { await corrupt.close(); await unavailable.close(); await browser.close(); }

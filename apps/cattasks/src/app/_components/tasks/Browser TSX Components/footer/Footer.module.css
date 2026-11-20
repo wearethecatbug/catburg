@@ -4,3 +4,10 @@
     width: 100%;
     padding: clamp(8px, 1.2vw, 16px) clamp(16px, 3.5vw, 54px);
 }
+
+:global([data-cattasks-theme='khorne']) .footerContainer {
+    width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+    max-width: 1600px;
+    margin-inline: auto;
+    padding-inline: 0;
+}

@@ -1,0 +1,15 @@
+export const ASSET_MAP = {
+    'title-frame.png': {width: 2172, height: 724, bounds: [78, 132, 2092, 569]},
+    'crest-metal.png': {width: 2172, height: 724, bounds: [44, 36, 2125, 662]},
+    'crest-gem.png': {width: 1278, height: 1230, bounds: [416, 156, 856, 1048]},
+    'vent-frame.png': {width: 2172, height: 724, bounds: [61, 164, 2110, 543]},
+    'vent-insert.png': {width: 2172, height: 724, bounds: [83, 154, 2115, 570]},
+    'beam.png': {width: 1484, height: 1060, bounds: [28, 520, 1456, 583]},
+    'button-wide.png': {width: 2172, height: 724, bounds: [96, 108, 2076, 616]},
+    'button-square.png': {width: 1351, height: 1164, bounds: [162, 166, 1185, 985]},
+    'back-button-housing.png': {width: 1888, height: 833, bounds: [71, 101, 1819, 720], directory: 'khorne/task-header'},
+    'back-button-mount.png': {width: 2172, height: 724, bounds: [61, 103, 2111, 609], directory: 'khorne/task-header'},
+    'control-metal-face.png': {width: 2022, height: 778, bounds: [109, 118, 1915, 655], directory: 'khorne/task-header'},
+    'header-base.png': {width: 2172, height: 724, bounds: [30, 304, 2143, 415], directory: 'khorne/task-header'},
+    'panel-surface.png': {width: 1448, height: 1086, bounds: [0, 0, 1448, 1086], directory: 'khorne/task-header'},
+} as const;

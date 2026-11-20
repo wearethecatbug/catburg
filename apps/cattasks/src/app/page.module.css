@@ -11,6 +11,11 @@
     --cattasks-focus-ring: #e7c88f;
 }
 
+.background:has([data-cattasks-theme='khorne']) {
+    --cattasks-page-background: #171514;
+    --cattasks-focus-ring: #d58b3a;
+}
+
 .pageDashboardRoot {
     min-height: 100dvh;
     width: 100%;

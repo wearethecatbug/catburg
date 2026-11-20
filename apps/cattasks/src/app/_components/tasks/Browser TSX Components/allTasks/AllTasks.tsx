@@ -6,6 +6,8 @@ import type {TaskDifficulty} from '../../catalog/taskCatalog';
 import {useTaskContext} from '../../context/TaskProvider';
 import {CustomTaskControls} from '../../customTasks/CustomTaskControls';
 import styles from './AllTasks.module.css';
+import {useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
+import {WarhammerCatalogHeader} from '../header/KhorneHeader';
 
 type AllTasksProps = {
     readonly className?: string;
@@ -21,7 +23,17 @@ const difficultyFilters: readonly TaskDifficulty[] = ['Easy', 'Medium', 'Hard'];
 const difficultyOrder = [...difficultyFilters, 'Unrated'] as const;
 const pageSize = 8;
 
+function getCatalogueExcerpt(description: string) {
+    return description.split(' Examples:', 1)[0];
+}
+
 export function AllTasksHeader({className, onBack}: AllTasksProps) {
+    const {theme} = useCatTasksTheme();
+
+    if (theme === 'khorne') {
+        return <WarhammerCatalogHeader className={className} onBack={onBack}/>;
+    }
+
     return (
         <header className={`${styles.catalogueHeader} ${className ?? ''}`}>
             <h1 className={styles.pageTitle}>
@@ -46,16 +58,20 @@ export function AllTasksHeader({className, onBack}: AllTasksProps) {
 
 export default function AllTasks({className, onBack}: AllTasksProps) {
     const {catalogueRows, catalogError, retryCatalog, selectTask, customTasks} = useTaskContext();
+    const {theme} = useCatTasksTheme();
     const [query, setQuery] = useState('');
     const [topic, setTopic] = useState<TopicFilter>('All topics');
     const [status, setStatus] = useState<StatusFilter>('All statuses');
     const [selectedDifficulties, setSelectedDifficulties] = useState<ReadonlySet<TaskDifficulty>>(() => new Set(difficultyFilters));
     const [page, setPage] = useState(1);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
     const taskListRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-        searchRef.current?.focus();
+        if (!window.matchMedia('(max-width: 639px)').matches) {
+            searchRef.current?.focus();
+        }
     }, []);
 
     const availableTopicFilters = useMemo<readonly TopicFilter[]>(
@@ -143,8 +159,26 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     };
 
     return (
-        <main className={`${styles.catalogueMain} ${className ?? ''}`}>
-            <aside className={styles.filters} aria-label="Task filters">
+        <main
+            className={`${styles.catalogueMain} ${className ?? ''}`}
+            data-khorne-catalogue={theme === 'khorne' ? '' : undefined}
+            data-khorne-workspace={theme === 'khorne' ? '' : undefined}
+        >
+            <div className={styles.catalogueLayout}>
+            <button
+                type="button"
+                className={styles.filtersToggle}
+                aria-expanded={filtersOpen}
+                aria-controls="khorne-task-filters"
+                onClick={() => setFiltersOpen(open => !open)}
+            >
+                Filters <span aria-hidden="true">⌄</span>
+            </button>
+            <aside
+                id="khorne-task-filters"
+                className={`${styles.filters} ${filtersOpen ? styles.filtersOpen : ''}`}
+                aria-label="Task filters"
+            >
                 <label className={styles.searchLabel}>
                     <span>Search tasks</span>
                     <input
@@ -260,13 +294,15 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                                 <span className={styles.ordinal} data-task-ordinal>{String(row.ordinal).padStart(2, '0')}</span>
                                 <div className={styles.taskDescription}>
                                     <h3>{row.title}</h3>
-                                    <p>{row.description}</p>
+                                    <p>{theme === 'khorne' ? getCatalogueExcerpt(row.description) : row.description}</p>
                                 </div>
-                                <span className={styles.topic}>{row.topic}</span>
-                                <span className={styles.status}>
-                                    <span>{row.status}</span>
-                                    {row.isCurrent && <span className={styles.currentMarker}>Current task</span>}
-                                </span>
+                                <div className={styles.rowMeta}>
+                                    <span className={styles.topic}>{row.topic}</span>
+                                    <span className={styles.status}>
+                                        <span>{row.status}</span>
+                                        {row.isCurrent && <span className={styles.currentMarker}>Current task</span>}
+                                    </span>
+                                </div>
                                 {row.isCurrent ? (
                                     <button type="button" className={styles.openButton} onClick={() => openTask(row.id)}>
                                         Open <span aria-hidden="true">→</span>
@@ -294,6 +330,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
                     </nav>
                 )}
             </section>
+            </div>
         </main>
     );
 }
