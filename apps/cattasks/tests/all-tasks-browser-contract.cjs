@@ -623,7 +623,7 @@ test("All tasks remains a left header link through compact resizing and returns 
     await allTasks.click();
     await page.getByRole("heading", {name: "All tasks"}).waitFor({state: "visible"});
     await page.getByRole("button", {name: "Back to task"}).click();
-    await allTasks.waitFor({state: "visible"});
+    await allTasks.and(page.locator(":focus")).waitFor({state: "visible"});
     assert.equal(await allTasks.evaluate(node => node === document.activeElement), true, "Back restores focus to the relocated All tasks control");
     assert.deepEqual(diagnostics.consoleErrors, []);
     assert.deepEqual(diagnostics.pageErrors, []);

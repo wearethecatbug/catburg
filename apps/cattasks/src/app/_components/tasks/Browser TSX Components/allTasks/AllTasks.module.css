@@ -108,7 +108,6 @@
 :global([data-cattasks-theme='nurgle']) .filterOption:has(input:focus-visible),
 :global([data-cattasks-theme='nurgle']) .openButton:focus-visible,
 :global([data-cattasks-theme='nurgle']) .openIcon:focus-visible { outline: 3px solid var(--khorne-focus, #9db66a); outline-offset: 3px; }
-@media (max-width: 859px) { :global([data-cattasks-theme='nurgle']) .catalogueLayout { grid-template-columns: 1fr; } }
 @media (forced-colors: active) {
     :global([data-cattasks-theme='nurgle']) .filterOption input,
     :global([data-cattasks-theme='nurgle']) .filterOption input:checked { appearance: auto; width: auto; height: auto; background: none; }
@@ -764,6 +763,7 @@
     background: #171514;
     color: var(--cattasks-ink);
 }
+:global([data-cattasks-theme='khorne']) .searchField { overflow: visible; }
 :global([data-cattasks-theme='khorne']) .searchField::before { border-color: var(--khorne-metal-bright); }
 :global([data-cattasks-theme='khorne']) .searchField::after { background: var(--khorne-metal-bright); }
 :global([data-cattasks-theme='khorne']) .searchLabel input:focus-visible,
@@ -973,6 +973,7 @@
 }
 
 @container (max-width: 859px) {
+    :global([data-cattasks-theme='nurgle']) .catalogueLayout { grid-template-columns: 1fr; }
     :global([data-cattasks-theme='nurgle']) .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; }
     :global([data-cattasks-theme='nurgle']) .searchLabel { grid-column: 1 / -1; }
     :global([data-cattasks-theme='nurgle']) .difficultyFilter { grid-column: 1; }
