@@ -4,6 +4,13 @@ import type {CSSProperties, RefObject} from 'react';
 import {ASSET_MAP} from './unifiedTaskHeaderAssets';
 import styles from './UnifiedTaskHeader.module.css';
 
+export type WarhammerHeaderTheme = 'khorne' | 'nurgle';
+
+export const warhammerAquilaSrc: Readonly<Record<WarhammerHeaderTheme, string>> = {
+    khorne: '/cattasks/themes/khorne/task-header/aquila-ruby.png',
+    nurgle: '/cattasks/themes/nurgle/aquila.png',
+};
+
 type ArtworkProps = {
     readonly name: keyof typeof ASSET_MAP;
     readonly className?: string;
@@ -31,19 +38,25 @@ export function Artwork({name, className, bounds, khorneVent = false}: ArtworkPr
 type SlicedArtworkProps = Pick<ArtworkProps, 'name' | 'className'> & {
     readonly cap?: number;
     readonly khorneRail?: boolean;
+    readonly theme?: WarhammerHeaderTheme;
 };
 
-export function SlicedArtwork({name, className, cap = .12, khorneRail = false}: SlicedArtworkProps) {
+export function SlicedArtwork({name, className, cap = .12, khorneRail = false, theme}: SlicedArtworkProps) {
     const [left, top, right, bottom] = ASSET_MAP[name].bounds;
     const cut = (right - left) * cap;
+    // beam.png has its rivets baked in, so stretch a clean section between them.
+    const railCenter: readonly [number, number, number, number] = [left + 182, top, left + 222, bottom];
+    const center: readonly [number, number, number, number] = khorneRail && name === 'beam.png'
+        ? railCenter
+        : [left + cut, top, right - cut, bottom];
     const slices: Array<readonly [number, number, number, number]> = [
         [left, top, left + cut, bottom],
-        [left + cut, top, right - cut, bottom],
+        center,
         [right - cut, top, right, bottom],
     ];
     const style = {'--art-cap-ratio': cut / Math.max(1, bottom - top)} as CSSProperties;
 
-    return <span className={`${styles.sliced} ${className ?? ''}`} data-khorne-rail={khorneRail ? '' : undefined} style={style} aria-hidden="true">{slices.map((bounds, index) => <Artwork key={index} name={name} bounds={bounds}/>)}</span>;
+    return <span className={`${styles.sliced} ${className ?? ''}`} data-khorne-rail={khorneRail ? '' : undefined} data-warhammer-variant={theme} style={style} aria-hidden="true">{slices.map((bounds, index) => <Artwork key={index} name={name} bounds={bounds}/>)}</span>;
 }
 
 function Arrow({direction}: {readonly direction: 'left' | 'right'}) {
@@ -64,16 +77,20 @@ type UnifiedTaskHeaderProps = {
     readonly navigationDisabled: boolean;
     readonly backButtonRef?: RefObject<HTMLButtonElement | null>;
     readonly showRail?: boolean;
+    readonly theme?: WarhammerHeaderTheme;
 };
 
-export default function UnifiedTaskHeader({className, taskNumber, title, onPrevious, onNext, onBack, navigationDisabled, backButtonRef, showRail = true}: UnifiedTaskHeaderProps) {
+export default function UnifiedTaskHeader({className, taskNumber, title, onPrevious, onNext, onBack, navigationDisabled, backButtonRef, showRail = true, theme = 'khorne'}: UnifiedTaskHeaderProps) {
     return (
-        <header className={`${styles.viewport} ${className ?? ''}`} data-khorne-header="task">
+        <header className={`${styles.viewport} ${className ?? ''}`} data-khorne-header="task" data-warhammer-variant={theme}>
             <div className={styles.header}>
                 <div className={styles.railSurface} aria-hidden="true"/>
-                <div className={`${styles.vent} ${styles.ventLeft}`} aria-hidden="true"><Artwork name="vent-frame.png" className={styles.metal}/><span className={`${styles.ventInsert} ${styles.accent}`} data-khorne-vent=""/></div>
-                <div className={`${styles.vent} ${styles.ventRight}`} aria-hidden="true"><Artwork name="vent-frame.png" className={styles.metal}/><span className={`${styles.ventInsert} ${styles.accent}`} data-khorne-vent=""/></div>
-                {onBack && <button ref={backButtonRef} className={`${styles.button} ${styles.back}`} type="button" onClick={onBack}><span className={styles.buttonSurface} aria-hidden="true"/><SlicedArtwork name="button-wide.png" cap={.19} className={`${styles.buttonFrame} ${styles.metal}`}/><span className={styles.buttonContent}><span aria-hidden="true">←</span>All tasks</span></button>}
+                <div className={`${styles.vent} ${styles.ventLeft}`} aria-hidden="true"><Artwork name="vent-frame.png" className={styles.metal}/><span className={`${styles.ventInsert} ${styles.accent}`} data-khorne-vent="" data-warhammer-variant={theme}/></div>
+                <div className={`${styles.vent} ${styles.ventRight}`} aria-hidden="true"><Artwork name="vent-frame.png" className={styles.metal}/><span className={`${styles.ventInsert} ${styles.accent}`} data-khorne-vent="" data-warhammer-variant={theme}/></div>
+                <Artwork name="vent-frame.png" bounds={[1700, 164, 2110, 543]} className={`${styles.titleShoulder} ${styles.titleShoulderLeft} ${styles.metal}`}/>
+                <Artwork name="vent-frame.png" bounds={[1700, 164, 2110, 543]} className={`${styles.titleShoulder} ${styles.titleShoulderRight} ${styles.metal}`}/>
+                <Artwork name="right-armor-cap.png" className={`${styles.armorCap} ${styles.metal}`}/>
+                {onBack && <><SlicedArtwork name="back-button-mount.png" cap={.2} className={`${styles.backMount} ${styles.metal}`}/><button ref={backButtonRef} className={`${styles.button} ${styles.back}`} type="button" onClick={onBack}><span className={styles.buttonSurface} aria-hidden="true"/><SlicedArtwork name="back-button-housing.png" cap={.2} className={`${styles.buttonFrame} ${styles.metal}`}/><span className={styles.buttonContent}><span aria-hidden="true">←</span>All tasks</span></button></>}
                 <div className={styles.plaque}>
                     <div className={styles.plaqueSurface} aria-hidden="true"/>
                     <SlicedArtwork name="title-frame.png" className={`${styles.titleFrame} ${styles.metal}`}/>
@@ -83,8 +100,8 @@ export default function UnifiedTaskHeader({className, taskNumber, title, onPrevi
                         <button className={`${styles.button} ${styles.nav} ${styles.navRight}`} type="button" onClick={onNext} disabled={navigationDisabled} aria-disabled={navigationDisabled} aria-label="Select next task"><span className={styles.navFace} aria-hidden="true"/><ChamberDivider/><span className={styles.buttonContent}><Arrow direction="right"/></span></button>
                     </div>
                 </div>
-                <span className={styles.crest} data-khorne-aquila="" aria-hidden="true"><img src="/cattasks/themes/khorne/task-header/aquila-ruby.png" alt="" draggable={false}/></span>
-                {showRail && <SlicedArtwork name="beam.png" cap={.075} className={`${styles.beam} ${styles.metal}`} khorneRail/>}
+                <span className={styles.crest} data-khorne-aquila="" data-warhammer-variant={theme} aria-hidden="true"><img src={warhammerAquilaSrc[theme]} alt="" draggable={false}/></span>
+                {showRail && <SlicedArtwork name="beam.png" cap={.075} className={`${styles.beam} ${styles.metal}`} khorneRail theme={theme}/>}
             </div>
         </header>
     );

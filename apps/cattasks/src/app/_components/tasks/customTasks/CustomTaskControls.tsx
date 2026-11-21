@@ -4,6 +4,7 @@ import {useEffect, useRef, useState} from 'react';
 import {parseCustomTask} from './customTaskTransfer';
 import {CUSTOM_TASK_TOPICS} from './customTaskTypes';
 import {useTaskContext} from '../context/TaskProvider';
+import {CatalogueFieldArt, CatalogueFileChoose, CatalogueMetalButton, CataloguePlus} from '../Browser TSX Components/allTasks/controlsV3/AllTasksControlsV3';
 import styles from './CustomTaskControls.module.css';
 
 type FormValues = Record<'id' | 'title' | 'description' | 'entryPoint' | 'starterCode' | 'solution' | 'tests' | 'topic', string>;
@@ -19,7 +20,11 @@ function fieldFromMessage(message: string): keyof FormValues | null {
     return match?.[1] as keyof FormValues | undefined ?? null;
 }
 
-export function CustomTaskControls() {
+type CustomTaskControlsProps = {
+    readonly useV3Controls?: boolean;
+};
+
+export function CustomTaskControls({useV3Controls = false}: CustomTaskControlsProps) {
     const {customStorageError, customStorageReady, recoveryCustomTaskExport, addCustomTasks, prepareCustomTaskImport, exportCustomTasks, retryCustomStorage} = useTaskContext();
     const [isOpen, setIsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -27,6 +32,7 @@ export function CustomTaskControls() {
     const [values, setValues] = useState<FormValues>(emptyForm);
     const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
     const [transferError, setTransferError] = useState<string | null>(null);
+    const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
     const mounted = useRef(true);
     const importVersion = useRef(0);
     const exportVersion = useRef(0);
@@ -136,17 +142,32 @@ export function CustomTaskControls() {
     return (
         <section className={styles.controls} aria-label="Custom tasks">
             <div className={styles.actions}>
-                <button ref={newTaskButton} type="button" onClick={() => setIsOpen(true)} disabled={!customStorageReady}>New task</button>
+                {useV3Controls ? (
+                    <CatalogueMetalButton ref={newTaskButton} type="button" frame="wide" tone="accent" onClick={() => setIsOpen(true)} disabled={!customStorageReady}>
+                        <CataloguePlus/> New task
+                    </CatalogueMetalButton>
+                ) : (
+                    <button ref={newTaskButton} type="button" onClick={() => setIsOpen(true)} disabled={!customStorageReady}>New task</button>
+                )}
                 <label className={styles.fileInput}>
                     <span>Import tasks JSON</span>
                     <input type="file" accept="application/json" disabled={!customStorageReady} onChange={event => {
                         const file = event.currentTarget.files?.[0];
+                        setSelectedFileName(useV3Controls ? file?.name ?? null : null);
                         event.currentTarget.value = '';
                         void importTasks(file);
                     }}/>
-                    <span className={styles.fileSelection} aria-hidden="true"><span className={styles.fileButton}>Choose file</span><span>No file selected</span></span>
+                    {useV3Controls ? (
+                        <span className={styles.fileSelection} aria-hidden="true"><CatalogueFieldArt/><CatalogueFileChoose/><span>{selectedFileName ?? 'No file selected'}</span></span>
+                    ) : (
+                        <span className={styles.fileSelection} aria-hidden="true"><span className={styles.fileButton}>Choose file</span><span>{selectedFileName ?? 'No file selected'}</span></span>
+                    )}
                 </label>
-                <button type="button" onClick={() => void exportTasks()} disabled={(!customStorageReady && !recoveryCustomTaskExport) || isExporting}>{recoveryCustomTaskExport ? 'Export recovery JSON' : 'Export tasks'}</button>
+                {useV3Controls ? (
+                    <CatalogueMetalButton type="button" frame="wide" tone="neutral" onClick={() => void exportTasks()} disabled={(!customStorageReady && !recoveryCustomTaskExport) || isExporting}>{recoveryCustomTaskExport ? 'Export recovery JSON' : 'Export tasks'}</CatalogueMetalButton>
+                ) : (
+                    <button type="button" onClick={() => void exportTasks()} disabled={(!customStorageReady && !recoveryCustomTaskExport) || isExporting}>{recoveryCustomTaskExport ? 'Export recovery JSON' : 'Export tasks'}</button>
+                )}
             </div>
             {customStorageError && <div className={styles.storageError} role="alert"><p>{customStorageError}</p><button className={styles.retry} type="button" onClick={retryCustomStorage}>Retry storage</button></div>}
             {transferError && <p className={styles.notice} role="alert">{transferError}</p>}

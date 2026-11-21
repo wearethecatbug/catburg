@@ -16,6 +16,11 @@
     --cattasks-focus-ring: #d58b3a;
 }
 
+.background:has([data-cattasks-theme='nurgle']) {
+    --cattasks-page-background: #151a10;
+    --cattasks-focus-ring: #9db66a;
+}
+
 .pageDashboardRoot {
     min-height: 100dvh;
     width: 100%;

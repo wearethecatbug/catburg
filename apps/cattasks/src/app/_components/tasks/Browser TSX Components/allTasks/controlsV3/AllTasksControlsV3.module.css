@@ -1,0 +1,254 @@
+.artCrop {
+  display: block;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.artCrop > img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  user-select: none;
+}
+
+.metalStrip {
+  display: grid;
+  grid-template-columns: min(calc(var(--ct-controls-strip-height, 36px) * var(--ct-controls-cap)), 30%) minmax(0, 1fr) min(calc(var(--ct-controls-strip-height, 36px) * var(--ct-controls-cap)), 30%);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.metalStrip > .artCrop:first-child,
+.metalStrip > .artCrop:last-child {
+  width: auto;
+}
+
+.metalFrame {
+  display: grid;
+  grid-template-columns: var(--ct-controls-frame-edge, 9px) minmax(0, 1fr) var(--ct-controls-frame-edge, 9px);
+  grid-template-rows: var(--ct-controls-frame-edge, 9px) minmax(0, 1fr) var(--ct-controls-frame-edge, 9px);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.button {
+  --ct-controls-visual-height: 36px;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-height: 36px;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 14px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  color: var(--ct-controls-button-ink, var(--cattasks-ink, #f8ecd0));
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.1;
+  cursor: pointer;
+  isolation: isolate;
+}
+
+.buttonFrameWide {
+  min-height: 38px;
+  --ct-controls-strip-height: 38px;
+  --ct-controls-visual-height: 38px;
+}
+
+.buttonFrameCompact {
+  min-height: 34px;
+  --ct-controls-strip-height: 34px;
+}
+
+.buttonVisual,
+.buttonCoat,
+.buttonTexture,
+.buttonFrame,
+.selectedRowArt,
+.selectedRowCoat,
+.fieldArt,
+.headingArt,
+.fileChooseFrame {
+  position: absolute;
+  pointer-events: none;
+}
+
+.buttonVisual {
+  z-index: -1;
+  inset: auto 0;
+  top: 50%;
+  height: var(--ct-controls-visual-height);
+  transform: translateY(-50%);
+  filter: drop-shadow(0 2px 1px rgb(0 0 0 / .55));
+}
+
+.buttonCoat {
+  inset: 2px;
+  background: linear-gradient(180deg, var(--cattasks-catalogue-surface, #312e26), #171813);
+  clip-path: polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
+  box-shadow: inset 0 1px 1px rgb(255 255 255 / .13), inset 0 -3px 2px rgb(0 0 0 / .44);
+}
+
+.buttonTexture {
+  inset: 2.5px;
+  opacity: 0.3;
+  mix-blend-mode: soft-light;
+}
+
+.buttonFrame {
+  inset: 0;
+}
+
+.buttonToneAccent .buttonCoat {
+  background: linear-gradient(180deg, var(--khorne-primary-high, #8f231d), var(--khorne-primary, #4c130f));
+}
+
+.buttonToneSelected .buttonCoat {
+  background: linear-gradient(180deg, var(--khorne-metal-bright, #a97927), var(--khorne-metal, #604014));
+}
+
+.buttonToneSelected {
+  --ct-controls-button-ink: #251b09;
+}
+
+.button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):hover .buttonCoat {
+  filter: brightness(1.11);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--cattasks-accent, #f7dc86);
+  outline-offset: 2px;
+}
+
+.buttonLabel {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fieldArt {
+  inset: 0;
+  --ct-controls-strip-height: 36px;
+}
+
+.headingArt {
+  inset: 0;
+  opacity: 0.78;
+  --ct-controls-strip-height: 38px;
+}
+
+.fileChoose {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  min-width: 86px;
+  min-height: 28px;
+  padding: 4px 10px;
+  overflow: hidden;
+  color: #251b09;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  isolation: isolate;
+}
+
+.fileChooseFrame {
+  inset: 0;
+  --ct-controls-strip-height: 28px;
+}
+
+.fileChoose::before {
+  position: absolute;
+  z-index: -1;
+  inset: 3px;
+  content: "";
+  background: linear-gradient(180deg, var(--khorne-metal-bright, #d8b659), var(--khorne-metal, #a37c26));
+}
+
+.fileChooseLabel {
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.selectedRowArt {
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+}
+
+.selectedRowCoat {
+  inset: 4px 3px;
+  clip-path: polygon(11px 0, calc(100% - 11px) 0, 100% 11px, 100% calc(100% - 11px), calc(100% - 11px) 100%, 11px 100%, 0 calc(100% - 11px), 0 11px);
+  background: linear-gradient(120deg, var(--ctc-selected-row-top, #60251d), var(--ctc-selected-row-bottom, #321b16));
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / .31);
+}
+
+.icon {
+  flex: 0 0 auto;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:global(.ct-controls[data-theme="green"]) .selectedRowArt {
+  --ctc-selected-row-top: #60251d;
+  --ctc-selected-row-bottom: #321b16;
+}
+
+:global(.ct-controls[data-theme="ember"]) .selectedRowArt {
+  --ctc-selected-row-top: #65251b;
+  --ctc-selected-row-bottom: #351510;
+}
+
+@media (forced-colors: active) {
+  .button,
+  .fileChoose,
+  .selectedRowArt,
+  .fieldArt,
+  .headingArt {
+    forced-color-adjust: auto;
+  }
+
+  .buttonVisual,
+  .fieldArt,
+  .headingArt,
+  .fileChooseFrame,
+  .selectedRowArt > .metalFrame {
+    display: none;
+  }
+
+  :global(.ct-controls[data-theme]) button.button,
+  .fileChoose,
+  .selectedRowArt {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  :global(.ct-controls[data-theme]) button.button.buttonToneSelected {
+    border-color: Highlight;
+    border-width: 1px;
+    border-style: solid;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

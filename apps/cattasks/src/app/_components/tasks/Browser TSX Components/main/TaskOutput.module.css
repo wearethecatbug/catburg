@@ -11,6 +11,10 @@
     flex: 0 0 auto;
 }
 
+:global([data-cattasks-theme='nurgle']) .outputPanel { border-color: var(--cattasks-border); background: var(--cattasks-panel); color: var(--cattasks-ink-strong); }
+:global([data-cattasks-theme='nurgle']) .outputHeading { border-color: var(--cattasks-border); background: var(--cattasks-panel-subtle); }
+:global([data-cattasks-theme='nurgle']) .outputPanel button:focus-visible { outline-color: var(--cattasks-accent); }
+
 .outputHeading {
     display: flex;
     align-items: center;

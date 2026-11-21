@@ -61,6 +61,12 @@
     box-shadow: inset 0 1px 0 rgb(244 234 210 / .14), 0 3px 9px rgb(20 8 7 / .5);
 }
 
+.themeChooser[data-theme='nurgle'] .themeToggle {
+    border-color: #b69854;
+    background: linear-gradient(145deg, #34402a, #151a10);
+    box-shadow: inset 0 1px 0 rgb(243 236 210 / .14), 0 3px 9px rgb(10 14 7 / .5);
+}
+
 .themeOptions {
     position: absolute;
     top: calc(100% + 8px);

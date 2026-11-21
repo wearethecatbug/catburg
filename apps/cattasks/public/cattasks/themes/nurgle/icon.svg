@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="nurgle-title">
+  <title id="nurgle-title">Нургл — три круга</title>
+  <defs><linearGradient id="nurgle-surface" x2="0" y2="1"><stop stop-color="#34462a"/><stop offset="1" stop-color="#151d13"/></linearGradient><linearGradient id="nurgle-metal" x2="0" y2="1"><stop stop-color="#e3ce8b"/><stop offset="1" stop-color="#a78f4d"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="url(#nurgle-surface)" stroke="#9c8b55" stroke-width="2"/>
+  <path d="M14 16c9-9 27-10 36-1" fill="none" stroke="#f3ecd2" stroke-opacity=".13" stroke-width="3" stroke-linecap="round"/>
+  <path d="m32 23-13 22h26Z" fill="none" stroke="#b3c27d" stroke-width="5" stroke-linejoin="round"/>
+  <g fill="#263923" stroke="url(#nurgle-metal)" stroke-width="4">
+    <circle cx="32" cy="21" r="9"/><circle cx="19" cy="43" r="9"/><circle cx="45" cy="43" r="9"/>
+  </g>
+  <g fill="#9db66a"><circle cx="32" cy="21" r="3"/><circle cx="19" cy="43" r="3"/><circle cx="45" cy="43" r="3"/></g>
+</svg>

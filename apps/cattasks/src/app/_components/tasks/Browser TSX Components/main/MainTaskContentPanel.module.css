@@ -8,6 +8,13 @@
     color: var(--cattasks-ink);
 }
 
+:global([data-cattasks-theme='nurgle']) .hint { border-color: var(--cattasks-border); background: var(--cattasks-panel-subtle); }
+:global([data-cattasks-theme='nurgle']) .hint[open] { border-color: var(--cattasks-accent); background: var(--cattasks-selected); }
+:global([data-cattasks-theme='nurgle']) .hint p { color: var(--cattasks-muted-ink); }
+:global([data-cattasks-theme='nurgle']) .taskDetailsContainer { overflow: hidden; border-color: transparent; border-radius: 0; background: linear-gradient(180deg, var(--khorne-neutral-high, #29301e), var(--khorne-neutral-low, #151a10)); clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+:global([data-cattasks-theme='nurgle']) .taskDetailsContainer::after { position: absolute; z-index: 2; inset: 0; border: 12px solid transparent; border-image: url('/cattasks/themes/khorne/chrome/panel-frame-cropped.png') 96 / 12px stretch; content: ''; pointer-events: none; }
+:global([data-cattasks-theme='nurgle']) .btnContainer { border-bottom-color: var(--khorne-metal, #b69854); }
+
 .taskDetailsContainer {
     position: relative;
     display: flex;

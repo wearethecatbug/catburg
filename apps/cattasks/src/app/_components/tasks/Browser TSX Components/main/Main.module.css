@@ -10,6 +10,23 @@
     background: transparent;
 }
 
+@media (min-width: 1151px) {
+    :global([data-cattasks-theme='nurgle']) .mainContainer {
+        grid-template-columns: minmax(360px, .29fr) minmax(0, .71fr);
+        width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+        max-width: 1600px;
+        height: calc(clamp(520px, calc(100dvh - 300px), 900px) + 12px);
+    }
+}
+
+@media (max-width: 1150px) {
+    :global([data-cattasks-theme='nurgle']) .mainContainer {
+        width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+        max-width: 1600px;
+        padding: 12px 0 18px;
+    }
+}
+
 @media (max-width: 600px) {
     .mainContainer,
     .taskContentPanelContainer,
