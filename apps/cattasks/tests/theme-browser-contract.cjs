@@ -1568,6 +1568,19 @@ test("Slaanesh collapsed Task uses the supplied recessed control at the actual 6
           bottom: box.bottom,
           sources: decorativeImages,
           editor: {left: editor.left, right: editor.right, top: editor.top, bottom: editor.bottom},
+          glyphs: (() => {
+            const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+            for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+              if (node.textContent.trim() !== "Show task") continue;
+              const range = document.createRange();
+              range.selectNodeContents(node);
+              const label = range.getBoundingClientRect();
+              const arrow = element.querySelector("svg")?.getBoundingClientRect();
+              if (!arrow) throw new Error("the real Show task control requires its inline arrow SVG");
+              return {label: {left: label.left, right: label.right, top: label.top, bottom: label.bottom}, arrow: {left: arrow.left, right: arrow.right, top: arrow.top, bottom: arrow.bottom}};
+            }
+            throw new Error("the visible Show task label requires a real text range");
+          })(),
         };
       });
       assert.equal(exactWorkspaceWidth, width, `the isolated workspace fixture holds the actual ${width}px CSS threshold`);
@@ -1576,18 +1589,26 @@ test("Slaanesh collapsed Task uses the supplied recessed control at the actual 6
       assert.match(control.sources.join(" "), /recessed.*violet|violet.*recessed/i, `the ${width}px control exposes the supplied violet recessed art through real CSS or DOM`);
       return control;
     };
+    const assertSeparatedGlyphs = (control, label) => {
+      const {label: text, arrow} = control.glyphs;
+      assert.ok(text.right <= arrow.left || arrow.right <= text.left || text.bottom <= arrow.top || arrow.bottom <= text.top,
+        `${label} keeps the visible Show task text range separate from its inline right-arrow SVG`);
+    };
     const horizontal = await measure(600);
     assert.ok(Math.abs(horizontal.width - 196) <= 1 && horizontal.width > horizontal.height, "600px keeps the 196px horizontal recessed control");
     assert.match(horizontal.sources.join(" "), /recessed-mobile-violet\.png/i, "600px uses only the supplied horizontal recessed asset");
     assert.ok(horizontal.bottom <= horizontal.editor.top + 2 && horizontal.right >= horizontal.editor.left - 2 && horizontal.left <= horizontal.editor.right + 2, "600px places the horizontal Task restore control in normal flow above the editor");
+    assertSeparatedGlyphs(horizontal, "600px horizontal recessed control");
     const halfway = await measure(600.5);
     assert.ok(Math.abs(halfway.width - 52) <= 1 && halfway.height > halfway.width, "600.5px switches to the 52px vertical recessed control");
     assert.match(halfway.sources.join(" "), /recessed-violet\.png/i, "600.5px switches to the supplied vertical recessed asset");
     assert.ok(halfway.right <= halfway.editor.left + 2 && halfway.bottom >= halfway.editor.top - 2 && halfway.top <= halfway.editor.bottom + 2, "600.5px places the vertical Task restore control beside the editor");
+    assertSeparatedGlyphs(halfway, "600.5px vertical recessed control");
     const vertical = await measure(601);
     assert.ok(Math.abs(vertical.width - 52) <= 1 && vertical.height > vertical.width, "601px retains the vertical recessed control");
     assert.match(vertical.sources.join(" "), /recessed-violet\.png/i, "601px retains the supplied vertical recessed asset");
     assert.ok(vertical.right <= vertical.editor.left + 2 && vertical.bottom >= vertical.editor.top - 2 && vertical.top <= vertical.editor.bottom + 2, "601px keeps the vertical Task restore control beside the editor");
+    assertSeparatedGlyphs(vertical, "601px vertical recessed control");
     await showTask.focus(); await page.keyboard.press("Enter");
     await showTask.waitFor({state: "detached"});
     const hideTask = page.getByRole("button", {name: "Hide task", exact: true});
@@ -1596,6 +1617,29 @@ test("Slaanesh collapsed Task uses the supplied recessed control at the actual 6
     assert.equal(await hideTask.getAttribute("aria-controls"), "taskPanelContent", "the expanded Task control names the panel it hides");
     assert.equal(await hideTask.evaluate(element => document.activeElement === element), true, "keyboard restoration transfers focus to the actual Hide task control");
     assert.deepEqual((await surface(page)).models, models, "collapsed Task restoration retains the existing Monaco model");
+    await hideTask.click();
+    await showTask.waitFor({state: "visible"});
+    await page.setViewportSize({width: 430, height: 932});
+    await workspace.evaluate(element => { element.style.width = ""; element.style.maxWidth = ""; });
+    await nextPaint(page);
+    const naturalMobile = await showTask.evaluate(element => {
+      const box = element.getBoundingClientRect(), arrow = element.querySelector("svg")?.getBoundingClientRect();
+      const range = document.createRange();
+      const labelNode = [...element.childNodes].find(node => node.textContent?.trim() === "Show task");
+      if (!arrow || !labelNode) throw new Error("natural mobile Show task control requires its visible label and inline arrow");
+      range.selectNodeContents(labelNode);
+      const label = range.getBoundingClientRect();
+      return {width: box.width, height: box.height, glyphs: {label: {left: label.left, right: label.right, top: label.top, bottom: label.bottom}, arrow: {left: arrow.left, right: arrow.right, top: arrow.top, bottom: arrow.bottom}}};
+    });
+    assert.ok(Math.abs(naturalMobile.width - 196) <= 1 && Math.abs(naturalMobile.height - 53.68) <= 1, "the natural phone workspace uses the supplied 196px by 53.68px horizontal recessed control");
+    assertSeparatedGlyphs(naturalMobile, "natural phone recessed control");
+    await page.setViewportSize({width: 1440, height: 900}); await nextPaint(page);
+    const naturalDesktop = await showTask.evaluate(element => {
+      const box = element.getBoundingClientRect();
+      return {width: box.width, height: box.height};
+    });
+    assert.ok(Math.abs(naturalDesktop.width - 52) <= 1 && Math.abs(naturalDesktop.height - 157.08) <= 1,
+      "the natural desktop workspace uses the supplied 52px by 157.08px vertical recessed control");
     assertDiagnostics(diagnostics);
   } finally { await context.close(); await browser.close(); }
 });

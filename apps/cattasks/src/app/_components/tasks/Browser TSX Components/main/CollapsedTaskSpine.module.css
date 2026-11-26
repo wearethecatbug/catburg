@@ -176,6 +176,10 @@
 }
 
 /* A Warhammer workspace may be narrow inside a desktop viewport. */
+:global([data-cattasks-theme='slaanesh']) .spine {
+    color: #f0eaf1;
+}
+
 @container cattasks-workspace (max-width: 600px) {
     :global([data-cattasks-theme='slaanesh']) .spine {
         inline-size: 196px;
@@ -203,6 +207,7 @@
 
 @container cattasks-workspace (width > 600px) {
     :global([data-cattasks-theme='slaanesh']) .spine {
+        flex: none;
         inline-size: 52px;
         min-inline-size: 52px;
         block-size: 157.08px;
@@ -216,8 +221,16 @@
         background-size: 100% 100%, 63.20px auto, 100% 100%;
     }
 
-    :global([data-cattasks-theme='slaanesh']) .label { transform: translate(-50%, -50%) rotate(-90deg); }
-    :global([data-cattasks-theme='slaanesh']) .chevron { inset-inline-end: 9px; transform: translateY(-50%); }
+    :global([data-cattasks-theme='slaanesh']) .label {
+        inset-block-start: 42%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .chevron {
+        inset-block-start: 80%;
+        inset-inline-end: 9px;
+        transform: translateY(-50%);
+    }
 }
 
 @media (forced-colors: active) {
