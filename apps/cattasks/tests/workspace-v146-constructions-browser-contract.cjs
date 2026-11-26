@@ -16,6 +16,7 @@ const v146Baseline = {320: 168, 360: 168, 430: 168, 622: 226.45972478867577, 623
 const v146WorkspaceSlot = {320: 184, 360: 184, 430: 185, 622: 272, 623: 272, 700: 282, 834: 298, 933: 309, 1040: 323, 1160: 323, 1280: 323, 1440: 323, 1600: 323};
 const longTitle = "A deliberately long inert fixture title must not cover live construction or navigation controls";
 const cyrillicTitle = "Съешь ещё этих мягких французских булок и проверь общую базовую линию";
+const mergingIntervalsTitle = "Merging intervals while preserving the original array";
 const catalog = {version: 1, tasks: [
   {id: "short", title: "Short", description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "cyrillic", title: cyrillicTitle, description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
@@ -24,9 +25,27 @@ const catalog = {version: 1, tasks: [
   ...Array.from({length: 15}, (_, index) => ({id: `scroll-${index}`, title: `Scroll fixture ${index + 1}`, description: "Inert scroll fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]})),
 ]};
 const invalidCatalog = {...catalog, tasks: [{...catalog.tasks[0], title: ""}]};
+const titleCatalog = {version: 1, tasks: [
+  {id: "short", title: "Short", description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "merging-intervals", title: mergingIntervalsTitle, description: "Inert title-fit fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "tail", title: "Tail", description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+]};
+const pathologicalCatalogueTitle = "A deliberately pathological title that is long enough to exhaust every permitted header-fitting step before the catalogue view is opened and must never leak its task-only clipping state into All tasks";
+const catalogueResetCatalog = {version: 1, tasks: [
+  {id: "short", title: "Short", description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "pathological", title: pathologicalCatalogueTitle, description: "Inert pathological fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "tail", title: "Tail", description: "Inert fixture.", entryPoint: "echo", starterCode: "function echo(value) { return value; }", solution: "function echo(value) { return value; }", tests: [{args: ["fixture"], expected: "fixture"}]},
+]};
 
 const near = (actual, expected, message, epsilon = 2) => assert.ok(Math.abs(actual - expected) <= epsilon, `${message}: expected ${expected}, received ${actual}`);
-const intersects = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+const rectEdges = rect => "left" in rect
+  ? rect
+  : {left: rect.x, right: rect.x + rect.width, top: rect.y, bottom: rect.y + rect.height};
+const intersects = (a, b) => {
+  const first = rectEdges(a);
+  const second = rectEdges(b);
+  return first.left < second.right && first.right > second.left && first.top < second.bottom && first.bottom > second.top;
+};
 
 async function settle(page) {
   await page.evaluate(async () => {
@@ -231,6 +250,11 @@ async function assertDiagnostics(diagnostics) {
   assert.deepEqual(diagnostics.responses, [], "no failing response occurred");
 }
 
+test("v146 construction overlap helper distinguishes Playwright boxes", () => {
+  assert.equal(intersects({x: 10, y: 10, width: 20, height: 20}, {x: 25, y: 20, width: 20, height: 20}), true, "known overlapping Playwright bounding boxes intersect");
+  assert.equal(intersects({x: 10, y: 10, width: 20, height: 20}, {x: 31, y: 10, width: 20, height: 20}), false, "separated Playwright bounding boxes do not intersect");
+});
+
 test("v146 constructions expose one keyboard-operable closed chooser for both shipped gods", {timeout: 120_000, concurrency: false}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
@@ -318,6 +342,105 @@ test("v146 constructions preserve continuity at 622→623 and real title/control
         assert.ok(Math.abs(frames[1].content.top - frames[0].content.top) <= 2, `${theme} ${construction} does not drop content at 622→623`);
       }
     }
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("v146 Industrial keeps the real merging-intervals title semantic, visible, and inside the fixed 430px workspace slot", {timeout: 90_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page, titleCatalog);
+    for (const theme of themes) {
+      await chooseTheme(page, theme);
+      await chooseConstructionWithKeyboard(page, "Industrial");
+      await closeChooser(page);
+      await setOwningContainerWidth(page, 430);
+      const shortFrame = await assertFrame(page, 430, `${theme} Industrial short title`);
+      const next = page.getByRole("button", {name: "Select next task", exact: true});
+      await next.click();
+      const heading = page.getByRole("heading", {name: mergingIntervalsTitle, exact: true});
+      await heading.waitFor({state: "visible"});
+      const measured = await heading.evaluate(node => {
+        const box = node.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const lines = [...range.getClientRects()].filter((rect, index, all) => all.findIndex(candidate => Math.abs(candidate.top - rect.top) <= 1 && Math.abs(candidate.bottom - rect.bottom) <= 1) === index).map(rect => ({left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom}));
+        return {text: node.textContent, nativeTitle: node.getAttribute("title"), truncated: node.getAttribute("data-title-truncated"), clientHeight: node.clientHeight, scrollHeight: node.scrollHeight, box: {left: box.left, right: box.right, top: box.top, bottom: box.bottom}, lines};
+      });
+      assert.equal(measured.text, mergingIntervalsTitle, `${theme} preserves the literal heading text`);
+      assert.equal(measured.nativeTitle, mergingIntervalsTitle, `${theme} exposes the full native title semantic`);
+      assert.notEqual(measured.truncated, "true", `${theme} does not mark the merging-intervals title as truncated`);
+      assert.ok(measured.scrollHeight <= measured.clientHeight + 1, `${theme} does not crop the merging-intervals title (${measured.scrollHeight}/${measured.clientHeight})`);
+      assert.ok(measured.lines.length >= 1 && measured.lines.length <= 2, `${theme} paints the merging-intervals title in no more than two actual lines`);
+      assert.ok(measured.lines.every(line => line.left >= measured.box.left - 1 && line.right <= measured.box.right + 1 && line.top >= measured.box.top - 1 && line.bottom <= measured.box.bottom + 1), `${theme} keeps every title line inside its own painted bounds`);
+      const [previousBox, nextBox] = await Promise.all([page.getByRole("button", {name: "Select previous task", exact: true}).boundingBox(), next.boundingBox()]);
+      assert.ok(previousBox && nextBox && !intersects(measured.box, previousBox) && !intersects(measured.box, nextBox), `${theme} merging-intervals title does not overlap either live arrow`);
+      const longFrame = await assertFrame(page, 430, `${theme} Industrial merging-intervals title`);
+      near(longFrame.baseline, shortFrame.baseline, `${theme} title fitting preserves the shared baseline`, 1);
+      near(longFrame.slot, shortFrame.slot, `${theme} title fitting preserves the shared workspace slot`, 1);
+      await page.getByRole("button", {name: "Select previous task", exact: true}).click();
+      await page.getByRole("heading", {name: "Short", exact: true}).waitFor({state: "visible"});
+    }
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("v146 catalogue header clears a pathological task title's fit and truncation state", {timeout: 90_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page, catalogueResetCatalog);
+    await chooseTheme(page, "Khorne");
+    await chooseConstructionWithKeyboard(page, "Industrial");
+    await closeChooser(page);
+    await setOwningContainerWidth(page, 430);
+    await page.getByRole("button", {name: "Select next task", exact: true}).click();
+    const pathological = page.getByRole("heading", {name: pathologicalCatalogueTitle, exact: true});
+    await pathological.waitFor({state: "visible"});
+    assert.equal(await pathological.getAttribute("data-title-truncated"), "true", "fixture first reaches the real pathological task-title truncation boundary");
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    const catalogueHeading = page.getByRole("heading", {name: "All tasks", exact: true});
+    await catalogueHeading.waitFor({state: "visible"});
+    const catalogueFit = await catalogueHeading.evaluate(node => {
+      const style = getComputedStyle(node);
+      return {truncated: node.getAttribute("data-title-truncated"), overflow: style.overflow, lineClamp: style.webkitLineClamp, clientHeight: node.clientHeight, scrollHeight: node.scrollHeight, fontSize: Number.parseFloat(style.fontSize)};
+    });
+    assert.notEqual(catalogueFit.truncated, "true", "All tasks clears task-title truncation metadata");
+    assert.notEqual(catalogueFit.overflow, "hidden", "All tasks does not retain task-title crop overflow");
+    assert.ok(catalogueFit.lineClamp === "" || catalogueFit.lineClamp === "none", "All tasks does not retain a task-title line clamp");
+    assert.ok(catalogueFit.scrollHeight <= catalogueFit.clientHeight + 1, "All tasks heading has no hidden overflow");
+    assert.ok(catalogueFit.fontSize > 18, `All tasks restores its own fitted heading size (received ${catalogueFit.fontSize}px)`);
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("v146 Industrial catalogue Back plate receives its authored 320px public hit point", {timeout: 90_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+    await chooseConstructionWithKeyboard(page, "Industrial");
+    await closeChooser(page);
+    await setOwningContainerWidth(page, 320);
+    const allTasks = page.getByRole("button", {name: "All tasks", exact: true});
+    await allTasks.click();
+    const back = page.getByRole("button", {name: "Back to task", exact: true});
+    await back.waitFor({state: "visible"});
+    const [workspace, backBox] = await Promise.all([page.locator("[data-cattasks-workspace]").boundingBox(), back.boundingBox()]);
+    assert.ok(workspace && backBox, "the measured workspace and live Back control are visible");
+    const authoredPoint = {x: workspace.x + 134, y: backBox.y + backBox.height / 2};
+    assert.ok(authoredPoint.x - workspace.x >= 9 && authoredPoint.x - workspace.x <= 165, "the independent point is calibrated to the authored 320px Back plate span");
+    assert.ok(authoredPoint.x > workspace.x && authoredPoint.x < workspace.x + workspace.width && authoredPoint.y > backBox.y && authoredPoint.y < backBox.y + backBox.height, "the public Back plate point is calibrated inside the measured workspace and Back row");
+    await page.mouse.click(authoredPoint.x, authoredPoint.y);
+    await settle(page);
+    assert.equal(await page.locator("[data-cattasks-page='task']").count(), 1, "the authored Back plate point invokes the real return-to-task callback");
+    await page.getByRole("heading", {name: "Short", exact: true}).waitFor({state: "visible"});
+    assert.equal(await allTasks.evaluate(node => node === document.activeElement), true, "pointer Back return preserves the application's public All tasks focus handoff");
     assertDiagnostics(diagnostics);
   } finally { await context.close(); await browser.close(); }
 });

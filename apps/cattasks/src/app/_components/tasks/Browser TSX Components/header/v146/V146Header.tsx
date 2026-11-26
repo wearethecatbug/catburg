@@ -3,6 +3,7 @@
 import {useLayoutEffect, useMemo, useRef, type CSSProperties, type RefObject} from 'react';
 import {getWorkspaceHeaderLayouts} from './pure/workspace/header-placement.mjs';
 import {renderHeaderArtwork, resolveHeaderAsset} from './header-artwork';
+import {getIndustrialTaskTextLayout} from './themed-layout';
 
 export type V146Construction = 'industrial' | 'gothic' | 'armor';
 export type V146Theme = 'khorne' | 'nurgle';
@@ -37,6 +38,9 @@ export default function V146Header(props: Props) {
     const pair = useMemo(() => getWorkspaceHeaderLayouts(props.width || 320, {style: props.construction, theme: props.theme}), [props.width, props.construction, props.theme]);
     const layout = props.mode === 'task' ? pair.task : pair.catalog;
     const offset = props.mode === 'task' ? pair.offsets.task : pair.offsets.catalog;
+    const industrialTaskText = useMemo(() => props.mode === 'task' && props.construction === 'industrial'
+        ? getIndustrialTaskTextLayout(props.width || 320, props.title, props.taskNumber ?? 0, props.theme)
+        : undefined, [props.mode, props.construction, props.width, props.title, props.taskNumber, props.theme]);
     const artwork = useMemo(() => renderHeaderArtwork(layout, props.theme), [layout, props.theme]);
     const supportRail = useMemo(() => supportRailStyle(resolveHeaderAsset('industrial/panel-strip-metal.png')), []);
     const rects = layout.rects as Record<string, Rect | undefined>;
@@ -45,9 +49,12 @@ export default function V146Header(props: Props) {
     const previous = hits.previous ?? rects.previous;
     const next = hits.next ?? rects.next;
     const back = hits.back ?? rects.back;
-    const titleRect = labels.title?.rect ?? rects.title;
-    const numberRect = labels.number?.rect;
-    const titleFontSize = labels.title?.fontSize ?? 22;
+    const titleRect = industrialTaskText?.title.rect ?? labels.title?.rect ?? rects.title;
+    const numberRect = industrialTaskText?.number?.rect ?? labels.number?.rect;
+    const titleFontSize = industrialTaskText?.title.fontSize ?? labels.title?.fontSize ?? 22;
+    const titleLineHeight = industrialTaskText && titleFontSize > 0
+        ? industrialTaskText.title.lineHeight / titleFontSize
+        : 1;
     const titlePhysicalAllowance = titleRect && numberRect
         ? Math.min(3, Math.max(0, titleRect[1] - numberRect[1] - numberRect[3]) * 2)
         : 0;
@@ -60,12 +67,15 @@ export default function V146Header(props: Props) {
         let frame = 0;
         let disposed = false;
         const minimumFontSize = 18;
-        const fitTitle = () => {
-            if (disposed) return;
+        const clearTitleFit = () => {
             heading.style.removeProperty('--header-title-fitted-size');
             heading.style.removeProperty('max-block-size');
             heading.style.removeProperty('overflow');
             delete heading.dataset.titleTruncated;
+        };
+        const fitTitle = () => {
+            if (disposed) return;
+            clearTitleFit();
             const preferredFontSize = Math.max(minimumFontSize, Number.parseFloat(getComputedStyle(heading).fontSize));
             const physicalTitleHeight = box.clientHeight + titlePhysicalAllowance;
             const fitsInTwoLines = () => {
@@ -97,6 +107,7 @@ export default function V146Header(props: Props) {
             disposed = true;
             cancelAnimationFrame(frame);
             observer.disconnect();
+            clearTitleFit();
         };
     }, [props.mode, props.title, titleFontSize, titlePhysicalAllowance]);
     return <header data-v146-header="" data-cattasks-header="" data-khorne-header={props.mode === 'catalogue' ? 'catalogue' : 'task'} data-warhammer-variant={props.theme} data-v146-construction={props.construction} data-v146-mode={props.mode} style={{position: 'relative', isolation: 'isolate', width: '100%', height: pair.baseline, overflow: 'visible'}}>
@@ -105,7 +116,7 @@ export default function V146Header(props: Props) {
         {back && <button ref={props.backButtonRef} type="button" aria-label={props.mode === 'task' ? 'All tasks' : 'Back to task'} onClick={props.onBack} style={rectStyle(back, offset)}>{props.mode === 'task' ? 'All tasks' : 'Back to task'}</button>}
         {props.mode === 'task' && previous && <button type="button" aria-label="Select previous task" disabled={props.previousDisabled} aria-disabled={props.previousDisabled} onClick={props.onPrevious} style={rectStyle(previous, offset)}>‹</button>}
         {props.mode === 'task' && next && <button type="button" aria-label="Select next task" disabled={props.nextDisabled} aria-disabled={props.nextDisabled} onClick={props.onNext} style={rectStyle(next, offset)}>›</button>}
-        {titleRect && <div ref={titleBoxRef} style={rectStyle(titleRect, offset)}><h1 ref={titleRef} title={props.mode === 'task' ? props.title : undefined} style={{position: 'absolute', top: '50%', right: 0, left: 0, transform: 'translateY(-50%)', margin: 0, textAlign: 'center', inlineSize: '100%', fontSize: `var(--header-title-fitted-size, ${titleFontSize}px)`, lineHeight: 1, overflowWrap: 'anywhere'}}>{props.mode === 'task' ? props.title : 'All tasks'}</h1></div>}
+        {titleRect && <div ref={titleBoxRef} style={rectStyle(titleRect, offset)}><h1 ref={titleRef} title={props.mode === 'task' ? props.title : undefined} style={{position: 'absolute', top: '50%', right: 0, left: 0, transform: 'translateY(-50%)', margin: 0, textAlign: 'center', inlineSize: '100%', fontSize: `var(--header-title-fitted-size, ${titleFontSize}px)`, lineHeight: titleLineHeight, overflowWrap: 'anywhere'}}>{props.mode === 'task' ? props.title : 'All tasks'}</h1></div>}
         {props.mode === 'task' && numberRect && <span aria-hidden="true" style={{...rectStyle(numberRect, offset), display: 'grid', placeItems: 'center'}}>TASK {String(props.taskNumber ?? 0).padStart(2, '0')}</span>}
     </header>;
 }
