@@ -137,10 +137,6 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                         </h2>
                         <p className={styles.languageLabel}>JavaScript</p>
                     </div>
-                    <div className={styles.buttonsRow} data-material={actionMaterial}>
-                        <MainBtnTest execute={execute} isDisabled={!selectedTask} isPending={pendingAction?.mode === "test" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
-                        <MainBtnRunCode execute={execute} isPending={pendingAction?.mode === "run" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
-                    </div>
                 </header>
 
                 <div className={`${styles.codeEditorFrame} ${className ?? ''}`}>
@@ -166,9 +162,12 @@ export default function MainCodeEditor({className}: MainCodeEditorProps) {
                         }}
                     />
                 </div>
-
-                <TaskOutput taskId={selectedTask?.id} record={selectedWorkspace?.result}/>
+                <div className={styles.buttonsRow} data-material={actionMaterial}>
+                    <MainBtnRunCode execute={execute} isPending={pendingAction?.mode === "run" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
+                    <MainBtnTest execute={execute} isDisabled={!selectedTask} isPending={pendingAction?.mode === "test" && pendingAction.taskId === selectedTask?.id} material={actionMaterial}/>
+                </div>
             </section>
+            <TaskOutput taskId={selectedTask?.id} record={selectedWorkspace?.result}/>
         </div>
     );
 }

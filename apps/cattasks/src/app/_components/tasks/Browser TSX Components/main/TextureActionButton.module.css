@@ -377,3 +377,75 @@
         color: GrayText;
     }
 }
+
+@media (forced-colors: none) {
+    .button[data-variant='run'] {
+        --action-face-top: #fbf6e9;
+        --action-face-bottom: #ece5d0;
+        --action-hover-top: #fffdf3;
+        --action-hover-bottom: #f0ead8;
+        --action-border: #aab59f;
+        --action-hover-border: #78946f;
+        --action-ink: #244b33;
+    }
+
+    .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #4b7449;
+        --action-face-bottom: #355c38;
+        --action-hover-top: #3b603c;
+        --action-hover-bottom: #2b4c30;
+        --action-border: #3b603c;
+        --action-hover-border: #2b4c30;
+        --action-ink: #fffdf3;
+    }
+
+    :global([data-cattasks-theme='dark']) .button[data-variant='run'] {
+        --action-face-top: #314650;
+        --action-face-bottom: #1d343d;
+        --action-hover-top: #3a525d;
+        --action-hover-bottom: #263f49;
+        --action-border: #5b7779;
+        --action-hover-border: #74947a;
+        --action-ink: #e1eae3;
+    }
+
+    :global([data-cattasks-theme='dark']) .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #9abd99;
+        --action-face-bottom: #749a76;
+        --action-hover-top: #accca8;
+        --action-hover-bottom: #86ae86;
+        --action-border: #b7d1b2;
+        --action-hover-border: #c9dec4;
+        --action-ink: #173124;
+    }
+
+    :global([data-cattasks-theme='khorne']) .button[data-variant='run'],
+    :global([data-cattasks-theme='nurgle']) .button[data-variant='run'] {
+        --action-face-top: #333936;
+        --action-face-bottom: #1b211f;
+        --action-hover-top: #414945;
+        --action-hover-bottom: #252d2a;
+        --action-border: #837b65;
+        --action-hover-border: #c8b982;
+    }
+
+    :global([data-cattasks-theme='khorne']) .button[data-variant='test']:not([data-result]),
+    :global([data-cattasks-theme='nurgle']) .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #873a50;
+        --action-face-bottom: #602638;
+        --action-hover-top: #a54a64;
+        --action-hover-bottom: #6f2d45;
+        --action-border: #c9909f;
+        --action-hover-border: #e3bbc5;
+        --action-ink: #fff8e6;
+    }
+
+    :global([data-cattasks-theme='khorne']) .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #944035;
+        --action-face-bottom: #6b231e;
+        --action-hover-top: #ad5447;
+        --action-hover-bottom: #7d2c25;
+        --action-border: #d79678;
+        --action-hover-border: #edc0a8;
+    }
+}
