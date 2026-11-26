@@ -445,6 +445,38 @@ test("v146 Industrial catalogue Back plate receives its authored 320px public hi
   } finally { await context.close(); await browser.close(); }
 });
 
+test("v146 Gothic catalogue Back keeps its lower-right authored plate point live", {timeout: 90_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    for (const theme of themes) {
+      await chooseTheme(page, theme);
+      await chooseConstructionWithKeyboard(page, "Gothic");
+      await closeChooser(page);
+      for (const width of [700, 720]) {
+        await setOwningContainerWidth(page, width);
+        const allTasks = page.getByRole("button", {name: "All tasks", exact: true});
+        await allTasks.click();
+        const back = page.getByRole("button", {name: "Back to task", exact: true});
+        const heading = page.getByRole("heading", {name: "All tasks", exact: true});
+        await heading.waitFor({state: "visible"});
+        await assertFrame(page, width, `${theme} Gothic catalogue ${width}px`);
+        const backBox = await back.boundingBox();
+        assert.ok(backBox, `${theme} Gothic ${width}px exposes the semantic Back target`);
+        const point = {x: backBox.x + backBox.width * 0.85, y: backBox.y + backBox.height * 0.9};
+        assert.ok(point.x > backBox.x && point.x < backBox.x + backBox.width && point.y > backBox.y && point.y < backBox.y + backBox.height, `${theme} Gothic ${width}px calibrated point stays inside the lower-right Back plate`);
+        await page.mouse.click(point.x, point.y);
+        await page.locator("[data-cattasks-page='task']").waitFor({state: "visible"});
+        await page.getByRole("heading", {name: "Short", exact: true}).waitFor({state: "visible"});
+        assert.equal(await allTasks.evaluate(node => node === document.activeElement), true, `${theme} Gothic ${width}px keeps the public Back focus handoff`);
+      }
+    }
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
 test("v146 construction changes retain the real editor and selected task; unavailable catalogue remains genuine", {timeout: 120_000, concurrency: false}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
