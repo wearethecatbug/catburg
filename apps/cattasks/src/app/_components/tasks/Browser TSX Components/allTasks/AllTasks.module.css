@@ -1179,3 +1179,207 @@
 @container (max-width: 700px) {
     :global(.ct-controls[data-theme]) .openButton { min-height: 44px; }
 }
+
+/* Capybara keeps the catalogue as one workspace body.  The filters and rows
+   remain the existing live controls; only their former card boundaries become
+   the sidebar divider inside the shared shell. */
+:global([data-cattasks-theme='light']) .catalogueMain,
+:global([data-cattasks-theme='dark']) .catalogueMain {
+    display: block;
+    container-type: inline-size;
+}
+
+:global([data-cattasks-theme='light']) .catalogueLayout,
+:global([data-cattasks-theme='dark']) .catalogueLayout {
+    display: grid;
+    grid-template-columns: minmax(244px, 0.37fr) minmax(0, 1fr);
+    min-width: 0;
+    border: 1px solid var(--cattasks-catalogue-border);
+    border-radius: 22px;
+    background: var(--cattasks-catalogue-surface);
+    box-shadow: 0 8px 22px rgb(45 77 57 / .09);
+}
+
+:global([data-cattasks-theme='light']) .filters,
+:global([data-cattasks-theme='dark']) .filters,
+:global([data-cattasks-theme='light']) .taskList,
+:global([data-cattasks-theme='dark']) .taskList {
+    border: 0;
+    border-radius: 0;
+    background: var(--cattasks-catalogue-surface);
+    box-shadow: none;
+}
+
+:global([data-cattasks-theme='light']) .filters,
+:global([data-cattasks-theme='dark']) .filters {
+    border-right: 1px solid var(--cattasks-catalogue-border);
+    padding: 26px 24px;
+}
+
+:global([data-cattasks-theme='light']) .taskList,
+:global([data-cattasks-theme='dark']) .taskList {
+    padding: 18px 20px;
+}
+
+:global([data-cattasks-theme='light']) .pagination,
+:global([data-cattasks-theme='dark']) .pagination {
+    margin: 18px 0 0;
+    padding: 16px 0 0;
+    background: transparent;
+}
+
+@container (max-width: 859px) {
+    :global([data-cattasks-theme='light']) .catalogueLayout,
+    :global([data-cattasks-theme='dark']) .catalogueLayout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    :global([data-cattasks-theme='light']) .filters,
+    :global([data-cattasks-theme='dark']) .filters {
+        border-right: 0;
+        border-bottom: 1px solid var(--cattasks-catalogue-border);
+    }
+
+    :global([data-cattasks-theme='light']) .columnHeadings,
+    :global([data-cattasks-theme='dark']) .columnHeadings {
+        display: none;
+    }
+
+    :global([data-cattasks-theme='light']) .row,
+    :global([data-cattasks-theme='dark']) .row {
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        grid-template-areas: 'number title action' '. topic action' '. status action';
+        gap: 5px 9px;
+        align-items: start;
+    }
+
+    :global([data-cattasks-theme='light']) .ordinal,
+    :global([data-cattasks-theme='dark']) .ordinal {
+        grid-area: number;
+        width: 32px;
+        height: 32px;
+    }
+
+    :global([data-cattasks-theme='light']) .taskDescription,
+    :global([data-cattasks-theme='dark']) .taskDescription { grid-area: title; }
+    :global([data-cattasks-theme='light']) .topic,
+    :global([data-cattasks-theme='dark']) .topic { grid-area: topic; }
+    :global([data-cattasks-theme='light']) .status,
+    :global([data-cattasks-theme='dark']) .status { grid-area: status; }
+    :global([data-cattasks-theme='light']) :is(.openButton, .openIcon),
+    :global([data-cattasks-theme='dark']) :is(.openButton, .openIcon) {
+        grid-area: action;
+        align-self: center;
+    }
+
+    :global([data-cattasks-theme='light']) .topic::before,
+    :global([data-cattasks-theme='dark']) .topic::before { content: 'Topic: '; font-weight: 700; }
+    :global([data-cattasks-theme='light']) .status::before,
+    :global([data-cattasks-theme='dark']) .status::before { content: 'Status: '; font-weight: 700; }
+}
+
+@container (max-width: 600px) {
+    :global([data-cattasks-theme='light']) .filters,
+    :global([data-cattasks-theme='dark']) .filters {
+        padding: 20px;
+    }
+
+    :global([data-cattasks-theme='light']) .taskList,
+    :global([data-cattasks-theme='dark']) .taskList {
+        padding: 12px;
+    }
+
+    :global([data-cattasks-theme='light']) .pagination,
+    :global([data-cattasks-theme='dark']) .pagination {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+
+    :global([data-cattasks-theme='light']) .taskDescription h3,
+    :global([data-cattasks-theme='dark']) .taskDescription h3 { font-size: 16px; }
+    :global([data-cattasks-theme='light']) .taskDescription p,
+    :global([data-cattasks-theme='dark']) .taskDescription p { font-size: 13px; }
+    :global([data-cattasks-theme='light']) .openButton,
+    :global([data-cattasks-theme='dark']) .openButton {
+        width: 88px;
+        min-height: 46px;
+        gap: 7px;
+        padding-inline: 10px;
+        font-size: 14px;
+    }
+    :global([data-cattasks-theme='light']) .pageControls,
+    :global([data-cattasks-theme='dark']) .pageControls {
+        width: 100%;
+        justify-content: space-between;
+        gap: 2px;
+    }
+}
+
+/* The metal catalogue follows the same body composition as Capybara.  V3
+   art remains on the native controls and rows; these rules only replace the
+   former disconnected card boundaries with the workspace shell and divider. */
+:global([data-khorne-workspace]) .catalogueLayout {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.37fr) minmax(0, 1fr);
+    gap: 0;
+    min-width: 0;
+    border: 1px solid var(--cattasks-catalogue-border);
+    border-radius: 4px;
+    background: var(--cattasks-panel);
+    box-shadow: 0 8px 20px rgb(0 0 0 / .28);
+}
+
+:global([data-khorne-workspace]) .filters,
+:global([data-khorne-workspace]) .taskList {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+:global([data-khorne-workspace]) .filters {
+    border-right: 1px solid var(--cattasks-catalogue-border);
+    padding: 24px 18px;
+}
+
+:global([data-khorne-workspace]) .taskList {
+    padding: 16px 18px;
+}
+
+:global([data-khorne-workspace]) .pagination {
+    margin: 16px 0 0;
+    padding: 14px 0 0;
+    background: transparent;
+}
+
+@container (max-width: 859px) {
+    :global([data-khorne-workspace]) .catalogueLayout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    :global([data-khorne-workspace]) .filters {
+        border-right: 0;
+        border-bottom: 1px solid var(--cattasks-catalogue-border);
+    }
+}
+
+@container (max-width: 700px) {
+    :global([data-khorne-workspace]) .filtersToggle {
+        margin-top: 8px;
+    }
+
+    :global([data-khorne-workspace]) .filters {
+        padding: 18px 12px;
+    }
+
+    :global([data-khorne-workspace]) .taskList {
+        padding: 12px;
+    }
+
+    :global([data-khorne-workspace]) .pagination {
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+}

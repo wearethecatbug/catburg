@@ -85,3 +85,14 @@
     .panel h2 { font-size: 20px; }
     .panel .action { flex: 1 1 0; width: auto; min-width: 0; }
 }
+
+/* Saved solution stays inside the reader's real tab panel and uses the same
+ * family surface without changing browser-local snapshot behavior. */
+:global([data-khorne-workspace]) .panel {
+    background: #1a1e1d;
+    color: #e5e0d4;
+}
+
+:global([data-khorne-workspace]) :is(.panel h2, .empty, .status) {
+    color: #e5e0d4;
+}

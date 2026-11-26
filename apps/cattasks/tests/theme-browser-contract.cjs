@@ -1154,3 +1154,117 @@ test("Bad or unavailable storage falls back safely; narrow All tasks scrolls wit
     assertDiagnostics(blockedDiagnostics);
   } finally { await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
+
+test("v146 body separates the live reader, editor and output while retaining tabs and catalogue state", {timeout: 120_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const themes = [
+    {name: "Khorne", kind: "god"},
+    {name: "Nurgle", kind: "god"},
+    {name: "Dark", kind: "capybara"},
+    {name: "Light", kind: "capybara"},
+  ];
+  try {
+    for (const theme of themes) {
+      const context = await browser.newContext({viewport: {width: 1440, height: 950}, reducedMotion: "reduce"});
+      const page = await context.newPage();
+      try {
+        const diagnostics = await prepare(page);
+        await chooseTheme(page, theme.name);
+
+        const panels = await page.evaluate(() => {
+          const required = (selector, label) => {
+            const element = document.querySelector(selector);
+            if (!element) throw new Error(`missing ${label}`);
+            return element;
+          };
+          const paint = element => {
+            const style = getComputedStyle(element);
+            return {background: style.backgroundColor, image: style.backgroundImage, radius: style.borderTopLeftRadius};
+          };
+          const readerControls = required("[aria-label='Режим содержимого']", "real Task controls");
+          const reader = readerControls.closest("[class*='taskDetailsContainer']");
+          if (!reader) throw new Error("the real Task controls have no reader panel");
+          const editor = required("section[aria-labelledby='taskSolutionHeading']", "real editor section");
+          const output = required("section[aria-labelledby='taskOutputHeading']", "real output section");
+          const editorTitle = required("#taskSolutionHeading", "editor heading");
+          const outputTitle = required("#taskOutputHeading", "output heading");
+          const editorSurface = required(".monaco-editor", "editable Monaco surface");
+          const run = required("button[aria-label='Run Code']", "Run action");
+          const test = required("button[aria-label='Test Code']", "Test action");
+          const pet = required("[aria-label='Pet feeding strip']", "Pet feeding strip");
+          const toolbar = element => paint(element.closest("header") ?? element);
+          const box = element => {
+            const rect = element.getBoundingClientRect();
+            return {top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height};
+          };
+          return {
+            reader: paint(reader),
+            editor: paint(editor),
+            output: paint(output),
+            readerHeading: paint(readerControls),
+            editorHeading: toolbar(editorTitle),
+            outputHeading: toolbar(outputTitle),
+            editorSurface: box(editorSurface),
+            run: box(run),
+            test: box(test),
+            outputBox: box(output),
+            readerBox: box(reader),
+            pet: box(pet),
+          };
+        });
+
+        const readerControls = page.locator("[aria-label='Режим содержимого']");
+        const selectedControl = theme.kind === "god"
+          ? readerControls.getByRole("tab", {name: "Task", exact: true})
+          : readerControls.getByRole("button", {name: /^Task:/});
+        const selectionAttribute = theme.kind === "god" ? "aria-selected" : "aria-pressed";
+        assert.equal(await selectedControl.getAttribute(selectionAttribute), "true", `${theme.name} starts on its actual Task selection control`);
+        const savedControl = theme.kind === "god"
+          ? readerControls.getByRole("tab", {name: "My solution", exact: true})
+          : readerControls.getByRole("button", {name: "My solution", exact: true});
+        await savedControl.click();
+        assert.equal(await savedControl.getAttribute(selectionAttribute), "true", `${theme.name} exposes the selected saved-solution control through its own semantics`);
+        await page.getByRole("button", {name: "Save current code", exact: true}).click();
+        await page.getByRole("button", {name: "Restore to editor", exact: true}).waitFor({state: "visible"});
+
+        const expectedRadius = theme.kind === "god" ? "4px" : "22px";
+        for (const [name, panel] of Object.entries({reader: panels.reader, editor: panels.editor, output: panels.output})) {
+          assert.equal(panel.radius, expectedRadius, `${theme.name} ${name} is a separate approved v146 body panel`);
+        }
+        assert.ok(panels.run.top >= panels.editorSurface.bottom && panels.test.top >= panels.editorSurface.bottom, `${theme.name} keeps the real Run and Test actions after the editable Monaco surface without invoking either action`);
+        assert.ok(panels.outputBox.top >= Math.max(panels.run.bottom, panels.test.bottom), `${theme.name} keeps Output as a visible separate panel after the real action strip`);
+        assert.ok(panels.pet.top >= Math.max(panels.readerBox.bottom, panels.outputBox.bottom) - 2, `${theme.name} keeps the Pet feeding strip below the reader and Output instead of obscuring either panel`);
+
+        const headings = Object.entries({reader: panels.readerHeading, editor: panels.editorHeading, output: panels.outputHeading});
+        if (theme.kind === "god") {
+          for (const [name, heading] of headings) {
+            assert.ok(heading.image.includes("panel-strip-metal"), `${theme.name} ${name} heading paints the approved metal strip`);
+          }
+        } else {
+          for (const [name, heading] of headings) {
+            assert.ok(!heading.image.includes("panel-strip-metal"), `${theme.name} ${name} heading stays free of god-panel texture`);
+          }
+        }
+
+        if (theme.name === "Dark") {
+          for (const [name, panel] of Object.entries({reader: panels.reader, editor: panels.editor, output: panels.output})) {
+            assert.equal(panel.background, "rgb(27, 53, 64)", `Capybara Dark ${name} uses the approved #1b3540 body material`);
+          }
+          for (const [name, heading] of headings) {
+            assert.equal(heading.background, "rgb(41, 72, 82)", `Capybara Dark ${name} heading uses #294852`);
+          }
+        }
+
+        await page.getByRole("button", {name: "All tasks", exact: true}).click();
+        await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
+        await page.getByRole("button", {name: "Next page", exact: true}).click();
+        const currentPage = page.getByRole("navigation", {name: "Task pages", exact: true}).locator("button[aria-current='page']");
+        assert.equal(await currentPage.textContent(), "2", `${theme.name} marks page 2 as current after real catalogue navigation`);
+        await page.getByRole("button", {name: "Back to task", exact: true}).click();
+        await savedControl.waitFor({state: "visible"});
+        assert.equal(await savedControl.getAttribute(selectionAttribute), "true", `${theme.name} retains its selected saved-solution control after catalogue navigation`);
+        assertDiagnostics(diagnostics);
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
+});
