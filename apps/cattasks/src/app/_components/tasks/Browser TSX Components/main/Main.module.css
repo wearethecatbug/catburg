@@ -20,7 +20,9 @@
 }
 
 :global([data-cattasks-theme='khorne']) :global([data-cattasks-workspace]) .mainContainer,
-:global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .mainContainer {
+:global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .mainContainer,
+:global([data-cattasks-theme='light']) :global([data-cattasks-workspace]) .mainContainer,
+:global([data-cattasks-theme='dark']) :global([data-cattasks-workspace]) .mainContainer {
     width: 100%;
 }
 

@@ -33,7 +33,7 @@
     overflow: auto;
     border: 1px solid var(--cattasks-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--cattasks-editor, #fff);
     color: var(--cattasks-ink);
     font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     white-space: pre-wrap;
@@ -54,7 +54,7 @@
     --action-hover-border: #78946f;
 }
 
-:global([data-cattasks-theme='dark']) .code { background: #10262f; }
+:global([data-cattasks-theme='dark']) .code { background: var(--cattasks-editor); }
 
 :global([data-cattasks-theme='khorne']) .code { background: #171514; color: #f4ead2; }
 :global([data-cattasks-theme='khorne']) .error { color: #f0a18d; }

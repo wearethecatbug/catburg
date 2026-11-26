@@ -1,20 +1,18 @@
 'use client';
 import styles from './TaskDashboard.module.css';
-import Header from '@/app/_components/tasks/Browser TSX Components/header/Header';
 import {KhorneDashboardHeader} from '@/app/_components/tasks/Browser TSX Components/header/KhorneHeader';
+import CapybaraHeader from '@/app/_components/tasks/Browser TSX Components/header/v146/CapybaraHeader';
 import Main from '@/app/_components/tasks/Browser TSX Components/main/Main';
 import Footer from '@/app/_components/tasks/Browser TSX Components/footer/Footer';
 import {TaskProvider} from '../../context/TaskProvider';
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
-import AllTasks, {AllTasksHeader} from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
+import AllTasks from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
 import {CatTasksThemeContext, catTasksThemes, getCatTasksTheme, isWarhammerTheme, type CatTasksTheme} from './CatTasksTheme';
 import ThemeToggle from './ThemeToggle';
 import type {V146Construction} from '@/app/_components/tasks/Browser TSX Components/header/v146/V146Header';
 import {getWorkspaceHeaderEnvelope} from '@/app/_components/tasks/Browser TSX Components/header/v146/pure/workspace/header-placement.mjs';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
-const compactHeaderBaseline = 146;
-const wideHeaderBaseline = 168;
 const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattasks-theme');const allowed=${JSON.stringify(catTasksThemes)};if(allowed.includes(theme))document.currentScript?.parentElement?.setAttribute('data-cattasks-theme',theme)}catch{}`;
 
 function KhorneFigure({figure, src}: {figure: string; src: string}) {
@@ -41,7 +39,7 @@ export default function TaskDashboard() {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const workspaceRef = useRef<HTMLDivElement>(null);
     const allTasksButtonRef = useRef<HTMLButtonElement>(null);
-    const [workspaceLayout, setWorkspaceLayout] = useState({width: 0, baseline: wideHeaderBaseline, slot: wideHeaderBaseline});
+    const [workspaceLayout, setWorkspaceLayout] = useState({width: 0, baseline: 0, slot: 0});
     const showAllTasks = useCallback(() => {
         setHasVisitedAllTasks(true);
         setIsAllTasksOpen(true);
@@ -69,10 +67,9 @@ export default function TaskDashboard() {
 
         const update = () => {
             const width = Math.floor(workspace.getBoundingClientRect().width);
-            const legacyBaseline = width <= 800 ? compactHeaderBaseline : wideHeaderBaseline;
-            const envelope = isWarhammerTheme(theme) ? getWorkspaceHeaderEnvelope(width) : null;
-            const baseline = envelope?.baseline ?? legacyBaseline;
-            const slot = envelope ? envelope.height + 3 : legacyBaseline;
+            const envelope = getWorkspaceHeaderEnvelope(width);
+            const baseline = envelope.baseline;
+            const slot = envelope.height + 3;
             workspace.style.setProperty('--workspace-header-slot', `${slot}px`);
             setWorkspaceLayout(current => current.width === width && current.baseline === baseline && current.slot === slot ? current : {width, baseline, slot});
         };
@@ -194,49 +191,17 @@ export default function TaskDashboard() {
                             onBack={returnToTask}
                             allTasksButtonRef={allTasksButtonRef}
                         />
-                    ) : isAllTasksOpen ? (
-                        <AllTasksHeader className={styles.headerContainer} onBack={returnToTask}/>
                     ) : (
-                        <Header
+                        <CapybaraHeader
                             className={styles.headerContainer}
-                            onShowAllTasks={showAllTasks}
+                            isAllTasksOpen={isAllTasksOpen}
+                            onAllTasks={showAllTasks}
+                            onBack={returnToTask}
                             allTasksButtonRef={allTasksButtonRef}
+                            workspaceWidth={workspaceLayout.width || 320}
                         />
                     )}
                     <ThemeToggle construction={headerConstruction} onConstructionChange={setHeaderConstruction}/>
-                    {!isWarhammerTheme(theme) && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
-                        {!isAllTasksOpen && (
-                            <>
-                            <div className={styles.shelfDecoration}>
-                                <span className={`${styles.shelfBracket} ${styles.shelfBracketLeft}`}/>
-                                <span className={`${styles.shelfBracket} ${styles.shelfBracketRight}`}/>
-                                <img className={styles.shelfPlantPreviousLeft} src="/cattasks/shelf/plant-prev-left.png" alt="" loading="lazy"/>
-                                <img className={styles.shelfPlantPreviousRight} src="/cattasks/shelf/plant-prev-right.png" alt="" loading="lazy"/>
-                                <img className={styles.shelfPlantNextLeft} src="/cattasks/shelf/plant-next-left.png" alt="" loading="lazy"/>
-                                <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
-                                <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
-                                <span className={styles.shelfBooks}/>
-                                <span className={styles.shelfLantern}/>
-                                <span className={styles.shelfHouse}/>
-                                <img className={styles.shelfOwl} src="/cattasks/shelf/owl.png" alt="" loading="lazy"/>
-                            </div>
-                            <div className={styles.mobileShelfDecoration}>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="books" src="/cattasks/mobile-shelf/books.png" alt="" loading="lazy"/>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="fan" src="/cattasks/mobile-shelf/fan.png" alt="" loading="lazy"/>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="lantern" src="/cattasks/mobile-shelf/lantern.png" alt="" loading="lazy"/>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="vine" src="/cattasks/mobile-shelf/vine.png" alt="" loading="lazy"/>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="crystals" src="/cattasks/mobile-shelf/crystals.png" alt="" loading="lazy"/>
-                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="sprig" src="/cattasks/mobile-shelf/sprig.png" alt="" loading="lazy"/>
-                            </div>
-                            </>
-                        )}
-                        {isAllTasksOpen && (
-                            <div className={styles.catalogueShelfDecoration}>
-                                <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketLeft}`}/>
-                                <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketRight}`}/>
-                            </div>
-                        )}
-                    </div>}
                     {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
                     <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
                     {hasVisitedAllTasks && <div className={styles.catalogueView} hidden={!isAllTasksOpen}><AllTasks onBack={returnToTask} isOpen={isAllTasksOpen}/></div>}

@@ -4,8 +4,8 @@ const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43852";
 const themeStorageKey = "cattasks-theme";
-const light = {page: "rgb(214, 225, 212)", panel: "rgb(250, 251, 251)", editor: "rgb(255, 255, 254)", pet: "rgb(37, 69, 50)", catalogue: "rgb(247, 249, 246)", fileInput: "rgb(255, 253, 248)"};
-const dark = {page: "rgb(16, 38, 47)", panel: "rgb(23, 46, 56)", editor: "rgb(16, 38, 47)"};
+const light = {page: "rgb(214, 225, 212)", panel: "rgb(250, 249, 242)", editor: "rgb(253, 254, 252)", pet: "rgb(41, 74, 59)", catalogue: "rgb(247, 249, 246)", fileInput: "rgb(255, 253, 248)"};
+const dark = {page: "rgb(16, 38, 47)", panel: "rgb(27, 53, 64)", editor: "rgb(17, 42, 51)"};
 const catalog = {version: 1, tasks: Array.from({length: 24}, (_, index) => ({
   id: `theme-${index + 1}`, title: `Theme fixture ${index + 1}`,
   description: "Inert fixture; only its fixed starter code runs in the runner assertion.", entryPoint: "echo",
@@ -300,7 +300,7 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     assert.equal(changed.editorPaints.length, 2, "both Monaco paths stay mounted after the switch");
     assert.ok(changed.editorPaints.every(editor => editor.backgroundColor === dark.editor), "both Monaco paths render the approved dark paint");
     assert.equal(await activeGiveUp.getAttribute("aria-pressed"), "true", "theme changes retain the real selected Give up state");
-    assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(225, 234, 227)", "Dark active Give up uses the approved visible ink");
+    assert.equal(await activeGiveUp.evaluate(element => getComputedStyle(element).color), "rgb(227, 238, 232)", "Dark active Give up uses the approved visible ink");
     assert.deepEqual(changed.models, withSolution.models, "draft, solution, and Monaco model versions survive the switch");
     assert.deepEqual(changed.editorSelections, withSolution.editorSelections, "editor selections survive the switch");
     const trigger = await themeTrigger(page);
@@ -328,9 +328,9 @@ test("Light baseline and one pointer/keyboard switch preserve state and Monaco m
     const savedCode = page.getByLabel("Saved solution code", {exact: true});
     await savedCode.waitFor({state: "visible"});
     assert.equal((await savedCode.textContent())?.trim(), catalog.tasks[0].starterCode, "the saved snapshot retains the original inert draft");
-    assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(16, 38, 47)", color: "rgb(225, 234, 227)"}, "Dark saved code is visibly rendered with the approved editor foreground");
+    assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(17, 42, 51)", color: "rgb(227, 238, 232)"}, "Dark saved code uses the v146 editor token and ink");
     await chooseTheme(page, "Light");
-    assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(255, 255, 255)", color: light.pet}, "returning to Light restores the existing saved-code paint");
+    assert.deepEqual(await savedCode.evaluate(element => ({backgroundColor: getComputedStyle(element).backgroundColor, color: getComputedStyle(element).color})), {backgroundColor: "rgb(253, 254, 252)", color: "rgb(41, 74, 59)"}, "returning to Light restores the v146 editor token and ink");
     assertDiagnostics(diagnostics);
   } finally { await context.close(); await browser.close(); }
 });
@@ -346,8 +346,15 @@ test("Dark preference persists, paints the meadow, and preserves a bright lanter
     const darkSurface = await surface(page);
     assert.deepEqual({page: darkSurface.outer.backgroundColor, panel: darkSurface.panel.backgroundColor, editor: darkSurface.editorPaints[0].backgroundColor}, dark);
     assert.match(await page.locator("[class*='viewportDecoration']").evaluate(element => getComputedStyle(element).backgroundImage), /night-meadow\.png/);
-    const lantern = await page.locator("[class*='shelfLantern']").boundingBox();
-    assert.ok(lantern && lantern.width && lantern.height, "the approved 1440px lantern crop is visible");
+    const lantern = await page.evaluate(() => {
+      const vignette = [...document.querySelectorAll("[aria-hidden='true'] *")].find(node => getComputedStyle(node).backgroundImage.includes("study-vignette.webp"));
+      const glow = [...document.querySelectorAll("[aria-hidden='true'] *")].find(node => getComputedStyle(node).backgroundImage.includes("radial-gradient") && getComputedStyle(node).opacity !== "0");
+      if (!vignette) return null;
+      const rect = vignette.getBoundingClientRect();
+      return {source: getComputedStyle(vignette).backgroundImage, x: rect.x, y: rect.y, width: rect.width, height: rect.height, glowOpacity: glow && getComputedStyle(glow).opacity};
+    });
+    assert.match(lantern?.source ?? "", /study-vignette\.webp/, "Dark exposes the supplied study vignette through its CSS mask");
+    assert.ok(Number.parseFloat(lantern?.glowOpacity ?? "0") > 0, "Dark keeps the authored static lantern glow visible");
     const screenshot = await page.screenshot({clip: {x: lantern.x, y: lantern.y, width: lantern.width, height: lantern.height}});
     const contrast = await page.evaluate(async encoded => {
       const image = new Image(); image.src = `data:image/png;base64,${encoded}`; await image.decode();
@@ -1110,9 +1117,13 @@ test("Bad or unavailable storage falls back safely; narrow All tasks scrolls wit
     assert.equal((await surface(page)).theme, "light", "invalid preference falls back to Light");
     await page.getByRole("button", {name: "All tasks", exact: true}).click(); await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
     const catalogue = await catalogueSurface(page);
-    assert.equal(catalogue.filters.backgroundColor, light.catalogue); assert.equal(catalogue.list.backgroundColor, light.catalogue); assert.equal(catalogue.fileInput.backgroundColor, light.fileInput); assert.equal(catalogue.pet.color, light.pet); assert.equal(catalogue.back, "←Back to task");
-    await page.getByRole("button", {name: "Back to task", exact: true}).focus();
-    assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), "←Back to task", "the catalogue return control remains keyboard-focusable");
+    assert.equal(catalogue.filters.backgroundColor, light.catalogue); assert.equal(catalogue.list.backgroundColor, light.catalogue); assert.equal(catalogue.fileInput.backgroundColor, light.fileInput); assert.equal(catalogue.pet.color, light.pet); assert.match(catalogue.back, /Back/, "narrow catalogue visibly renders its shortened Back label");
+    const back = page.getByRole("button", {name: "Back to task", exact: true});
+    const backBox = await back.boundingBox();
+    assert.ok(backBox && backBox.x < 160, "narrow Back remains on the left side of the catalogue header");
+    await back.focus();
+    assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Back to task", "the full Back name remains keyboard-addressable");
+    assert.equal(await back.evaluate(node => { const rect = node.getBoundingClientRect(); return node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)); }), true, "narrow Back owns its center hit point");
     assert.equal((await surface(page)).overflow, 0, "390px catalogue has no horizontal clipping");
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     assert.ok(await page.evaluate(() => window.scrollY > 0), "the extended catalogue really scrolls");
@@ -1122,7 +1133,7 @@ test("Bad or unavailable storage falls back safely; narrow All tasks scrolls wit
       const style = getComputedStyle(element);
       return {color: style.color, fill: style.webkitTextFillColor};
     });
-    assert.equal(titlePaint.fill, "rgb(225, 234, 227)", "Dark compact catalogue title uses the approved visible text fill instead of a transparent clipped fill");
+    assert.equal(titlePaint.fill, "rgb(227, 238, 229)", "Dark compact catalogue title uses the approved visible text fill instead of a transparent clipped fill");
     assertDiagnostics(diagnostics);
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
     const blockedPage = await unavailable.newPage(), blockedDiagnostics = await prepare(blockedPage);
