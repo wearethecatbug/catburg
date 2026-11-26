@@ -3,6 +3,20 @@ const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
+const filterBracketAssets = [
+  {
+    path: "/cattasks/themes/shared/all-tasks/filter-brackets/filter-bar.png",
+    sha256: "b2ffd988811b784f36b026e75223844f6dfa6c06bb79b6f76600358115062e26",
+    width: 2172,
+    height: 724,
+  },
+  {
+    path: "/cattasks/themes/shared/all-tasks/filter-brackets/surface.png",
+    sha256: "79a1f31ca639a2b603f9279f0efa6c67c66ddb80c89ed7e7ae9758df644f0a13",
+    width: 1254,
+    height: 1254,
+  },
+];
 const taskDescription = (page, text) => page.getByLabel("Описание задачи", {exact: true}).filter({hasText: text});
 const catalog = {
   version: 1,
@@ -615,6 +629,44 @@ test("All tasks remains a left header link through compact resizing and returns 
     assert.deepEqual(diagnostics.pageErrors, []);
     assert.deepEqual(diagnostics.failedRequests, []);
     assert.deepEqual(diagnostics.failedResponses, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+test("shared compact Filter Brackets public PNGs retain approved bytes and browser decodability", {timeout: 45_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  try {
+    const response = await page.goto(baseUrl, {waitUntil: "domcontentloaded"});
+    assert.equal(response.status(), 200, "the asset check starts from the actual loopback CatTasks runtime");
+
+    const received = await page.evaluate(async assets => Promise.all(assets.map(async asset => {
+      const response = await fetch(asset.path, {cache: "no-store"});
+      const bytes = await response.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      const sha256 = [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, "0")).join("");
+      let decoded = null;
+      if (response.ok && response.headers.get("content-type")?.startsWith("image/png")) {
+        const bitmap = await createImageBitmap(new Blob([bytes], {type: "image/png"}));
+        decoded = {width: bitmap.width, height: bitmap.height};
+        bitmap.close();
+      }
+      return {
+        path: asset.path,
+        status: response.status,
+        contentType: response.headers.get("content-type"),
+        sha256,
+        decoded,
+      };
+    })), filterBracketAssets);
+
+    assert.deepEqual(received.map(asset => ({path: asset.path, status: asset.status, contentType: asset.contentType})), filterBracketAssets.map(asset => ({path: asset.path, status: 200, contentType: "image/png"})), "both exact public Filter Brackets URLs must return PNG responses");
+    assert.deepEqual(received.map(asset => asset.sha256), filterBracketAssets.map(asset => asset.sha256), "public Filter Brackets responses must retain the approved bytes");
+    assert.deepEqual(received.map(asset => asset.decoded), filterBracketAssets.map(asset => ({width: asset.width, height: asset.height})), "the received approved PNG bytes must decode at their approved dimensions");
   } finally {
     await context.close();
     await browser.close();
