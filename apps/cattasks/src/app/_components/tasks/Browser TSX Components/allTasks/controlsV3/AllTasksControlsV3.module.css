@@ -219,6 +219,11 @@
   --ctc-selected-row-bottom: #351510;
 }
 
+:global(.ct-controls[data-theme="violet"]) .selectedRowArt {
+  --ctc-selected-row-top: #6a3572;
+  --ctc-selected-row-bottom: #301b3c;
+}
+
 @media (forced-colors: active) {
   .button,
   .fileChoose,

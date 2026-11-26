@@ -11,6 +11,12 @@ type ThemeToggleProps = {
     readonly onConstructionChange: (construction: V146Construction) => void;
 };
 
+const themeIconSrc: Record<Exclude<CatTasksTheme, 'light' | 'dark'>, string> = {
+    khorne: '/cattasks/themes/khorne/icon.svg',
+    nurgle: '/cattasks/themes/nurgle/icon.svg',
+    slaanesh: '/cattasks/themes/slaanesh/emblem.png',
+};
+
 export default function ThemeToggle({construction, onConstructionChange}: ThemeToggleProps) {
     const {theme, setTheme} = useCatTasksTheme();
     const [isOpen, setIsOpen] = useState(false);
@@ -50,7 +56,7 @@ export default function ThemeToggle({construction, onConstructionChange}: ThemeT
                 onClick={openChooser}
             >
                 {isWarhammerTheme(theme) ? (
-                    <Image src={`/cattasks/themes/${theme}/icon.svg`} alt="" aria-hidden="true" width={28} height={28} unoptimized/>
+                    <Image src={themeIconSrc[theme]} alt="" aria-hidden="true" width={28} height={28} unoptimized/>
                 ) : (
                     <>
                         <span className={styles.skyMark} aria-hidden="true">{isDark ? '☾' : '☀'}</span>
@@ -72,7 +78,7 @@ export default function ThemeToggle({construction, onConstructionChange}: ThemeT
                                 key={option}
                                 onClick={() => chooseTheme(option)}
                             >
-                                {isWarhammerTheme(option) ? <Image src={`/cattasks/themes/${option}/icon.svg`} alt="" aria-hidden="true" width={20} height={20} unoptimized/> : <span className={styles.optionMark} aria-hidden="true">{option === 'dark' ? '☾' : '☀'}</span>}
+                                {isWarhammerTheme(option) ? <Image src={option === 'slaanesh' ? '/cattasks/themes/slaanesh/icon.svg' : themeIconSrc[option]} alt="" aria-hidden="true" width={20} height={20} unoptimized/> : <span className={styles.optionMark} aria-hidden="true">{option === 'dark' ? '☾' : '☀'}</span>}
                                 {optionLabel}
                             </button>
                         );

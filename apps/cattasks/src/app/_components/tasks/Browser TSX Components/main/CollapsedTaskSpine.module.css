@@ -174,3 +174,74 @@
     .spine::after { display: none; }
     .spine:focus-visible { outline-color: Highlight; }
 }
+
+/* A Warhammer workspace may be narrow inside a desktop viewport. */
+:global([data-cattasks-theme='slaanesh']) .spine {
+    color: #f0eaf1;
+}
+
+@container cattasks-workspace (max-width: 600px) {
+    :global([data-cattasks-theme='slaanesh']) .spine {
+        inline-size: 196px;
+        min-inline-size: 0;
+        block-size: 53.68px;
+        min-block-size: 0;
+        border-radius: var(--task-spine-mobile-radius, 20px);
+        background-image:
+            linear-gradient(180deg, rgb(240 244 232 / 0.30), rgb(233 239 225 / 0.11) 45%, rgb(209 224 204 / 0.18)),
+            var(--task-spine-mobile-image),
+            linear-gradient(180deg, #4d2852, #26172e 35%, #512858 72%, #211427);
+        background-origin: border-box;
+        background-position: center, 50% 47.44%, center;
+        background-size: 100% 100%, 205.26px auto, 100% 100%;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .spine::after {
+        background-position: var(--task-spine-mobile-band-offset, 14px) center, calc(100% - var(--task-spine-mobile-band-offset, 14px)) center;
+        background-size: 10px 100%;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .label { transform: translate(-50%, -50%); }
+    :global([data-cattasks-theme='slaanesh']) .chevron { inset-inline-end: 24px; transform: translateY(-50%) rotate(90deg); }
+}
+
+@container cattasks-workspace (width > 600px) {
+    :global([data-cattasks-theme='slaanesh']) .spine {
+        flex: none;
+        inline-size: 52px;
+        min-inline-size: 52px;
+        block-size: 157.08px;
+        min-block-size: 157.08px;
+        background-image:
+            linear-gradient(90deg, rgb(240 244 232 / 0.30), rgb(233 239 225 / 0.11) 45%, rgb(209 224 204 / 0.18)),
+            var(--task-spine-desktop-image),
+            linear-gradient(90deg, #4d2852, #26172e 35%, #512858 72%, #211427);
+        background-origin: border-box;
+        background-position: center, 50.75% 44%, center;
+        background-size: 100% 100%, 63.20px auto, 100% 100%;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .label {
+        inset-block-start: 42%;
+        transform: translate(-50%, -50%) rotate(-90deg);
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .chevron {
+        inset-block-start: 80%;
+        inset-inline-end: 9px;
+        transform: translateY(-50%);
+    }
+}
+
+@media (forced-colors: active) {
+    :global([data-cattasks-theme='slaanesh']) .spine {
+        border-color: ButtonText;
+        background: ButtonFace;
+        box-shadow: none;
+        color: ButtonText;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .spine::before,
+    :global([data-cattasks-theme='slaanesh']) .spine::after { display: none; }
+    :global([data-cattasks-theme='slaanesh']) .spine:focus-visible { outline-color: Highlight; }
+}

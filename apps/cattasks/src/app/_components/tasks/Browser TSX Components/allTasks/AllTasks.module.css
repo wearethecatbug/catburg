@@ -919,8 +919,8 @@
         font: 700 16px/1 system-ui, sans-serif;
         cursor: pointer;
     }
-    :global([data-cattasks-theme='khorne']) .filtersToggle > span { font-size: 22px; transition: transform 160ms ease; }
-    :global([data-cattasks-theme='khorne']) .filtersToggle[aria-expanded='true'] > span { transform: rotate(180deg); }
+    :global([data-cattasks-theme='khorne']) .filtersToggleArrow { font-size: 22px; transition: transform 160ms ease; }
+    :global([data-cattasks-theme='khorne']) .filtersToggle[aria-expanded='true'] .filtersToggleArrow { transform: rotate(180deg); }
     :global([data-cattasks-theme='khorne']) .filtersToggle:focus-visible { outline: 3px solid var(--khorne-focus); outline-offset: 3px; }
     :global([data-cattasks-theme='khorne']) .filters { display: none; padding: 18px 12px; }
     :global([data-cattasks-theme='khorne']) .filtersOpen { display: flex; }
@@ -1026,8 +1026,8 @@
 @container (max-width: 700px) {
     :global([data-cattasks-theme='nurgle']) .catalogueLayout { gap: 10px; }
     :global([data-cattasks-theme='nurgle']) .filtersToggle { display: flex; grid-column: 1; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 0 18px; border: 7px solid transparent; border-image: var(--khorne-frame-image) 25% / 7px stretch; background: linear-gradient(180deg, var(--khorne-neutral-high, #29301e), var(--khorne-neutral-low, #151a10)); color: var(--cattasks-ink); font: 700 16px/1 system-ui, sans-serif; cursor: pointer; }
-    :global([data-cattasks-theme='nurgle']) .filtersToggle > span { font-size: 22px; }
-    :global([data-cattasks-theme='nurgle']) .filtersToggle[aria-expanded='true'] > span { transform: rotate(180deg); }
+    :global([data-cattasks-theme='nurgle']) .filtersToggleArrow { font-size: 22px; }
+    :global([data-cattasks-theme='nurgle']) .filtersToggle[aria-expanded='true'] .filtersToggleArrow { transform: rotate(180deg); }
     :global([data-cattasks-theme='nurgle']) .filtersToggle:focus-visible { outline: 3px solid var(--khorne-focus, #9db66a); outline-offset: 3px; }
     :global([data-cattasks-theme='nurgle']) .filters { display: none; padding: 18px 12px; }
     :global([data-cattasks-theme='nurgle']) .filtersOpen { display: flex; }
@@ -1382,4 +1382,140 @@
         margin-top: 12px;
         padding-top: 12px;
     }
+}
+
+/* Slaanesh owns only its palette and compact composition. The shared F2 shell
+ * above remains responsible for the live catalogue panels and controls. */
+:global([data-cattasks-theme='slaanesh']) .catalogueMain[data-khorne-catalogue] {
+    display: block;
+    width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
+    max-width: 1600px;
+    margin: 10px auto 24px;
+    container-type: inline-size;
+    background: #252029;
+}
+
+:global([data-cattasks-theme='slaanesh']) :global([data-cattasks-workspace]) .catalogueMain[data-khorne-catalogue] {
+    width: 100%;
+    margin-top: 0;
+}
+
+:global([data-cattasks-theme='slaanesh']) .catalogueLayout {
+    display: grid;
+    grid-template-columns: minmax(250px, .37fr) minmax(0, 1fr);
+    grid-template-areas: 'filters list';
+    width: 100%;
+    min-width: 0;
+    background: #252029;
+}
+
+:global([data-cattasks-theme='slaanesh']) .filters { grid-area: filters; }
+:global([data-cattasks-theme='slaanesh']) .taskList { grid-area: list; min-width: 0; }
+:global([data-cattasks-theme='slaanesh']) :is(.filters, .taskList) { color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) :is(.row, .taskDescription, .rowMeta, .pagination) { min-width: 0; }
+:global([data-cattasks-theme='slaanesh']) :is(.row, .taskDescription, .rowMeta, .pagination, .openIcon, .openButton) { color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) :is(.row h3, .row p, .topic, .status, .pagination button) { color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) :is(.difficultyFilterHeader > span, .filterGroup legend) { color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) :is(.pagination button, .openIcon, .openButton):focus-visible { outline: 3px solid #edc9ef; outline-offset: 3px; }
+:global([data-cattasks-theme='slaanesh']) .filterOption:has(input:checked) { background: #512858; color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) .filterOption input { accent-color: #dba6de; }
+:global([data-cattasks-theme='slaanesh']) .filterSummary { display: grid; gap: 8px; margin-top: 16px; color: #f7e8f4; font-size: 14px; }
+:global([data-cattasks-theme='slaanesh']) .filterSummary button { min-height: 44px; border: 1px solid #dba6de; background: #512858; color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) .topic { border-color: #cbb9cf; background: #512858; color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) :global(.ct-controls[data-theme='violet']) .difficultyOption { min-height: 44px; grid-template-rows: minmax(44px, 1fr); gap: 0; }
+:global([data-cattasks-theme='slaanesh']) .pageControls button { color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) .pageControls button:hover:not(:disabled) { border-color: #edc9ef; background: #512858; color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) .pageControls .currentPage { border-color: #cbb9cf; background: #512858; color: #f7e8f4; }
+
+@container (max-width: 859px) {
+    :global([data-cattasks-theme='slaanesh']) .catalogueLayout {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: 'filters' 'list';
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .rows { min-width: 0; }
+    :global([data-cattasks-theme='slaanesh']) .row { grid-template-columns: minmax(28px, auto) minmax(0, 1fr) minmax(0, auto); }
+    :global([data-cattasks-theme='slaanesh']) .pagination { flex-wrap: wrap; justify-content: center; gap: 8px; }
+}
+
+@container (max-width: 700px) {
+    :global([data-cattasks-theme='slaanesh']) .catalogueLayout {
+        grid-template-areas: 'toggle' 'filters' 'list';
+        gap: 10px;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle {
+        position: relative;
+        grid-area: toggle;
+        display: flex;
+        align-items: center;
+        width: 100%;
+        min-height: 52px;
+        height: 52px;
+        padding: 0 var(--slaanesh-filter-right-inset, 115.102px) 0 var(--slaanesh-filter-left-inset, 42.449px);
+        border: 0;
+        background: transparent;
+        color: #f7e8f4;
+        isolation: isolate;
+        --slaanesh-filter-top-clearance: 69.4694px;
+        --slaanesh-filter-right-inset: 115.102px;
+        --slaanesh-filter-bottom-clearance: 70.5306px;
+        --slaanesh-filter-left-inset: 42.449px;
+        --slaanesh-filter-arrow-inset: 53px;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle::before {
+        position: absolute;
+        z-index: -1;
+        inset: calc(0px - var(--slaanesh-filter-top-clearance)) 0 calc(0px - var(--slaanesh-filter-bottom-clearance));
+        border: 1px solid transparent;
+        border-image: url('/cattasks/themes/shared/all-tasks/filter-brackets/filter-bar.png') 262 434 266 160 fill / var(--slaanesh-filter-top-clearance) var(--slaanesh-filter-right-inset) var(--slaanesh-filter-bottom-clearance) var(--slaanesh-filter-left-inset) repeat;
+        clip-path: inset(var(--slaanesh-filter-top-clearance) 0 var(--slaanesh-filter-bottom-clearance));
+        content: '';
+        pointer-events: none;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .filtersToggleLabel { margin-inline-end: auto; }
+    :global([data-cattasks-theme='slaanesh']) .filtersToggleArrow { position: absolute; inset-inline-end: var(--slaanesh-filter-arrow-inset); font-size: 22px; }
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle[aria-expanded='true'] .filtersToggleArrow { transform: rotate(180deg); }
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle:focus-visible { outline: 3px solid #edc9ef; outline-offset: 3px; }
+    :global([data-cattasks-theme='slaanesh']) :is(.filterOption, .difficultyOption) { min-height: 52px; }
+    :global([data-cattasks-theme='slaanesh']) .filters { display: none; }
+    :global([data-cattasks-theme='slaanesh']) .filters.filtersOpen {
+        display: flex;
+        border: 1px solid #cbb9cf;
+        background: linear-gradient(rgb(63 33 75 / .84), rgb(32 21 43 / .9)), url('/cattasks/themes/shared/all-tasks/filter-brackets/surface.png') center / cover;
+        box-shadow: inset 0 1px rgb(247 232 244 / .18), inset 0 -1px rgb(20 15 28 / .52);
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .pagination { min-inline-size: 0; width: 100%; }
+    :global([data-cattasks-theme='slaanesh']) .pageControls { max-width: 100%; flex-wrap: wrap; justify-content: center; }
+}
+
+@container (max-width: 480px) {
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle {
+        min-height: 54px;
+        height: 54px;
+        --slaanesh-filter-top-clearance: 72.1837px;
+        --slaanesh-filter-right-inset: 119.5714px;
+        --slaanesh-filter-bottom-clearance: 73.2857px;
+        --slaanesh-filter-left-inset: 44.0816px;
+        --slaanesh-filter-arrow-inset: 56px;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) :is(.filterOption, .difficultyOption) { min-height: 54px; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    :global([data-cattasks-theme='slaanesh']) .filtersToggleArrow { transition: transform 160ms ease; }
+}
+
+@media (forced-colors: active) {
+    :global([data-cattasks-theme='slaanesh']) .filterOption input { appearance: auto; width: auto; height: auto; }
+    :global([data-cattasks-theme='slaanesh']) :is(.filtersToggle, .filterOption, .difficultyOption):focus-visible { outline: 3px solid Highlight; outline-offset: 3px; }
+    :global([data-cattasks-theme='slaanesh']) :is(.difficultyFilterHeader > span, .filterGroup legend) { color: CanvasText; }
+    :global([data-cattasks-theme='slaanesh']) .filtersToggle::before { display: none; }
+    :global([data-cattasks-theme='slaanesh']) .filters.filtersOpen { border-color: ButtonText; background: Canvas; box-shadow: none; }
+    :global([data-cattasks-theme='slaanesh']) .pageControls button { color: ButtonText; }
+    :global([data-cattasks-theme='slaanesh']) .pageControls .currentPage { border-color: Highlight; background: Highlight; color: HighlightText; }
 }

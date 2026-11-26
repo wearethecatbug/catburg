@@ -5,6 +5,8 @@
     right: 12px;
 }
 
+[data-cattasks-theme='slaanesh'] .themeChooser[data-theme='light'] { visibility: hidden; }
+
 .themeToggle {
     display: grid;
     width: 44px;
@@ -66,6 +68,14 @@
     background: linear-gradient(145deg, #34402a, #151a10);
     box-shadow: inset 0 1px 0 rgb(243 236 210 / .14), 0 3px 9px rgb(10 14 7 / .5);
 }
+
+.themeChooser[data-theme='slaanesh'] .themeToggle {
+    border-color: #dba6de;
+    background: linear-gradient(145deg, #642560, #20152b);
+    box-shadow: inset 0 1px 0 rgb(247 234 247 / .18), 0 3px 9px rgb(31 8 38 / .52);
+}
+
+.themeChooser[data-theme='slaanesh'] .themeToggle img { width: 38px; height: 26px; }
 
 .themeOptions {
     position: absolute;

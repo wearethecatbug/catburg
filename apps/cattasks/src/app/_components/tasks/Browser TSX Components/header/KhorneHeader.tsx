@@ -3,7 +3,7 @@
 import type {RefObject} from 'react';
 import {useTaskContext} from '../../context/TaskProvider';
 import styles from './KhorneHeader.module.css';
-import type {WarhammerHeaderTheme} from './UnifiedTaskHeader';
+import type {WarhammerTheme} from '../taskDashboard/CatTasksTheme';
 import V146Header, {type V146Construction} from './v146/V146Header';
 
 type KhorneDashboardHeaderProps = {
@@ -12,7 +12,7 @@ type KhorneDashboardHeaderProps = {
     readonly onAllTasks: () => void;
     readonly onBack: () => void;
     readonly allTasksButtonRef: RefObject<HTMLButtonElement | null>;
-    readonly theme?: WarhammerHeaderTheme;
+    readonly theme?: WarhammerTheme;
     readonly construction?: V146Construction;
     readonly workspaceWidth?: number;
 };
@@ -23,7 +23,7 @@ type KhorneHeaderProps = {
     readonly onAllTasks?: () => void;
     readonly onBack?: () => void;
     readonly allTasksButtonRef?: RefObject<HTMLButtonElement | null>;
-    readonly theme?: WarhammerHeaderTheme;
+    readonly theme?: WarhammerTheme;
     readonly construction?: V146Construction;
     readonly workspaceWidth?: number;
 };
@@ -31,7 +31,7 @@ type KhorneHeaderProps = {
 type WarhammerCatalogHeaderProps = {
     readonly className?: string;
     readonly onBack?: () => void;
-    readonly theme?: WarhammerHeaderTheme;
+    readonly theme?: WarhammerTheme;
 };
 
 const noop = () => undefined;

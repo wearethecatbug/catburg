@@ -21,6 +21,11 @@
     --cattasks-focus-ring: #9db66a;
 }
 
+.background:has([data-cattasks-theme='slaanesh']) {
+    --cattasks-page-background: #20152b;
+    --cattasks-focus-ring: #edc9ef;
+}
+
 .pageDashboardRoot {
     min-height: 100dvh;
     width: 100%;

@@ -10,6 +10,8 @@ export type CollapsedTaskSpineProps = {
     readonly label?: string;
     readonly className?: string;
     readonly assetBasePath?: string;
+    readonly desktopImageName?: string;
+    readonly mobileImageName?: string;
     readonly disabled?: boolean;
 };
 
@@ -25,12 +27,14 @@ const CollapsedTaskSpine = forwardRef<HTMLButtonElement, CollapsedTaskSpineProps
     label = 'Show task',
     className,
     assetBasePath = '/task-spine',
+    desktopImageName = 'book-spine-desktop.png',
+    mobileImageName = 'book-spine-mobile.png',
     disabled = false,
 }, ref) {
     const basePath = assetBasePath.replace(/\/+$/, '');
     const imageVariables: SpineImageVariables = {
-        '--task-spine-desktop-image': `url(${JSON.stringify(`${basePath}/book-spine-desktop.png`)})`,
-        '--task-spine-mobile-image': `url(${JSON.stringify(`${basePath}/book-spine-mobile.png`)})`,
+        '--task-spine-desktop-image': `url(${JSON.stringify(`${basePath}/${desktopImageName}`)})`,
+        '--task-spine-mobile-image': `url(${JSON.stringify(`${basePath}/${mobileImageName}`)})`,
     };
 
     return (
