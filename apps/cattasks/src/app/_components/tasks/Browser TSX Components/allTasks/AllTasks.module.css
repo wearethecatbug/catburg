@@ -919,8 +919,8 @@
         font: 700 16px/1 system-ui, sans-serif;
         cursor: pointer;
     }
-    :global([data-cattasks-theme='khorne']) .filtersToggle > span { font-size: 22px; transition: transform 160ms ease; }
-    :global([data-cattasks-theme='khorne']) .filtersToggle[aria-expanded='true'] > span { transform: rotate(180deg); }
+    :global([data-cattasks-theme='khorne']) .filtersToggleArrow { font-size: 22px; transition: transform 160ms ease; }
+    :global([data-cattasks-theme='khorne']) .filtersToggle[aria-expanded='true'] .filtersToggleArrow { transform: rotate(180deg); }
     :global([data-cattasks-theme='khorne']) .filtersToggle:focus-visible { outline: 3px solid var(--khorne-focus); outline-offset: 3px; }
     :global([data-cattasks-theme='khorne']) .filters { display: none; padding: 18px 12px; }
     :global([data-cattasks-theme='khorne']) .filtersOpen { display: flex; }
@@ -1026,8 +1026,8 @@
 @container (max-width: 700px) {
     :global([data-cattasks-theme='nurgle']) .catalogueLayout { gap: 10px; }
     :global([data-cattasks-theme='nurgle']) .filtersToggle { display: flex; grid-column: 1; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 0 18px; border: 7px solid transparent; border-image: var(--khorne-frame-image) 25% / 7px stretch; background: linear-gradient(180deg, var(--khorne-neutral-high, #29301e), var(--khorne-neutral-low, #151a10)); color: var(--cattasks-ink); font: 700 16px/1 system-ui, sans-serif; cursor: pointer; }
-    :global([data-cattasks-theme='nurgle']) .filtersToggle > span { font-size: 22px; }
-    :global([data-cattasks-theme='nurgle']) .filtersToggle[aria-expanded='true'] > span { transform: rotate(180deg); }
+    :global([data-cattasks-theme='nurgle']) .filtersToggleArrow { font-size: 22px; }
+    :global([data-cattasks-theme='nurgle']) .filtersToggle[aria-expanded='true'] .filtersToggleArrow { transform: rotate(180deg); }
     :global([data-cattasks-theme='nurgle']) .filtersToggle:focus-visible { outline: 3px solid var(--khorne-focus, #9db66a); outline-offset: 3px; }
     :global([data-cattasks-theme='nurgle']) .filters { display: none; padding: 18px 12px; }
     :global([data-cattasks-theme='nurgle']) .filtersOpen { display: flex; }

@@ -1199,6 +1199,54 @@ test("Khorne moves scenes below the pet strip on constrained desktop and hides t
   } finally { await context.close(); await browser.close(); }
 });
 
+test("Khorne and Nurgle keep compact Filters labels upright", {timeout: 120_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const scenarios = [
+    ["Khorne", 430], ["Khorne", 700], ["Nurgle", 430], ["Nurgle", 700],
+  ];
+  try {
+    for (const [theme, width] of scenarios) {
+      const context = await browser.newContext({viewport: {width, height: 932}, reducedMotion: "no-preference"});
+      const page = await context.newPage();
+      try {
+        const diagnostics = await prepare(page);
+        await chooseTheme(page, theme);
+        await page.getByRole("button", {name: "All tasks", exact: true}).click();
+        await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+        const filters = page.getByRole("button", {name: "Filters", exact: true});
+        assert.equal(await filters.count(), 1, `${theme} ${width}px exposes one real compact Filters control`);
+        assert.equal(await filters.getAttribute("aria-expanded"), "false", `${theme} ${width}px begins with real compact Filters closed`);
+        await filters.focus(); await page.keyboard.press("Enter");
+        assert.equal(await filters.getAttribute("aria-expanded"), "true", `${theme} ${width}px opens real compact Filters through the keyboard`);
+        await page.waitForFunction(button => {
+          const visible = element => {
+            const style = getComputedStyle(element), box = element.getBoundingClientRect();
+            return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+          };
+          const label = [...button.children].find(child => child.getAttribute("aria-hidden") !== "true" && child.textContent?.trim() === "Filters" && visible(child));
+          const arrow = [...button.children].find(child => child.getAttribute("aria-hidden") === "true" && visible(child));
+          if (!label || !arrow) return false;
+          const matrix = new DOMMatrixReadOnly(getComputedStyle(arrow).transform);
+          return Math.abs(matrix.a + 1) < .001 && Math.abs(matrix.b) < .001 && Math.abs(matrix.c) < .001 && Math.abs(matrix.d + 1) < .001;
+        }, await filters.elementHandle(), {timeout: 2_000});
+        const glyphs = await filters.evaluate(button => {
+          const visible = element => {
+            const style = getComputedStyle(element), box = element.getBoundingClientRect();
+            return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+          };
+          const label = [...button.children].find(child => child.getAttribute("aria-hidden") !== "true" && child.textContent?.trim() === "Filters" && visible(child));
+          const arrow = [...button.children].find(child => child.getAttribute("aria-hidden") === "true" && visible(child));
+          if (!label || !arrow) throw new Error("real compact Filters requires a visible label child and aria-hidden arrow child");
+          return {labelTransform: getComputedStyle(label).transform, arrowTransform: getComputedStyle(arrow).transform};
+        });
+        assert.equal(glyphs.labelTransform, "none", `${theme} ${width}px keeps the visible Filters label upright after the real open transition`);
+        assert.match(glyphs.arrowTransform, /matrix\(-1,\s*0,\s*0,\s*-1,\s*0,\s*0\)/, `${theme} ${width}px rotates only the aria-hidden Filters arrow by 180 degrees`);
+        assertDiagnostics(diagnostics);
+      } finally { await context.close(); }
+    }
+  } finally { await browser.close(); }
+});
+
 test("Khorne keeps real hints, active Give up, and enabled Restore readable", {timeout: 60_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
