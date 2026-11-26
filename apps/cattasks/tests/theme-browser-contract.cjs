@@ -172,6 +172,21 @@ async function visibleKhorneGeometry(page, selector) {
     }));
 }
 
+async function v146Artwork(header, label) {
+  assert.equal(await header.count(), 1, `${label} has one v146 header`);
+  const decoration = header.locator("[data-cattasks-decoration]");
+  assert.equal(await decoration.count(), 1, `${label} has one v146 SVG artwork layer`);
+  const artwork = await decoration.evaluate(layer => ({
+    ariaHidden: layer.getAttribute("aria-hidden"),
+    pointerEvents: getComputedStyle(layer).pointerEvents,
+    images: [...layer.querySelectorAll("svg image")].map(image => new URL(image.getAttribute("href"), location.href).pathname),
+    markup: layer.innerHTML,
+  }));
+  assert.equal(artwork.ariaHidden, "true", `${label} artwork is hidden from the accessibility tree`);
+  assert.equal(artwork.pointerEvents, "none", `${label} artwork cannot intercept its live controls`);
+  return artwork;
+}
+
 async function nextPaint(page) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
@@ -495,13 +510,15 @@ test("Nurgle is the fourth native choice with real Task/catalogue state, one rai
     await page.locator("[data-cattasks-theme='nurgle']").waitFor();
     await expectCurrentTheme(page, "Nurgle");
     assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "nurgle", "the native Nurgle choice persists the valid preference");
-    const taskHeader = page.locator(`header${nurgle}[data-khorne-header='task']`);
+    const taskHeader = page.locator(`header${nurgle}[data-v146-header][data-khorne-header='task']`);
     const taskRail = page.locator(`${nurgle}[data-khorne-rail]`);
-    const taskAquila = page.locator(`${nurgle}[data-khorne-aquila]`);
     assert.equal(await taskHeader.count(), 1, "Nurgle Task has one integrated live header");
     assert.equal(await taskRail.count(), 1, "Nurgle Task has one shared riveted rail");
-    assert.equal(await taskAquila.count(), 1, "Nurgle Task has its supplied shared Aquila");
-    assert.equal(await taskAquila.locator("img").getAttribute("src"), "/cattasks/themes/nurgle/aquila.png", "Nurgle Task uses the supplied shared Aquila path");
+    const taskArtwork = await v146Artwork(taskHeader, "Nurgle Task");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/industrial/crest-gem.png"), "Nurgle Task includes its Industrial crest artwork");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/classic/panel-armor-green.png"), "Nurgle Task includes its approved green Armor panel");
+    assert.match(taskArtwork.markup, /#95b83e/i, "Nurgle Task renders its green rune glow");
+    assert.match(taskArtwork.markup, /#363a22/i, "Nurgle Task renders its distinct green material palette");
     const railHandle = await taskRail.elementHandle();
     const taskHeaderBox = await taskHeader.boundingBox();
     const taskFigures = await visibleGeometry(page, figureSelector, "data-nurgle-figure");
@@ -535,16 +552,19 @@ test("Nurgle is the fourth native choice with real Task/catalogue state, one rai
     await page.getByRole("button", {name: "All tasks", exact: true}).click();
     await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
     await nextPaint(page);
-    const catalogueHeader = page.locator(`header${nurgle}[data-khorne-header='catalogue']`);
+    const catalogueHeader = page.locator(`header${nurgle}[data-v146-header][data-khorne-header='catalogue']`);
     const catalogueRail = page.locator(`${nurgle}[data-khorne-rail]`);
-    const catalogueAquila = page.locator(`${nurgle}[data-khorne-aquila]`);
     assert.equal(await catalogueHeader.count(), 1, "Nurgle catalogue uses its distinct integrated header");
     assert.equal(await catalogueRail.count(), 1, "Nurgle catalogue retains one shared riveted rail");
-    assert.equal(await catalogueAquila.count(), 1, "Nurgle catalogue keeps the supplied Aquila in its catalogue header placement");
-    assert.equal(await catalogueAquila.locator("img").getAttribute("src"), "/cattasks/themes/nurgle/aquila.png", "Nurgle catalogue reuses the supplied shared Aquila path");
+    const catalogueArtwork = await v146Artwork(catalogueHeader, "Nurgle catalogue");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/beam.png"), "Nurgle catalogue includes its Industrial beam artwork");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/daemon-iron-support-v1.png"), "Nurgle catalogue includes its catalogue-specific Industrial support artwork");
+    assert.ok(!catalogueArtwork.images.includes("/cattasks-art/v146/classic/panel-armor-green.png"), "Nurgle catalogue does not substitute the Task-only green Armor panel");
+    assert.match(catalogueArtwork.markup, /#829536/i, "Nurgle catalogue renders its green catalogue accent");
+    assert.match(catalogueArtwork.markup, /#363a22/i, "Nurgle catalogue renders its distinct green material palette");
     assert.equal(await railHandle.evaluate((rail, selector) => rail === document.querySelector(selector), `${nurgle}[data-khorne-rail]`), true, "Task to catalogue retains the same shared beam element");
-    const [catalogueHeaderBox, catalogueAquilaBox] = await Promise.all([catalogueHeader.boundingBox(), catalogueAquila.boundingBox()]);
-    assert.ok(taskHeaderBox && catalogueHeaderBox && catalogueAquilaBox && Math.abs(taskHeaderBox.y + taskHeaderBox.height - (catalogueHeaderBox.y + catalogueHeaderBox.height)) <= 1, "Task and catalogue headers share their lower edge while Aquila remains visibly placed");
+    const catalogueHeaderBox = await catalogueHeader.boundingBox();
+    assert.ok(taskHeaderBox && catalogueHeaderBox && Math.abs(taskHeaderBox.y + taskHeaderBox.height - (catalogueHeaderBox.y + catalogueHeaderBox.height)) <= 1, "Task and catalogue headers share their lower edge");
     const catalogueFigures = await visibleGeometry(page, figureSelector, "data-nurgle-figure");
     assert.equal(catalogueFigures.length, 2, "wide Nurgle catalogue exposes its indivisible marine and plaguebearer/nurglings group");
     assert.ok(catalogueFigures.every(figure => figure.bottom >= 1140 && figure.bottom <= 1220 && figure.pointerEvents === "none"), "wide Nurgle catalogue figures are grounded and click-through");
@@ -763,9 +783,13 @@ test("Khorne keeps a 1600px workspace, aligned beam and grounded desktop scene t
     assert.ok(taskRailHandle && taskRailBox && taskWorkspaceBox, "Task rail and workspace are visibly measurable");
     assert.ok(Math.abs(taskWorkspaceBox.width - 1600) <= 1, "Task workspace reaches, but does not exceed, the approved 1600px desktop cap");
 
-    const taskVents = await visibleKhorneGeometry(page, "[data-khorne-vent]");
-    assert.equal(taskVents.length, 2, "Task has its two measurable red vent inserts");
-    for (const vent of taskVents) assert.ok(vent.height >= 38 && vent.height <= 40, "Task red inserts retain the approved 38–40px desktop height");
+    const taskHeader = page.locator("header[data-v146-header][data-khorne-header='task'][data-warhammer-variant='khorne']");
+    const taskArtwork = await v146Artwork(taskHeader, "Khorne Task");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/industrial/vent-frame.png"), "Khorne Task includes the Industrial vent-frame artwork");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/industrial/glowing-arches.png"), "Khorne Task includes the Industrial glowing arches artwork");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/classic/panel-armor-ember.png"), "Khorne Task includes its approved ember Armor panel");
+    assert.match(taskArtwork.markup, /#ba351d/i, "Khorne Task renders its ember rune glow");
+    assert.match(taskArtwork.markup, /#3a2520/i, "Khorne Task renders its distinct ember material palette");
 
     const taskFigures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
     assert.deepEqual(taskFigures.map(figure => figure.name).sort(), ["task-hound-lower", "task-hound-upper", "task-marine"], "Task exposes three independently placed decorations");
@@ -789,18 +813,21 @@ test("Khorne keeps a 1600px workspace, aligned beam and grounded desktop scene t
     assert.ok(Math.abs(catalogueRailBox.x - taskRailBox.x) <= 1 && Math.abs(catalogueRailBox.y - taskRailBox.y) <= 1 && Math.abs(catalogueRailBox.width - taskRailBox.width) <= 1, "the catalogue keeps the Task beam at the identical desktop position and width");
     assert.equal(await taskRailHandle.evaluate((rail, selector) => rail === document.querySelector(selector), "[data-khorne-rail]"), true, "navigation retains the same persistent beam element rather than swapping a duplicate");
 
-    const catalogueVents = await visibleKhorneGeometry(page, "[data-khorne-vent]");
-    assert.equal(catalogueVents.length, 2, "catalogue has its two measurable red vent inserts");
-    for (const vent of catalogueVents) assert.ok(vent.height >= 38 && vent.height <= 40, "catalogue red inserts retain the approved 38–40px desktop height");
-    assert.ok(catalogueVents.every((vent, index) => Math.abs(vent.height - taskVents[index].height) <= 1), "Task and catalogue red inserts remain equal-height through navigation");
+    const catalogueHeader = page.locator("header[data-v146-header][data-khorne-header='catalogue'][data-warhammer-variant='khorne']");
+    const catalogueArtwork = await v146Artwork(catalogueHeader, "Khorne catalogue");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/vent-frame.png"), "Khorne catalogue includes the Industrial vent-frame artwork");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/beam.png"), "Khorne catalogue includes the Industrial beam artwork");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/daemon-iron-support-v1.png"), "Khorne catalogue includes its catalogue-specific Industrial support artwork");
+    assert.ok(!catalogueArtwork.images.includes("/cattasks-art/v146/classic/panel-armor-ember.png"), "Khorne catalogue does not substitute the Task-only ember Armor panel");
+    assert.match(catalogueArtwork.markup, /#c32a1c/i, "Khorne catalogue renders its ember catalogue accent");
+    assert.match(catalogueArtwork.markup, /#3a2520/i, "Khorne catalogue renders its distinct ember material palette");
 
-    const [catalogueTitle, aquila, catalogueBack] = await Promise.all([
+    const [catalogueTitle, catalogueBack] = await Promise.all([
       page.getByRole("heading", {name: "All tasks", exact: true}).boundingBox(),
-      page.locator("[data-khorne-aquila]").boundingBox(),
       page.getByRole("button", {name: "Back to task", exact: true}).boundingBox(),
     ]);
-    assert.ok(catalogueTitle && aquila && catalogueBack, "catalogue title, central aquila, and real return action are visible");
-    assert.ok(catalogueBack.x + catalogueBack.width <= aquila.x && aquila.x + aquila.width <= catalogueTitle.x, "catalogue keeps Back to task left, aquila centred, and title right");
+    assert.ok(catalogueTitle && catalogueBack, "catalogue title and real return action are visible over the inert v146 artwork");
+    assert.ok(catalogueBack.x + catalogueBack.width <= catalogueTitle.x, "catalogue keeps Back to task left of its live title");
 
     const catalogueFigures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
     assert.deepEqual(catalogueFigures.map(candidate => candidate.name).sort(), ["catalogue-daemon", "catalogue-marine"], "catalogue exposes its two independent side figures");

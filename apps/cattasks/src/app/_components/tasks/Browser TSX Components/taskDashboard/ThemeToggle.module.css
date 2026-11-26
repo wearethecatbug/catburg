@@ -51,7 +51,7 @@
 }
 
 .themeToggle:focus-visible {
-    outline: 3px solid var(--cattasks-focus-ring);
+    outline: 3px solid var(--cattasks-focus-ring, #f5d77a);
     outline-offset: 3px;
 }
 
@@ -99,7 +99,23 @@
 
 .themeOption[aria-pressed='true'] { border-color: var(--cattasks-accent); background: var(--cattasks-selected); }
 .themeOption:hover { background: var(--cattasks-hover); }
-.themeOption:focus-visible { outline: 3px solid var(--cattasks-focus-ring); outline-offset: 1px; }
+.themeOption:focus-visible { outline: 3px solid var(--cattasks-focus-ring, #f5d77a); outline-offset: 1px; }
+
+.constructionOptions {
+    display: grid;
+    grid-template-columns: minmax(44px, 1fr);
+    gap: 4px;
+    padding-top: 4px;
+    border-top: 1px solid var(--cattasks-border);
+}
+
+.constructionOptions .themeOption {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 6px 8px;
+    text-align: center;
+}
 
 .themeOption img { width: 20px; height: 20px; }
 .optionMark { display: grid; width: 20px; height: 20px; place-items: center; color: var(--cattasks-accent); font-size: 17px; line-height: 1; }

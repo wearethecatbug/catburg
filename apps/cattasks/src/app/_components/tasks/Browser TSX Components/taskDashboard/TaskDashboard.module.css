@@ -155,7 +155,7 @@
 }
 
 @container cattasks-workspace (max-width: 800px) {
-    .workspaceFrame > .headerContainer {
+    .taskDashboardRoot:not([data-cattasks-theme='khorne']):not([data-cattasks-theme='nurgle']) .workspaceFrame > .headerContainer {
         min-height: 146px;
     }
 }
