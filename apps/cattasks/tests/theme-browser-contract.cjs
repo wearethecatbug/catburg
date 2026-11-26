@@ -348,13 +348,19 @@ test("Dark preference persists, paints the meadow, and preserves a bright lanter
     assert.match(await page.locator("[class*='viewportDecoration']").evaluate(element => getComputedStyle(element).backgroundImage), /night-meadow\.png/);
     const lantern = await page.evaluate(() => {
       const vignette = [...document.querySelectorAll("[aria-hidden='true'] *")].find(node => getComputedStyle(node).backgroundImage.includes("study-vignette.webp"));
-      const glow = [...document.querySelectorAll("[aria-hidden='true'] *")].find(node => getComputedStyle(node).backgroundImage.includes("radial-gradient") && getComputedStyle(node).opacity !== "0");
+      const glow = document.querySelector("[data-cattasks-header='capybara'] [class*='lanternGlow']");
       if (!vignette) return null;
       const rect = vignette.getBoundingClientRect();
-      return {source: getComputedStyle(vignette).backgroundImage, x: rect.x, y: rect.y, width: rect.width, height: rect.height, glowOpacity: glow && getComputedStyle(glow).opacity};
+      const glowRect = glow?.getBoundingClientRect();
+      const glowStyle = glow && getComputedStyle(glow);
+      return {source: getComputedStyle(vignette).backgroundImage, x: rect.x, y: rect.y, width: rect.width, height: rect.height, glowOpacity: glowStyle?.opacity, glowDisplay: glowStyle?.display, glowVisibility: glowStyle?.visibility, glowGradient: glowStyle?.backgroundImage, glowWidth: glowRect?.width, glowHeight: glowRect?.height};
     });
     assert.match(lantern?.source ?? "", /study-vignette\.webp/, "Dark exposes the supplied study vignette through its CSS mask");
     assert.ok(Number.parseFloat(lantern?.glowOpacity ?? "0") > 0, "Dark keeps the authored static lantern glow visible");
+    assert.equal(lantern?.glowDisplay, "block", "Dark renders the scoped lantern glow layer");
+    assert.notEqual(lantern?.glowVisibility, "hidden", "Dark keeps the scoped lantern glow visible");
+    assert.ok((lantern?.glowWidth ?? 0) > 0 && (lantern?.glowHeight ?? 0) > 0, "Dark gives the scoped lantern glow a rendered box");
+    assert.match(lantern?.glowGradient ?? "", /radial-gradient/, "Dark uses the authored lantern radial gradient rather than ambient decoration");
     const screenshot = await page.screenshot({clip: {x: lantern.x, y: lantern.y, width: lantern.width, height: lantern.height}});
     const contrast = await page.evaluate(async encoded => {
       const image = new Image(); image.src = `data:image/png;base64,${encoded}`; await image.decode();

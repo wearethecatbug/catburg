@@ -53,14 +53,21 @@ test("v146 long title is semantically complete, paints at most two lines, and cl
       const range = document.createRange();
       range.selectNodeContents(node);
       const box = node.getBoundingClientRect();
-      const rows = [...range.getClientRects()]
-        .filter(rect => rect.width && rect.height && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+      const fragments = [...range.getClientRects()].filter(rect => rect.width && rect.height);
+      const rawRows = fragments.map(rect => Math.round(rect.top)).filter((top, index, values) => index === 0 || top !== values[index - 1]);
+      const rows = fragments
+        .filter(rect => rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
         .map(rect => Math.round(rect.top))
         .filter((top, index, values) => index === 0 || top !== values[index - 1]);
-      return {text: node.textContent, lines: rows.length, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+      return {text: node.textContent, lines: rows.length, rawRows: rawRows.length, fragmentsContained: fragments.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1), lineClamp: getComputedStyle(node).webkitLineClamp, overflowStyle: getComputedStyle(node).overflow, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth};
     });
     assert.equal(geometry.text, longTitle, "the complete original title remains semantic text");
     assert.ok(geometry.lines >= 1 && geometry.lines <= 2, "the compact header visibly paints at most two title lines");
+    if (geometry.rawRows > 2) {
+      assert.equal(geometry.lineClamp, "2", "the compact header clamps a raw third title row");
+      assert.ok(geometry.overflowStyle === "hidden" || geometry.overflowStyle === "clip", "the compact header clips overflowing glyph fragments");
+      assert.equal(geometry.fragmentsContained, false, "the compact header does not silently discard a raw third title row");
+    }
     assert.equal(geometry.overflow, 0, "the long title creates no horizontal overflow");
     const headingBox = await heading.boundingBox();
     for (const name of ["All tasks", "Select previous task", "Select next task"]) {
@@ -93,7 +100,7 @@ test("v146 long title is semantically complete, paints at most two lines, and cl
       const workspace = node.closest("[data-cattasks-workspace]");
       return {
         rows,
-        fragmentsContained: fragments.every(rect => rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1),
+        fragmentsContained: fragments.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1),
         workspaceWidth: Number(workspace?.getAttribute("data-cattasks-workspace")),
         fontSize: Number.parseFloat(getComputedStyle(node).fontSize),
       };

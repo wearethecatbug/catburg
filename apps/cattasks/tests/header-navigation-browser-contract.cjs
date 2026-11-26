@@ -38,18 +38,31 @@ async function assertTwoLineSemanticTitle(page, name, label) {
     const range = document.createRange();
     range.selectNodeContents(node);
     const box = node.getBoundingClientRect();
-    const visibleRows = [...range.getClientRects()]
-      .filter(rect => rect.width && rect.height && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+    const fragments = [...range.getClientRects()].filter(rect => rect.width && rect.height);
+    const rawRows = fragments
+      .map(rect => Math.round(rect.top))
+      .filter((top, index, rows) => index === 0 || top !== rows[index - 1]);
+    const visibleRows = fragments
+      .filter(rect => rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
       .map(rect => Math.round(rect.top))
       .filter((top, index, rows) => index === 0 || top !== rows[index - 1]);
     return {
       lines: visibleRows.length,
+      rawRows: rawRows.length,
+      fragmentsContained: fragments.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1),
+      lineClamp: getComputedStyle(node).webkitLineClamp,
+      overflowStyle: getComputedStyle(node).overflow,
       text: node.textContent,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
   assert.equal(result.text, name, `${label} retains the complete title in the semantic heading`);
   assert.ok(result.lines >= 1 && result.lines <= 2, `${label} visibly paints at most two title lines`);
+  if (result.rawRows > 2) {
+    assert.equal(result.lineClamp, "2", `${label} clamps an overflowing title to two painted rows`);
+    assert.ok(result.overflowStyle === "hidden" || result.overflowStyle === "clip", `${label} clips overflowing title fragments at the heading`);
+    assert.equal(result.fragmentsContained, false, `${label} does not silently treat a raw third title row as fitted`);
+  }
   assert.equal(result.overflow, 0, `${label} creates no horizontal overflow`);
   return heading;
 }
