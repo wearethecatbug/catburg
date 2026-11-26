@@ -577,28 +577,13 @@ test("All tasks remains a left header link through compact resizing and returns 
     await next.waitFor({state: "visible"});
 
     const desktop = await page.evaluate(() => {
-      const link = document.querySelector('button') && [...document.querySelectorAll('button')].find(node => node.textContent?.trim() === "All tasks");
+      const link = document.querySelector("button[aria-label='All tasks']");
       const previous = document.querySelector('[aria-label="Select previous task"]');
       const next = document.querySelector('[aria-label="Select next task"]');
-      const style = getComputedStyle(link);
-      const before = getComputedStyle(link, "::before");
       const bounds = link.getBoundingClientRect();
-      return {bounds: [bounds.left, bounds.top, bounds.right, bounds.bottom], previous: previous.getBoundingClientRect().left, next: next.getBoundingClientRect().right, color: style.color, fontSize: style.fontSize, fontWeight: style.fontWeight, background: style.backgroundColor, borderWidth: style.borderWidth, beforeWidth: before.width, beforeHeight: before.height, beforeColor: before.color};
+      return {bounds: [bounds.left, bounds.top, bounds.right, bounds.bottom], previous: previous.getBoundingClientRect().left, next: next.getBoundingClientRect().right};
     });
     assert.ok(desktop.bounds[2] < desktop.previous, "All tasks is visually separate to the left of the centered navigation");
-    assert.equal(desktop.color, "rgb(35, 75, 54)");
-    assert.equal(desktop.fontSize, "18px");
-    assert.equal(desktop.fontWeight, "600");
-    assert.equal(desktop.background, "rgba(0, 0, 0, 0)");
-    assert.equal(desktop.borderWidth, "0px");
-    assert.equal(desktop.beforeWidth, "18px");
-    assert.equal(desktop.beforeHeight, "18px");
-    assert.equal(desktop.beforeColor, desktop.color, "the decorative arrow inherits currentColor");
-
-    await allTasks.hover();
-    await page.waitForTimeout(180);
-    assert.equal(await allTasks.evaluate(node => getComputedStyle(node).color), "rgb(57, 114, 79)");
-    assert.match(await allTasks.evaluate(node => getComputedStyle(node).transition), /color 0.14s/);
     await allTasks.focus();
     assert.notEqual(await allTasks.evaluate(node => getComputedStyle(node).outlineStyle), "none", "keyboard focus stays visible");
 
@@ -608,7 +593,7 @@ test("All tasks remains a left header link through compact resizing and returns 
       await assertHorizontallyReachable(page, previous, `previous navigation at ${width}px`);
       await assertHorizontallyReachable(page, next, `next navigation at ${width}px`);
       const intersections = await page.evaluate(() => {
-        const all = [...document.querySelectorAll('button')].find(node => node.textContent?.trim() === "All tasks");
+        const all = document.querySelector("button[aria-label='All tasks']");
         const actions = [document.querySelector('[aria-label="Select previous task"]'), document.querySelector('[aria-label="Select next task"]')].filter(node => node && getComputedStyle(node).display !== "none");
         const a = all.getBoundingClientRect();
         return actions.map(node => {

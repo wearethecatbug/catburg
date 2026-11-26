@@ -302,6 +302,12 @@
     align-items: stretch;
 }
 
+:global([data-cattasks-theme='light']) .catalogueMain,
+:global([data-cattasks-theme='dark']) .catalogueMain {
+    width: 100%;
+    margin: 0;
+}
+
 .filters, .taskList {
     min-width: 0;
     border: 1px solid var(--cattasks-catalogue-border);

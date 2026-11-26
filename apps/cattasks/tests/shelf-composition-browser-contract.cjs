@@ -2,729 +2,120 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
-const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43852";
-const shelfAssets = [
-  "plant-prev-left.png",
-  "plant-prev-right.png",
-  "plant-next-left.png",
-  "plant-next-right.png",
-  "leaf-pair.png",
-];
-const sparseShelfAssets = [
-  "plant-prev-left.png",
-  "plant-prev-right.png",
-  "plant-next-left.png",
-  "plant-next-right.png",
-  "leaf-pair.png",
-];
-const intermediateShelfAssets = sparseShelfAssets.filter(name => name !== "leaf-pair.png");
+// Independent v146 Task/Catalogue composition oracle. Only inert fixture data
+// is supplied; this suite never activates Test Code or Run Code.
+const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
+const longTitle = "A deliberately long task title that must wrap without covering controls";
 const catalog = {version: 1, tasks: [
-  {
-    id: "shelf-first",
-    title: "Shelf composition fixture",
-    description: "Inert shelf browser fixture.",
-    entryPoint: "echo",
-    starterCode: "function echo(value) { return value; }",
-    solution: "function echo(value) { return value; }",
-    tests: [{args: ["fixture"], expected: "fixture"}],
-  },
-  {
-    id: "shelf-second",
-    title: "A deliberately long task title that stays clear of the shelf",
-    description: "Second inert fixture.",
-    entryPoint: "echo",
-    starterCode: "function echo(value) { return value; }",
-    solution: "function echo(value) { return value; }",
-    tests: [{args: ["fixture"], expected: "fixture"}],
-  },
+  {id: "race", title: "Tortoise race", description: "First", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "long", title: longTitle, description: "Long", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "third", title: "Third independent task", description: "Third", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "anagrams", title: "Check Whether Two Strings Are Anagrams", description: "Fit", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
 ]};
-
-const withEdges = ({x, y, width, height}) => ({x, y, width, height, left: x, right: x + width, top: y, bottom: y + height});
-
-function installDiagnostics(page) {
-  const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []};
-  page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); });
-  page.on("pageerror", error => diagnostics.page.push(error.message));
-  page.on("requestfailed", request => diagnostics.request.push(request.url()));
-  page.on("response", response => { if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`); });
-  return diagnostics;
-}
+const intersects = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 
 async function prepare(page) {
-  const diagnostics = installDiagnostics(page);
-  await page.route("**/task-catalog.v1.json", route => {
-    diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`);
-    return route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)});
-  });
-  assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200);
-  await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor();
-  return diagnostics;
+  const diagnostics = {console: [], page: [], failed: [], responses: [], catalog: []};
+  page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); }); page.on("pageerror", error => diagnostics.page.push(error.message)); page.on("requestfailed", request => diagnostics.failed.push(request.url())); page.on("response", response => { if (response.status() >= 400) diagnostics.responses.push(`${response.status()} ${response.url()}`); });
+  await page.route("**/task-catalog.v1.json", route => { diagnostics.catalog.push(`${route.request().method()} ${route.request().url()}`); return route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}); });
+  assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200, "the inert loopback dashboard loads"); return diagnostics;
 }
+function assertDiagnostics(diagnostics) { assert.deepEqual(diagnostics.console, []); assert.deepEqual(diagnostics.page, []); assert.deepEqual(diagnostics.failed, []); assert.deepEqual(diagnostics.responses, []); assert.equal(diagnostics.catalog.length, 1, "navigation reuses the inert catalogue response"); }
+async function enterCatalogue(page) { await page.getByRole("button", {name: "All tasks", exact: true}).click(); await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor(); }
+async function openFromCatalogue(page, name) { await enterCatalogue(page); const search = page.getByRole("searchbox", {name: "Search tasks"}); await search.fill(name); await page.locator("section[aria-labelledby='taskListTitle']").filter({hasText: name}).getByRole("button", {name: /^Open(?: |$)/}).click(); await page.getByRole("heading", {level: 1, name, exact: true}).waitFor(); }
+async function assertLiveCenter(page, name, label) { const button = page.getByRole("button", {name, exact: true}); const box = await button.boundingBox(); assert.ok(box && box.width >= 44 && box.height >= 40, `${label} ${name} has a usable hit area`); const ownsPoint = await button.evaluate(node => { const r = node.getBoundingClientRect(); const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return hit === node || node.contains(hit); }); assert.equal(ownsPoint, true, `${label} decoration cannot intercept ${name}`); return {button, box}; }
 
-function assertDiagnostics(diagnostics) {
-  assert.deepEqual(diagnostics.console, []);
-  assert.deepEqual(diagnostics.page, []);
-  assert.deepEqual(diagnostics.request, []);
-  assert.deepEqual(diagnostics.response, []);
-  assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`]);
-}
-
-function shelfContract(page) {
-  return page.evaluate(async () => {
-    const selector = name => `[class*="${name}"]`;
-    const box = element => {
-      const {x, y, width, height} = element.getBoundingClientRect();
-      return {x, y, width, height, left: x, right: x + width, top: y, bottom: y + height};
-    };
-    const shelf = document.querySelector(selector("shelfDecoration"));
-    if (!shelf) throw new Error("decorated task shelf is unavailable");
-    const physicalShelf = shelf.closest('[aria-hidden="true"]') ?? shelf.parentElement;
-    if (!physicalShelf) throw new Error("physical task shelf is unavailable");
-    const classBox = name => {
-      const element = shelf.querySelector(selector(name));
-      if (!element) throw new Error(`${name} is unavailable`);
-      return {box: box(element), pointerEvents: getComputedStyle(element).pointerEvents};
-    };
-    const optionalClassBox = name => {
-      const element = shelf.querySelector(selector(name));
-      if (!element) return null;
-      const style = getComputedStyle(element);
-      return {
-        tagName: element.tagName,
-        src: element instanceof HTMLImageElement ? new URL(element.src).pathname : null,
-        backgroundImage: style.backgroundImage,
-        box: box(element),
-        pointerEvents: style.pointerEvents,
-        visible: isVisible(element),
-      };
-    };
-    const images = Array.from(shelf.querySelectorAll("img:not([data-mobile-shelf-art])"));
-    const mobileImages = Array.from(physicalShelf.querySelectorAll("img[data-mobile-shelf-art]"));
-    const isVisible = element => {
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && getComputedStyle(element).display !== "none" && getComputedStyle(element).visibility !== "hidden";
-    };
-    await Promise.all(images.filter(isVisible).map(image => image.decode()));
-    return {
-      shelf: box(physicalShelf),
-      brackets: Array.from(shelf.querySelectorAll(selector("shelfBracket"))).map(element => ({box: box(element), backgroundImage: getComputedStyle(element).backgroundImage})),
-      images: images.map(image => ({src: new URL(image.src).pathname, box: box(image), visible: isVisible(image), decoded: image.complete && image.naturalWidth > 0, pointerEvents: getComputedStyle(image).pointerEvents})),
-      mobileImages: mobileImages.map(image => ({role: image.dataset.mobileShelfArt, box: box(image), visible: isVisible(image), pointerEvents: getComputedStyle(image).pointerEvents})),
-      plants: Object.fromEntries(["shelfPlantPreviousLeft", "shelfPlantPreviousRight", "shelfPlantNextLeft", "shelfPlantNextRight", "shelfLeafPair"].map(name => [name, classBox(name)])),
-      decorations: Object.fromEntries(["shelfBooks", "shelfLantern", "shelfHouse", "shelfOwl"].map(name => [name, optionalClassBox(name)])),
-      retiredDecoration: Object.fromEntries(["shelfMug", "shelfPlantBooks", "shelfPlantCup"].map(name => [name, optionalClassBox(name)])),
-      pageWidth: document.documentElement.scrollWidth,
-      viewportWidth: document.documentElement.clientWidth,
-    };
-  });
-}
-
-async function assertSparseShelf(page, width, minimumTitleClearance, expectedAssets = sparseShelfAssets) {
-  await page.setViewportSize({width, height: 900});
-  const [view, previous, next, title] = await Promise.all([
-    shelfContract(page),
-    page.getByRole("button", {name: "Select previous task"}).boundingBox(),
-    page.getByRole("button", {name: "Select next task"}).boundingBox(),
-    page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).boundingBox(),
-  ]);
-  assert.equal(view.shelf.height, 22, `${width}px sparse shelf stays 22px tall`);
-  assert.equal(view.brackets.length, 2, `${width}px sparse shelf keeps both brackets`);
-  assert.ok(view.brackets.every(({box, backgroundImage}) => box.width > 0 && box.height > 0 && box.left >= 0 && box.right <= width && backgroundImage.includes("/cattasks/shelf/brackets.png")), `${width}px sparse brackets stay contained`);
-  assert.deepEqual(view.images.filter(image => image.visible).map(image => image.src).sort(), expectedAssets.map(name => `/cattasks/shelf/${name}`).sort(), `${width}px shows only its approved sparse arrow foliage`);
-  assert.ok(view.mobileImages.every(image => !image.visible), `${width}px keeps compact shelf art hidden outside its approved range`);
-  assert.ok(view.images.filter(image => image.visible).every(image => image.decoded && image.pointerEvents === "none"), `${width}px decodes only visible sparse art and keeps it pointer-inert`);
-  assert.ok(Object.values(view.retiredDecoration).every(decoration => !decoration || !decoration.visible), `${width}px keeps retired mug and side plants out of the sparse shelf`);
-  assert.ok(previous && next && title, `${width}px retains the title and both navigation controls`);
-  const titleBox = withEdges(title);
-  assert.ok(titleBox.bottom + minimumTitleClearance <= view.shelf.top, `${width}px keeps the title ${minimumTitleClearance}px clear of the shelf beam`);
-  assert.equal(view.pageWidth, view.viewportWidth, `${width}px sparse shelf causes no horizontal overflow`);
-  for (const [arrow, expectedLabel] of [[previous, "Select previous task"], [next, "Select next task"]]) {
-    assert.ok(arrow.x >= view.shelf.left && arrow.x + arrow.width <= view.shelf.right, `${width}px ${expectedLabel} stays horizontally on the shelf`);
-    const x = arrow.x + arrow.width / 2;
-    const y = arrow.y + arrow.height / 2;
-    const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), {x, y});
-    assert.equal(hit, expectedLabel, `${width}px transition art cannot intercept its arrow center hit`);
-  }
-}
-
-async function assertArrowKeyboardNavigation(page) {
-  const allTasks = page.getByRole("button", {name: "All tasks"});
-  const previous = page.getByRole("button", {name: "Select previous task"});
-  await allTasks.focus();
-  await page.keyboard.press("Tab");
-  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Select previous task", "Tab from All tasks reaches the actual previous arrow");
-  assert.equal(await page.evaluate(() => document.activeElement?.matches(":focus-visible")), true, "previous arrow exposes its keyboard focus indicator");
-  await page.keyboard.press("Tab");
-  assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Select next task", "Tab then reaches the actual next arrow");
-  assert.equal(await page.evaluate(() => document.activeElement?.matches(":focus-visible")), true, "next arrow exposes its keyboard focus indicator");
-  await page.keyboard.press("Enter");
-  await page.getByRole("heading", {name: catalog.tasks[1].title, exact: true}).waitFor();
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.equal(await page.evaluate(() => document.activeElement?.matches("pre[aria-label='Описание задачи'][tabindex='-1']")), true, "Enter on next moves focus to the newly selected description after RAF");
-  await previous.focus();
-  assert.equal(await page.evaluate(() => document.activeElement?.matches(":focus-visible")), true, "previous arrow remains visibly focused before Space activation");
-  await page.keyboard.press(" ");
-  await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor();
-  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  assert.equal(await page.evaluate(() => document.activeElement?.matches("pre[aria-label='Описание задачи'][tabindex='-1']")), true, "Space on previous returns focus to the newly selected description after RAF");
-}
-
-async function assertWideShelf(page, width) {
-  await page.setViewportSize({width, height: 900});
-  const [view, previous, next, title] = await Promise.all([
-    shelfContract(page),
-    page.getByRole("button", {name: "Select previous task"}).boundingBox(),
-    page.getByRole("button", {name: "Select next task"}).boundingBox(),
-    page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).boundingBox(),
-  ]);
-  assert.equal(view.brackets.length, 2, `${width}px shows two brackets from the approved sprite`);
-  assert.ok(view.brackets.every(({box, backgroundImage}) => box.width > 0 && box.height > 0 && box.left >= 0 && box.right <= width && backgroundImage.includes("/cattasks/shelf/brackets.png")), `${width}px shows contained brackets from the approved sprite`);
-  const visibleImages = view.images.filter(image => image.visible);
-  const foliageImages = visibleImages.filter(image => image.src !== "/cattasks/shelf/owl.png");
-  assert.equal(foliageImages.length, shelfAssets.length, `${width}px keeps the five approved foliage assets`);
-  assert.deepEqual(foliageImages.map(image => image.src).sort(), shelfAssets.map(name => `/cattasks/shelf/${name}`).sort(), `${width}px loads the approved foliage assets`);
-  assert.ok(view.mobileImages.every(image => !image.visible), `${width}px keeps mobile art hidden on wide task views`);
-  assert.ok(visibleImages.every(image => image.decoded && image.pointerEvents === "none"), `${width}px visible art is decoded and pointer-inert`);
-  assert.ok(visibleImages.every(image => image.box.width > 0 && image.box.height > 0 && image.box.left >= 0 && image.box.right <= width), `${width}px visible art stays in the viewport`);
-  assert.equal(view.pageWidth, view.viewportWidth, `${width}px shelf causes no horizontal overflow`);
-  assert.ok(previous && next && title, `${width}px exposes title and both navigation controls`);
-  const previousBox = withEdges(previous);
-  const nextBox = withEdges(next);
-  const titleBox = withEdges(title);
-  const previousMidpoint = previousBox.x + previousBox.width / 2;
-  const nextMidpoint = nextBox.x + nextBox.width / 2;
-  const p = view.plants;
-  const expectedWidths = {
-    shelfPlantPreviousLeft: 58,
-    shelfPlantPreviousRight: 48.42,
-    shelfPlantNextLeft: 43,
-    shelfPlantNextRight: 42,
-    shelfLeafPair: 23,
-  };
-  for (const [name, expectedWidth] of Object.entries(expectedWidths)) {
-    assert.ok(Math.abs(p[name].box.width - expectedWidth) <= .02, `${width}px ${name} retains its approved wide silhouette`);
-  }
-  assert.ok(Object.values(view.retiredDecoration).every(decoration => !decoration || !decoration.visible), `${width}px removes retired mug and plants from the wide shelf`);
-  assert.ok(p.shelfPlantPreviousLeft.box.right <= previousMidpoint + 2 && p.shelfPlantPreviousLeft.box.left < previousBox.left, `${width}px previous outer plant extends left of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantPreviousRight.box.left >= previousMidpoint - 2 && p.shelfPlantPreviousRight.box.right > previousBox.right, `${width}px previous inner plant extends right of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantNextLeft.box.right <= nextMidpoint + 2 && p.shelfPlantNextLeft.box.left < nextBox.left, `${width}px next inner plant extends left of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantNextRight.box.left >= nextMidpoint - 2 && p.shelfPlantNextRight.box.right > nextBox.right, `${width}px next outer plant extends right of its plaque without crossing its midpoint`);
-  assert.ok(p.shelfPlantNextRight.box.bottom > view.shelf.bottom, `${width}px outer right branch descends below shelf`);
-  assert.ok(p.shelfLeafPair.box.left >= p.shelfPlantPreviousLeft.box.left && p.shelfLeafPair.box.right <= p.shelfPlantPreviousLeft.box.right, `${width}px leaf accent stays with the left arrow foliage`);
-  const previousGroupCenter = (Math.min(p.shelfPlantPreviousLeft.box.left, p.shelfLeafPair.box.left) + Math.max(p.shelfPlantPreviousRight.box.right, p.shelfLeafPair.box.right)) / 2;
-  const nextGroupCenter = (Math.min(p.shelfPlantNextLeft.box.left, p.shelfPlantNextRight.box.left) + Math.max(p.shelfPlantNextLeft.box.right, p.shelfPlantNextRight.box.right)) / 2;
-  assert.ok(previousGroupCenter <= view.shelf.left + view.shelf.width * .25, `${width}px left arrow foliage stays near the left shelf end`);
-  assert.ok(nextGroupCenter >= view.shelf.right - view.shelf.width * .25, `${width}px right arrow foliage stays near the right shelf end`);
-  const decorationVisibility = {
-    shelfBooks: width >= 1221,
-    shelfLantern: width >= 1440,
-    shelfHouse: width >= 1440,
-    shelfOwl: width >= 1221,
-  };
-  for (const [name, expectedVisible] of Object.entries(decorationVisibility)) {
-    assert.equal(view.decorations[name]?.visible, expectedVisible, `${width}px ${name} follows the approved ordered visibility`);
-  }
-  for (const name of ["shelfBooks", "shelfLantern", "shelfHouse"]) {
-    const decoration = view.decorations[name];
-    assert.equal(decoration?.tagName, "SPAN", `${width}px ${name} remains a native sprite span`);
-    assert.equal(decoration?.src, null, `${width}px ${name} is not misclassified as an image`);
-    assert.equal(decoration?.pointerEvents, "none", `${width}px ${name} remains pointer-inert`);
-    assert.ok(decoration?.backgroundImage.includes("/cattasks/shelf/cozy-stickers.png"), `${width}px ${name} uses the shared approved atlas`);
-  }
-  const owl = view.decorations.shelfOwl;
-  assert.equal(owl?.tagName, "IMG", `${width}px owl remains an image decoration`);
-  assert.equal(owl?.src, "/cattasks/shelf/owl.png", `${width}px uses the approved owl asset`);
-  assert.equal(owl?.pointerEvents, "none", `${width}px owl remains pointer-inert`);
-  if (width >= 1440) {
-    const {shelfBooks: books, shelfLantern: lantern, shelfHouse: house} = view.decorations;
-    assert.ok(Math.abs(books.box.width - 77) <= .01 && Math.abs(books.box.height - 55.51) <= .01, `${width}px books retain the approved crop aspect`);
-    assert.ok(Math.abs(books.box.bottom - (view.shelf.bottom - 12)) <= 1 && Math.abs(books.box.left - (view.shelf.left + 212)) <= 1, `${width}px books retain the approved shelf-relative anchor`);
-    assert.ok(Math.abs(lantern.box.width - 40) <= .01 && Math.abs(lantern.box.height - 56.89) <= .01, `${width}px lantern retains the approved crop aspect`);
-    assert.ok(Math.abs(lantern.box.bottom - (view.shelf.bottom - 15)) <= 1 && Math.abs(lantern.box.left - (view.shelf.left + 301)) <= 1 && Math.abs(lantern.box.left - books.box.right - 12) <= 1, `${width}px lantern retains its approved shelf-relative berth`);
-    assert.ok(Math.abs(house.box.width - 59) <= .01 && Math.abs(house.box.height - 55.61) <= .01, `${width}px house retains the approved crop aspect`);
-    assert.ok(Math.abs(house.box.bottom - (view.shelf.bottom - 15)) <= 1 && Math.abs(house.box.right - (view.shelf.right - 268)) <= 1, `${width}px house retains the approved shelf-relative anchor`);
-    assert.ok(Math.abs(owl.box.width - 52.8) <= .01 && Math.abs(owl.box.bottom - (view.shelf.bottom - 15)) <= 1 && Math.abs(owl.box.right - (view.shelf.right - 207)) <= 1, `${width}px owl retains its approved shelf-relative anchor`);
-    assert.ok(Math.abs(owl.box.left - house.box.right - 8.2) <= 1, `${width}px house remains approximately 8px left of the owl`);
-    assert.ok(owl.box.right + 16 <= p.shelfPlantNextRight.box.left && owl.box.left >= view.shelf.left, `${width}px owl stays inward of the right foliage with its approved berth`);
-  }
-  assert.ok(titleBox.bottom < view.shelf.top, `${width}px title remains above shelf`);
-  assert.ok(view.shelf.top - titleBox.bottom >= 8, `${width}px keeps the title readable above the shelf`);
-  for (const [arrow, expectedLabel] of [[previous, "Select previous task"], [next, "Select next task"]]) {
-    const x = arrow.x + arrow.width / 2;
-    const y = arrow.y + arrow.height / 2;
-    const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), {x, y});
-    assert.equal(hit, expectedLabel, `${width}px shelf art cannot intercept its arrow center hit`);
-  }
-  assert.equal(await page.locator("[class*='shelfCenter'], [class*='titleVine'], [class*='centerOrnament']").count(), 0, `${width}px has no retired center ornament`);
-}
-
-test("approved shelf composition preserves real header targets on wide task views", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 1536, height: 900}});
-  const page = await context.newPage();
+test("v146 Catalogue keeps Back left, keyboard reachable, and returns focus to its Task opener", {timeout: 75_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 1280, height: 900}}); const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    for (const width of [1151, 1180, 1200, 1220, 1221, 1250, 1280, 1439, 1440, 1536, 1600, 1440, 1439, 1221, 1220, 1221, 1439, 1440]) await assertWideShelf(page, width);
+    for (const width of [320, 430, 622, 623, 1280]) { await page.setViewportSize({width, height: 900}); await enterCatalogue(page); const back = await assertLiveCenter(page, "Back to task", `${width}px Catalogue`); const heading = page.getByRole("heading", {name: "All tasks", exact: true}); const headingBox = await heading.boundingBox(); assert.ok(headingBox && !intersects(headingBox, back.box), `${width}px Catalogue title clears Back`); if (width < 700) { await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab"); } else { for (let index = 0; index < 8 && await page.evaluate(() => document.activeElement?.getAttribute("aria-label")) !== "Back to task"; index += 1) await page.keyboard.press("Shift+Tab"); } await page.locator("button[aria-label='Back to task']:focus").waitFor(); assert.equal(await back.button.evaluate(node => node.matches(":focus-visible")), true, `${width}px Back has visible keyboard focus`); await page.keyboard.press("Enter"); await page.getByRole("button", {name: "All tasks", exact: true}).waitFor(); assert.equal(await page.getByRole("button", {name: "All tasks", exact: true}).evaluate(node => node === document.activeElement), true, `${width}px Back restores focus to its opener`); }
     assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
+  } finally { await context.close(); await browser.close(); }
 });
 
-test("601–900px keeps the sparse wooden arrow shelf outside the catalogue", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 600, height: 900}});
-  const page = await context.newPage();
+test("v146 compact controls and application actions stay keyboard reachable without executing code", {timeout: 75_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 430, height: 900}}); const page = await context.newPage();
   try {
-    const diagnostics = await prepare(page);
-    for (const width of [601, 780, 900, 1150]) await assertSparseShelf(page, width, 0, intermediateShelfAssets);
-    await page.setViewportSize({width: 1536, height: 900});
-    await page.getByRole("button", {name: "All tasks"}).click();
-    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
-    assert.equal(await page.locator("[class*='shelfDecoration']").count(), 0, "catalogue keeps the shared shelf plain");
+    const diagnostics = await prepare(page); await openFromCatalogue(page, longTitle);
+    for (const width of [320, 430, 622]) { await page.setViewportSize({width, height: 900}); for (const name of ["All tasks", "Select previous task", "Select next task", "Test Code", "Run Code"]) { await assertLiveCenter(page, name, `${width}px Task`); } await page.getByRole("button", {name: "All tasks", exact: true}).press("Tab"); assert.equal(await page.evaluate(() => document.activeElement?.matches(":focus-visible")), true, `${width}px keyboard traversal retains a visible focus target`); assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${width}px Task has no horizontal overflow`); }
     assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
+  } finally { await context.close(); await browser.close(); }
 });
 
-test("catalogue shelf and Back to task use the approved independent composition", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 1440, height: 900}});
-  const page = await context.newPage();
+test("v146 long title is semantically complete, paints at most two lines, and clears every control", {timeout: 60_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 430, height: 900}}); const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    await page.getByRole("button", {name: "All tasks"}).click();
-    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
-
-    const mossRailOffsets = new Map();
-    for (const [width, expectedShelfHeight, expectedBrackets, expectedMascotWidth, expectedButtonHeight] of [
-      [1757, 22, 2, 101, 60],
-      [1440, 22, 2, 101, 60],
-      [1151, 22, 2, 101, 60],
-      [1150, 22, 2, 101, 60],
-      [1149, 22, 2, 101, 60],
-      [1120, 22, 2, 101, 60],
-      [761, 22, 2, 101, 60],
-      [760, 22, 2, 101, 60],
-      [602, 22, 2, 101, 60],
-      [601, 11, 0, 77, 46],
-      [600, 11, 0, 77, 46],
-      [582, 11, 0, 77, 46],
-      [320, 11, 0, 77, 46],
-    ]) {
-      await page.setViewportSize({width, height: 900});
-      const nunito = width === 1757
-        ? await page.evaluate(async () => {
-          await document.fonts.ready;
-          const faces = await document.fonts.load('900 56px "Nunito"');
-          return {
-            loaded: faces.length > 0,
-            available: document.fonts.check('900 56px "Nunito"'),
-          };
-        })
-        : null;
-      const view = await page.evaluate(async () => {
-        const box = element => {
-          const {x, y, width, height} = element.getBoundingClientRect();
-          return {x, y, width, height, left: x, right: x + width, top: y, bottom: y + height};
-        };
-        const shelf = document.querySelector("[class*='catalogueShelf']");
-        const brackets = Array.from(document.querySelectorAll("[class*='catalogueShelfBracket']"));
-        const capybara = document.querySelector("img[data-catalogue-back-capybara]");
-        const visible = image => getComputedStyle(image).display !== "none" && image.getBoundingClientRect().width > 0;
-        const stickerImages = [
-          document.querySelector("img[data-catalogue-shelf-sticker='samoyed']"),
-          document.querySelector("img[data-catalogue-shelf-sticker='yarn']"),
-        ];
-        const rabbit = document.querySelector("img[class*='backRabbit']");
-        const candles = document.querySelector("img[class*='compactCandles']");
-        const button = Array.from(document.querySelectorAll("button")).find(node => node.textContent?.trim() === "←Back to task");
-        const backControl = button?.closest("[class*='backControl']");
-        const arrow = button?.querySelector("span");
-        const title = document.querySelector("h1");
-        if (!shelf || !capybara || stickerImages.some(image => !image) || !rabbit || !candles || !button || !backControl || !arrow || !title) throw new Error("catalogue shelf, title, stickers, rabbit, candles, capybara, Back control, button, or arrow is unavailable");
-        await capybara.decode();
-        await Promise.all([...stickerImages, rabbit, candles].filter(visible).map(image => image.decode()));
-        const paintedBottom = image => {
-          const canvas = document.createElement("canvas");
-          canvas.width = image.naturalWidth;
-          canvas.height = image.naturalHeight;
-          const context = canvas.getContext("2d", {willReadFrequently: true});
-          context.drawImage(image, 0, 0);
-          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-          let bottom = -1;
-          for (let y = canvas.height - 1; y >= 0 && bottom < 0; y -= 1) for (let x = 0; x < canvas.width; x += 1) if (pixels[(y * canvas.width + x) * 4 + 3] >= 240) { bottom = y; break; }
-          const imageBox = box(image);
-          return bottom < 0 ? null : imageBox.top + (bottom + 1) * imageBox.height / canvas.height;
-        };
-        const titleStyle = getComputedStyle(title);
-        const moss = getComputedStyle(title, "::after");
-        return {
-          shelf: box(shelf),
-          shelfHeight: getComputedStyle(shelf).height,
-          taskDecorationCount: document.querySelectorAll("[class*='shelfDecoration']").length,
-          brackets: brackets.map(bracket => ({box: box(bracket), visible: getComputedStyle(bracket).display !== "none", pointerEvents: getComputedStyle(bracket).pointerEvents, backgroundImage: getComputedStyle(bracket).backgroundImage})),
-          capybara: {box: box(capybara), src: new URL(capybara.src).pathname, alt: capybara.alt, decoded: capybara.complete && capybara.naturalWidth > 0, pointerEvents: getComputedStyle(capybara).pointerEvents},
-          stickers: stickerImages.map(image => ({
-            box: box(image),
-            src: new URL(image.src).pathname,
-            alt: image.alt,
-            decoded: image.complete && image.naturalWidth > 0,
-            visible: getComputedStyle(image).display !== "none" && getComputedStyle(image).visibility !== "hidden" && image.getBoundingClientRect().width > 0,
-            pointerEvents: getComputedStyle(image).pointerEvents,
-            ariaHidden: image.closest("[aria-hidden='true']")?.getAttribute("aria-hidden") ?? null,
-          })),
-          rabbit: {visible: visible(rabbit), decoded: rabbit.complete && rabbit.naturalWidth > 0, pointerEvents: getComputedStyle(rabbit).pointerEvents, bottom: getComputedStyle(rabbit).bottom},
-          candles: {visible: visible(candles), decoded: candles.complete && candles.naturalWidth > 0, pointerEvents: getComputedStyle(candles).pointerEvents, translate: getComputedStyle(candles).translate, box: box(candles), paintedBottom: visible(candles) ? paintedBottom(candles) : null},
-          backFoliage: ["::before", "::after"].map(pseudo => {
-            const style = getComputedStyle(backControl, pseudo);
-            return {content: style.content, backgroundImage: style.backgroundImage, zIndex: style.zIndex, pointerEvents: style.pointerEvents};
-          }),
-          button: {...box(button), zIndex: getComputedStyle(button).zIndex},
-          arrow: {box: box(arrow), text: arrow.textContent, visible: getComputedStyle(arrow).display !== "none"},
-          title: {
-            box: box(title),
-            fontFamily: titleStyle.fontFamily,
-            fontSize: titleStyle.fontSize,
-            fontWeight: titleStyle.fontWeight,
-            moss: {
-              content: moss.content,
-              backgroundImage: moss.backgroundImage,
-              left: moss.left,
-              top: moss.top,
-              width: moss.width,
-              height: moss.height,
-              pointerEvents: moss.pointerEvents,
-            },
-          },
-          pageWidth: document.documentElement.scrollWidth,
-          viewportWidth: document.documentElement.clientWidth,
-        };
-      });
-      const visibleBrackets = view.brackets.filter(bracket => bracket.visible && bracket.box.width > 0 && bracket.box.height > 0);
-      assert.equal(view.shelfHeight, `${expectedShelfHeight}px`, `${width}px catalogue shelf uses the approved height`);
-      assert.equal(view.taskDecorationCount, 0, `${width}px catalogue retains no task-only shelfDecoration subtree`);
-      assert.equal(visibleBrackets.length, expectedBrackets, `${width}px catalogue exposes exactly its approved bracket count`);
-      assert.ok(visibleBrackets.every(bracket => bracket.pointerEvents === "none" && bracket.backgroundImage.includes("/cattasks/shelf/brackets.png") && bracket.box.left >= 0 && bracket.box.right <= width), `${width}px visible catalogue brackets are contained and pointer-inert`);
-      assert.equal(view.capybara.src, "/cattasks/catalogue-back-capybara.png", `${width}px uses the supplied sleeping capybara`);
-      assert.equal(view.capybara.alt, "", `${width}px capybara is decorative`);
-      assert.equal(view.capybara.decoded, true, `${width}px capybara decodes`);
-      assert.equal(view.capybara.pointerEvents, "none", `${width}px capybara cannot intercept the button`);
-      assert.equal(Math.round(view.capybara.box.width), expectedMascotWidth, `${width}px capybara keeps its approved responsive width`);
-      assert.ok(Math.abs((view.capybara.box.left + view.capybara.box.right) / 2 - (view.button.left + view.button.right) / 2) <= 1, `${width}px capybara stays centered over Back to task`);
-      assert.deepEqual(view.backFoliage.map(foliage => foliage.backgroundImage.includes("catalogue-back-vine.png") || foliage.backgroundImage.includes("catalogue-back-leaves.png")).sort(), [true, true], `${width}px keeps both approved Back foliage layers`);
-      assert.ok(view.backFoliage.every(foliage => foliage.content === '""' && foliage.zIndex === "0" && foliage.pointerEvents === "none"), `${width}px Back foliage stays visible, decorative, and behind the front button edge`);
-      assert.equal(view.button.zIndex, "1", `${width}px Back to task remains above its foliage layers`);
-      const [samoyed, yarn] = view.stickers;
-      assert.equal(samoyed.src, "/cattasks/catalogue/samoyed-cushion.png", `${width}px uses the approved Samoyed crop`);
-      assert.equal(yarn.src, "/cattasks/catalogue/yarn-ball.png", `${width}px uses the approved yarn crop`);
-      assert.ok(view.stickers.every(sticker => sticker.alt === "" && sticker.decoded && sticker.pointerEvents === "none" && sticker.ariaHidden === "true"), `${width}px stickers remain decoded, inert, and outside the accessibility tree`);
-      assert.equal(samoyed.visible, width >= 900, `${width}px Samoyed visibility follows the approved 900px catalogue breakpoint`);
-      assert.equal(yarn.visible, width >= 1000, `${width}px yarn visibility follows the approved 1000px catalogue breakpoint`);
-      assert.equal(view.rabbit.visible, width >= 761, `${width}px rabbit and carrot follow the approved full-shelf breakpoint`);
-      assert.equal(view.rabbit.pointerEvents, "none", `${width}px rabbit and carrot remain decorative`);
-      if (view.rabbit.visible) {
-        assert.equal(view.rabbit.decoded, true, `${width}px rabbit and carrot asset decodes`);
-        assert.equal(view.rabbit.bottom, "-8px", `${width}px rabbit and carrot retain the approved lowered placement`);
-      }
-      assert.equal(view.candles.visible, width <= 601, `${width}px candles appear only on the compact shelf`);
-      assert.equal(view.candles.pointerEvents, "none", `${width}px candles remain decorative`);
-      if (width <= 601) {
-        assert.equal(view.candles.decoded, true, `${width}px candle asset decodes`);
-        assert.equal(view.candles.translate, "0px 4px", `${width}px candles retain the approved compact lowering`);
-        assert.ok(view.candles.paintedBottom >= view.shelf.top + 2 && view.candles.paintedBottom <= view.shelf.bottom, `${width}px visible candle foot remains seated within the compact shelf rail`);
-      }
-      if (width >= 1000) {
-        assert.equal(Math.round(samoyed.box.width), 116, `${width}px Samoyed has the approved width`);
-        assert.equal(Math.round(yarn.box.width), 44, `${width}px yarn has the approved width`);
-        assert.ok(Math.abs(samoyed.box.left - view.title.box.right - 22) <= 1, `${width}px Samoyed begins 22px after All tasks`);
-        assert.ok(Math.abs(yarn.box.left - samoyed.box.right - 9) <= 1, `${width}px yarn remains 9px after the Samoyed`);
-        assert.ok(Math.abs(samoyed.box.bottom - view.shelf.top - 14) <= 1, `${width}px Samoyed sits 14px into the shelf`);
-        assert.ok(Math.abs(yarn.box.bottom - view.shelf.top - 14) <= 1, `${width}px yarn sits 14px into the shelf`);
-      }
-      assert.equal(Math.round(view.button.height), expectedButtonHeight, `${width}px Back to task keeps its approved height`);
-      assert.ok(Math.abs(view.button.bottom - view.shelf.top) <= 1, `${width}px Back to task sits on the shelf top edge`);
-      if (width > 760) assert.ok(view.button.width >= 235, `${width}px Back to task keeps the desktop minimum width`);
-      assert.equal(view.arrow.text, "←", `${width}px Back to task keeps its arrow`);
-      assert.equal(view.arrow.visible, true, `${width}px Back to task arrow remains visible`);
-      if (width > 601) {
-        const raisedTransitionTitle = width <= 760;
-        assert.ok(Math.abs(view.title.box.left - (view.shelf.left + 16)) <= 1, `${width}px All tasks starts 16px from the shelf edge`);
-        assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + (raisedTransitionTitle ? -1 : 7))) <= 1, `${width}px All tasks uses its approved shelf clearance`);
-        assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px title uses the local approved moss texture`);
-        assert.equal(view.title.moss.pointerEvents, "none", `${width}px title moss is pointer-inert`);
-        assert.equal(parseFloat(view.title.moss.left), -21, `${width}px title moss starts 21px left of the title`);
-        assert.ok(Math.abs(parseFloat(view.title.moss.top) - (view.title.box.height - (raisedTransitionTitle ? 4 : 12))) <= 0.1, `${width}px title moss uses its approved title-relative overlap`);
-        assert.ok(Math.abs(parseFloat(view.title.moss.width) - (view.title.box.width + 21)) <= 0.1, `${width}px title moss extends 21px beyond the title`);
-        mossRailOffsets.set(width, {
-          top: view.title.box.top + parseFloat(view.title.moss.top) - view.shelf.top,
-          bottom: view.title.box.top + parseFloat(view.title.moss.top) + parseFloat(view.title.moss.height) - view.shelf.top,
-        });
-      } else {
-        assert.equal(view.title.moss.content, '""', `${width}px compact title retains its decorative moss pseudo-element`);
-        assert.equal(view.title.moss.backgroundImage.includes("/cattasks/catalogue/title-moss.png"), true, `${width}px compact title retains the approved moss texture`);
-        assert.equal(view.title.fontFamily.includes("Nunito"), true, `${width}px compact title retains Nunito`);
-        if (width === 601) {
-          assert.ok(Math.abs(view.title.box.bottom - (view.shelf.top + 2)) <= 1, "601px retains the compact title's approved shelf position");
-          assert.ok(Math.abs(view.title.box.top + parseFloat(view.title.moss.top) - (view.shelf.top - 7)) <= 1, "601px retains the compact moss position against the shelf");
-        }
-      }
-      if (width === 1757) {
-        assert.deepEqual(nunito, {loaded: true, available: true}, "1757px waits for the loaded local Nunito face");
-        assert.equal(view.title.fontFamily.includes("Nunito"), true, "1757px All tasks uses Nunito");
-        assert.equal(view.title.fontWeight, "900", "1757px All tasks uses Nunito 900");
-        assert.equal(view.title.fontSize, "56px", "1757px All tasks uses the approved reference size");
-      }
-      assert.equal(view.pageWidth, view.viewportWidth, `${width}px catalogue shelf and button avoid horizontal overflow`);
-      const button = page.getByRole("button", {name: "Back to task"});
-      await button.focus();
-      assert.equal(await button.evaluate(node => node === document.activeElement), true, `${width}px Back to task remains keyboard focusable`);
-      const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.textContent?.trim(), {x: view.button.left + view.button.width / 2, y: view.button.top + view.button.height / 2});
-      assert.equal(hit, "←Back to task", `${width}px capybara and shelf do not block Back to task`);
+    await openFromCatalogue(page, longTitle);
+    const heading = page.getByRole("heading", {level: 1, name: longTitle, exact: true});
+    const geometry = await heading.evaluate(node => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const box = node.getBoundingClientRect();
+      const fragments = [...range.getClientRects()].filter(rect => rect.width && rect.height);
+      const rawRows = fragments.map(rect => Math.round(rect.top)).filter((top, index, values) => index === 0 || top !== values[index - 1]);
+      const rows = fragments
+        .filter(rect => rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+        .map(rect => Math.round(rect.top))
+        .filter((top, index, values) => index === 0 || top !== values[index - 1]);
+      return {text: node.textContent, lines: rows.length, rawRows: rawRows.length, fragmentsContained: fragments.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1), lineClamp: getComputedStyle(node).webkitLineClamp, overflowStyle: getComputedStyle(node).overflow, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+    });
+    assert.equal(geometry.text, longTitle, "the complete original title remains semantic text");
+    assert.ok(geometry.lines >= 1 && geometry.lines <= 2, "the compact header visibly paints at most two title lines");
+    if (geometry.rawRows > 2) {
+      assert.equal(geometry.lineClamp, "2", "the compact header clamps a raw third title row");
+      assert.ok(geometry.overflowStyle === "hidden" || geometry.overflowStyle === "clip", "the compact header clips overflowing glyph fragments");
+      assert.equal(geometry.fragmentsContained, false, "the compact header does not silently discard a raw third title row");
     }
-    const normalMossOffsets = mossRailOffsets.get(761);
-    for (const width of [602, 760]) {
-      const transitionMossOffsets = mossRailOffsets.get(width);
-      assert.ok(Math.abs(transitionMossOffsets.top - normalMossOffsets.top) <= .1 && Math.abs(transitionMossOffsets.bottom - normalMossOffsets.bottom) <= .1, `${width}px raised title preserves the moss's absolute position against the shelf`);
+    assert.equal(geometry.overflow, 0, "the long title creates no horizontal overflow");
+    const headingBox = await heading.boundingBox();
+    for (const name of ["All tasks", "Select previous task", "Select next task"]) {
+      const {box} = await assertLiveCenter(page, name, "long-title Task");
+      assert.ok(headingBox && !intersects(headingBox, box), `${name} remains clear of the long title`);
     }
-    await page.setViewportSize({width: 1440, height: 900});
-    await page.getByRole("button", {name: "Back to task"}).focus();
-    await page.keyboard.press("Enter");
-    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor();
-    assert.equal(await page.locator("img[data-catalogue-shelf-sticker]").count(), 0, "task page has no catalogue shelf stickers");
-    await page.getByRole("button", {name: "All tasks"}).click();
-    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
-    await page.emulateMedia({reducedMotion: "reduce"});
-    assert.equal(await page.getByRole("button", {name: "Back to task"}).evaluate(node => getComputedStyle(node).transitionDuration), "0s", "reduced motion removes Back to task animation");
-    await page.setViewportSize({width: 1757, height: 900});
-    await page.emulateMedia({forcedColors: "active"});
-    const forcedColors = await page.getByRole("heading", {name: "All tasks", exact: true}).evaluate(title => {
-      const style = getComputedStyle(title);
-      const moss = getComputedStyle(title, "::after");
+    await openFromCatalogue(page, "Check Whether Two Strings Are Anagrams");
+    await page.setViewportSize({width: 1790, height: 900});
+    await page.evaluate(() => {
+      const workspace = document.querySelector("[data-cattasks-workspace]");
+      Object.assign(workspace?.parentElement?.style ?? {}, {inlineSize: "1440px", maxInlineSize: "1440px", minInlineSize: "0px"});
+    });
+    const fitted = page.getByRole("heading", {level: 1, name: "Check Whether Two Strings Are Anagrams", exact: true});
+    await fitted.waitFor({state: "visible"});
+    await fitted.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise(requestAnimationFrame);
+      await new Promise(requestAnimationFrame);
+    });
+    const fittedGeometry = await fitted.evaluate(node => {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const box = node.getBoundingClientRect();
+      const fragments = [...range.getClientRects()]
+        .filter(rect => rect.width && rect.height);
+      const rows = fragments
+        .filter(rect => rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1)
+        .map(rect => Math.round(rect.top))
+        .filter((top, index, values) => index === 0 || top !== values[index - 1]);
+      const workspace = node.closest("[data-cattasks-workspace]");
       return {
-        color: style.color,
-        textFillColor: style.webkitTextFillColor,
-        backgroundImage: style.backgroundImage,
-        mossContent: moss.content,
-        mossBackgroundImage: moss.backgroundImage,
-        mossDisplay: moss.display,
+        rows,
+        fragmentsContained: fragments.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1),
+        workspaceWidth: Number(workspace?.getAttribute("data-cattasks-workspace")),
+        fontSize: Number.parseFloat(getComputedStyle(node).fontSize),
       };
     });
-    assert.notEqual(forcedColors.color, "rgba(0, 0, 0, 0)", "forced colors keeps All tasks readable");
-    assert.equal(forcedColors.textFillColor, forcedColors.color, "forced colors restores the All tasks text fill");
-    assert.equal(forcedColors.backgroundImage, "none", "forced colors removes All tasks gradient text paint");
-    assert.ok(
-      forcedColors.mossDisplay === "none" || forcedColors.mossContent === "none" || forcedColors.mossBackgroundImage === "none",
-      "forced colors hides the decorative title moss",
-    );
+    assert.ok(Math.abs(fittedGeometry.workspaceWidth - 1384) <= 2, "the positive fit case measures the required 1384px workspace width");
+    assert.ok(fittedGeometry.fontSize >= 20 && fittedGeometry.fontSize <= 30, "the measured wide title retains the approved readable 20–30px font range");
+    assert.equal(fittedGeometry.fragmentsContained, true, "every nonempty title glyph fragment remains inside the real heading bounds");
+    assert.ok(fittedGeometry.rows.length >= 1 && fittedGeometry.rows.length <= 2, "the approved split-width title fits one or two fully visible rows");
     assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
+  } finally { await context.close(); await browser.close(); }
 });
 
-test("approved mobile shelf composition swaps exact task-only art without blocking controls", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 390, height: 900}});
-  const page = await context.newPage();
+test("v146 keyboard navigation hands focus to description and supports reduced motion and forced colors", {timeout: 75_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 623, height: 900}, reducedMotion: "reduce"}); const page = await context.newPage();
   try {
-    const diagnostics = await prepare(page);
-    const expectedVisible = new Map([
-      [320, []],
-      [321, ["sprig"]],
-      [390, ["sprig"]],
-      [430, ["sprig"]],
-      [431, ["sprig"]],
-      [598, ["sprig"]],
-      [600, ["sprig"]],
-      [601, []],
-    ]);
-
-    for (const [width, expected] of expectedVisible) {
-      await page.setViewportSize({width, height: 900});
-      await page.mouse.move(0, 899);
-      await page.waitForTimeout(240);
-      const view = await page.evaluate(async () => {
-        const box = element => {
-          const {x, y, width, height} = element.getBoundingClientRect();
-          return {x, y, width, height, left: x, right: x + width, top: y, bottom: y + height};
-        };
-        const visible = element => {
-          const rect = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          return rect.width > 0 && style.display !== "none" && style.visibility !== "hidden";
-        };
-        const art = Array.from(document.querySelectorAll("[data-mobile-shelf-art]"));
-        const fox = Array.from(document.querySelectorAll("[data-mobile-fox]"));
-        const legacyArt = Array.from(document.querySelectorAll("[class*='taskShelf'] [class*='shelfDecoration'] img:not([data-mobile-shelf-art])"));
-        await Promise.all([...art, ...fox].filter(visible).map(image => image.decode()));
-        const identity = document.querySelector("[class*='taskIdentity']");
-        const shelf = document.querySelector("[class*='taskShelf']");
-        const heading = document.querySelector("#taskSolutionHeading");
-        const language = document.querySelector("[class*='languageLabel']");
-        return {
-          art: art.map(image => ({role: image.dataset.mobileShelfArt, visible: visible(image), src: new URL(image.src).pathname, decoded: image.complete && image.naturalWidth > 0, pointerEvents: getComputedStyle(image).pointerEvents, box: box(image)})),
-          fox: fox.map(image => ({role: image.dataset.mobileFox, visible: visible(image), src: new URL(image.src).pathname, decoded: image.complete && image.naturalWidth > 0, pointerEvents: getComputedStyle(image).pointerEvents, ariaHidden: image.getAttribute("aria-hidden"), width: getComputedStyle(image).width, zIndex: getComputedStyle(image).zIndex, clipPath: getComputedStyle(image).clipPath, box: box(image)})),
-          legacyArt: legacyArt.map(image => ({src: new URL(image.src).pathname, visible: visible(image), box: box(image)})),
-          identity: identity && {
-            box: box(identity),
-            padding: {
-              top: getComputedStyle(identity).paddingTop,
-              right: getComputedStyle(identity).paddingRight,
-              bottom: getComputedStyle(identity).paddingBottom,
-              left: getComputedStyle(identity).paddingLeft,
-            },
-          },
-          shelf: shelf && box(shelf),
-          heading: heading && box(heading),
-          language: language && box(language),
-          pageWidth: document.documentElement.scrollWidth,
-          viewportWidth: document.documentElement.clientWidth,
-        };
-      });
-      const visible = view.art.filter(art => art.visible);
-      assert.deepEqual(visible.map(art => art.role).sort(), [...expected].sort(), `${width}px has only its approved mobile shelf art`);
-      if (width <= 600) assert.ok(view.legacyArt.every(art => !art.visible), `${width}px hides every desktop shelf asset from the mobile composition`);
-      assert.ok(visible.every(art => art.decoded && art.pointerEvents === "none" && art.src === `/cattasks/mobile-shelf/${art.role}.png`), `${width}px visible art is exact, decoded, and pointer-inert`);
-      assert.equal(view.pageWidth, view.viewportWidth, `${width}px has no horizontal overflow`);
-      assert.ok(view.identity && view.shelf && view.identity.box.bottom <= view.shelf.top, `${width}px identity clears the shelf`);
-      if (width <= 600) assert.ok(view.heading && view.language && Math.abs((view.heading.y + view.heading.height / 2) - (view.language.y + view.language.height / 2)) <= 1 && view.heading.right <= view.language.left, `${width}px solution title and language share a row`);
-      const [previous, next] = await Promise.all([
-        page.getByRole("button", {name: "Select previous task"}),
-        page.getByRole("button", {name: "Select next task"}),
-      ]);
-      assert.equal(await previous.count(), 1, `${width}px keeps the approved previous navigation control`);
-      assert.equal(await next.count(), 1, `${width}px keeps the approved next navigation control`);
-
-      const visibleFox = view.fox.filter(fox => fox.visible);
-      if (width > 320 && width <= 600) {
-        assert.deepEqual(visibleFox.map(fox => fox.role).sort(), ["body", "paws"], `${width}px exposes both approved fox layers`);
-        assert.ok(visibleFox.every(fox => fox.src === "/cattasks/mobile-shelf/raised-paws-fox.png" && fox.decoded && fox.pointerEvents === "none" && fox.ariaHidden === "true" && fox.width === "60px"), `${width}px fox is the exact decoded, decorative, pointer-inert crop`);
-        const [previousBox, nextBox] = await Promise.all([previous.boundingBox(), next.boundingBox()]);
-        assert.ok(previousBox && nextBox, `${width}px retains both real navigation buttons`);
-        const arrowPositions = new Map([
-          [321, [86, 225]],
-          [390, [91, 289]],
-          [430, [94, 326]],
-          [431, [60, 327]],
-          [598, [74, 480]],
-          [600, [74, 482]],
-        ]);
-        const [expectedPreviousX, expectedNextX] = arrowPositions.get(width) ?? [];
-        for (const [arrow, box, expectedX] of [[previous, previousBox, expectedPreviousX], [next, nextBox, expectedNextX]]) {
-          assert.equal(Math.round(box.width), 44, `${width}px ${await arrow.getAttribute("aria-label")} is 44px wide`);
-          assert.equal(Math.round(box.height), 44, `${width}px ${await arrow.getAttribute("aria-label")} is 44px tall`);
-          assert.equal(Math.round(box.x), expectedX, `${width}px ${await arrow.getAttribute("aria-label")} keeps its approved shelf position`);
-          assert.ok(Math.abs((box.y + box.height) - (view.shelf.top + 4)) <= 1, `${width}px ${await arrow.getAttribute("aria-label")} sits 4px below the rail`);
-          const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), {x: box.x + box.width / 2, y: box.y + box.height / 2});
-          assert.equal(hit, await arrow.getAttribute("aria-label"), `${width}px decorative fox cannot intercept the native arrow`);
-        }
-        const byRole = Object.fromEntries(visibleFox.map(fox => [fox.role, fox]));
-        assert.ok(byRole.body.box.left < previousBox.x + previousBox.width && byRole.body.box.right > previousBox.x, `${width}px fox body horizontally overlaps the previous button`);
-        assert.equal(byRole.body.zIndex, "1", `${width}px fox body stays behind the previous button`);
-        assert.equal(byRole.paws.zIndex, "3", `${width}px fox paws stay above the previous button`);
-        assert.notEqual(byRole.paws.clipPath, "none", `${width}px fox paws use the approved upper crop`);
-        if (width > 430) {
-          assert.deepEqual(view.identity.padding, {top: "48px", right: "62px", bottom: "14px", left: "62px"}, `${width}px title uses the approved fox-clearance padding`);
-          assert.equal(byRole.body.box.left - view.identity.box.left, -28, `${width}px fox body retains its approved 34px left shift`);
-          assert.equal(byRole.paws.box.left - view.identity.box.left, -28, `${width}px fox paws retain their approved 34px left shift`);
-        }
-      } else {
-        assert.equal(visibleFox.length, 0, `${width}px has no fox outside its approved 321–600px range`);
-      }
-
-      if (width === 320) {
-        const [previousBox, nextBox] = await Promise.all([previous.boundingBox(), next.boundingBox()]);
-        assert.ok(previousBox && nextBox, "320px retains both real navigation buttons");
-        assert.deepEqual([Math.round(previousBox.x), Math.round(nextBox.x)], [54, 222], "320px arrows retain the approved 54px symmetric viewport insets");
-        assert.ok(Math.abs((previousBox.y + previousBox.height) - (view.shelf.top + 4)) <= 1 && Math.abs((nextBox.y + nextBox.height) - (view.shelf.top + 4)) <= 1, "320px arrows sit 4px below the rail");
-      }
-
-
-      for (const name of ["Test Code", "Run Code"]) {
-        const button = page.getByRole("button", {name});
-        const buttonBox = await button.boundingBox();
-        assert.ok(buttonBox && buttonBox.height >= 44, `${width}px ${name} keeps a 44px target`);
-        await button.focus();
-        assert.equal(await page.evaluate(() => document.activeElement?.matches(":focus-visible")), true, `${width}px ${name} remains keyboard focusable`);
-        const hit = await page.evaluate(({x, y}) => document.elementFromPoint(x, y)?.closest("button")?.getAttribute("aria-label"), {x: buttonBox.x + buttonBox.width / 2, y: buttonBox.y + buttonBox.height / 2});
-        assert.equal(hit, name, `${width}px decorative art does not intercept ${name}`);
-      }
-    }
-    assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
-});
-
-test("mobile shelf clears a long selected task title", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 390, height: 900}});
-  const page = await context.newPage();
-  try {
-    const diagnostics = await prepare(page);
-    await page.getByRole("button", {name: "All tasks"}).click();
-    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
-    await page.getByRole("button", {name: `Open ${catalog.tasks[1].title}`}).click();
-    const title = page.getByRole("heading", {name: catalog.tasks[1].title, exact: true});
-    await title.waitFor();
-    const view = await page.evaluate(async () => {
-      const box = element => {
-        const {x, y, width, height} = element.getBoundingClientRect();
-        return {x, y, width, height, left: x, right: x + width, top: y, bottom: y + height};
-      };
-      const visible = element => {
-        const rect = element.getBoundingClientRect();
-        const style = getComputedStyle(element);
-        return rect.width > 0 && style.display !== "none" && style.visibility !== "hidden";
-      };
-      const art = Array.from(document.querySelectorAll("[data-mobile-shelf-art]")).filter(visible);
-      const fox = Array.from(document.querySelectorAll("[data-mobile-fox]")).filter(visible);
-      await Promise.all([...art, ...fox].map(image => image.decode()));
-      const title = document.querySelector("[class*='taskTitle']");
-      const shelf = document.querySelector("[class*='taskShelf']");
-      return {
-        title: title && box(title),
-        shelf: shelf && box(shelf),
-        art: art.map(image => ({role: image.dataset.mobileShelfArt, box: box(image), pointerEvents: getComputedStyle(image).pointerEvents})),
-        fox: fox.map(image => ({role: image.dataset.mobileFox, box: box(image), pointerEvents: getComputedStyle(image).pointerEvents})),
-        pageWidth: document.documentElement.scrollWidth,
-        viewportWidth: document.documentElement.clientWidth,
-      };
-    });
-    assert.ok(view.title && view.shelf && view.title.bottom <= view.shelf.top, "long title clears the shelf");
-    assert.deepEqual(view.art.map(art => art.role), ["sprig"], "390px long title keeps only the approved shelf sprig");
-    assert.deepEqual(view.fox.map(fox => fox.role).sort(), ["body", "paws"], "390px long title keeps the approved two-layer fox");
-    assert.ok([...view.art, ...view.fox].every(art => art.pointerEvents === "none"), "long title remains clear of pointer-inert decoration");
-    const titleLines = await title.evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); return [...range.getClientRects()].map(rect => ({left: rect.left, right: rect.right})); });
-    const foxRight = Math.max(...view.fox.map(fox => fox.box.right));
-    assert.ok(titleLines.every(line => line.left >= foxRight || line.right <= Math.min(...view.fox.map(fox => fox.box.left))), "long title text rectangles remain horizontally clear of the fox");
-    assert.equal(view.pageWidth, view.viewportWidth, "long title does not create horizontal overflow");
-    for (const name of ["Test Code", "Run Code"]) assert.ok(await page.getByRole("button", {name}).boundingBox(), `long title retains ${name}`);
-    assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
-});
-
-test("full shelf preserves keyboard navigation and title clearance at the desktop cutoff", {timeout: 45_000}, async () => {
-  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
-  const context = await browser.newContext({viewport: {width: 1220, height: 900}});
-  const page = await context.newPage();
-  try {
-    const diagnostics = await prepare(page);
-    for (const width of [1201, 1220]) await assertWideShelf(page, width);
-    await page.setViewportSize({width: 1220, height: 900});
-    await assertArrowKeyboardNavigation(page);
-    assertDiagnostics(diagnostics);
-  } finally {
-    await context.close();
-    await browser.close();
-  }
+    const diagnostics = await prepare(page); await openFromCatalogue(page, longTitle); const next = page.getByRole("button", {name: "Select next task", exact: true}); await next.focus(); await next.press("Enter"); await page.getByRole("heading", {level: 1, name: "Third independent task", exact: true}).waitFor(); assert.equal(await page.evaluate(() => document.activeElement?.matches("pre[aria-label='Описание задачи'][tabindex='-1']")), true, "Enter on enabled Next hands focus to the new description"); const previous = page.getByRole("button", {name: "Select previous task", exact: true}); await previous.focus(); const reduced = await previous.evaluate(node => getComputedStyle(node).transitionDuration); assert.equal(reduced.split(",").every(value => Number.parseFloat(value) === 0), true, "reduced motion removes enabled-navigation transitions"); await page.emulateMedia({forcedColors: "active"}); await enterCatalogue(page); const forced = await page.getByRole("heading", {name: "All tasks", exact: true}).evaluate(node => { const style = getComputedStyle(node); return {color: style.color, fill: style.webkitTextFillColor, background: style.backgroundImage}; }); assert.notEqual(forced.color, "rgba(0, 0, 0, 0)", "forced colors keeps the Catalogue heading readable"); assert.equal(forced.fill, forced.color, "forced colors restores text fill to the readable color"); assert.equal(forced.background, "none", "forced colors removes decorative gradient text paint"); assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
 });

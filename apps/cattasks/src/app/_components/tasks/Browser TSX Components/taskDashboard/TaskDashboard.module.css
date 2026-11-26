@@ -1,4 +1,5 @@
 .taskDashboardRoot {
+    --cattasks-workspace-width: min(1600px, calc(100% - clamp(16px, 3.125vw, 64px)));
     --catalogue-shelf-width: min(calc(100% - clamp(32px, 16vw, 258px)), 1281px);
     --task-shelf-arrow-inset: 10px;
     --task-shelf-previous-anchor: 122px;
@@ -130,17 +131,22 @@
     min-width: 0;
 }
 
-.taskDashboardRoot[data-cattasks-theme='light'] .workspaceFrame,
-.taskDashboardRoot[data-cattasks-theme='dark'] .workspaceFrame,
 .taskDashboardRoot[data-cattasks-theme='light'] .catalogueView:not([hidden]),
 .taskDashboardRoot[data-cattasks-theme='dark'] .catalogueView:not([hidden]) {
     display: contents;
 }
 
+.taskDashboardRoot[data-cattasks-theme='light'] .workspaceFrame,
+.taskDashboardRoot[data-cattasks-theme='dark'] .workspaceFrame {
+    container: cattasks-workspace / inline-size;
+    width: min(100%, var(--cattasks-workspace-width));
+    margin-inline: auto;
+}
+
 .taskDashboardRoot[data-cattasks-theme='khorne'] .workspaceFrame,
 .taskDashboardRoot[data-cattasks-theme='nurgle'] .workspaceFrame {
     container: cattasks-workspace / inline-size;
-    width: min(100%, var(--khorne-workspace-width, 1120px));
+    width: min(100%, var(--cattasks-workspace-width));
     margin-inline: auto;
 }
 
@@ -1214,4 +1220,29 @@
 
 @media (max-width: 600px) {
     .headerContainer { min-height: 104px; }
+}
+
+.workspaceFrame > .headerContainer[data-cattasks-header='capybara'] {
+    min-height: calc(var(--capy-header-height) + 3px);
+    height: calc(var(--capy-header-height) + 3px);
+}
+
+.taskDashboardRoot[data-cattasks-theme='light'] {
+    --cattasks-ink: #294a3b;
+    --cattasks-muted-ink: #5e6f62;
+    --cattasks-panel: #faf9f2;
+    --cattasks-panel-subtle: #edf0e5;
+    --cattasks-editor: #fdfefc;
+    --cattasks-border: #c5cebc;
+    --cattasks-accent: #3f6b4c;
+}
+
+.taskDashboardRoot[data-cattasks-theme='dark'] {
+    --cattasks-ink: #e3eee8;
+    --cattasks-muted-ink: #b1c7bf;
+    --cattasks-panel: #1b3540;
+    --cattasks-panel-subtle: #294852;
+    --cattasks-editor: #112a33;
+    --cattasks-border: #49676c;
+    --cattasks-accent: #b3d4b5;
 }
