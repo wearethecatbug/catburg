@@ -4,8 +4,14 @@ import {useLayoutEffect, useRef, useState, type KeyboardEvent} from 'react';
 import {catTasksThemes, isWarhammerTheme, useCatTasksTheme, type CatTasksTheme} from './CatTasksTheme';
 import styles from './ThemeToggle.module.css';
 import Image from 'next/image';
+import type {V146Construction} from '@/app/_components/tasks/Browser TSX Components/header/v146/V146Header';
 
-export default function ThemeToggle() {
+type ThemeToggleProps = {
+    readonly construction: V146Construction;
+    readonly onConstructionChange: (construction: V146Construction) => void;
+};
+
+export default function ThemeToggle({construction, onConstructionChange}: ThemeToggleProps) {
     const {theme, setTheme} = useCatTasksTheme();
     const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -71,6 +77,9 @@ export default function ThemeToggle() {
                             </button>
                         );
                     })}
+                    {isWarhammerTheme(theme) && <div className={styles.constructionOptions} role="group" aria-label="Header construction">
+                        {(['industrial', 'gothic', 'armor'] as const).map(option => <button type="button" className={styles.themeOption} aria-pressed={construction === option} key={option} onClick={() => onConstructionChange(option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
+                    </div>}
                 </div>
             )}
         </div>

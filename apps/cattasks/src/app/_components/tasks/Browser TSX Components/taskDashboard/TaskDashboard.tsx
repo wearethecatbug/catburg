@@ -9,11 +9,13 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import AllTasks, {AllTasksHeader} from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
 import {CatTasksThemeContext, catTasksThemes, getCatTasksTheme, isWarhammerTheme, type CatTasksTheme} from './CatTasksTheme';
 import ThemeToggle from './ThemeToggle';
+import type {V146Construction} from '@/app/_components/tasks/Browser TSX Components/header/v146/V146Header';
+import {getWorkspaceHeaderEnvelope} from '@/app/_components/tasks/Browser TSX Components/header/v146/pure/workspace/header-placement.mjs';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
-const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattasks-theme');const allowed=${JSON.stringify(catTasksThemes)};if(allowed.includes(theme))document.currentScript?.parentElement?.setAttribute('data-cattasks-theme',theme)}catch{}`;
 const compactHeaderBaseline = 146;
 const wideHeaderBaseline = 168;
+const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattasks-theme');const allowed=${JSON.stringify(catTasksThemes)};if(allowed.includes(theme))document.currentScript?.parentElement?.setAttribute('data-cattasks-theme',theme)}catch{}`;
 
 function KhorneFigure({figure, src}: {figure: string; src: string}) {
     return <span className={styles.khorneFigure} data-khorne-figure={figure}><img className={styles.khorneFigureArt} src={src} alt="" loading="lazy" decoding="async"/></span>;
@@ -35,10 +37,11 @@ export default function TaskDashboard() {
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
     const [hasVisitedAllTasks, setHasVisitedAllTasks] = useState(false);
     const [theme, setTheme] = useState<CatTasksTheme>('light');
+    const [headerConstruction, setHeaderConstruction] = useState<V146Construction>('industrial');
     const dashboardRef = useRef<HTMLDivElement>(null);
     const workspaceRef = useRef<HTMLDivElement>(null);
     const allTasksButtonRef = useRef<HTMLButtonElement>(null);
-    const [workspaceLayout, setWorkspaceLayout] = useState({width: 0, baseline: wideHeaderBaseline});
+    const [workspaceLayout, setWorkspaceLayout] = useState({width: 0, baseline: wideHeaderBaseline, slot: wideHeaderBaseline});
     const showAllTasks = useCallback(() => {
         setHasVisitedAllTasks(true);
         setIsAllTasksOpen(true);
@@ -66,16 +69,18 @@ export default function TaskDashboard() {
 
         const update = () => {
             const width = Math.floor(workspace.getBoundingClientRect().width);
-            const baseline = width <= 800 ? compactHeaderBaseline : wideHeaderBaseline;
-            workspace.style.setProperty('--workspace-measured-width', `${width}px`);
-            workspace.style.setProperty('--workspace-header-slot', `${baseline}px`);
-            setWorkspaceLayout(current => current.width === width && current.baseline === baseline ? current : {width, baseline});
+            const legacyBaseline = width <= 800 ? compactHeaderBaseline : wideHeaderBaseline;
+            const envelope = isWarhammerTheme(theme) ? getWorkspaceHeaderEnvelope(width) : null;
+            const baseline = envelope?.baseline ?? legacyBaseline;
+            const slot = envelope ? envelope.height + 3 : legacyBaseline;
+            workspace.style.setProperty('--workspace-header-slot', `${slot}px`);
+            setWorkspaceLayout(current => current.width === width && current.baseline === baseline && current.slot === slot ? current : {width, baseline, slot});
         };
         const observer = new ResizeObserver(update);
         observer.observe(workspace);
         update();
         return () => observer.disconnect();
-    }, []);
+    }, [theme]);
 
     useLayoutEffect(() => {
         if (!isWarhammerTheme(theme) || !isAllTasksOpen) return;
@@ -182,6 +187,8 @@ export default function TaskDashboard() {
                         <KhorneDashboardHeader
                             className={styles.headerContainer}
                             theme={theme}
+                            construction={headerConstruction}
+                            workspaceWidth={workspaceLayout.width || 320}
                             isAllTasksOpen={isAllTasksOpen}
                             onAllTasks={showAllTasks}
                             onBack={returnToTask}
@@ -196,7 +203,7 @@ export default function TaskDashboard() {
                             allTasksButtonRef={allTasksButtonRef}
                         />
                     )}
-                    <ThemeToggle/>
+                    <ThemeToggle construction={headerConstruction} onConstructionChange={setHeaderConstruction}/>
                     {!isWarhammerTheme(theme) && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
                         {!isAllTasksOpen && (
                             <>
