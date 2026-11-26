@@ -13,6 +13,7 @@ export default function Main({className}: MainProps) {
     return (
         <div
             className={`${styles.mainContainer} ${className ?? ''}`}
+            data-cattasks-workspace-content=""
             data-khorne-workspace={isWarhammerTheme(theme) ? '' : undefined}
         >
             <MainTaskContentPanel className={styles.taskContentPanelContainer}/>

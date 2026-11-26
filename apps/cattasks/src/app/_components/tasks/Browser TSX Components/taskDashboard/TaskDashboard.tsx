@@ -12,6 +12,8 @@ import ThemeToggle from './ThemeToggle';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
 const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattasks-theme');const allowed=${JSON.stringify(catTasksThemes)};if(allowed.includes(theme))document.currentScript?.parentElement?.setAttribute('data-cattasks-theme',theme)}catch{}`;
+const compactHeaderBaseline = 146;
+const wideHeaderBaseline = 168;
 
 function KhorneFigure({figure, src}: {figure: string; src: string}) {
     return <span className={styles.khorneFigure} data-khorne-figure={figure}><img className={styles.khorneFigureArt} src={src} alt="" loading="lazy" decoding="async"/></span>;
@@ -31,10 +33,16 @@ function readStoredTheme(): CatTasksTheme {
 
 export default function TaskDashboard() {
     const [isAllTasksOpen, setIsAllTasksOpen] = useState(false);
+    const [hasVisitedAllTasks, setHasVisitedAllTasks] = useState(false);
     const [theme, setTheme] = useState<CatTasksTheme>('light');
     const dashboardRef = useRef<HTMLDivElement>(null);
+    const workspaceRef = useRef<HTMLDivElement>(null);
     const allTasksButtonRef = useRef<HTMLButtonElement>(null);
-    const showAllTasks = useCallback(() => setIsAllTasksOpen(true), []);
+    const [workspaceLayout, setWorkspaceLayout] = useState({width: 0, baseline: wideHeaderBaseline});
+    const showAllTasks = useCallback(() => {
+        setHasVisitedAllTasks(true);
+        setIsAllTasksOpen(true);
+    }, []);
     const returnToTask = useCallback(() => {
         setIsAllTasksOpen(false);
         requestAnimationFrame(() => allTasksButtonRef.current?.focus());
@@ -51,6 +59,23 @@ export default function TaskDashboard() {
         }
     }, []);
     const themeValue = useMemo(() => ({theme, setTheme: selectTheme}), [theme, selectTheme]);
+
+    useLayoutEffect(() => {
+        const workspace = workspaceRef.current;
+        if (!workspace) return;
+
+        const update = () => {
+            const width = Math.floor(workspace.getBoundingClientRect().width);
+            const baseline = width <= 800 ? compactHeaderBaseline : wideHeaderBaseline;
+            workspace.style.setProperty('--workspace-measured-width', `${width}px`);
+            workspace.style.setProperty('--workspace-header-slot', `${baseline}px`);
+            setWorkspaceLayout(current => current.width === width && current.baseline === baseline ? current : {width, baseline});
+        };
+        const observer = new ResizeObserver(update);
+        observer.observe(workspace);
+        update();
+        return () => observer.disconnect();
+    }, []);
 
     useLayoutEffect(() => {
         if (!isWarhammerTheme(theme) || !isAllTasksOpen) return;
@@ -147,61 +172,68 @@ export default function TaskDashboard() {
                     <span className={styles.foliageBottomLeft}/>
                     <span className={styles.foliageBottomRight}/>
                 </div>
-                {isWarhammerTheme(theme) ? (
-                    <KhorneDashboardHeader
-                        className={styles.headerContainer}
-                        theme={theme}
-                        isAllTasksOpen={isAllTasksOpen}
-                        onAllTasks={showAllTasks}
-                        onBack={returnToTask}
-                        allTasksButtonRef={allTasksButtonRef}
-                    />
-                ) : isAllTasksOpen ? (
-                    <AllTasksHeader className={styles.headerContainer} onBack={returnToTask}/>
-                ) : (
-                    <Header
-                        className={styles.headerContainer}
-                        onShowAllTasks={showAllTasks}
-                        allTasksButtonRef={allTasksButtonRef}
-                    />
-                )}
-                <ThemeToggle/>
-                {!isWarhammerTheme(theme) && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
-                    {!isAllTasksOpen && (
-                        <>
-                        <div className={styles.shelfDecoration}>
-                            <span className={`${styles.shelfBracket} ${styles.shelfBracketLeft}`}/>
-                            <span className={`${styles.shelfBracket} ${styles.shelfBracketRight}`}/>
-                            <img className={styles.shelfPlantPreviousLeft} src="/cattasks/shelf/plant-prev-left.png" alt="" loading="lazy"/>
-                            <img className={styles.shelfPlantPreviousRight} src="/cattasks/shelf/plant-prev-right.png" alt="" loading="lazy"/>
-                            <img className={styles.shelfPlantNextLeft} src="/cattasks/shelf/plant-next-left.png" alt="" loading="lazy"/>
-                            <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
-                            <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
-                            <span className={styles.shelfBooks}/>
-                            <span className={styles.shelfLantern}/>
-                            <span className={styles.shelfHouse}/>
-                            <img className={styles.shelfOwl} src="/cattasks/shelf/owl.png" alt="" loading="lazy"/>
-                        </div>
-                        <div className={styles.mobileShelfDecoration}>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="books" src="/cattasks/mobile-shelf/books.png" alt="" loading="lazy"/>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="fan" src="/cattasks/mobile-shelf/fan.png" alt="" loading="lazy"/>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="lantern" src="/cattasks/mobile-shelf/lantern.png" alt="" loading="lazy"/>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="vine" src="/cattasks/mobile-shelf/vine.png" alt="" loading="lazy"/>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="crystals" src="/cattasks/mobile-shelf/crystals.png" alt="" loading="lazy"/>
-                            <img className={styles.mobileShelfArt} data-mobile-shelf-art="sprig" src="/cattasks/mobile-shelf/sprig.png" alt="" loading="lazy"/>
-                        </div>
-                        </>
+                <div
+                    ref={workspaceRef}
+                    className={styles.workspaceFrame}
+                    data-cattasks-workspace={workspaceLayout.width || undefined}
+                    data-header-baseline={workspaceLayout.baseline}
+                >
+                    {isWarhammerTheme(theme) ? (
+                        <KhorneDashboardHeader
+                            className={styles.headerContainer}
+                            theme={theme}
+                            isAllTasksOpen={isAllTasksOpen}
+                            onAllTasks={showAllTasks}
+                            onBack={returnToTask}
+                            allTasksButtonRef={allTasksButtonRef}
+                        />
+                    ) : isAllTasksOpen ? (
+                        <AllTasksHeader className={styles.headerContainer} onBack={returnToTask}/>
+                    ) : (
+                        <Header
+                            className={styles.headerContainer}
+                            onShowAllTasks={showAllTasks}
+                            allTasksButtonRef={allTasksButtonRef}
+                        />
                     )}
-                    {isAllTasksOpen && (
-                        <div className={styles.catalogueShelfDecoration}>
-                            <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketLeft}`}/>
-                            <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketRight}`}/>
-                        </div>
-                    )}
-                </div>}
-                {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
-                <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
-                {isAllTasksOpen && <AllTasks onBack={returnToTask}/>}
+                    <ThemeToggle/>
+                    {!isWarhammerTheme(theme) && <div className={`${styles.shelf} ${isAllTasksOpen ? styles.catalogueShelf : styles.taskShelf}`} aria-hidden="true">
+                        {!isAllTasksOpen && (
+                            <>
+                            <div className={styles.shelfDecoration}>
+                                <span className={`${styles.shelfBracket} ${styles.shelfBracketLeft}`}/>
+                                <span className={`${styles.shelfBracket} ${styles.shelfBracketRight}`}/>
+                                <img className={styles.shelfPlantPreviousLeft} src="/cattasks/shelf/plant-prev-left.png" alt="" loading="lazy"/>
+                                <img className={styles.shelfPlantPreviousRight} src="/cattasks/shelf/plant-prev-right.png" alt="" loading="lazy"/>
+                                <img className={styles.shelfPlantNextLeft} src="/cattasks/shelf/plant-next-left.png" alt="" loading="lazy"/>
+                                <img className={styles.shelfPlantNextRight} src="/cattasks/shelf/plant-next-right.png" alt="" loading="lazy"/>
+                                <img className={styles.shelfLeafPair} src="/cattasks/shelf/leaf-pair.png" alt="" loading="lazy"/>
+                                <span className={styles.shelfBooks}/>
+                                <span className={styles.shelfLantern}/>
+                                <span className={styles.shelfHouse}/>
+                                <img className={styles.shelfOwl} src="/cattasks/shelf/owl.png" alt="" loading="lazy"/>
+                            </div>
+                            <div className={styles.mobileShelfDecoration}>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="books" src="/cattasks/mobile-shelf/books.png" alt="" loading="lazy"/>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="fan" src="/cattasks/mobile-shelf/fan.png" alt="" loading="lazy"/>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="lantern" src="/cattasks/mobile-shelf/lantern.png" alt="" loading="lazy"/>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="vine" src="/cattasks/mobile-shelf/vine.png" alt="" loading="lazy"/>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="crystals" src="/cattasks/mobile-shelf/crystals.png" alt="" loading="lazy"/>
+                                <img className={styles.mobileShelfArt} data-mobile-shelf-art="sprig" src="/cattasks/mobile-shelf/sprig.png" alt="" loading="lazy"/>
+                            </div>
+                            </>
+                        )}
+                        {isAllTasksOpen && (
+                            <div className={styles.catalogueShelfDecoration}>
+                                <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketLeft}`}/>
+                                <span className={`${styles.catalogueShelfBracket} ${styles.catalogueShelfBracketRight}`}/>
+                            </div>
+                        )}
+                    </div>}
+                    {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
+                    <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
+                    {hasVisitedAllTasks && <div className={styles.catalogueView} hidden={!isAllTasksOpen}><AllTasks onBack={returnToTask} isOpen={isAllTasksOpen}/></div>}
+                </div>
                 <Footer className={styles.footerContainer}></Footer>
                 {theme === 'khorne' && <div className={styles.khorneLowerScene} data-khorne-scene-layout="lower" aria-hidden="true">
                     <div data-khorne-figure-scene="task">

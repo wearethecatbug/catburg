@@ -13,6 +13,7 @@ import {CatalogueFieldArt, CatalogueHeadingArt, CatalogueMetalButton, CatalogueO
 type AllTasksProps = {
     readonly className?: string;
     readonly onBack: () => void;
+    readonly isOpen?: boolean;
 };
 
 type TopicFilter = 'All topics' | TaskTopic;
@@ -57,7 +58,7 @@ export function AllTasksHeader({className, onBack}: AllTasksProps) {
     );
 }
 
-export default function AllTasks({className, onBack}: AllTasksProps) {
+export default function AllTasks({className, onBack, isOpen = true}: AllTasksProps) {
     const {catalogueRows, catalogError, retryCatalog, selectTask, customTasks} = useTaskContext();
     const {theme} = useCatTasksTheme();
     const [query, setQuery] = useState('');
@@ -70,10 +71,10 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     const taskListRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
-        if (!window.matchMedia('(max-width: 639px)').matches) {
+        if (isOpen && !window.matchMedia('(max-width: 639px)').matches) {
             searchRef.current?.focus();
         }
-    }, []);
+    }, [isOpen]);
 
     const availableTopicFilters = useMemo<readonly TopicFilter[]>(
         () => customTasks.some(task => task.topic === undefined) ? [...topicFilters, 'Uncategorized'] : topicFilters,
@@ -164,6 +165,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     return (
         <main
             className={`${styles.catalogueMain} ${className ?? ''}`}
+            data-cattasks-workspace-content=""
             data-khorne-catalogue={useV3Controls ? '' : undefined}
             data-khorne-workspace={useV3Controls ? '' : undefined}
         >

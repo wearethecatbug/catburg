@@ -126,6 +126,40 @@
 
 }
 
+.workspaceFrame {
+    min-width: 0;
+}
+
+.taskDashboardRoot[data-cattasks-theme='light'] .workspaceFrame,
+.taskDashboardRoot[data-cattasks-theme='dark'] .workspaceFrame,
+.taskDashboardRoot[data-cattasks-theme='light'] .catalogueView:not([hidden]),
+.taskDashboardRoot[data-cattasks-theme='dark'] .catalogueView:not([hidden]) {
+    display: contents;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'] .workspaceFrame,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .workspaceFrame {
+    container: cattasks-workspace / inline-size;
+    width: min(100%, var(--khorne-workspace-width, 1120px));
+    margin-inline: auto;
+}
+
+.taskDashboardRoot[data-cattasks-theme='khorne'] .workspaceFrame > .headerContainer,
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .workspaceFrame > .headerContainer {
+    min-height: var(--workspace-header-slot, 168px);
+    height: auto;
+}
+
+.workspaceFrame :global([data-cattasks-header]) {
+    width: 100%;
+}
+
+@container cattasks-workspace (max-width: 800px) {
+    .workspaceFrame > .headerContainer {
+        min-height: 146px;
+    }
+}
+
 .mainContainer {
     width: 100%;
     height: 70%;
@@ -280,8 +314,8 @@
         min-height: 100vh;
     }
 
-    .taskDashboardRoot > .headerContainer,
-    .taskDashboardRoot > .mainContainer,
+    .workspaceFrame > .headerContainer,
+    .workspaceFrame > .mainContainer,
     .taskDashboardRoot > .footerContainer {
         height: auto;
         flex: 0 0 auto;
@@ -1131,9 +1165,9 @@
 
 .headerContainer, .mainContainer, .footerContainer { position: relative; z-index: 1; }
 .headerContainer { min-height: 137px; height: auto; }
-.taskDashboardRoot > .headerContainer { padding-bottom: 0; }
+.workspaceFrame > .headerContainer { padding-bottom: 0; }
 .mainContainer { flex: 1 1 auto; min-height: 0; }
-.taskDashboardRoot > .hiddenMain { display: none; }
+.workspaceFrame > .hiddenMain { display: none; }
 .footerContainer { min-height: 90px; height: auto; }
 
 @media (min-width: 1151px) {
@@ -1146,7 +1180,7 @@
         display: none;
     }
 
-    .taskDashboardRoot > .mainContainer {
+    .workspaceFrame > .mainContainer {
         height: auto;
         min-height: clamp(560px, calc(100dvh - 265px), 759px);
         flex: 0 0 auto;
@@ -1154,22 +1188,27 @@
 }
 
 @media (1151px <= width < 1221px) {
-    .taskDashboardRoot > .headerContainer {
+    .workspaceFrame > .headerContainer {
         min-height: 213px;
     }
 }
 
 @media (min-width: 1221px) {
-    .taskDashboardRoot > .headerContainer {
+    .workspaceFrame > .headerContainer {
         min-height: 176px;
-    }
-
-    .taskDashboardRoot[data-cattasks-theme='khorne'] > .headerContainer {
-        min-height: 128px;
     }
 
     .taskDashboardRoot[data-cattasks-theme='khorne'] [aria-label='Pet feeding strip'] {
         max-inline-size: 940px;
+    }
+}
+
+/* At the side-figure layout threshold the workspace keeps the established
+ * pane clearance while fixed scene actors retain their measured positions. */
+@media (min-width: 2200px) and (min-height: 740px) {
+    .workspaceFrame > .mainContainer,
+    .workspaceFrame > div:not([hidden]) {
+        padding-top: 18px;
     }
 }
 

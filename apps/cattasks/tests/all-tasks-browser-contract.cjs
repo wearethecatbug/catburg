@@ -3,6 +3,7 @@ const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
+const taskDescription = (page, text) => page.getByLabel("Описание задачи", {exact: true}).filter({hasText: text});
 const catalog = {
   version: 1,
   tasks: [
@@ -208,11 +209,11 @@ test("All tasks uses real catalogue rows, combined filters, and preserves the Pr
     await page.getByRole("button", {name: "All tasks"}).click();
     const arrayRow = catalogueRows(page).filter({hasText: "Array sum"});
     await arrayRow.getByRole("button", {name: /^Open(?: |$)/}).click();
-    await page.getByText("Add all numbers in an array.", {exact: true}).waitFor({state: "visible"});
+    await taskDescription(page, "Add all numbers in an array.").waitFor({state: "visible"});
     await assertActiveEditorDraft(page, catalog.tasks[1].starterCode, "Open renders Array sum's own draft instead of a cached Tortoise model");
     await page.getByRole("button", {name: "All tasks"}).click();
     await catalogueRows(page).filter({hasText: "Tortoise race"}).getByRole("button", {name: /^Open(?: |$)/}).click();
-    await page.getByText("Find when B catches A.", {exact: true}).waitFor({state: "visible"});
+    await taskDescription(page, "Find when B catches A.").waitFor({state: "visible"});
     await assertActiveEditorDraft(page, "function echo(value) { return value + '!'; }", "returning from Array sum restores Tortoise's draft in the rendered active editor");
 
     await page.getByRole("button", {name: "All tasks"}).press("Enter");

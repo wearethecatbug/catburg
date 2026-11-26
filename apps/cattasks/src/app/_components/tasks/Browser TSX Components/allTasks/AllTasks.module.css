@@ -14,6 +14,11 @@
     max-width: 1600px;
     margin: 10px auto 24px;
 }
+:global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .catalogueMain[data-khorne-catalogue],
+:global([data-cattasks-theme='khorne']) :global([data-cattasks-workspace]) .catalogueMain[data-khorne-catalogue] {
+    width: 100%;
+    margin-top: 0;
+}
 :global([data-cattasks-theme='nurgle']) .catalogueLayout { display: grid; grid-template-columns: minmax(264px, 320px) minmax(0, 1fr); gap: clamp(12px, 1.25vw, 24px); align-items: stretch; width: 100%; margin-inline: auto; }
 :global([data-cattasks-theme='nurgle']) .filters,
 :global([data-cattasks-theme='nurgle']) .taskList {
