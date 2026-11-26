@@ -11,7 +11,8 @@
 }
 
 @media (min-width: 1151px) {
-    :global([data-cattasks-theme='nurgle']) .mainContainer {
+    :global([data-cattasks-theme='nurgle']) .mainContainer,
+    :global([data-cattasks-theme='slaanesh']) .mainContainer {
         grid-template-columns: minmax(360px, .29fr) minmax(0, .71fr);
         width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
         max-width: 1600px;
@@ -21,13 +22,15 @@
 
 :global([data-cattasks-theme='khorne']) :global([data-cattasks-workspace]) .mainContainer,
 :global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .mainContainer,
+:global([data-cattasks-theme='slaanesh']) :global([data-cattasks-workspace]) .mainContainer,
 :global([data-cattasks-theme='light']) :global([data-cattasks-workspace]) .mainContainer,
 :global([data-cattasks-theme='dark']) :global([data-cattasks-workspace]) .mainContainer {
     width: 100%;
 }
 
 @media (max-width: 1150px) {
-    :global([data-cattasks-theme='nurgle']) .mainContainer {
+    :global([data-cattasks-theme='nurgle']) .mainContainer,
+    :global([data-cattasks-theme='slaanesh']) .mainContainer {
         width: var(--khorne-workspace-width, min(1600px, calc(100% - clamp(16px, 3.125vw, 64px))));
         max-width: 1600px;
         padding: 12px 0 18px;
@@ -75,7 +78,8 @@
    data-cattasks-theme in its prepaint path.  Child panels consume this shared
    material map, while live-only geometry can keep using data-khorne-workspace. */
 :global([data-cattasks-theme='khorne']) .mainContainer,
-:global([data-cattasks-theme='nurgle']) .mainContainer {
+:global([data-cattasks-theme='nurgle']) .mainContainer,
+:global([data-cattasks-theme='slaanesh']) .mainContainer {
     --workspace-panel-radius: 4px;
     --workspace-panel-border: #4b473d;
     --workspace-reader-surface: #1a1e1d;
@@ -93,8 +97,32 @@
     --workspace-heading-repeat: no-repeat;
 }
 
+/* Retain the source-mapped violet recess while F2 remains responsible for the shared shell. */
+:global([data-cattasks-theme='slaanesh']) :global([data-cattasks-workspace]) .taskContentPanelContainer[data-task-collapsed='true'] {
+    --task-spine-width: 52px;
+    --task-spine-min-height: 157.08px;
+}
+@container cattasks-workspace (max-width: 600px) {
+    :global([data-cattasks-theme='slaanesh']) .taskContentPanelContainer[data-task-collapsed='true'] {
+        --task-spine-width: 196px;
+        --task-spine-mobile-height: 53.68px;
+        --task-spine-min-height: 0;
+    }
+}
+@container cattasks-workspace (width > 600px) and (max-width: 820px) {
+    :global([data-cattasks-theme='slaanesh']) .mainContainer:has(> .taskContentPanelContainer[data-task-collapsed='true']) { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; width: 100%; }
+    :global([data-cattasks-theme='slaanesh']) .mainContainer:has(> .taskContentPanelContainer[data-task-collapsed='true']) > .taskContentPanelContainer { width: 52px; min-width: 52px; align-self: center; }
+    :global([data-cattasks-theme='slaanesh']) .mainContainer:has(> .taskContentPanelContainer[data-task-collapsed='true']) > .taskContentPanelContainer + * { width: auto; min-width: 0; max-width: none; }
+}
+
 :global([data-cattasks-theme='khorne']) .mainContainer { --workspace-heading-surface: #332b25; }
 :global([data-cattasks-theme='nurgle']) .mainContainer { --workspace-heading-surface: #2b2e26; }
+:global([data-cattasks-theme='slaanesh']) .mainContainer {
+    --workspace-panel-border: #70606e;
+    --workspace-heading-surface: #352d39;
+    --workspace-panel-ink: #f7e8f4;
+    --workspace-label-ink: #dbc3df;
+}
 
 @media (min-width: 1151px) {
     :global([data-cattasks-theme='khorne']) .mainContainer {
@@ -176,7 +204,8 @@
     }
 
     :global([data-cattasks-theme='khorne']) :global([data-cattasks-workspace]) .mainContainer,
-    :global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .mainContainer {
+    :global([data-cattasks-theme='nurgle']) :global([data-cattasks-workspace]) .mainContainer,
+    :global([data-cattasks-theme='slaanesh']) :global([data-cattasks-workspace]) .mainContainer {
         height: auto;
     }
 

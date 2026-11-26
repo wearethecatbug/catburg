@@ -127,6 +127,14 @@
 :global([data-cattasks-theme='nurgle']) .retry { min-height: 48px; border: 8px solid transparent; border-image: var(--khorne-frame-image) 25% / 8px stretch; border-radius: 0; }
 :global([data-cattasks-theme='nurgle']) .actions > button:first-child::after { display: none; }
 
+:global([data-cattasks-theme='slaanesh']) .fileInput > span:first-child {
+    color: #f7e8f4;
+}
+
+@media (forced-colors: active) {
+    :global([data-cattasks-theme='slaanesh']) .fileInput > span:first-child { color: CanvasText; }
+}
+
 /* The art components are enabled by AllTasks only beneath its local
    .ct-controls root; these rules intentionally do not change Light/Dark. */
 :global(.ct-controls[data-theme]) .actions > button {

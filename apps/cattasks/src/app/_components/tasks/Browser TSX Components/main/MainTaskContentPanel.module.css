@@ -377,6 +377,19 @@
     background-color: #2b2e26;
 }
 
+:global([data-cattasks-theme='slaanesh']) .btnContainer {
+    background-color: #352d39;
+}
+
+:global([data-cattasks-theme='slaanesh']) .hint {
+    border-color: #70606e;
+    background: #20152b;
+}
+
+:global([data-cattasks-theme='slaanesh']) .hint[open] { background: #35233d; }
+
+:global([data-cattasks-theme='slaanesh']) :is(.hint, .taskDescriptionPre, .challengeHeading) { color: #f7e8f4; }
+
 :global([data-khorne-workspace]) :is(.khorneTab, .khorneTabBar > button) {
     color: #e5e0d4;
 }

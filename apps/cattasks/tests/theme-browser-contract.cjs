@@ -78,6 +78,44 @@ async function catalogueSurface(page) {
     return {filters: paint(find("[aria-label='Task filters']")), list: paint(find("[aria-labelledby='taskListTitle']")), fileInput: paint(find("label[class*='fileInput']")), pet: paint(find("[aria-label='Pet feeding strip']")), back: find("button").textContent?.trim()};
   });
 }
+async function compactFilterMetrics(page) {
+  return page.evaluate(() => {
+    const panel = document.querySelector("[aria-label='Task filters']");
+    if (!panel) throw new Error("missing actual Task filters surface");
+    if (!panel.id) throw new Error("actual Task filters surface has no id for its real trigger");
+    const trigger = document.querySelector(`button[aria-controls="${CSS.escape(panel.id)}"]`);
+    if (!trigger) throw new Error("missing actual compact Filters trigger");
+    const workspaceContent = panel.closest("[data-cattasks-workspace-content]");
+    if (!workspaceContent) throw new Error("Task filters have no actual workspace-content container");
+    const visible = element => {
+      const style = getComputedStyle(element), box = element.getBoundingClientRect();
+      return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+    };
+    const paths = new Set();
+    const collectUrls = value => {
+      for (const match of value.matchAll(/url\((['"]?)(.*?)\1\)/g)) {
+        if (match[2]) paths.add(new URL(match[2], location.href).pathname);
+      }
+    };
+    const collectPaint = (element, pseudo) => {
+      const style = getComputedStyle(element, pseudo);
+      for (const value of [style.backgroundImage, style.borderImageSource, style.maskImage, style.content]) collectUrls(value || "");
+    };
+    for (const element of [panel, trigger, ...panel.querySelectorAll("*"), ...trigger.querySelectorAll("*")]) {
+      if (!visible(element)) continue;
+      collectPaint(element);
+      collectPaint(element, "::before");
+      collectPaint(element, "::after");
+      if (element instanceof HTMLImageElement) paths.add(new URL(element.currentSrc || element.src, location.href).pathname);
+      if (element instanceof SVGImageElement) {
+        const href = element.getAttribute("href");
+        if (href) paths.add(new URL(href, location.href).pathname);
+      }
+    }
+    const workspaceBox = workspaceContent.getBoundingClientRect(), triggerBox = trigger.getBoundingClientRect();
+    return {catalogueInlineSize: workspaceBox.width, trigger: {width: triggerBox.width, height: triggerBox.height}, paths: [...paths]};
+  });
+}
 async function waitForJavaScriptWorker(page) {
   await page.waitForFunction(() => Boolean(window.monaco?.editor.getModels().length));
   await page.evaluate(async () => {
@@ -118,14 +156,38 @@ async function expectText(page, roleName, pattern) {
 }
 
 async function expectShippedThemeChoices(choices) {
-  const names = ["Light", "Dark", "Khorne", "Nurgle"];
+  const names = ["Light", "Dark", "Khorne", "Nurgle", "Slaanesh"];
   const buttons = choices.getByRole("button");
-  assert.equal(await buttons.count(), names.length, "exactly four theme controls are exposed");
+  assert.equal(await buttons.count(), names.length, "exactly five theme controls are exposed");
   for (const [index, name] of names.entries()) {
     const option = choices.getByRole("button", {name, exact: true});
     assert.equal(await option.count(), 1, `${name} is exposed as one accessible theme control`);
     assert.equal(await option.evaluate((element, ordinal) => [...element.parentElement.querySelectorAll("button")].indexOf(element), index), index, `${name} keeps its approved option order`);
   }
+}
+
+async function themeOptionIcon(option) {
+  return option.evaluate(element => {
+    const image = element.querySelector("img");
+    if (!image) throw new Error("the real theme option has no faction icon");
+    return new URL(image.currentSrc || image.src, location.href).pathname;
+  });
+}
+
+async function triggerArtwork(trigger) {
+  return trigger.evaluate(async element => {
+    const image = element.querySelector("img");
+    if (!image) throw new Error("the real theme trigger has no current-theme artwork");
+    await image.decode();
+    const box = image.getBoundingClientRect();
+    return {
+      path: new URL(image.currentSrc || image.src, location.href).pathname,
+      naturalWidth: image.naturalWidth,
+      naturalHeight: image.naturalHeight,
+      width: box.width,
+      height: box.height,
+    };
+  });
 }
 
 async function khorneAssets(page) {
@@ -493,6 +555,145 @@ test("fresh non-Khorne and compact Khorne boots do not transfer hidden Khorne fi
       } finally { await context.close(); }
     }
   } finally { await browser.close(); }
+});
+
+test("Slaanesh v146 body keeps its violet workspace materials across the three real constructions", {timeout: 120_000, concurrency: false}, async t => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 950}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Slaanesh");
+    const constructionChoices = page.getByRole("group", {name: "Header construction", exact: true});
+    if (!await constructionChoices.isVisible()) {
+      await (await themeTrigger(page)).click();
+      await constructionChoices.waitFor({state: "visible"});
+    }
+    for (const construction of ["Industrial", "Gothic", "Armor"]) {
+      await t.test(`${construction} keeps the real reader, editor, actions, and Output distinct`, async () => {
+        const constructionChoice = constructionChoices.getByRole("button", {name: construction, exact: true});
+        await constructionChoice.click();
+        assert.equal(await constructionChoice.getAttribute("aria-pressed"), "true", `${construction} remains the actual selected construction`);
+        const materials = await page.evaluate(() => {
+          const required = (selector, label) => {
+            const element = document.querySelector(selector);
+            if (!element) throw new Error(`missing ${label}`);
+            return element;
+          };
+          const paint = element => {
+            const style = getComputedStyle(element);
+            return {background: style.backgroundColor, radius: style.borderTopLeftRadius};
+          };
+          const box = element => {
+            const rect = element.getBoundingClientRect();
+            return {top: rect.top, bottom: rect.bottom};
+          };
+          const readerControls = required("[aria-label='Режим содержимого']", "real reader controls");
+          const reader = readerControls.closest("[class*='taskDetailsContainer']");
+          if (!reader) throw new Error("reader controls have no real reader panel");
+          const editor = required("section[aria-labelledby='taskSolutionHeading']", "real editor section");
+          const output = required("section[aria-labelledby='taskOutputHeading']", "real Output section");
+          const run = required("button[aria-label='Run Code']", "real Run action");
+          const test = required("button[aria-label='Test Code']", "real Test action");
+          return {
+            reader: paint(reader), editor: paint(editor), output: paint(output),
+            readerToolbar: paint(readerControls),
+            editorToolbar: paint(required("#taskSolutionHeading", "editor heading").closest("header") ?? required("#taskSolutionHeading", "editor heading")),
+            outputToolbar: paint(required("#taskOutputHeading", "Output heading").closest("header") ?? required("#taskOutputHeading", "Output heading")),
+            editorSurface: box(required(".monaco-editor", "editable Monaco surface")),
+            run: box(run), test: box(test), outputBox: box(output),
+          };
+        });
+        assert.deepEqual(
+          {reader: materials.reader, editor: materials.editor, output: materials.output},
+          {
+            reader: {background: "rgb(26, 30, 29)", radius: "4px"},
+            editor: {background: "rgb(17, 23, 25)", radius: "4px"},
+            output: {background: "rgb(22, 28, 27)", radius: "4px"},
+          },
+          `${construction} keeps the source-approved separate 4px reader (#1a1e1d), editor (#111719), and Output (#161c1b) body materials`,
+        );
+        for (const [name, toolbar] of Object.entries({reader: materials.readerToolbar, editor: materials.editorToolbar, output: materials.outputToolbar})) {
+          assert.equal(toolbar.background, "rgb(53, 45, 57)", `${construction} gives the Slaanesh ${name} toolbar the approved #352d39 raised-violet material`);
+        }
+        assert.ok(materials.run.top >= materials.editorSurface.bottom && materials.test.top >= materials.editorSurface.bottom, `${construction} keeps real Run and Test below Monaco without invoking either action`);
+        assert.ok(materials.outputBox.top >= Math.max(materials.run.bottom, materials.test.bottom), `${construction} keeps Output after the real action strip`);
+      });
+    }
+    const tabs = page.locator("[aria-label='Режим содержимого']");
+    const saved = tabs.getByRole("tab", {name: "My solution", exact: true});
+    await saved.click();
+    assert.equal(await saved.getAttribute("aria-selected"), "true", "Slaanesh retains the actual My solution tab state after construction changes");
+    await page.getByRole("button", {name: "Save current code", exact: true}).click();
+    const savedCode = page.getByLabel("Saved solution code", {exact: true});
+    await savedCode.waitFor({state: "visible"});
+    const savedPaint = await savedCode.evaluate(element => ({foreground: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor}));
+    assertNormalTextContrast(savedPaint.foreground, [savedPaint.background], "Slaanesh visibly saved solution code after the real Save current code action");
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    assert.equal(await page.locator("[aria-label='Task filters']").count(), 1, "Slaanesh reaches the real All tasks catalogue without losing its actual filter surface");
+    const catalogueMetrics = async width => {
+      await page.setViewportSize({width, height: 950}); await nextPaint(page);
+      return page.evaluate(() => {
+        const required = (selector, label) => {
+          const element = document.querySelector(selector);
+          if (!element) throw new Error(`missing ${label}`);
+          return element;
+        };
+        const list = required("[aria-labelledby='taskListTitle']", "real All tasks list");
+        const row = required("[aria-labelledby='taskListTitle'] li", "real All tasks row");
+        const title = required("[aria-labelledby='taskListTitle'] li h3", "real All tasks row title");
+        const pager = required("nav[aria-label='Task pages']", "real task pager");
+        const visible = element => {
+          const style = getComputedStyle(element), box = element.getBoundingClientRect();
+          return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+        };
+        const titleBox = title.getBoundingClientRect();
+        return {
+          title: {width: titleBox.width, height: titleBox.height, visible: visible(title)},
+          listOverflow: list.scrollWidth - list.clientWidth,
+          pagerOverflow: pager.scrollWidth - pager.clientWidth,
+          documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          pagerVisible: visible(pager), rowVisible: visible(row),
+        };
+      });
+    };
+    const desktopCatalogue = await catalogueMetrics(1440);
+    assert.equal(desktopCatalogue.rowVisible, true, "1440px Slaanesh All tasks keeps a real catalogue row visible");
+    assert.equal(desktopCatalogue.title.visible, true, "1440px Slaanesh All tasks keeps its real task title visible");
+    assert.ok(desktopCatalogue.title.width >= 48 && desktopCatalogue.title.height > 0, `1440px Slaanesh All tasks preserves a readable title column (got ${desktopCatalogue.title.width}×${desktopCatalogue.title.height}px)`);
+    assert.equal(desktopCatalogue.listOverflow, 0, "1440px Slaanesh All tasks list has no horizontal scroll width");
+    assert.equal(desktopCatalogue.pagerOverflow, 0, "1440px Slaanesh task pager has no horizontal scroll width");
+    for (const width of [320, 430]) {
+      const compactCatalogue = await catalogueMetrics(width);
+      assert.equal(compactCatalogue.rowVisible, true, `${width}px Slaanesh catalogue retains a real task row`);
+      assert.equal(compactCatalogue.title.visible, true, `${width}px Slaanesh catalogue retains its real task title`);
+      assert.equal(compactCatalogue.pagerVisible, true, `${width}px Slaanesh catalogue retains its real task pager`);
+      assert.equal(compactCatalogue.listOverflow, 0, `${width}px Slaanesh list has no horizontal scroll width`);
+      assert.equal(compactCatalogue.pagerOverflow, 0, `${width}px Slaanesh task pager has no horizontal scroll width`);
+      assert.equal(compactCatalogue.documentOverflow, 0, `${width}px Slaanesh catalogue has no horizontal document overflow`);
+    }
+    const pager = page.getByRole("navigation", {name: "Task pages", exact: true});
+    const currentPage = pager.locator("button[aria-current='page']");
+    const nextPage = pager.getByRole("button", {name: "2", exact: true});
+    assert.equal(await currentPage.innerText(), "1", "430px Slaanesh catalogue exposes its real current page");
+    const paginationPaint = locator => locator.evaluate(button => {
+      const background = element => {
+        for (let candidate = element; candidate; candidate = candidate.parentElement) {
+          const color = getComputedStyle(candidate).backgroundColor;
+          if (!/^rgba\(\d+,\s*\d+,\s*\d+,\s*0\)$/.test(color)) return color;
+        }
+        throw new Error("pagination control has no opaque rendered background");
+      };
+      return {foreground: getComputedStyle(button).color, background: background(button)};
+    });
+    const currentPagePaint = await paginationPaint(currentPage);
+    assertNormalTextContrast(currentPagePaint.foreground, [currentPagePaint.background], "Slaanesh current catalogue page");
+    await nextPage.hover();
+    const hoveredPagePaint = await paginationPaint(nextPage);
+    assertNormalTextContrast(hoveredPagePaint.foreground, [hoveredPagePaint.background], "Slaanesh hovered catalogue page");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
 });
 
 test("Nurgle is the fourth native choice with real Task/catalogue state, one rail, and responsive scene boundaries", {timeout: 120_000}, async () => {
@@ -1073,20 +1274,454 @@ test("Khorne keeps real hints, active Give up, and enabled Restore readable", {t
   } finally { await context.close(); await browser.close(); }
 });
 
-test("inline theme boot paints persisted Dark, Khorne, and Nurgle before blocked React bundles hydrate", {timeout: 90_000}, async () => {
+test("Slaanesh is the fifth keyboard-native theme with distinct trigger, option, scenes, and retained task state", {timeout: 120_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 2560, height: 1200}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const variant = "[data-warhammer-variant='slaanesh']";
+  const figureSelector = "[data-slaanesh-figure]";
+  try {
+    const diagnostics = await prepare(page);
+    const trigger = await themeTrigger(page);
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const choices = page.getByRole("group", {name: "Themes", exact: true});
+    await choices.waitFor({state: "visible"});
+    await expectShippedThemeChoices(choices);
+    assert.equal(await choices.getByRole("button", {name: "Light", exact: true}).evaluate(element => document.activeElement === element), true, "opening the fifth-theme chooser puts focus on its first native option");
+    for (let index = 0; index < 4; index += 1) await page.keyboard.press("Tab");
+    const choice = choices.getByRole("button", {name: "Slaanesh", exact: true});
+    assert.equal(await choice.evaluate(element => document.activeElement === element), true, "keyboard traversal reaches the fifth native Slaanesh choice");
+    assert.equal(await themeOptionIcon(choice), "/cattasks/themes/slaanesh/icon.svg", "Slaanesh has its own faction SVG in the chooser rather than reusing its current-theme trigger art");
+    await page.keyboard.press("Escape");
+    await choices.waitFor({state: "hidden"});
+    assert.equal(await page.evaluate(label => document.activeElement?.getAttribute("aria-label") === label, await trigger.getAttribute("aria-label")), true, "Escape restores focus from Slaanesh to the live trigger");
+    await trigger.focus(); await page.keyboard.press("Enter");
+    for (let index = 0; index < 4; index += 1) await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await page.locator("[data-cattasks-theme='slaanesh']").waitFor();
+    await expectCurrentTheme(page, "Slaanesh");
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "slaanesh", "the fifth native choice persists its valid preference");
+    const art = await triggerArtwork(await themeTrigger(page));
+    assert.match(art.path, /\/cattasks\/themes\/slaanesh\/.*\.png$/i, "the current Slaanesh trigger uses its supplied wide PNG, not the faction SVG");
+    assert.ok(art.naturalWidth > art.naturalHeight && art.width > art.height, "the supplied Slaanesh trigger PNG remains proportionally wide");
+
+    const taskHeader = page.locator(`header${variant}[data-v146-header][data-khorne-header='task']`);
+    const taskArtwork = await v146Artwork(taskHeader, "Slaanesh Task");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/industrial/crest-gem.png"), "Slaanesh Task retains the native central v146 crest");
+    assert.ok((await visibleGeometry(page, figureSelector, "data-slaanesh-figure")).length === 2, "wide Slaanesh Task exposes exactly its supplied two decorative figures");
+    assert.deepEqual((await page.locator(`${figureSelector}:visible img`).evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())), ["/cattasks/themes/slaanesh/task/daemon.webp", "/cattasks/themes/slaanesh/task/marine.webp"], "Slaanesh Task uses only the supplied Task WebP figures");
+    assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/task\/background-desktop\.webp/, "Slaanesh Task paints its supplied desktop WebP backdrop");
+    const models = (await surface(page)).models;
+    await page.getByRole("tab", {name: "Hint", exact: true}).click();
+    assert.equal(await page.getByRole("tab", {name: "Hint", exact: true}).getAttribute("aria-selected"), "true", "Slaanesh preserves the real task tab controls");
+
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    const catalogueHeader = page.locator(`header${variant}[data-v146-header][data-khorne-header='catalogue']`);
+    await v146Artwork(catalogueHeader, "Slaanesh catalogue");
+    assert.deepEqual((await page.locator(`${figureSelector}:visible img`).evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())), ["/cattasks/themes/slaanesh/all-tasks/daemon.webp", "/cattasks/themes/slaanesh/all-tasks/marine.webp"], "Slaanesh catalogue uses only the supplied catalogue WebP figures");
+    assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/all-tasks\/background-desktop\.webp/, "Slaanesh catalogue paints its supplied desktop WebP backdrop");
+    const search = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+    await search.fill("fixture 1");
+    await page.getByRole("radio", {name: "Not started", exact: true}).check();
+    await chooseTheme(page, "Dark"); await chooseTheme(page, "Slaanesh");
+    assert.equal(await search.inputValue(), "fixture 1", "Slaanesh theme round-trip retains the real catalogue search");
+    assert.equal(await page.getByRole("radio", {name: "Not started", exact: true}).isChecked(), true, "Slaanesh theme round-trip retains the real catalogue filter");
+    await page.getByRole("button", {name: "Back to task", exact: true}).click();
+    assert.deepEqual((await surface(page)).models, models, "Slaanesh Task/catalogue navigation retains the same Monaco model state");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Slaanesh UTH-3 maps approved violet ink, focus, and rail across each real construction", {timeout: 90_000}, async t => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1600, height: 1000}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const header = page.locator("header[data-warhammer-variant='slaanesh'][data-v146-header][data-khorne-header='task']");
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Slaanesh");
+    const title = header.getByRole("heading", {name: catalog.tasks[0].title, exact: true});
+    const allTasks = header.getByRole("button", {name: "All tasks", exact: true});
+    const ordinal = header.getByText("TASK 01", {exact: true});
+    for (const construction of ["Industrial", "Gothic", "Armor"]) {
+      await t.test(construction + " keeps the published violet Task palette", async () => {
+        const choices = page.getByRole("group", {name: "Header construction", exact: true});
+        if (!await choices.isVisible()) {
+          const trigger = await themeTrigger(page);
+          await trigger.click();
+          await choices.waitFor({state: "visible"});
+        }
+        const choice = choices.getByRole("button", {name: construction, exact: true});
+        await choice.click();
+        await header.waitFor({state: "visible"});
+        assert.equal(await header.getAttribute("data-v146-construction"), construction.toLowerCase(), construction + " is selected through the real construction control");
+        assert.equal(await choice.getAttribute("aria-pressed"), "true", construction + " truthfully exposes its selected state");
+        assert.equal(await title.evaluate(element => getComputedStyle(element).color), "rgb(247, 232, 244)", construction + " uses approved #f7e8f4 live heading ink");
+        assert.equal(await allTasks.evaluate(element => getComputedStyle(element).color), "rgb(247, 232, 244)", construction + " uses approved #f7e8f4 live action ink");
+        assert.equal(await ordinal.evaluate(element => getComputedStyle(element).color), "rgb(219, 195, 223)", construction + " uses approved #dbc3df muted Task ordinal ink");
+        await allTasks.focus(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+        assert.deepEqual(await allTasks.evaluate(element => {
+          const style = getComputedStyle(element);
+          return {focusVisible: element.matches(":focus-visible"), outline: style.outline, outlineColor: style.outlineColor};
+        }), {focusVisible: true, outline: "rgb(203, 185, 207) solid 3px", outlineColor: "rgb(203, 185, 207)"}, construction + " renders the approved #cbb9cf native keyboard ring");
+        const railPaint = await header.locator("[data-khorne-rail]").evaluate(element => getComputedStyle(element).backgroundImage);
+        assert.match(railPaint, /panel-strip-metal\.png/, construction + " keeps the shared support-rail artwork");
+        assert.match(railPaint, /rgba\(167, 94, 145, 0\.16\).*rgba\(20, 15, 28, 0\.38\)/, construction + " exposes violet #a75e91 and plum #140f1c rail paint instead of bronze");
+      });
+    }
+    await t.test("retains the native focus affordance in forced colors", async () => {
+      for (const colorScheme of ["light", "dark"]) {
+        await page.emulateMedia({forcedColors: "active", colorScheme});
+        await allTasks.focus(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+        const colors = await allTasks.evaluate(element => {
+          const probe = document.createElement("span");
+          probe.style.cssText = "position:absolute;color:CanvasText;outline:3px solid Highlight;forced-color-adjust:none";
+          document.body.append(probe);
+          const expected = getComputedStyle(probe);
+          const actual = getComputedStyle(element);
+          const result = {
+            forcedColors: matchMedia("(forced-colors: active)").matches,
+            focusVisible: element.matches(":focus-visible"),
+            color: actual.color,
+            outlineColor: actual.outlineColor,
+            outlineStyle: actual.outlineStyle,
+            outlineWidth: actual.outlineWidth,
+            expectedColor: expected.color,
+            expectedOutlineColor: expected.outlineColor,
+          };
+          probe.remove();
+          return result;
+        });
+        assert.equal(colors.forcedColors, true, `forced-colors ${colorScheme} is active`);
+        assert.equal(colors.focusVisible, true, `forced-colors ${colorScheme} keeps keyboard-visible focus`);
+        assert.equal(colors.color, colors.expectedColor, `forced-colors ${colorScheme} resolves the real Slaanesh action to CanvasText`);
+        assert.equal(colors.outlineColor, colors.expectedOutlineColor, `forced-colors ${colorScheme} resolves the real Slaanesh keyboard ring to Highlight`);
+        assert.equal(colors.outlineStyle, "solid", `forced-colors ${colorScheme} retains a visible solid keyboard ring`);
+        assert.equal(colors.outlineWidth, "3px", `forced-colors ${colorScheme} retains the approved keyboard ring width`);
+      }
+      await page.emulateMedia({forcedColors: "none", colorScheme: "light"});
+    });
+    assertDiagnostics(diagnostics);
+  } finally { await page.emulateMedia({forcedColors: "none"}); await context.close(); await browser.close(); }
+});
+
+test("Slaanesh v146 workspace retains real controls across the approved 13-width envelope", {timeout: 180_000}, async t => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1600, height: 1000}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const widths = [320, 360, 430, 622, 623, 700, 834, 933, 1040, 1160, 1280, 1440, 1600];
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Slaanesh");
+    const workspaceContentEdges = () => page.evaluate(() => {
+      const visible = element => {
+        const style = getComputedStyle(element);
+        const box = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+      };
+      const workspace = document.querySelector("[data-cattasks-workspace]");
+      const content = [...document.querySelectorAll("[data-cattasks-workspace-content]")].filter(visible);
+      if (!workspace || content.length !== 1) throw new Error("expected one visible workspace content surface");
+      const owner = workspace.getBoundingClientRect(), surface = content[0].getBoundingClientRect();
+      return {owner: {left: owner.left, right: owner.right}, content: {left: surface.left, right: surface.right}};
+    });
+    const assertWorkspaceContentWidth = async (width, view) => {
+      const edges = await workspaceContentEdges();
+      assert.ok(
+        Math.abs(edges.content.left - edges.owner.left) <= 2 && Math.abs(edges.content.right - edges.owner.right) <= 2,
+        `${width}px Slaanesh ${view} uses the owning workspace inline width (got ${JSON.stringify(edges)})`,
+      );
+    };
+    for (const width of widths) {
+      await page.setViewportSize({width, height: 1000}); await nextPaint(page);
+      const header = page.locator("header[data-warhammer-variant='slaanesh'][data-v146-header][data-khorne-header='task']");
+      assert.equal(await header.count(), 1, `${width}px Slaanesh Task keeps one integrated v146 header`);
+      await assertWorkspaceContentWidth(width, "Task");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${width}px Slaanesh Task has no horizontal clipping`);
+      if (width === 1600) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/task\/background-desktop\.webp/, "Slaanesh Task uses its supplied desktop backdrop in the wide envelope");
+      if (width === 700) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/task\/background-tablet\.webp/, "Slaanesh Task uses its supplied tablet backdrop in the intermediate envelope");
+      if (width === 430) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='task']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/task\/background-mobile\.webp/, "Slaanesh Task uses its supplied mobile backdrop in the compact envelope");
+      const trigger = await themeTrigger(page);
+      const box = await trigger.boundingBox();
+      assert.ok(box && box.width >= 44 && box.height >= 44, `${width}px Slaanesh keeps its live theme control target`);
+    }
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    for (const width of widths) {
+      await page.setViewportSize({width, height: 1000}); await nextPaint(page);
+      const header = page.locator("header[data-warhammer-variant='slaanesh'][data-v146-header][data-khorne-header='catalogue']");
+      assert.equal(await header.count(), 1, `${width}px Slaanesh catalogue keeps one integrated v146 header`);
+      await assertWorkspaceContentWidth(width, "catalogue");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, `${width}px Slaanesh catalogue has no horizontal clipping`);
+      if (width === 1600) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/all-tasks\/background-desktop\.webp/, "Slaanesh catalogue uses its supplied desktop backdrop in the wide envelope");
+      if (width === 700) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/all-tasks\/background-tablet\.webp/, "Slaanesh catalogue uses its supplied tablet backdrop in the intermediate envelope");
+      if (width === 430) assert.match(await page.locator("[data-cattasks-theme='slaanesh'] [data-slaanesh-scene='all-tasks']").evaluate(element => getComputedStyle(element).backgroundImage), /slaanesh\/all-tasks\/background-mobile\.webp/, "Slaanesh catalogue uses its supplied mobile backdrop in the compact envelope");
+    }
+    await t.test("uses the 52px compact control at the actual tablet catalogue width", async () => {
+      await page.setViewportSize({width: 700, height: 1000}); await nextPaint(page);
+      const metrics = await compactFilterMetrics(page);
+      assert.ok(metrics.catalogueInlineSize > 480 && metrics.catalogueInlineSize <= 700, `700px viewport exposes the approved compact-tablet catalogue width (got ${metrics.catalogueInlineSize}px)`);
+      assert.equal(metrics.trigger.height, 52, "the real Slaanesh Filters trigger is 52px high at the compact-tablet catalogue width");
+    });
+    await t.test("uses the 54px compact control at the actual phone catalogue width", async () => {
+      await page.setViewportSize({width: 430, height: 1000}); await nextPaint(page);
+      const metrics = await compactFilterMetrics(page);
+      assert.ok(metrics.catalogueInlineSize <= 480, `430px viewport exposes the approved phone catalogue width (got ${metrics.catalogueInlineSize}px)`);
+      assert.equal(metrics.trigger.height, 54, "the real Slaanesh Filters trigger is 54px high at the phone catalogue width");
+    });
+    await t.test("uses the approved shared bracket art on the open compact control and body", async () => {
+      await page.setViewportSize({width: 430, height: 1000}); await nextPaint(page);
+      const compactFilters = page.getByRole("button", {name: "Filters", exact: true});
+      if (await compactFilters.getAttribute("aria-expanded") !== "true") await compactFilters.click();
+      const metrics = await compactFilterMetrics(page);
+      assert.ok(metrics.paths.includes("/cattasks/themes/shared/all-tasks/filter-brackets/filter-bar.png"), "the visible compact Filters surface uses the approved shared filter-bar art");
+      assert.ok(metrics.paths.includes("/cattasks/themes/shared/all-tasks/filter-brackets/surface.png"), "the visible open Filters body uses the approved shared surface art");
+    });
+    await page.setViewportSize({width: 700, height: 1000}); await nextPaint(page);
+    const filters = page.getByRole("button", {name: "Filters", exact: true});
+    if (await filters.isVisible() && await filters.getAttribute("aria-expanded") !== "true") await filters.click();
+    const radio = page.getByRole("radio", {name: "All topics", exact: true});
+    const label = await radio.evaluate(element => {
+      const target = element.closest("label") || document.querySelector(`label[for="${element.id}"]`);
+      const box = target?.getBoundingClientRect(); return box && {width: box.width, height: box.height};
+    });
+    assert.ok(label && label.width >= 44 && label.height >= 44, "Slaanesh compact Filters keeps its native radio label at least 44px");
+    await page.emulateMedia({forcedColors: "active"});
+    assert.notEqual(await radio.evaluate(element => getComputedStyle(element).appearance), "none", "forced-colors Slaanesh retains the native radio appearance");
+    await page.emulateMedia({forcedColors: "none"});
+    if (await filters.isVisible() && await filters.getAttribute("aria-expanded") === "true") await filters.click();
+    await page.setViewportSize({width: 430, height: 1000}); await nextPaint(page);
+    const compactFilters = page.getByRole("button", {name: "Filters", exact: true});
+    await compactFilters.focus(); await page.keyboard.press("Enter");
+    assert.equal(await compactFilters.getAttribute("aria-expanded"), "true", "430px Slaanesh Filters opens through the keyboard");
+    const compactOrder = await page.evaluate(() => {
+      const trigger = document.querySelector("button[aria-controls='khorne-task-filters']");
+      const filters = document.querySelector("[aria-label='Task filters']");
+      const list = document.querySelector("[aria-labelledby='taskListTitle']");
+      if (!trigger || !filters || !list) throw new Error("missing real compact catalogue controls");
+      return {
+        triggerBottom: trigger.getBoundingClientRect().bottom,
+        filtersTop: filters.getBoundingClientRect().top,
+        listTop: list.getBoundingClientRect().top,
+      };
+    });
+    assert.ok(
+      compactOrder.triggerBottom <= compactOrder.filtersTop + 1 && compactOrder.triggerBottom <= compactOrder.listTop + 1,
+      `430px compact Filters control precedes its opened panel and task list (got ${JSON.stringify(compactOrder)})`,
+    );
+    const compactSearch = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+    await compactSearch.fill("fixture 1");
+    assert.equal(await compactSearch.evaluate(element => document.activeElement === element), true, "the real compact Search keeps focus while its filter text is edited");
+    const activeFilters = page.locator("[aria-label='Task filters']").getByRole("status");
+    assert.equal(await activeFilters.count(), 1, "Slaanesh exposes one live summary for the active compact search");
+    assert.match(await activeFilters.innerText(), /Active filters: Search: fixture 1/, "the compact summary names the real active search rather than a decorative state");
+    await page.keyboard.press("Escape");
+    assert.equal(await compactFilters.getAttribute("aria-expanded"), "false", "Escape from focused Slaanesh Search closes compact Filters");
+    assert.equal(await compactFilters.evaluate(element => document.activeElement === element), true, "Escape returns focus to the compact Filters trigger");
+    assert.equal(await compactSearch.isVisible(), false, "collapsed Filters removes Search from the visible focusable body");
+    await page.keyboard.press("Enter");
+    assert.equal(await compactSearch.inputValue(), "fixture 1", "Slaanesh compact Filters retains its real search state while reopening");
+    await page.getByRole("button", {name: "Reset filters", exact: true}).click();
+    assert.equal(await compactSearch.inputValue(), "", "Reset filters clears the actual compact search value");
+    assert.equal(await activeFilters.count(), 0, "Reset filters removes the active-filter summary after restoring defaults");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Slaanesh collapsed Task uses the supplied recessed control at the actual 600px workspace threshold", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1100, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Slaanesh");
+    const workspace = page.locator("[data-cattasks-workspace]").first();
+    assert.equal(await workspace.count(), 1, "Slaanesh exposes one actual workspace for the recessed-control breakpoint");
+    const models = (await surface(page)).models;
+    await page.getByRole("button", {name: "Hide task", exact: true}).click();
+    const showTask = page.getByRole("button", {name: "Show task", exact: true});
+    await showTask.waitFor({state: "visible"});
+    const measure = async width => {
+      await workspace.evaluate((element, value) => {
+        element.style.width = `${value}px`;
+        element.style.maxWidth = `${value}px`;
+      }, width);
+      await nextPaint(page);
+      const exactWorkspaceWidth = await workspace.evaluate(element => element.getBoundingClientRect().width);
+      const control = await showTask.evaluate(element => {
+        const box = element.getBoundingClientRect();
+        const editor = document.querySelector("section[aria-labelledby='taskSolutionHeading']")?.getBoundingClientRect();
+        if (!editor) throw new Error("the visible Task editor is required for recessed-control placement");
+        const decorativeImages = [element, ...element.querySelectorAll("*")].flatMap(node => {
+          const css = getComputedStyle(node).backgroundImage;
+          const image = node instanceof HTMLImageElement ? (node.currentSrc || node.src) : "";
+          return [css, image].filter(Boolean);
+        });
+        return {
+          width: box.width,
+          height: box.height,
+          left: box.left,
+          right: box.right,
+          top: box.top,
+          bottom: box.bottom,
+          sources: decorativeImages,
+          editor: {left: editor.left, right: editor.right, top: editor.top, bottom: editor.bottom},
+        };
+      });
+      assert.equal(exactWorkspaceWidth, width, `the isolated workspace fixture holds the actual ${width}px CSS threshold`);
+      assert.equal(await showTask.getAttribute("aria-expanded"), "false", `the ${width}px recessed control truthfully reports its collapsed Task`);
+      assert.ok((await showTask.getAttribute("aria-controls")), `the ${width}px recessed control names the Task it restores`);
+      assert.match(control.sources.join(" "), /recessed.*violet|violet.*recessed/i, `the ${width}px control exposes the supplied violet recessed art through real CSS or DOM`);
+      return control;
+    };
+    const horizontal = await measure(600);
+    assert.ok(Math.abs(horizontal.width - 196) <= 1 && horizontal.width > horizontal.height, "600px keeps the 196px horizontal recessed control");
+    assert.match(horizontal.sources.join(" "), /recessed-mobile-violet\.png/i, "600px uses only the supplied horizontal recessed asset");
+    assert.ok(horizontal.bottom <= horizontal.editor.top + 2 && horizontal.right >= horizontal.editor.left - 2 && horizontal.left <= horizontal.editor.right + 2, "600px places the horizontal Task restore control in normal flow above the editor");
+    const halfway = await measure(600.5);
+    assert.ok(Math.abs(halfway.width - 52) <= 1 && halfway.height > halfway.width, "600.5px switches to the 52px vertical recessed control");
+    assert.match(halfway.sources.join(" "), /recessed-violet\.png/i, "600.5px switches to the supplied vertical recessed asset");
+    assert.ok(halfway.right <= halfway.editor.left + 2 && halfway.bottom >= halfway.editor.top - 2 && halfway.top <= halfway.editor.bottom + 2, "600.5px places the vertical Task restore control beside the editor");
+    const vertical = await measure(601);
+    assert.ok(Math.abs(vertical.width - 52) <= 1 && vertical.height > vertical.width, "601px retains the vertical recessed control");
+    assert.match(vertical.sources.join(" "), /recessed-violet\.png/i, "601px retains the supplied vertical recessed asset");
+    assert.ok(vertical.right <= vertical.editor.left + 2 && vertical.bottom >= vertical.editor.top - 2 && vertical.top <= vertical.editor.bottom + 2, "601px keeps the vertical Task restore control beside the editor");
+    await showTask.focus(); await page.keyboard.press("Enter");
+    await showTask.waitFor({state: "detached"});
+    const hideTask = page.getByRole("button", {name: "Hide task", exact: true});
+    await hideTask.waitFor({state: "visible"});
+    assert.equal(await hideTask.getAttribute("aria-expanded"), "true", "keyboard restoration exposes the actual expanded Task control");
+    assert.equal(await hideTask.getAttribute("aria-controls"), "taskPanelContent", "the expanded Task control names the panel it hides");
+    assert.equal(await hideTask.evaluate(element => document.activeElement === element), true, "keyboard restoration transfers focus to the actual Hide task control");
+    assert.deepEqual((await surface(page)).models, models, "collapsed Task restoration retains the existing Monaco model");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Slaanesh visual oracle reserves the workspace rail and keeps compact filters readable and reachable", {timeout: 120_000}, async t => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const referencePlum = "rgb(63, 33, 75)";
+  const contrastRatio = color => {
+    const channels = color.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
+    assert.equal(channels?.length, 3, `a rendered RGB foreground is available (got ${color})`);
+    const luminance = values => values.map(value => value / 255).map(value => value <= .03928 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+      .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+    const [first, second] = [luminance(channels), luminance(referencePlum.match(/\d+/g).map(Number))].sort((a, b) => b - a);
+    return (first + .05) / (second + .05);
+  };
+  const verifyRailBeforeWorkspace = async (mode, viewport, openFilters = false) => {
+    await page.setViewportSize(viewport); await nextPaint(page);
+    if (mode === "catalogue") {
+      const filters = page.getByRole("button", {name: "Filters", exact: true});
+      if (openFilters && await filters.getAttribute("aria-expanded") !== "true") {
+        await filters.focus(); await page.keyboard.press("Enter");
+      }
+      if (openFilters) assert.equal(await filters.getAttribute("aria-expanded"), "true", `${viewport.width}px actual Filters opens before measuring the live catalogue rail`);
+    }
+    const geometry = await page.evaluate(expectedMode => {
+      const visible = element => {
+        const style = getComputedStyle(element), box = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+      };
+      const header = document.querySelector(`header[data-v146-header][data-v146-mode='${expectedMode}'][data-warhammer-variant='slaanesh']`);
+      if (!header || !visible(header)) throw new Error(`missing visible Slaanesh ${expectedMode} header`);
+      const rail = header.querySelector("[data-khorne-rail]");
+      if (!rail || !visible(rail)) throw new Error(`missing painted Slaanesh ${expectedMode} support rail`);
+      const workspace = [...document.querySelectorAll("[data-cattasks-workspace-content]")].find(visible);
+      if (!workspace) throw new Error(`missing visible ${expectedMode} workspace content`);
+      const railBox = rail.getBoundingClientRect(), workspaceBox = workspace.getBoundingClientRect();
+      return {rail: {top: railBox.top, bottom: railBox.bottom, height: railBox.height}, workspace: {top: workspaceBox.top, height: workspaceBox.height}};
+    }, mode);
+    assert.ok(geometry.rail.height > 0, `${viewport.width}px ${mode} exposes a real painted support rail`);
+    assert.ok(geometry.workspace.height > 0, `${viewport.width}px ${mode} exposes real workspace content`);
+    assert.ok(geometry.rail.bottom <= geometry.workspace.top + 1, `${viewport.width}px ${mode} support rail ends before its visible workspace begins (rail ${geometry.rail.top}..${geometry.rail.bottom}; workspace starts ${geometry.workspace.top})`);
+  };
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Slaanesh");
+    await t.test("keeps the Task rail outside live workspace at desktop and phone widths", async () => {
+      await verifyRailBeforeWorkspace("task", {width: 1440, height: 900});
+      await verifyRailBeforeWorkspace("task", {width: 430, height: 932});
+    });
+    await page.setViewportSize({width: 1440, height: 900}); await nextPaint(page);
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    await t.test("keeps the All tasks rail outside live workspace, including open phone Filters", async () => {
+      await verifyRailBeforeWorkspace("catalogue", {width: 1440, height: 900});
+      await verifyRailBeforeWorkspace("catalogue", {width: 430, height: 932}, true);
+    });
+    await t.test("uses readable Slaanesh ink for real filter and import labels", async () => {
+      await page.setViewportSize({width: 430, height: 932}); await nextPaint(page);
+      const filters = page.getByRole("button", {name: "Filters", exact: true});
+      if (await filters.getAttribute("aria-expanded") !== "true") await filters.click();
+      assert.equal(await filters.getAttribute("aria-expanded"), "true", "the real phone Filters panel is open before its readable labels are measured");
+      const paints = await page.evaluate(() => {
+        const panel = document.querySelector("[aria-label='Task filters']");
+        if (!panel) throw new Error("missing actual Task filters panel");
+        const visibleExact = text => [...panel.querySelectorAll("*")].find(element => {
+          const box = element.getBoundingClientRect(), style = getComputedStyle(element);
+          return element.children.length === 0 && element.textContent?.trim() === text && style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+        });
+        const labels = ["Difficulty", "Topics", "Import tasks JSON"].map(text => {
+          const element = visibleExact(text);
+          if (!element) throw new Error(`missing visible real ${text} label`);
+          return {text, color: getComputedStyle(element).color};
+        });
+        return {panelPaint: getComputedStyle(panel).backgroundImage, labels};
+      });
+      assert.match(paints.panelPaint, /linear-gradient/i, "the visible normal-color Slaanesh filters expose their real gradient paint rather than a forced-colors Canvas fallback");
+      assert.match(paints.panelPaint, /(?:rgb\(63, 33, 75\)|rgba\(63, 33, 75, 0\.84\))/i, "the first actual Slaanesh panel gradient stop is the approved plum reference fill");
+      for (const label of paints.labels) assert.ok(contrastRatio(label.color) >= 4.5, `${label.text} has at least 4.5:1 rendered contrast against the approved plum panel fill (got ${label.color})`);
+    });
+    await t.test("keeps actual difficulty choices 44px, unclipped, and stateful", async () => {
+      await page.setViewportSize({width: 430, height: 932}); await nextPaint(page);
+      const filters = page.getByRole("button", {name: "Filters", exact: true});
+      if (await filters.getAttribute("aria-expanded") !== "true") await filters.click();
+      for (const name of ["Easy", "Medium", "Hard"]) {
+        const choice = page.locator("[aria-label='Task filters']").getByRole("button", {name, exact: true});
+        assert.equal(await choice.count(), 1, `${name} is one real difficulty button`);
+        const before = await choice.getAttribute("aria-pressed");
+        await choice.click();
+        assert.notEqual(await choice.getAttribute("aria-pressed"), before, `${name} changes the live difficulty selection`);
+        await choice.click();
+        assert.equal(await choice.getAttribute("aria-pressed"), before, `${name} can restore its live difficulty selection`);
+        const metrics = await choice.evaluate((button, label) => {
+          const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+          for (let node = walker.nextNode(); node; node = walker.nextNode()) if (node.textContent.trim() === label) {
+            const range = document.createRange(); range.selectNodeContents(node);
+            const text = range.getBoundingClientRect(), hit = button.getBoundingClientRect();
+            return {hit: {top: hit.top, bottom: hit.bottom, height: hit.height}, text: {top: text.top, bottom: text.bottom, height: text.height}};
+          }
+          throw new Error(`missing live ${label} text node`);
+        }, name);
+        assert.ok(metrics.hit.height >= 44, `${name} has a compact real hit target of at least 44px (got ${metrics.hit.height}px)`);
+        assert.ok(metrics.text.height > 0 && metrics.text.top >= metrics.hit.top - .5 && metrics.text.bottom <= metrics.hit.bottom + .5, `${name}'s full rendered label remains inside its painted hit box without top clipping`);
+      }
+    });
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("inline theme boot paints persisted Dark, Khorne, Nurgle, and Slaanesh before blocked React bundles hydrate", {timeout: 90_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const valid = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const khorne = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const nurgle = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const slaanesh = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const corrupt = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const unavailable = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   try {
     await valid.addInitScript(([key]) => localStorage.setItem(key, "dark"), [themeStorageKey]);
     await khorne.addInitScript(([key]) => localStorage.setItem(key, "khorne"), [themeStorageKey]);
     await nurgle.addInitScript(([key]) => localStorage.setItem(key, "nurgle"), [themeStorageKey]);
+    await slaanesh.addInitScript(([key]) => localStorage.setItem(key, "slaanesh"), [themeStorageKey]);
     await corrupt.addInitScript(([key]) => localStorage.setItem(key, "corrupt"), [themeStorageKey]);
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
-    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [nurgle, "nurgle", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
+    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [nurgle, "nurgle", null], [slaanesh, "slaanesh", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
       let bundles = 0;
       const loadedAssets = [];
       await context.route("**/_next/static/**/*.js", route => { bundles += 1; return route.fulfill({contentType: "application/javascript", body: ""}); });
@@ -1096,21 +1731,31 @@ test("inline theme boot paints persisted Dark, Khorne, and Nurgle before blocked
       assert.equal(response?.status(), 200, "the real server response starts before React bundles are released");
       const serverHtml = await response?.text();
       assert.match(serverHtml || "", /cattasks-theme/, "the real server HTML contains the inline theme boot contract");
-      await page.locator(`[data-cattasks-theme='${expectedTheme}']`).waitFor();
+      assert.equal(await page.locator(`[data-cattasks-theme='${expectedTheme}']`).count(), 1, `inline boot synchronously exposes persisted ${expectedTheme} before React can hydrate`);
+      const capybaraHeader = page.locator("header[data-cattasks-header='capybara']");
+      const lightThemeChooser = page.locator("button[aria-label='Choose theme (current: Light)']");
+      if (expectedTheme === "slaanesh") assert.equal(await capybaraHeader.isVisible(), false, "persisted Slaanesh hides the actual Capybara header before blocked Next bundles can hydrate");
+      if (expectedTheme === "slaanesh") assert.equal(await lightThemeChooser.isVisible(), false, "persisted Slaanesh hides the old SSR Light theme chooser before blocked Next bundles can hydrate");
+      if (expectedTheme === "light") {
+        assert.equal(await capybaraHeader.count(), 1, "Light fallback retains one actual Capybara header before blocked Next bundles can hydrate");
+        assert.equal(await capybaraHeader.isVisible(), true, "Light fallback visibly retains the actual Capybara header before blocked Next bundles can hydrate");
+        assert.equal(await lightThemeChooser.count(), 1, "Light fallback retains one actual Light theme chooser before blocked Next bundles can hydrate");
+        assert.equal(await lightThemeChooser.isVisible(), true, "Light fallback visibly retains the actual Light theme chooser before blocked Next bundles can hydrate");
+      }
       const outerPaint = await page.locator("[class*='background']").evaluate(element => getComputedStyle(element).backgroundColor);
       if (expectedPage) assert.equal(outerPaint, expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
       else {
         assert.notEqual(outerPaint, light.page, `${expectedTheme} outer page is painted before React can hydrate`);
-        const sceneSelector = expectedTheme === "nurgle" ? "[data-cattasks-theme='nurgle'] [data-nurgle-scene='task']" : "[data-khorne-scene='task']";
+        const sceneSelector = `[data-cattasks-theme='${expectedTheme}'] [data-${expectedTheme}-scene='task']`;
         assert.match(await page.locator(sceneSelector).evaluate(element => getComputedStyle(element).backgroundImage), new RegExp(`cattasks/themes/${expectedTheme}/`), `${expectedTheme} own scene is painted before React can hydrate`);
         assert.ok(loadedAssets.includes(`/cattasks/themes/${expectedTheme}/task/background-desktop.webp`), `the persisted ${expectedTheme} page loads its own scene before React hydration`);
         assert.ok(!loadedAssets.includes("/cattasks/desktop-meadow.png"), `the persisted ${expectedTheme} page does not load the Light desktop meadow`);
-        if (expectedTheme === "nurgle") assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, "prehydrated Nurgle leaves no painted legacy shelf or mascot");
+        if (expectedTheme === "nurgle" || expectedTheme === "slaanesh") assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, `prehydrated ${expectedTheme} leaves no painted legacy shelf or mascot`);
       }
       assert.ok(bundles > 0, "all external Next static JavaScript bundles were intercepted before React could hydrate");
       await page.close();
     }
-  } finally { await valid.close(); await khorne.close(); await nurgle.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
+  } finally { await valid.close(); await khorne.close(); await nurgle.close(); await slaanesh.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
 
 test("Bad or unavailable storage falls back safely; narrow All tasks scrolls without clipping", {timeout: 60_000}, async () => {

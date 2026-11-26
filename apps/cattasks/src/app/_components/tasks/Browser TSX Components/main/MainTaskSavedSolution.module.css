@@ -96,3 +96,14 @@
 :global([data-khorne-workspace]) :is(.panel h2, .empty, .status) {
     color: #e5e0d4;
 }
+
+:global([data-cattasks-theme='slaanesh']) .code { background: #101517; color: #f7e8f4; }
+:global([data-cattasks-theme='slaanesh']) .panel .restore {
+    --action-face-top: #352d39;
+    --action-face-bottom: #20152b;
+    --action-hover-top: #4a3550;
+    --action-hover-bottom: #2a2031;
+    --action-border: #70606e;
+    --action-hover-border: #dba6de;
+    --action-ink: #f7e8f4;
+}

@@ -4,9 +4,10 @@ import {useLayoutEffect, useMemo, useRef, type CSSProperties, type RefObject} fr
 import {getWorkspaceHeaderLayouts} from './pure/workspace/header-placement.mjs';
 import {renderHeaderArtwork, resolveHeaderAsset} from './header-artwork';
 import {getIndustrialTaskTextLayout} from './themed-layout';
+import type {WarhammerTheme} from '../../taskDashboard/CatTasksTheme';
 
 export type V146Construction = 'industrial' | 'gothic' | 'armor';
-export type V146Theme = 'khorne' | 'nurgle';
+export type V146Theme = WarhammerTheme;
 
 type Props = {
     readonly width: number;
@@ -27,9 +28,9 @@ type Rect = readonly [number, number, number, number];
 const rectStyle = (rect: Rect, offset: number): CSSProperties => ({position: 'absolute', left: rect[0], top: rect[1] + offset, width: rect[2], height: rect[3]});
 const supportRailStyle = (asset: string): CSSProperties => ({
     position: 'absolute', zIndex: -1, top: 'calc(var(--workspace-header-slot, 0px) - 15px)', right: 0, left: 0, height: 15, pointerEvents: 'none',
-    border: '1px solid rgb(183 151 92 / .46)', borderRadius: '3px 3px 0 0',
-    background: `linear-gradient(180deg, rgb(244 215 149 / .1), rgb(0 0 0 / .27)), url(${asset}) center 50% / calc(100% + 32px) 1053% no-repeat, #231e16`,
-    boxShadow: 'inset 0 1px rgb(255 237 177 / .32), inset 0 -3px rgb(0 0 0 / .56), 0 -1px 4px rgb(0 0 0 / .38)'
+    border: '1px solid var(--v146-support-rail-border, rgb(183 151 92 / .46))', borderRadius: '3px 3px 0 0',
+    background: `linear-gradient(180deg, var(--v146-support-rail-glow, rgb(244 215 149 / .1)), var(--v146-support-rail-shade, rgb(0 0 0 / .27))), url(${asset}) center 50% / calc(100% + 32px) 1053% no-repeat, var(--v146-support-rail-base, #231e16)`,
+    boxShadow: 'inset 0 1px var(--v146-support-rail-highlight, rgb(255 237 177 / .32)), inset 0 -3px var(--v146-support-rail-shadow, rgb(0 0 0 / .56)), 0 -1px 4px rgb(0 0 0 / .38)'
 });
 /** Decorative SVG receives only enum/numeric data. All user-visible text stays React text. */
 export default function V146Header(props: Props) {
@@ -117,6 +118,6 @@ export default function V146Header(props: Props) {
         {props.mode === 'task' && previous && <button type="button" aria-label="Select previous task" disabled={props.previousDisabled} aria-disabled={props.previousDisabled} onClick={props.onPrevious} style={rectStyle(previous, offset)}>‹</button>}
         {props.mode === 'task' && next && <button type="button" aria-label="Select next task" disabled={props.nextDisabled} aria-disabled={props.nextDisabled} onClick={props.onNext} style={rectStyle(next, offset)}>›</button>}
         {titleRect && <div ref={titleBoxRef} style={rectStyle(titleRect, offset)}><h1 ref={titleRef} title={props.mode === 'task' ? props.title : undefined} style={{position: 'absolute', top: '50%', right: 0, left: 0, transform: 'translateY(-50%)', margin: 0, textAlign: 'center', inlineSize: '100%', fontSize: `var(--header-title-fitted-size, ${titleFontSize}px)`, lineHeight: titleLineHeight, overflowWrap: 'anywhere'}}>{props.mode === 'task' ? props.title : 'All tasks'}</h1></div>}
-        {props.mode === 'task' && numberRect && <span aria-hidden="true" style={{...rectStyle(numberRect, offset), display: 'grid', placeItems: 'center'}}>TASK {String(props.taskNumber ?? 0).padStart(2, '0')}</span>}
+        {props.mode === 'task' && numberRect && <span data-v146-task-number="" aria-hidden="true" style={{...rectStyle(numberRect, offset), display: 'grid', placeItems: 'center'}}>TASK {String(props.taskNumber ?? 0).padStart(2, '0')}</span>}
     </header>;
 }

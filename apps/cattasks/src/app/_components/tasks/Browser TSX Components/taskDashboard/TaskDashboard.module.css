@@ -105,6 +105,24 @@
     background: #151a10;
 }
 
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] {
+    --khorne-focus: #edc9ef;
+    --khorne-selection: #512858;
+    --cattasks-ink: #f7eaf7;
+    --cattasks-ink-strong: #f7eaf7;
+    --cattasks-muted-ink: #d3bad5;
+    --cattasks-panel: #2b1935;
+    --cattasks-panel-subtle: #3f214b;
+    --cattasks-border: #a96cac;
+    --cattasks-hover: rgb(219 166 222 / .18);
+    --cattasks-selected: #512858;
+    --cattasks-accent: #dba6de;
+    --cattasks-catalogue-surface: #20152b;
+    --cattasks-catalogue-border: #a96cac;
+    --cattasks-control-text: #f7eaf7;
+    background: #20152b;
+}
+
 .taskDashboardRoot[data-cattasks-theme='nurgle'][data-cattasks-page='task'] {
     --nurgle-scene-background: url('/cattasks/themes/nurgle/task/background-mobile.webp');
 }
@@ -150,8 +168,19 @@
     margin-inline: auto;
 }
 
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] .workspaceFrame {
+    container: cattasks-workspace / inline-size;
+    width: min(100%, var(--cattasks-workspace-width));
+    margin-inline: auto;
+}
+
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] :is(.decorationLayer, .viewportDecoration, .shelf, .shelfDecoration) { display: none; }
+
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] :global(header[data-cattasks-header='capybara']) { visibility: hidden; }
+
 .taskDashboardRoot[data-cattasks-theme='khorne'] .workspaceFrame > .headerContainer,
-.taskDashboardRoot[data-cattasks-theme='nurgle'] .workspaceFrame > .headerContainer {
+.taskDashboardRoot[data-cattasks-theme='nurgle'] .workspaceFrame > .headerContainer,
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] .workspaceFrame > .headerContainer {
     min-height: var(--workspace-header-slot, 168px);
     height: auto;
 }
@@ -161,7 +190,7 @@
 }
 
 @container cattasks-workspace (max-width: 800px) {
-    .taskDashboardRoot:not([data-cattasks-theme='khorne']):not([data-cattasks-theme='nurgle']) .workspaceFrame > .headerContainer {
+    .taskDashboardRoot:not([data-cattasks-theme='khorne']):not([data-cattasks-theme='nurgle']):not([data-cattasks-theme='slaanesh']) .workspaceFrame > .headerContainer {
         min-height: 146px;
     }
 }
@@ -577,6 +606,60 @@
     object-fit: contain;
     pointer-events: none;
     user-select: none;
+}
+
+.slaaneshScene {
+    display: none;
+    position: fixed;
+    z-index: 0;
+    inset: 0;
+    pointer-events: none;
+    background: #20152b center / cover no-repeat;
+    background-image: var(--slaanesh-scene-background);
+}
+
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshScene { display: block; }
+.taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='task'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/task/background-mobile.webp'); }
+.taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='all-tasks'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/all-tasks/background-mobile.webp'); }
+.slaaneshFigureStage,
+.slaaneshFigure { display: none; }
+.slaaneshFigureArt { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+@media (min-width: 601px) {
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='task'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/task/background-tablet.webp'); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='all-tasks'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/all-tasks/background-tablet.webp'); }
+}
+
+@media (min-width: 1151px) {
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='task'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/task/background-desktop.webp'); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'][data-cattasks-page='all-tasks'] { --slaanesh-scene-background: url('/cattasks/themes/slaanesh/all-tasks/background-desktop.webp'); }
+}
+
+@media (min-width: 601px) and (width < 2200px), (min-width: 601px) and (height < 740px) {
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshFigureStage { position: relative; z-index: 1; display: block; width: 100%; height: clamp(198px, 19vw, 264px); margin: 12px auto 0; overflow: clip; pointer-events: none; background: #20152b center bottom / cover no-repeat var(--slaanesh-scene-background); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshFigure { position: absolute; display: block; bottom: 0; }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='task-marine'] { left: calc(50% - clamp(196px, 18vw, 250px)); width: clamp(142px, 13.5vw, 190px); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='task-daemon'] { left: calc(50% + clamp(18px, 3vw, 54px)); width: clamp(156px, 15vw, 214px); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-marine'] { right: calc(50% + 24px); width: clamp(142px, 13.5vw, 190px); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-daemon'] { left: calc(50% + 24px); width: clamp(152px, 14.5vw, 204px); }
+}
+
+@media (min-width: 2200px) and (min-height: 740px) {
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] { --slaanesh-side-gutter: max(0px, calc((100vw - var(--cattasks-workspace-width)) / 2)); --slaanesh-ground-inset: max(20px, calc(20vh - 212px)); --slaanesh-side-figure-width: min(460px, calc(var(--slaanesh-side-gutter) + 11px)); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshFigureStage { position: fixed; z-index: 2; inset: 0; display: block; pointer-events: none; user-select: none; }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshFigure { position: absolute; display: block; bottom: var(--slaanesh-ground-inset); pointer-events: none; width: var(--slaanesh-side-figure-width); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='task-marine'], .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-marine'] { left: calc(var(--slaanesh-side-gutter) - var(--slaanesh-side-figure-width) + 11px); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='task-daemon'], .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-daemon'] { left: calc(100% - var(--slaanesh-side-gutter) - 11px); }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-marine'][data-slaanesh-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% var(--slaanesh-catalogue-clip-top), var(--slaanesh-catalogue-clip-edge) var(--slaanesh-catalogue-clip-top), var(--slaanesh-catalogue-clip-edge) var(--slaanesh-catalogue-clip-bottom), 100% var(--slaanesh-catalogue-clip-bottom), 100% 100%, 0 100%);
+    }
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-slaanesh-figure='catalogue-daemon'][data-slaanesh-catalogue-clipped='true'] {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 var(--slaanesh-catalogue-clip-bottom), var(--slaanesh-catalogue-clip-edge) var(--slaanesh-catalogue-clip-bottom), var(--slaanesh-catalogue-clip-edge) var(--slaanesh-catalogue-clip-top), 0 var(--slaanesh-catalogue-clip-top));
+    }
+}
+
+@media (max-width: 600px) {
+    .taskDashboardRoot[data-cattasks-theme='slaanesh'] .slaaneshFigureStage { display: none; }
 }
 
 .taskDashboardRoot[data-cattasks-theme='khorne'] .shelf {

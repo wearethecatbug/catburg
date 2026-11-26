@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState, type KeyboardEvent} from 'react';
 import {TASK_TOPICS, type TaskProgressStatus, type TaskTopic} from '../../catalog/taskCatalogueRows';
 import type {TaskDifficulty} from '../../catalog/taskCatalog';
 import {useTaskContext} from '../../context/TaskProvider';
@@ -69,6 +69,7 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
     const [filtersOpen, setFiltersOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
     const taskListRef = useRef<HTMLElement>(null);
+    const filtersToggleRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
         if (isOpen && !window.matchMedia('(max-width: 639px)').matches) {
@@ -90,7 +91,7 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
 
     const allDifficultiesSelected = difficultyFilters.every(difficulty => selectedDifficulties.has(difficulty));
     const useV3Controls = isWarhammerTheme(theme);
-    const controlsTheme = theme === 'nurgle' ? 'green' : 'ember';
+    const controlsTheme = theme === 'nurgle' ? 'green' : theme === 'slaanesh' ? 'violet' : 'ember';
 
     const toggleDifficulty = (difficulty: TaskDifficulty) => {
         setSelectedDifficulties(current => {
@@ -106,6 +107,26 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
         if (allDifficultiesSelected) return;
         setSelectedDifficulties(new Set(difficultyFilters));
         setPage(1);
+    };
+    const resetFilters = () => {
+        setQuery('');
+        setTopic('All topics');
+        setStatus('All statuses');
+        setSelectedDifficulties(new Set(difficultyFilters));
+        setPage(1);
+    };
+    const activeFilterSummary = [
+        query.trim() ? `Search: ${query.trim()}` : null,
+        topic !== 'All topics' ? `Topic: ${topic}` : null,
+        status !== 'All statuses' ? `Status: ${status}` : null,
+        !allDifficultiesSelected ? `Difficulty: ${selectedDifficulties.size === 0 ? 'none' : Array.from(selectedDifficulties).join(', ')}` : null,
+    ].filter((value): value is string => value !== null);
+    const closeCompactFiltersOnEscape = (event: KeyboardEvent<HTMLElement>) => {
+        if (theme !== 'slaanesh' || !filtersOpen || event.key !== 'Escape' || !filtersToggleRef.current || filtersToggleRef.current.offsetParent === null) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setFiltersOpen(false);
+        filtersToggleRef.current.focus({preventScroll: true});
     };
 
     const visibleRows = useMemo(() => {
@@ -168,16 +189,19 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
             data-cattasks-workspace-content=""
             data-khorne-catalogue={useV3Controls ? '' : undefined}
             data-khorne-workspace={useV3Controls ? '' : undefined}
+            onKeyDownCapture={closeCompactFiltersOnEscape}
         >
             <div className={`${styles.catalogueLayout} ${useV3Controls ? 'ct-controls' : ''}`} data-theme={useV3Controls ? controlsTheme : undefined}>
             <button
                 type="button"
+                ref={filtersToggleRef}
                 className={styles.filtersToggle}
                 aria-expanded={filtersOpen}
                 aria-controls="khorne-task-filters"
                 onClick={() => setFiltersOpen(open => !open)}
             >
-                Filters <span aria-hidden="true">⌄</span>
+                <span className={styles.filtersToggleLabel}>Filters</span>
+                <span className={styles.filtersToggleArrow} aria-hidden="true">⌄</span>
             </button>
             <aside
                 id="khorne-task-filters"
@@ -293,6 +317,10 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
                         </label>
                     ))}
                 </fieldset>
+                {theme === 'slaanesh' && activeFilterSummary.length > 0 && <div className={styles.filterSummary} role="status">
+                    <span>Active filters: {activeFilterSummary.join('; ')}</span>
+                    <button type="button" onClick={resetFilters}>Reset filters</button>
+                </div>}
             </aside>
             <section className={styles.taskList} aria-labelledby="taskListTitle" ref={taskListRef} tabIndex={-1}>
                 <h2 id="taskListTitle" className={styles.visuallyHidden}>Task list</h2>

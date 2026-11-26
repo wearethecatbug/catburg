@@ -448,4 +448,24 @@
         --action-border: #d79678;
         --action-hover-border: #edc0a8;
     }
+
+    :global([data-cattasks-theme='slaanesh']) .button[data-variant='run'] {
+        --action-face-top: #333936;
+        --action-face-bottom: #1b211f;
+        --action-hover-top: #414945;
+        --action-hover-bottom: #252d2a;
+        --action-border: #837b65;
+        --action-hover-border: #c8b982;
+        --action-ink: #f7e8f4;
+    }
+
+    :global([data-cattasks-theme='slaanesh']) .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #8e3d62;
+        --action-face-bottom: #642741;
+        --action-hover-top: #a54a72;
+        --action-hover-bottom: #742d4c;
+        --action-border: #c990b0;
+        --action-hover-border: #e3bbd2;
+        --action-ink: #fff8f5;
+    }
 }

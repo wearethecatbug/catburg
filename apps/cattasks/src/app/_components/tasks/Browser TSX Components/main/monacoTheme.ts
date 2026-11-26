@@ -6,7 +6,7 @@ const configuredMonacoInstances = new WeakSet<object>();
 export const getMonacoThemeName = (theme: CatTasksTheme): string => theme === 'dark'
     ? 'catTasksDark'
     : theme === 'khorne' ? 'catTasksKhorne'
-        : theme === 'nurgle' ? 'catTasksNurgle' : 'catTasksLight';
+        : theme === 'nurgle' ? 'catTasksNurgle' : theme === 'slaanesh' ? 'catTasksSlaanesh' : 'catTasksLight';
 
 export function defineCatTasksThemes(monaco: Monaco): void {
     if (configuredMonacoInstances.has(monaco)) return;
@@ -85,6 +85,17 @@ export function defineCatTasksThemes(monaco: Monaco): void {
             'scrollbarSlider.background': '#5D654088',
             'scrollbarSlider.hoverBackground': '#9DB66Acc',
             'scrollbarSlider.activeBackground': '#EEE8D7',
+        },
+    });
+    monaco.editor.defineTheme('catTasksSlaanesh', {
+        base: 'vs-dark', inherit: true, rules: [],
+        colors: {
+            'editor.background': '#101517', 'editor.foreground': '#F7EAF7',
+            'editorLineNumber.foreground': '#AC8AA9', 'editorLineNumber.activeForeground': '#F7EAF7',
+            'editor.selectionBackground': '#6D356D', 'editor.inactiveSelectionBackground': '#6D356D88',
+            'editorCursor.foreground': '#EDC9EF', 'editorIndentGuide.background1': '#4A3156',
+            'editorIndentGuide.activeBackground1': '#DBA6DE', 'scrollbarSlider.background': '#8F579188',
+            'scrollbarSlider.hoverBackground': '#DBA6DECC', 'scrollbarSlider.activeBackground': '#F7EAF7',
         },
     });
 }
