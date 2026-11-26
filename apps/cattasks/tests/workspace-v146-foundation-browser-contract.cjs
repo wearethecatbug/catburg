@@ -200,6 +200,13 @@ async function assertDiagnostics(diagnostics) {
   assert.deepEqual(diagnostics.catalogRequests, [`GET ${new URL("/task-catalog.v1.json", baseUrl).href}`]);
 }
 
+async function waitForFocus(page, locator, message) {
+  const element = await locator.elementHandle();
+  assert.ok(element, `${message}: focus target exists`);
+  await page.waitForFunction(node => document.activeElement === node, element, {timeout: 5_000});
+  assert.equal(await locator.evaluate(node => node === document.activeElement), true, message);
+}
+
 test("v146 foundation measures Task and All tasks from the owning container at every published width", {timeout: 180_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const context = await browser.newContext({viewport: {width: 1800, height: 1100}});
@@ -304,6 +311,46 @@ test("v146 foundation fits measured titles before shortening and preserves patho
       near(pathologicalFrame.header.bottom, metricFrame.header.bottom, `${theme} pathological title remains in the fixed header slot`, 1);
       near(pathologicalFrame.header.bottom, shortFrame.header.bottom, `${theme} pathological title preserves the short-title header boundary`, 1);
       near(pathologicalFrame.content.top, shortFrame.content.top, `${theme} pathological title preserves the short-title content start`, 1);
+    }
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("v146 foundation restores the real catalogue opener before a second keyboard reopen", {timeout: 90_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1200, height: 920}});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    for (const theme of ["Khorne", "Light"]) {
+      await chooseTheme(page, theme);
+      const opener = page.getByRole("button", {name: "All tasks", exact: true});
+      await opener.focus();
+      await waitForFocus(page, opener, `${theme} starts from the real All tasks opener`);
+      await page.keyboard.press("Enter");
+      const firstSearch = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+      await firstSearch.waitFor({state: "visible"});
+      await waitForFocus(page, firstSearch, `${theme} first keyboard catalogue open focuses its searchbox`);
+      await firstSearch.fill("short");
+      const firstNotStarted = page.getByRole("radio", {name: "Not started", exact: true});
+      await firstNotStarted.check();
+      const back = page.getByRole("button", {name: "Back to task", exact: true});
+      await back.focus();
+      await waitForFocus(page, back, `${theme} Back to task is the real keyboard return control`);
+      await page.keyboard.press("Enter");
+      const restoredOpener = page.getByRole("button", {name: "All tasks", exact: true});
+      await restoredOpener.waitFor({state: "visible"});
+      await waitForFocus(page, restoredOpener, `${theme} Back to task restores focus to its All tasks opener`);
+      await page.keyboard.press("Enter");
+      const secondSearch = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+      await secondSearch.waitFor({state: "visible"});
+      await waitForFocus(page, secondSearch, `${theme} second keyboard catalogue open focuses its current searchbox`);
+      assert.equal(await secondSearch.inputValue(), "short", `${theme} second catalogue owner retains the first query`);
+      assert.equal(await page.getByRole("radio", {name: "Not started", exact: true}).isChecked(), true, `${theme} second catalogue owner retains the selected filter`);
+      const secondBack = page.getByRole("button", {name: "Back to task", exact: true});
+      await secondBack.focus();
+      await page.keyboard.press("Enter");
+      await restoredOpener.waitFor({state: "visible"});
     }
     assertDiagnostics(diagnostics);
   } finally { await context.close(); await browser.close(); }

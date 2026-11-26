@@ -64,7 +64,7 @@ export function KhorneDashboardHeader({className, isAllTasksOpen, onAllTasks, on
     const hasTasks = tasks.length > 0;
     const selectedIndex = selectedTask ? tasks.findIndex(task => task.id === selectedTask.id) : -1;
     const previousDisabled = selectedIndex <= 0;
-    const nextDisabled = selectedIndex < 0 || selectedIndex >= tasks.length - 1;
+    const nextDisabled = !hasTasks || selectedIndex >= tasks.length - 1;
     const title = selectedTask
         ? selectedTask.title
         : catalogError

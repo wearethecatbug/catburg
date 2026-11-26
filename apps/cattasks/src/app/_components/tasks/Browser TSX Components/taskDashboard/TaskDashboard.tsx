@@ -232,7 +232,7 @@ export default function TaskDashboard() {
                     </div>}
                     {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
                     <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
-                    {hasVisitedAllTasks && <div className={styles.catalogueView} hidden={!isAllTasksOpen}><AllTasks onBack={returnToTask}/></div>}
+                    {hasVisitedAllTasks && <div className={styles.catalogueView} hidden={!isAllTasksOpen}><AllTasks onBack={returnToTask} isOpen={isAllTasksOpen}/></div>}
                 </div>
                 <Footer className={styles.footerContainer}></Footer>
                 {theme === 'khorne' && <div className={styles.khorneLowerScene} data-khorne-scene-layout="lower" aria-hidden="true">

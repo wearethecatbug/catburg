@@ -824,6 +824,21 @@ test("an external collision reread quarantines a previously selected custom work
     assert.equal(await page.getByRole("button", {name: "Test Code"}).isDisabled(), true, "a stale custom workspace never rebinds after collision reread");
     assert.equal(await page.getByRole("button", {name: "Run Code"}).isDisabled(), true, "collision reread leaves execution unavailable without a selected valid task");
     assert.equal(await outputText(page, "Run code or tests to see output."), "Run code or tests to see output.", "collision reread clears stale custom output ownership while preserving the protected editor shell");
+    const themeToggle = page.getByRole("button", {name: /Choose theme.*current:/i});
+    await themeToggle.click();
+    await page.getByRole("group", {name: "Themes", exact: true}).getByRole("button", {name: "Khorne", exact: true}).click();
+    await page.locator("[data-cattasks-theme='khorne']").waitFor({state: "visible"});
+    await page.getByRole("heading", {name: "No task selected.", exact: true}).waitFor({state: "visible"});
+    const previous = page.getByRole("button", {name: "Select previous task", exact: true});
+    const next = page.getByRole("button", {name: "Select next task", exact: true});
+    assert.equal(await previous.isDisabled(), true, "Khorne keeps Previous disabled while quarantine leaves no selected task");
+    assert.equal(await next.isDisabled(), false, "Khorne exposes Next to recover the first available built-in task without a selection");
+    await next.focus();
+    assert.equal(await next.evaluate(node => node === document.activeElement), true, "Khorne recovery reaches the real Next control by keyboard");
+    await page.keyboard.press("Enter");
+    await page.getByRole("heading", {name: catalog.tasks[0].title, exact: true}).waitFor({state: "visible"});
+    assert.equal(await previous.isDisabled(), true, "Khorne recovery selects the first built-in without wrapping Previous");
+    assert.equal(await next.isDisabled(), false, "Khorne recovery leaves Next available for the following built-in task");
     assert.equal(resultBefore, "All tests passed: 1/1", "the connected history establishes a real result before its custom workspace is quarantined");
     assert.deepEqual(seen.consoleErrors, []);
   } finally {
