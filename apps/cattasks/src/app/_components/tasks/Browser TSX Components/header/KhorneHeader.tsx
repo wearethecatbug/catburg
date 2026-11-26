@@ -62,6 +62,9 @@ export function WarhammerCatalogHeader({className, onBack, theme = 'khorne'}: Wa
 export function KhorneDashboardHeader({className, isAllTasksOpen, onAllTasks, onBack, allTasksButtonRef, theme = 'khorne'}: KhorneDashboardHeaderProps) {
     const {tasks, catalogError, selectedTask, selectPreviousTask, selectNextTask} = useTaskContext();
     const hasTasks = tasks.length > 0;
+    const selectedIndex = selectedTask ? tasks.findIndex(task => task.id === selectedTask.id) : -1;
+    const previousDisabled = selectedIndex <= 0;
+    const nextDisabled = selectedIndex < 0 || selectedIndex >= tasks.length - 1;
     const title = selectedTask
         ? selectedTask.title
         : catalogError
@@ -70,14 +73,19 @@ export function KhorneDashboardHeader({className, isAllTasksOpen, onAllTasks, on
                 ? 'No task selected.'
                 : 'Loading tasks…';
 
-    return <div className={`${styles.dashboardShell} ${isAllTasksOpen ? styles.catalogueDashboardShell : ''} ${className ?? ''}`} data-warhammer-variant={theme}>
+    return <div className={`${styles.dashboardShell} ${isAllTasksOpen ? styles.catalogueDashboardShell : ''} ${className ?? ''}`} data-cattasks-header="" data-warhammer-variant={theme}>
         {isAllTasksOpen ? <KhorneCatalogueHeader onBack={onBack} theme={theme}/> : <UnifiedTaskHeader
             taskNumber={selectedTask?.ordinal}
             title={title}
-            onPrevious={selectPreviousTask}
-            onNext={selectNextTask}
+            onPrevious={() => {
+                if (!previousDisabled) selectPreviousTask();
+            }}
+            onNext={() => {
+                if (!nextDisabled) selectNextTask();
+            }}
             onBack={onAllTasks}
-            navigationDisabled={!hasTasks}
+            previousDisabled={previousDisabled}
+            nextDisabled={nextDisabled}
             backButtonRef={allTasksButtonRef}
             showRail={false}
             theme={theme}

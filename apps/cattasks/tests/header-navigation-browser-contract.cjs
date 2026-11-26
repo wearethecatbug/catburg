@@ -3,6 +3,8 @@ const test = require("node:test");
 const playwright = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
 const baseUrl = process.env.CATTASKS_BASE_URL || "http://127.0.0.1:43850";
+const taskTitle = (page, name, exact = true) => page.getByRole("heading", {level: 1, name, exact});
+const taskShelfSelector = '[data-cattasks-theme] [aria-hidden="true"][class*="TaskDashboard_taskShelf__"]';
 const catalog = {version: 1, tasks: [
   {id: "race", title: "Tortoise race", description: "First", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "long", title: "A deliberately long task title that must wrap without covering controls", description: "Long", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
@@ -14,7 +16,7 @@ const catalog = {version: 1, tasks: [
   {id: "eighth", title: "Eighth fixture task", description: "Eighth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "ninth", title: "Ninth fixture task", description: "Ninth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "tenth", title: "Tenth fixture task", description: "Tenth", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
-  {id: "anagrams", title: "Check Whether Two Strings Are Anagrams", description: "Task 11 title fixture.", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
+  {id: "anagrams", title: "Check Whether Two Strings Are Anagrams With Case", description: "Task 11 title fixture.", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
   {id: "frequent", title: "Find the Most Frequent Element", description: "Task 12 title fixture.", entryPoint: "echo", starterCode: "function echo() {}", solution: "function echo() {}", tests: [{args: ["fixture"], expected: "fixture"}]},
 ]};
 
@@ -87,14 +89,14 @@ async function openFromCatalogue(page, title) {
   await page.getByRole("button", {name: "All tasks"}).click();
   const search = page.getByRole("searchbox", {name: "Search tasks"}); await search.fill(title);
   await page.locator("section[aria-labelledby='taskListTitle']").filter({hasText: title}).getByRole("button", {name: /^Open(?: |$)/}).click();
-  await page.getByText(title, {exact: true}).waitFor();
+  await taskTitle(page, title).waitFor();
 }
 
 async function titleGeometry(page, title) {
-  return title.evaluate(node => {
+  return title.evaluate((node, selector) => {
     const range = document.createRange();
     range.selectNodeContents(node);
-    const shelf = document.querySelector('[class*="__taskShelf"]');
+    const shelf = document.querySelector(selector);
     if (!shelf) throw new Error("task header shelf is unavailable");
     const style = getComputedStyle(node);
     return {
@@ -103,7 +105,7 @@ async function titleGeometry(page, title) {
       overflow: style.overflow,
       lineClamp: style.webkitLineClamp,
     };
-  });
+  }, taskShelfSelector);
 }
 
 function assertClean(diagnostics) {
@@ -114,7 +116,7 @@ function assertClean(diagnostics) {
 test("static identity replaces header query while desktop capybara navigation retains focus, reveal, contact, and catalogue flow", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 1536, height: 1024}}); const page = await context.newPage();
   try {
-    const diagnostics = await prepare(page); const previous = page.getByRole("button", {name: "Select previous task"}); const next = page.getByRole("button", {name: "Select next task"}); const allTasks = page.getByRole("button", {name: "All tasks"}); const ordinal = page.getByText("TASK 01", {exact: true}); const title = page.getByText("Tortoise race", {exact: true});
+    const diagnostics = await prepare(page); const previous = page.getByRole("button", {name: "Select previous task"}); const next = page.getByRole("button", {name: "Select next task"}); const allTasks = page.getByRole("button", {name: "All tasks"}); const ordinal = page.getByText("TASK 01", {exact: true}); const title = taskTitle(page, "Tortoise race");
     await Promise.all([previous.waitFor(), next.waitFor(), allTasks.waitFor(), ordinal.waitFor(), title.waitFor()]); await assertNoRetiredHeaderControls(page);
     const [allBox, titleBox] = await Promise.all([allTasks.boundingBox(), title.boundingBox()]); assert.ok(allBox.width >= 44 && allBox.height >= 44, "18px All tasks retains a 44px hit target"); assert.equal(await allTasks.evaluate(node => getComputedStyle(node).fontSize), "18px", "All tasks has the selected 18px scale"); assert.equal(intersects(allBox, titleBox), false, "All tasks does not cover static title");
     assert.equal(await title.evaluate(node => { const range = document.createRange(); range.selectNodeContents(node); return [...range.getClientRects()].every(rect => rect.width > 0 && rect.height > 0); }), true, "static title exposes readable rendered lines");
@@ -142,7 +144,7 @@ test("static identity replaces header query while desktop capybara navigation re
       assertClose(translateY(active.transform), 3, "pressed arrow settles 3px below its resting position");
       assert.notEqual(active.shadow, hover.shadow, "pressed plaque changes its settled hover shadow");
       await page.mouse.up();
-      await page.getByText(expectedTitle, {exact: false}).waitFor();
+      await taskTitle(page, expectedTitle, false).waitFor();
     }
     await openFromCatalogue(page, "Third independent task"); assert.equal(await page.getByText("TASK 03", {exact: true}).count(), 1, "catalogue Open updates static ordinal"); await assertNoRetiredHeaderControls(page); assertClean(diagnostics);
   } finally { await context.close(); await browser.close(); }
@@ -151,7 +153,7 @@ test("static identity replaces header query while desktop capybara navigation re
 test("static identity keeps native sage arrows through the approved compact range", {timeout: 45_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 320, height: 900}}); const page = await context.newPage();
   try {
-    const diagnostics = await prepare(page); await openFromCatalogue(page, "A deliberately long task title that must wrap without covering controls"); const title = page.getByText("A deliberately long task title that must wrap without covering controls", {exact: true}); const ordinal = page.getByText("TASK 02", {exact: true}); const allTasks = page.getByRole("button", {name: "All tasks"}); const previous = page.getByRole("button", {name: "Select previous task", includeHidden: true}); const next = page.getByRole("button", {name: "Select next task", includeHidden: true});
+    const diagnostics = await prepare(page); await openFromCatalogue(page, "A deliberately long task title that must wrap without covering controls"); const title = taskTitle(page, "A deliberately long task title that must wrap without covering controls"); const ordinal = page.getByText("TASK 02", {exact: true}); const allTasks = page.getByRole("button", {name: "All tasks"}); const previous = page.getByRole("button", {name: "Select previous task", includeHidden: true}); const next = page.getByRole("button", {name: "Select next task", includeHidden: true});
     for (const width of [320, 321, 390, 430, 431, 598, 600]) {
       await page.setViewportSize({width, height: 900});
       await assertNoRetiredHeaderControls(page);
@@ -191,7 +193,7 @@ test("static identity keeps native sage arrows through the approved compact rang
     await page.setViewportSize({width: 390, height: 900});
     await next.focus();
     await page.keyboard.press("Enter");
-    await page.getByText("Third independent task", {exact: true}).waitFor();
+    await taskTitle(page, "Third independent task").waitFor();
     const nextBox = await next.boundingBox();
     assert.ok(nextBox, "390px next arrow remains pointer-operable after keyboard navigation");
     await page.getByRole("button", {name: "Select previous task"}).click();
@@ -212,7 +214,7 @@ test("static identity keeps native sage arrows through the approved compact rang
         assert.deepEqual(edgeHits, [true, true, true], "All tasks preserves 1250px left, centre, and right hit geometry");
       }
       if (width === 1536) {
-        const shelf = await page.evaluate(() => { const previous = document.querySelector('[aria-label="Select previous task"]'); const next = document.querySelector('[aria-label="Select next task"]'); let header = previous?.parentElement; while (header && (!header.contains(next) || header.nextElementSibling?.getAttribute("aria-hidden") !== "true")) header = header.parentElement; const shelf = header?.nextElementSibling; if (!shelf) throw new Error("dashboard shelf is unavailable"); return {top: shelf.getBoundingClientRect().top, bottoms: [previous, next].map(node => node.getBoundingClientRect().bottom)}; });
+        const shelf = await page.evaluate(selector => { const previous = document.querySelector('[aria-label="Select previous task"]'); const next = document.querySelector('[aria-label="Select next task"]'); const shelf = document.querySelector(selector); if (!previous || !next || !shelf) throw new Error("dashboard task shelf or arrows are unavailable"); return {top: shelf.getBoundingClientRect().top, bottoms: [previous, next].map(node => node.getBoundingClientRect().bottom)}; }, taskShelfSelector);
         for (const bottom of shelf.bottoms) assert.ok(Math.abs(bottom - shelf.top) <= 3, "desktop plaque remains seated on shelf support");
       }
     }
@@ -224,20 +226,20 @@ test("431px task navigation reserves mobile header anchors through three title l
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 431, height: 900}}); const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    const task11Title = "Check Whether Two Strings Are Anagrams";
+    const task11Title = "Check Whether Two Strings Are Anagrams With Case";
     const task12Title = "Find the Most Frequent Element";
     const previous = page.getByRole("button", {name: "Select previous task"}); const next = page.getByRole("button", {name: "Select next task"});
     await openFromCatalogue(page, task11Title);
     await settleHeaderLayout(page);
     await settleArrowAnchors(page, previous, next);
-    const task11 = page.getByRole("heading", {name: task11Title, exact: true}); const task11Ordinal = page.getByText("TASK 11", {exact: true});
+    const task11 = taskTitle(page, task11Title); const task11Ordinal = page.getByText("TASK 11", {exact: true});
     const task11Geometry = await titleGeometry(page, task11);
     assert.equal(task11Geometry.lines.length, 3, "431px Task 11 exposes its three rendered title lines");
     const task11Anchors = await Promise.all([task11Ordinal, previous, next].map(locator => locator.evaluate(node => node.getBoundingClientRect().top + window.scrollY))).then(([numberTop, previousTop, nextTop]) => ({numberTop, titleTop: task11Geometry.lines[0].top, previousTop, nextTop, shelfTop: task11Geometry.shelfTop}));
     for (const [name, value] of Object.entries(task11Anchors)) assert.notEqual(value, undefined, `431px Task 11 exposes ${name}`);
 
-    await next.click(); await page.getByRole("heading", {name: task12Title, exact: true}).waitFor(); await settleHeaderLayout(page); await settleArrowAnchors(page, previous, next);
-    const task12 = page.getByRole("heading", {name: task12Title, exact: true}); const task12Ordinal = page.getByText("TASK 12", {exact: true});
+    await next.click(); await taskTitle(page, task12Title).waitFor(); await settleHeaderLayout(page); await settleArrowAnchors(page, previous, next);
+    const task12 = taskTitle(page, task12Title); const task12Ordinal = page.getByText("TASK 12", {exact: true});
     const task12Geometry = await titleGeometry(page, task12);
     assert.equal(task12Geometry.lines.length, 2, "431px Task 12 exposes its two rendered title lines");
     const task12Anchors = await Promise.all([task12Ordinal, previous, next].map(locator => locator.evaluate(node => node.getBoundingClientRect().top + window.scrollY))).then(([numberTop, previousTop, nextTop]) => ({numberTop, titleTop: task12Geometry.lines[0].top, previousTop, nextTop, shelfTop: task12Geometry.shelfTop}));
@@ -246,7 +248,7 @@ test("431px task navigation reserves mobile header anchors through three title l
     const longTitle = "A deliberately long task title that must wrap without covering controls";
     await openFromCatalogue(page, longTitle);
     await settleHeaderLayout(page);
-    const long = page.getByRole("heading", {name: longTitle, exact: true}); const longGeometry = await titleGeometry(page, long);
+    const long = taskTitle(page, longTitle); const longGeometry = await titleGeometry(page, long);
     assert.ok(longGeometry.lines.length > 3, "431px title beyond three lines remains fully rendered");
     assert.equal(longGeometry.overflow, "visible", "431px title beyond three lines has no clipping box");
     assert.equal(longGeometry.lineClamp, "none", "431px title beyond three lines has no line clamp");
@@ -259,9 +261,9 @@ test("task headers retain every title line and clear the shelf through the deskt
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 1440, height: 900}}); const page = await context.newPage();
   try {
     const diagnostics = await prepare(page);
-    const anagramTitle = "Check Whether Two Strings Are Anagrams";
+    const anagramTitle = "Check Whether Two Strings Are Anagrams With Case";
     await openFromCatalogue(page, anagramTitle);
-    const anagrams = page.getByRole("heading", {name: anagramTitle, exact: true});
+    const anagrams = taskTitle(page, anagramTitle);
     for (const width of [1440, 1221, 1220, 1200, 768, 650, 601]) {
       await page.setViewportSize({width, height: 900});
       const geometry = await titleGeometry(page, anagrams);
@@ -273,7 +275,7 @@ test("task headers retain every title line and clear the shelf through the deskt
 
     const longTitle = "A deliberately long task title that must wrap without covering controls";
     await openFromCatalogue(page, longTitle);
-    const long = page.getByRole("heading", {name: longTitle, exact: true});
+    const long = taskTitle(page, longTitle);
     for (const width of [768, 650, 601]) {
       await page.setViewportSize({width, height: 900});
       const geometry = await titleGeometry(page, long);
@@ -289,7 +291,7 @@ test("desktop arrows remain disabled during loading and honor reduced motion", {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true}); const context = await browser.newContext({viewport: {width: 780, height: 900}, reducedMotion: "reduce"}); const page = await context.newPage(); let release;
   try {
     const diagnostics = {console: [], page: [], request: [], response: [], catalogRequests: []}; page.on("console", message => { if (message.type() === "error") diagnostics.console.push(message.text()); }); page.on("pageerror", error => diagnostics.page.push(error.message)); page.on("requestfailed", request => diagnostics.request.push(request.url())); page.on("response", response => { if (response.status() >= 400) diagnostics.response.push(`${response.request().method()} ${response.status()} ${response.url()}`); }); const held = new Promise(resolve => { release = resolve; }); await page.route("**/task-catalog.v1.json", async route => { diagnostics.catalogRequests.push(`${route.request().method()} ${route.request().url()}`); await held; await route.fulfill({contentType: "application/json", body: JSON.stringify(catalog)}); });
-    assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200); const previous = page.getByRole("button", {name: "Select previous task"}); await previous.waitFor(); assert.equal(await previous.isDisabled(), true); const before = await arrowState(previous); await page.mouse.move(...Object.values(center(before.mascot))); await waitForArrowState(previous); const after = await arrowState(previous); assert.equal(after.reveal, "0", "disabled arrow does not reveal"); assert.equal(after.paintFilter, before.paintFilter, "disabled arrow does not hover"); assertClose(translateY(after.transform), 0, "reduced-motion disabled arrow does not translate"); assert.equal(zeroDurations(after.durations), true, "reduced motion removes arrow transitions"); release(); await page.getByText("Tortoise race", {exact: true}).waitFor(); assert.equal(await previous.isDisabled(), false, "loaded catalogue enables arrow"); assertClean(diagnostics);
+    assert.equal((await page.goto(baseUrl, {waitUntil: "domcontentloaded"}))?.status(), 200); const previous = page.getByRole("button", {name: "Select previous task"}); await previous.waitFor(); assert.equal(await previous.isDisabled(), true); const before = await arrowState(previous); await page.mouse.move(...Object.values(center(before.mascot))); await waitForArrowState(previous); const after = await arrowState(previous); assert.equal(after.reveal, "0", "disabled arrow does not reveal"); assert.equal(after.paintFilter, before.paintFilter, "disabled arrow does not hover"); assertClose(translateY(after.transform), 0, "reduced-motion disabled arrow does not translate"); assert.equal(zeroDurations(after.durations), true, "reduced motion removes arrow transitions"); release(); await taskTitle(page, "Tortoise race").waitFor(); assert.equal(await previous.isDisabled(), false, "loaded catalogue enables arrow"); assertClean(diagnostics);
   } finally { if (release) release(); await context.close(); await browser.close(); }
 });
 

@@ -408,7 +408,7 @@ test("Khorne is a keyboard-accessible persisted choice with distinct Task and ca
     const catalogueBack = catalogueHeader.getByRole("button", {name: "Back to task", exact: true});
     assert.equal(await catalogueHeader.count(), 1, "Khorne catalogue uses its own integrated header");
     const [titleBox, backBox] = await Promise.all([catalogueTitle.boundingBox(), catalogueBack.boundingBox()]);
-    assert.ok(titleBox && backBox && titleBox.x + titleBox.width <= backBox.x && Math.min(titleBox.y + titleBox.height, backBox.y + backBox.height) > Math.max(titleBox.y, backBox.y), "the live catalogue title remains left of, and vertically aligned with, its Back to task action");
+    assert.ok(titleBox && backBox && backBox.x + backBox.width <= titleBox.x && Math.min(titleBox.y + titleBox.height, backBox.y + backBox.height) > Math.max(titleBox.y, backBox.y), "the live catalogue Back to task action remains left of, and vertically aligned with, its All tasks title");
     assert.equal(await page.locator("[class*='shelfStickers'], [class*='backRabbit'], [class*='compactCandles'], [data-catalogue-back-capybara]").count(), 0, "Khorne catalogue has no former shelf or mascot decoration");
     assert.equal(await page.locator("[class*='difficultyBar']:visible").count(), 0, "Khorne difficulty choices do not retain the former green bars");
     const selectedDifficulty = page.getByRole("button", {name: "Easy", exact: true});
@@ -800,7 +800,7 @@ test("Khorne keeps a 1600px workspace, aligned beam and grounded desktop scene t
       page.getByRole("button", {name: "Back to task", exact: true}).boundingBox(),
     ]);
     assert.ok(catalogueTitle && aquila && catalogueBack, "catalogue title, central aquila, and real return action are visible");
-    assert.ok(catalogueTitle.x + catalogueTitle.width <= aquila.x && aquila.x + aquila.width <= catalogueBack.x, "catalogue keeps title left, aquila centred, and Back to task right");
+    assert.ok(catalogueBack.x + catalogueBack.width <= aquila.x && aquila.x + aquila.width <= catalogueTitle.x, "catalogue keeps Back to task left, aquila centred, and title right");
 
     const catalogueFigures = await visibleKhorneGeometry(page, "[data-khorne-figure]");
     assert.deepEqual(catalogueFigures.map(candidate => candidate.name).sort(), ["catalogue-daemon", "catalogue-marine"], "catalogue exposes its two independent side figures");

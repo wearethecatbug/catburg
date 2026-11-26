@@ -669,7 +669,9 @@ test("CatTasks lets a tall 1305px catalogue paginate to its final inert row abov
     assert.equal(hit, true, "the final catalogue action is hit-testable rather than masked by the PetStrip");
     await lastOpen.click();
     await page.getByRole("button", {name: "All tasks", exact: true}).waitFor({state: "visible", timeout: 10_000});
-    await page.getByText("Safe inert row 18 exists only to exercise paginated catalogue navigation.", {exact: true}).waitFor({state: "visible"});
+    const activeDescription = page.getByLabel("Описание задачи", {exact: true});
+    await activeDescription.waitFor({state: "visible"});
+    assert.equal((await activeDescription.textContent()).trim(), "Safe inert row 18 exists only to exercise paginated catalogue navigation.");
     assertCleanDiagnostics(diagnostics);
   } finally {
     await context.close();

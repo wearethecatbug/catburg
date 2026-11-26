@@ -164,6 +164,7 @@ export default function AllTasks({className, onBack}: AllTasksProps) {
     return (
         <main
             className={`${styles.catalogueMain} ${className ?? ''}`}
+            data-cattasks-workspace-content=""
             data-khorne-catalogue={useV3Controls ? '' : undefined}
             data-khorne-workspace={useV3Controls ? '' : undefined}
         >
