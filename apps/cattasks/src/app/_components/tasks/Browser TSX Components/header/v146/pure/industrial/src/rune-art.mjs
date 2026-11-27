@@ -163,9 +163,8 @@ export function renderRunePanel(theme,rect,options={}) {
     return `<g data-rune="${glyph.variant}" data-rune-key="${glyph.key}" opacity="${runeNumber(glyph.opacity)}"${options.animate?` style="animation-delay:${runeNumber(delay)}s"`:''} transform="translate(${runeNumber(x)} ${runeNumber(y)}) scale(${runeNumber(size/32)})">`+
       runeLayers(RUNE_SHAPES[key][glyph.variant],key,`${o.id}-${glyph.key}`,o.glow)+'</g>';
   }).join('');
-  // A static engraved glow is always present. Browsers add a restrained,
-  // staggered breath only when motion is allowed; reduced-motion and static
-  // renderers therefore retain exactly the same visible composition.
-  const animation=options.animate?`<style>@media(prefers-reduced-motion:no-preference){@keyframes ${o.id}-breathe{0%,100%{filter:brightness(.88)}50%{filter:brightness(1.24)}}#${o.id}>[data-rune]{animation:${o.id}-breathe 6.8s ease-in-out infinite}}</style>`:'';
+  // Keep the engraved base light in the artwork. Dashboard AmbientCanvas owns
+  // the optional runtime pulse, so this renderer never attaches a CSS clock.
+  const animation='';
   return `${animation}<g id="${o.id}" data-rune-panel="${RUNE_PALETTES[key].god}" data-glyph-count="${layout.count}" opacity="${runeNumber(o.opacity)}">${shapes}</g>`;
 }

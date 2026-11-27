@@ -9,10 +9,12 @@ import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from
 import AllTasks from '@/app/_components/tasks/Browser TSX Components/allTasks/AllTasks';
 import {CatTasksThemeContext, catTasksThemes, getCatTasksTheme, isWarhammerTheme, type CatTasksTheme} from './CatTasksTheme';
 import ThemeToggle from './ThemeToggle';
+import AmbientCanvas from '../../feature/ambient/AmbientCanvas';
 import type {V146Construction} from '@/app/_components/tasks/Browser TSX Components/header/v146/V146Header';
 import {getWorkspaceHeaderEnvelope} from '@/app/_components/tasks/Browser TSX Components/header/v146/pure/workspace/header-placement.mjs';
 
 const THEME_STORAGE_KEY = 'cattasks-theme';
+const MOTION_STORAGE_KEY = 'cattasks-ambient-motion';
 const themePrepaintScript = `try{const theme=window.localStorage.getItem('cattasks-theme');const allowed=${JSON.stringify(catTasksThemes)};if(allowed.includes(theme))document.currentScript?.parentElement?.setAttribute('data-cattasks-theme',theme)}catch{}`;
 
 function KhorneFigure({figure, src}: {figure: string; src: string}) {
@@ -39,6 +41,7 @@ export default function TaskDashboard() {
     const [hasVisitedAllTasks, setHasVisitedAllTasks] = useState(false);
     const [theme, setTheme] = useState<CatTasksTheme>('light');
     const [headerConstruction, setHeaderConstruction] = useState<V146Construction>('industrial');
+    const [motionEnabled, setMotionEnabled] = useState(true);
     const dashboardRef = useRef<HTMLDivElement>(null);
     const workspaceRef = useRef<HTMLDivElement>(null);
     const allTasksButtonRef = useRef<HTMLButtonElement>(null);
@@ -53,6 +56,15 @@ export default function TaskDashboard() {
     }, []);
     useEffect(() => {
         setTheme(readStoredTheme());
+        try { setMotionEnabled(window.localStorage.getItem(MOTION_STORAGE_KEY) !== 'false'); } catch {
+            // Storage is optional: keep the accessible in-memory default enabled.
+        }
+    }, []);
+    const selectMotion = useCallback((enabled: boolean) => {
+        setMotionEnabled(enabled);
+        try { window.localStorage.setItem(MOTION_STORAGE_KEY, String(enabled)); } catch {
+            // The selected session preference remains live even when storage is unavailable.
+        }
     }, []);
     const selectTheme = useCallback((nextTheme: CatTasksTheme) => {
         setTheme(nextTheme);
@@ -206,11 +218,12 @@ export default function TaskDashboard() {
                             workspaceWidth={workspaceLayout.width || 320}
                         />
                     )}
-                    <ThemeToggle construction={headerConstruction} onConstructionChange={setHeaderConstruction}/>
+                    <ThemeToggle construction={headerConstruction} onConstructionChange={setHeaderConstruction} motionEnabled={motionEnabled} onMotionEnabledChange={selectMotion}/>
                     {/* Keep Monaco mounted while browsing so opening the catalogue cannot abort its worker. */}
                     <Main className={`${styles.mainContainer} ${isAllTasksOpen ? styles.hiddenMain : ''}`}/>
                     {hasVisitedAllTasks && <div className={styles.catalogueView} hidden={!isAllTasksOpen}><AllTasks onBack={returnToTask} isOpen={isAllTasksOpen}/></div>}
                 </div>
+                <AmbientCanvas theme={theme} motionEnabled={motionEnabled}/>
                 <Footer className={styles.footerContainer}></Footer>
                 {theme === 'khorne' && <div className={styles.khorneLowerScene} data-khorne-scene-layout="lower" aria-hidden="true">
                     <div data-khorne-figure-scene="task">
