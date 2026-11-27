@@ -3,6 +3,7 @@ import {ActorModel} from '@/app/_components/tasks/feature/pixi/models/ActorModel
 import {MovementModel} from '@/app/_components/tasks/feature/pixi/models/MovementModel';
 import {PhysicsModel} from '@/app/_components/tasks/feature/pixi/models/PhysicsModel';
 import {ViewFactory} from './ViewFactory';
+import {ActorView} from '@/app/_components/tasks/feature/pixi/views/ActorView';
 import {PlayerController} from '@/app/_components/tasks/feature/pixi/controllers/PlayerController';
 import {MovementController} from '@/app/_components/tasks/feature/pixi/controllers/MovementController';
 import {GravityController} from '@/app/_components/tasks/feature/pixi/controllers/GravityController';
@@ -31,6 +32,23 @@ export interface PlayerActorConfig extends MobileActorConfig {
 }
 
 export class ActorFactory {
+    /**
+     * Creates an actor around a caller-owned view. This intentionally does not
+     * look in global Assets: local hosts retain ownership of their textures.
+     */
+    static createActorFromView(config: {
+        view: ActorView;
+        initialPosition: { x: number; y: number };
+        direction?: Direction;
+    }): Actor {
+        const direction = config.direction ?? Direction.Right;
+        return new Actor(config.view, new ActorModel({
+            position: config.initialPosition,
+            direction,
+            state: 'Idle',
+        }));
+    }
+
     static createStaticActor(config: BaseActorConfig): Actor {
         const spritesheet = Assets.get<Spritesheet>(config.spritesheet);
 
