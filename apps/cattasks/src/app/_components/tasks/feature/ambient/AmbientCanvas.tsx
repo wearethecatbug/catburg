@@ -3,7 +3,7 @@
 import {useEffect, useRef, useState} from 'react';
 import type {Application, Container, Graphics} from 'pixi.js';
 import type {CatTasksTheme} from '../../Browser TSX Components/taskDashboard/CatTasksTheme';
-import {measureAmbientGeometry, type AmbientGeometry, type AmbientRect} from './ambient-anchors';
+import {measureAmbientGeometry, protectedAmbientElements, type AmbientGeometry, type AmbientRect} from './ambient-anchors';
 
 type Props = {theme: CatTasksTheme; motionEnabled: boolean};
 type Pixi = typeof import('pixi.js');
@@ -150,14 +150,22 @@ export default function AmbientCanvas({theme, motionEnabled}: Props) {
         const target = host.current, root = target?.parentElement, app = appRef.current, scene = sceneRef.current, pixi = pixiRef.current;
         if (!ready || !target || !root || !app || !scene || !pixi) return;
         let frame = 0, disposed = false;
+        const observed = new Set<Element>();
+        const syncProtectedObservers = (current: readonly Element[]) => {
+            for (const element of observed) if (!current.includes(element)) { observer.unobserve(element); observed.delete(element); }
+            for (const element of current) if (!observed.has(element)) { observer.observe(element); observed.add(element); }
+        };
         const rebuild = () => {
             frame = 0;
-            geometry.current = measureAmbientGeometry(root, app.canvas, app.screen.width, app.screen.height);
-            if (disposed || !target.isConnected || appRef.current !== app || sceneRef.current !== scene || pixiRef.current !== pixi || !geometry.current) return;
+            if (disposed || !target.isConnected || appRef.current !== app || sceneRef.current !== scene || pixiRef.current !== pixi) return;
+            const elements = protectedAmbientElements(root);
+            syncProtectedObservers(elements);
+            geometry.current = measureAmbientGeometry(root, app.canvas, app.screen.width, app.screen.height, elements);
+            if (disposed || !geometry.current) return;
             motifs.current = populate(pixi, scene, geometry.current, latest.current.theme);
             setBoundTheme(latest.current.theme); app.render();
         };
-        const dirty = () => { if (!frame) frame = requestAnimationFrame(rebuild); };
+        const dirty = () => { if (!disposed && !frame) frame = requestAnimationFrame(rebuild); };
         const observer = new ResizeObserver(dirty);
         const changesLayout = (record: MutationRecord) => {
             const target = record.target.nodeType === Node.ELEMENT_NODE ? record.target as Element : record.target.parentElement;
@@ -169,9 +177,14 @@ export default function AmbientCanvas({theme, motionEnabled}: Props) {
             // a decorative scene for changes that remain wholly inside it.
             if (records.some(changesLayout)) dirty();
         });
-        observer.observe(root); mutations.observe(root, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded', 'data-cattasks-theme', 'data-cattasks-page']});
+        observer.observe(root);
+        const fonts = document.fonts;
+        const afterFonts = () => dirty();
+        void fonts.ready.then(afterFonts).catch(() => undefined);
+        fonts.addEventListener('loadingdone', afterFonts);
+        mutations.observe(root, {subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'aria-expanded', 'data-cattasks-theme', 'data-cattasks-page']});
         window.addEventListener('resize', dirty); window.addEventListener('scroll', dirty, {capture: true, passive: true}); dirty();
-        return () => { disposed = true; if (frame) cancelAnimationFrame(frame); observer.disconnect(); mutations.disconnect(); window.removeEventListener('resize', dirty); window.removeEventListener('scroll', dirty, true); };
+        return () => { disposed = true; if (frame) cancelAnimationFrame(frame); fonts.removeEventListener('loadingdone', afterFonts); observer.disconnect(); mutations.disconnect(); window.removeEventListener('resize', dirty); window.removeEventListener('scroll', dirty, true); };
     }, [ready, theme]);
 
     useEffect(() => {

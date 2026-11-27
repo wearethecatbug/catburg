@@ -31,15 +31,19 @@ function localRect(element: Element, canvas: DOMRect, width: number, height: num
     const bottom = Math.min(height, (rect.bottom - canvas.top) * scaleY);
     return right > left && bottom > top ? {x: left, y: top, width: right - left, height: bottom - top} : null;
 }
-/** Measures DOM in a dirty pass and returns logical Pixi coordinates, never physical DPR pixels. */
-export function measureAmbientGeometry(root: HTMLElement, canvas: HTMLCanvasElement, width: number, height: number): AmbientGeometry {
-    const canvasRect = canvas.getBoundingClientRect();
-    const protectedRects = [...new Set(selectors.flatMap(selector => [...root.querySelectorAll(selector)]))]
+/** The real protected elements are also ResizeObserver targets in AmbientCanvas. */
+export function protectedAmbientElements(root: HTMLElement): Element[] {
+    return [...new Set(selectors.flatMap(selector => [...root.querySelectorAll(selector)]))]
         .filter(element => {
             if (element.closest('[data-cattasks-ambient]')) return false;
             const style = getComputedStyle(element);
             return style.display !== 'none' && style.visibility !== 'hidden';
-        })
+        });
+}
+/** Measures DOM in a dirty pass and returns logical Pixi coordinates, never physical DPR pixels. */
+export function measureAmbientGeometry(root: HTMLElement, canvas: HTMLCanvasElement, width: number, height: number, elements = protectedAmbientElements(root)): AmbientGeometry {
+    const canvasRect = canvas.getBoundingClientRect();
+    const protectedRects = elements
         .map(element => localRect(element, canvasRect, width, height))
         .filter((rect): rect is AmbientRect => Boolean(rect));
     const bounds: AmbientRect = {x: 8, y: 8, width: Math.max(0, width - 16), height: Math.max(0, height - 16)};

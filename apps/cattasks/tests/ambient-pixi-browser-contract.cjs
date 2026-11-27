@@ -481,3 +481,73 @@ test("ambient painted insects follow visibly different paths and fireflies breat
     await browser.close();
   }
 });
+
+async function installAmbientTitleDrawProbe(page) {
+  await page.addInitScript(() => {
+    window.__cattasksAmbientTitleDraws = 0;
+    for (const prototype of [window.WebGLRenderingContext?.prototype, window.WebGL2RenderingContext?.prototype]) {
+      if (!prototype) continue;
+      for (const name of ["drawArrays", "drawElements", "drawArraysInstanced", "drawElementsInstanced"]) {
+        if (!Object.prototype.hasOwnProperty.call(prototype, name)) continue;
+        const original = prototype[name];
+        prototype[name] = function (...args) {
+          const result = original.apply(this, args);
+          if (this.canvas?.parentElement?.hasAttribute("data-cattasks-ambient")) window.__cattasksAmbientTitleDraws++;
+          return result;
+        };
+      }
+    }
+  });
+}
+
+async function titleAndAmbientGeometry(page) {
+  return page.evaluate(() => {
+    const title = document.querySelector("header[data-v146-header] h1");
+    const host = document.querySelector("[data-cattasks-ambient]");
+    const root = host?.parentElement;
+    if (!title || !host || !root) throw new Error("real title or ambient root is unavailable");
+    const rect = node => {
+      const value = node.getBoundingClientRect();
+      return {x: value.x, y: value.y, width: value.width, height: value.height};
+    };
+    return {title: rect(title), root: rect(root), canvases: host.querySelectorAll("canvas").length, draws: window.__cattasksAmbientTitleDraws};
+  });
+}
+
+test("ambient protected title metric recomposes while reduced Motion is paused", {timeout: 30_000}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 623, height: 1100}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    await installAmbientTitleDrawProbe(page);
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Khorne");
+    await expectAmbient(page, "khorne", "paused");
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      for (let frame = 0; frame < 4; frame++) await new Promise(requestAnimationFrame);
+    });
+    await page.waitForTimeout(300);
+    const quiet = await titleAndAmbientGeometry(page);
+    await page.waitForTimeout(300);
+    const quietAgain = await titleAndAmbientGeometry(page);
+    assert.equal(quietAgain.draws, quiet.draws, "reduced Motion establishes a quiet ambient canvas before title geometry changes");
+
+    const before = quietAgain;
+    await page.locator("header[data-v146-header] h1").evaluate(async title => {
+      title.style.lineHeight = "2.1";
+      await document.fonts.ready;
+      for (let frame = 0; frame < 4; frame++) await new Promise(requestAnimationFrame);
+    });
+    await page.waitForTimeout(350);
+    const after = await titleAndAmbientGeometry(page);
+    assert.ok(after.title.height > before.title.height + 20, "a controlled late metric change grows the real protected title at the fixed 623px viewport");
+    assert.deepEqual(after.root, before.root, "the outer ambient workspace geometry remains stable while only the live title changes");
+    assert.equal(after.canvases, 1, "title recomposition retains exactly one ambient canvas");
+    assert.ok(after.draws > before.draws, "a controlled late protected-title metric change recomposes the paused ambient scene without synthetic resize or scroll");
+    assertDiagnostics(diagnostics);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
