@@ -31,6 +31,13 @@
     inset: 0 57px;
     pointer-events: none;
 }
+.tyranidCanvas {
+    position: absolute;
+    z-index: 2;
+    inset: 0;
+    display: block;
+    pointer-events: none;
+}
 .grassOne, .grassTwo, .grassThree, .grassFour, .grassFive, .grassSix {
     position: absolute;
     z-index: 0;
@@ -52,6 +59,14 @@
     position: absolute; z-index: 1; inset-inline-start: var(--pet-position); pointer-events: none;
     transform: translateX(-50%); image-rendering: pixelated;
 }
+.armoredForearm, .acid {
+    position: absolute; z-index: 1; inset-inline-start: var(--pet-position); pointer-events: none;
+    transform: translateX(-50%); image-rendering: pixelated;
+}
+.armoredForearm { bottom: 6px; inline-size: 47px; block-size: 36px; }
+.armoredForearm[data-pet-direction='left'] { transform: translateX(-50%) scaleX(-1); }
+.armoredForearm svg, .acid svg { display: block; inline-size: 100%; block-size: 100%; overflow: hidden; }
+.acid { bottom: 5px; inline-size: 43px; block-size: 43px; }
 .dog {
     z-index: 2; bottom: 6px; inline-size: clamp(46px, 5vw, 62px); aspect-ratio: 1;
     background: url('/cattasks/pet-strip/dog-side-sprite-sheet.png') 0 0 / 800% 600% no-repeat;
@@ -61,6 +76,11 @@
 .dog[data-pet-state='running'] { animation: dog-run 600ms steps(8, jump-none) infinite; background-position-y: 20%; }
 .dog[data-pet-state='eating'] { animation: dog-eat 700ms steps(8, jump-none) infinite; background-position-y: 40%; }
 .dog[data-pet-state='sleeping'] { background-position: 0 80%; }
+.dog.hiddenDogProjection {
+    visibility: hidden;
+    background: none;
+    animation: none;
+}
 .food {
     bottom: 11px; box-sizing: border-box; inline-size: 20px; block-size: 8px; border: 1px solid #9a4f1d; border-radius: 4px;
     background: #f1b94b; box-shadow: inset 0 -2px #ca7e27;
