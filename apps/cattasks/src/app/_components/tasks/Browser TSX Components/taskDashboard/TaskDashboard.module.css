@@ -29,6 +29,36 @@
 
 }
 
+.taskDashboardRoot [data-ambient-header-light] {
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgb(255 238 180 / .52), transparent 68%);
+    mix-blend-mode: screen;
+    /* The base artwork stays untouched; the private Pixi clock supplies only
+       the small additive phase for each real painted mask. */
+    opacity: calc(.08 + var(--ambient-phase, 0));
+}
+
+/* The V146 shell must not trap the dashboard-owned canvas above all header
+   paint. Artwork stays at 0, Pixi at 1, local masks at 2 and live controls
+   at 3 (set by V146Header). */
+.taskDashboardRoot :global([data-cattasks-v146-shell]) { z-index: auto; }
+.taskDashboardRoot :global([data-cattasks-workspace-content]) { position: relative; z-index: 2; }
+
+.taskDashboardRoot[data-cattasks-ambient-state='running'] :global([data-rune-panel]) {
+    /* AmbientCanvas is the only clock: this static filter merely receives its
+       current intensity through the dashboard custom property. */
+    filter: drop-shadow(0 0 4px rgb(133 220 255 / .42)) brightness(calc(1 + var(--cattasks-ambient-pulse-b, 0)));
+}
+
+.taskDashboardRoot[data-cattasks-ambient-state='running'] :global([data-rune-pocket='left'] [data-rune-panel]) {
+    filter: drop-shadow(0 0 4px rgb(133 220 255 / .42)) brightness(calc(1 + var(--cattasks-ambient-pulse-a, 0)));
+}
+
+.taskDashboardRoot[data-cattasks-theme='nurgle'] [data-ambient-header-light] { background: radial-gradient(ellipse, rgb(178 220 94 / .52), transparent 68%); }
+.taskDashboardRoot[data-cattasks-theme='khorne'] [data-ambient-header-light] { background: radial-gradient(ellipse, rgb(238 96 47 / .52), transparent 68%); }
+.taskDashboardRoot[data-cattasks-theme='slaanesh'] [data-ambient-header-light] { background: radial-gradient(ellipse, rgb(239 159 223 / .52), transparent 68%); }
+.taskDashboardRoot[data-cattasks-theme='tzeentch'] [data-ambient-header-light] { background: radial-gradient(ellipse, rgb(118 216 255 / .52), transparent 68%); }
+
 .taskDashboardRoot[data-cattasks-theme='dark'] {
     --cattasks-ink: #e1eae3;
     --cattasks-ink-strong: #e1eae3;

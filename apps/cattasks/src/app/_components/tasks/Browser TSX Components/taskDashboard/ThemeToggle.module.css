@@ -95,6 +95,11 @@
     box-shadow: 0 8px 18px rgb(10 19 14 / .28);
 }
 
+.themeChoices {
+    display: grid;
+    gap: 4px;
+}
+
 .themeOption {
     display: flex;
     min-height: 40px;

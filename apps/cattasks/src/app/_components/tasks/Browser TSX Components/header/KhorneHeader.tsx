@@ -55,7 +55,7 @@ export function KhorneDashboardHeader({className, isAllTasksOpen, onAllTasks, on
                 ? 'No task selected.'
                 : 'Loading tasks…';
 
-    return <div className={`${styles.dashboardShell} ${isAllTasksOpen ? styles.catalogueDashboardShell : ''} ${className ?? ''}`} data-warhammer-variant={theme}>
+    return <div className={`${styles.dashboardShell} ${isAllTasksOpen ? styles.catalogueDashboardShell : ''} ${className ?? ''}`} data-cattasks-v146-shell="" data-warhammer-variant={theme}>
         <V146Header width={workspaceWidth} construction={construction} theme={theme} mode={isAllTasksOpen ? 'catalogue' : 'task'} title={title} taskNumber={selectedTask?.ordinal} onBack={isAllTasksOpen ? onBack : onAllTasks} onPrevious={() => { if (!previousDisabled) selectPreviousTask(); }} onNext={() => { if (!nextDisabled) selectNextTask(); }} previousDisabled={previousDisabled} nextDisabled={nextDisabled} backButtonRef={allTasksButtonRef}/>
     </div>;
 }

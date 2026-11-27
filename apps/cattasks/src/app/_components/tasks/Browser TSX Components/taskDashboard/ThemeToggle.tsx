@@ -9,6 +9,8 @@ import type {V146Construction} from '@/app/_components/tasks/Browser TSX Compone
 type ThemeToggleProps = {
     readonly construction: V146Construction;
     readonly onConstructionChange: (construction: V146Construction) => void;
+    readonly motionEnabled: boolean;
+    readonly onMotionEnabledChange: (enabled: boolean) => void;
 };
 
 const themeIconSrc: Record<Exclude<CatTasksTheme, 'light' | 'dark'>, string> = {
@@ -18,7 +20,7 @@ const themeIconSrc: Record<Exclude<CatTasksTheme, 'light' | 'dark'>, string> = {
     tzeentch: '/cattasks/themes/tzeentch/emblem.png',
 };
 
-export default function ThemeToggle({construction, onConstructionChange}: ThemeToggleProps) {
+export default function ThemeToggle({construction, onConstructionChange, motionEnabled, onMotionEnabledChange}: ThemeToggleProps) {
     const {theme, setTheme} = useCatTasksTheme();
     const [isOpen, setIsOpen] = useState(false);
     const triggerRef = useRef<HTMLButtonElement>(null);
@@ -66,7 +68,8 @@ export default function ThemeToggle({construction, onConstructionChange}: ThemeT
                 )}
             </button>
             {isOpen && (
-                <div id="cattasks-theme-options" className={styles.themeOptions} role="group" aria-label="Themes">
+                <div id="cattasks-theme-options" className={styles.themeOptions} role="group" aria-label="Appearance">
+                    <div className={styles.themeChoices} role="group" aria-label="Themes">
                     {catTasksThemes.map((option, index) => {
                         const optionLabel = option[0].toUpperCase() + option.slice(1);
                         const isSelected = option === theme;
@@ -84,9 +87,11 @@ export default function ThemeToggle({construction, onConstructionChange}: ThemeT
                             </button>
                         );
                     })}
+                    </div>
                     {isWarhammerTheme(theme) && <div className={styles.constructionOptions} role="group" aria-label="Header construction">
                         {(['industrial', 'gothic', 'armor'] as const).map(option => <button type="button" className={styles.themeOption} aria-pressed={construction === option} key={option} onClick={() => onConstructionChange(option)}>{option[0].toUpperCase() + option.slice(1)}</button>)}
                     </div>}
+                    <button type="button" className={styles.themeOption} aria-pressed={motionEnabled} onClick={() => onMotionEnabledChange(!motionEnabled)}>Motion</button>
                 </div>
             )}
         </div>
