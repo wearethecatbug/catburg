@@ -91,7 +91,7 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
 
     const allDifficultiesSelected = difficultyFilters.every(difficulty => selectedDifficulties.has(difficulty));
     const useV3Controls = isWarhammerTheme(theme);
-    const controlsTheme = theme === 'nurgle' ? 'green' : theme === 'slaanesh' ? 'violet' : 'ember';
+    const controlsTheme = theme === 'nurgle' ? 'green' : theme === 'slaanesh' ? 'violet' : theme === 'tzeentch' ? 'blue' : 'ember';
 
     const toggleDifficulty = (difficulty: TaskDifficulty) => {
         setSelectedDifficulties(current => {
@@ -122,7 +122,7 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
         !allDifficultiesSelected ? `Difficulty: ${selectedDifficulties.size === 0 ? 'none' : Array.from(selectedDifficulties).join(', ')}` : null,
     ].filter((value): value is string => value !== null);
     const closeCompactFiltersOnEscape = (event: KeyboardEvent<HTMLElement>) => {
-        if (theme !== 'slaanesh' || !filtersOpen || event.key !== 'Escape' || !filtersToggleRef.current || filtersToggleRef.current.offsetParent === null) return;
+        if ((theme !== 'slaanesh' && theme !== 'tzeentch') || !filtersOpen || event.key !== 'Escape' || !filtersToggleRef.current || filtersToggleRef.current.offsetParent === null) return;
         event.preventDefault();
         event.stopPropagation();
         setFiltersOpen(false);
@@ -317,7 +317,7 @@ export default function AllTasks({className, onBack, isOpen = true}: AllTasksPro
                         </label>
                     ))}
                 </fieldset>
-                {theme === 'slaanesh' && activeFilterSummary.length > 0 && <div className={styles.filterSummary} role="status">
+                {(theme === 'slaanesh' || theme === 'tzeentch') && activeFilterSummary.length > 0 && <div className={styles.filterSummary} role="status">
                     <span>Active filters: {activeFilterSummary.join('; ')}</span>
                     <button type="button" onClick={resetFilters}>Reset filters</button>
                 </div>}

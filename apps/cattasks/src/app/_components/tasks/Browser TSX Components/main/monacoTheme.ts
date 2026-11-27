@@ -6,7 +6,7 @@ const configuredMonacoInstances = new WeakSet<object>();
 export const getMonacoThemeName = (theme: CatTasksTheme): string => theme === 'dark'
     ? 'catTasksDark'
     : theme === 'khorne' ? 'catTasksKhorne'
-        : theme === 'nurgle' ? 'catTasksNurgle' : theme === 'slaanesh' ? 'catTasksSlaanesh' : 'catTasksLight';
+        : theme === 'nurgle' ? 'catTasksNurgle' : theme === 'slaanesh' ? 'catTasksSlaanesh' : theme === 'tzeentch' ? 'catTasksTzeentch' : 'catTasksLight';
 
 export function defineCatTasksThemes(monaco: Monaco): void {
     if (configuredMonacoInstances.has(monaco)) return;
@@ -96,6 +96,17 @@ export function defineCatTasksThemes(monaco: Monaco): void {
             'editorCursor.foreground': '#EDC9EF', 'editorIndentGuide.background1': '#4A3156',
             'editorIndentGuide.activeBackground1': '#DBA6DE', 'scrollbarSlider.background': '#8F579188',
             'scrollbarSlider.hoverBackground': '#DBA6DECC', 'scrollbarSlider.activeBackground': '#F7EAF7',
+        },
+    });
+    monaco.editor.defineTheme('catTasksTzeentch', {
+        base: 'vs-dark', inherit: true, rules: [],
+        colors: {
+            'editor.background': '#101517', 'editor.foreground': '#E8E9F1',
+            'editorLineNumber.foreground': '#8093C5', 'editorLineNumber.activeForeground': '#E8E9F1',
+            'editor.selectionBackground': '#233F81', 'editor.inactiveSelectionBackground': '#233F8188',
+            'editorCursor.foreground': '#3D8EAA', 'editorIndentGuide.background1': '#1A2551',
+            'editorIndentGuide.activeBackground1': '#67519A', 'scrollbarSlider.background': '#3D8EAA88',
+            'scrollbarSlider.hoverBackground': '#3D8EAACC', 'scrollbarSlider.activeBackground': '#E8E9F1',
         },
     });
 }

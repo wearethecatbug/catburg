@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-labelledby="tzeentch-title">
+  <title id="tzeentch-title">Тзинч — глаз в пламени</title>
+  <defs><linearGradient id="tzeentch-surface" x2="0" y2="1"><stop stop-color="#254367"/><stop offset="1" stop-color="#111c32"/></linearGradient><linearGradient id="tzeentch-flame" x2="0" y2="1"><stop stop-color="#b0eafb"/><stop offset="1" stop-color="#3d9ac0"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="16" fill="url(#tzeentch-surface)" stroke="#b8a171" stroke-width="2"/>
+  <path d="M14 16c9-9 27-10 36-1" fill="none" stroke="#eef3fc" stroke-opacity=".13" stroke-width="3" stroke-linecap="round"/>
+  <path d="M34 11c-1 9 8 10 7 19 4-1 6-4 7-7 6 12 2 29-16 30-13 0-21-9-18-20 1-5 5-9 8-11-1 6 0 9 3 10-2-10 7-12 9-21Z" fill="url(#tzeentch-flame)" stroke="#8bdced" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M19 39q13-15 26 0-13 14-26 0Z" fill="#13213d" stroke="#d9c590" stroke-width="2.5"/>
+  <circle cx="32" cy="39" r="5.5" fill="#e6d59f"/>
+  <path d="M32 34v10" stroke="#18213d" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -147,6 +147,14 @@
     color: #e5e0d4;
 }
 
+:global([data-cattasks-theme='tzeentch']) .outputPanel {
+    border-color: var(--workspace-panel-border);
+}
+
+:global([data-cattasks-theme='tzeentch']) :is(.outputHeading, .tabList) {
+    border-bottom-color: var(--workspace-panel-border);
+}
+
 @container cattasks-workspace (max-width: 520px) {
     .outputPanel {
         border-radius: 22px;

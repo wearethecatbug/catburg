@@ -19,7 +19,26 @@
 .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='slaanesh']) [data-v146-task-number] { color: var(--v146-header-muted); }
 .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='slaanesh']) button:focus-visible { outline: 3px solid var(--v146-header-focus); outline-offset: 3px; }
 
+.dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) {
+    --v146-header-text: #f4e9d3;
+    --v146-header-muted: #c6cce0;
+    --v146-header-focus: #83cee6;
+    --v146-support-rail-border: rgb(185 153 96 / .64);
+    --v146-support-rail-glow: rgb(52 135 173 / .16);
+    --v146-support-rail-shade: rgb(9 15 29 / .38);
+    --v146-support-rail-base: #142337;
+    --v146-support-rail-highlight: rgb(244 233 211 / .34);
+    --v146-support-rail-shadow: rgb(9 15 29 / .72);
+}
+
+.dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) h1,
+.dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) button { color: var(--v146-header-text); }
+.dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) [data-v146-task-number] { color: var(--v146-header-muted); }
+.dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) button:focus-visible { outline: 3px solid var(--v146-header-focus); outline-offset: 3px; }
+
 @media (forced-colors: active) {
     .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='slaanesh']) :is(h1, button, [data-v146-task-number]) { color: CanvasText; }
     .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='slaanesh']) button:focus-visible { outline-color: Highlight; }
+    .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) :is(h1, button, [data-v146-task-number]) { color: CanvasText; }
+    .dashboardShell :global([data-v146-header][data-v146-mode='task'][data-warhammer-variant='tzeentch']) button:focus-visible { outline-color: Highlight; }
 }
