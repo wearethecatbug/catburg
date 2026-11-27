@@ -1,9 +1,9 @@
 'use client';
 
-import {useEffect, useRef, useState, type CSSProperties, type MouseEvent} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent} from 'react';
 import styles from './PetStrip.module.css';
 import {isWarhammerTheme, useCatTasksTheme} from '../taskDashboard/CatTasksTheme';
-import TyranidPixiCanvas from './TyranidPixiCanvas';
+import TyranidPixiCanvas, {projectTyranidBitePosition, TYRANID_BITE_OFFSET_PX} from './TyranidPixiCanvas';
 import type {TyranidAnimation} from '../../feature/pixi/petstrip/TyranidActor';
 
 const INITIAL_DOG_POSITION = 6;
@@ -14,7 +14,6 @@ const EATING_DURATION_MS = 600;
 const PILE_DELAY_MS = 3_000;
 const PILE_VISIBLE_MS = 7_000;
 const ACID_PUDDLE_VISIBLE_MS = 1_500;
-const TYRANID_BITE_OFFSET_PX = 30;
 const TYRANID_BITE_DELAY_MS = 320;
 const TYRANID_ACID_DURATION_MS = 740;
 const TYRANID_ACID_PHASE_DURATIONS = [100, 110, 150, 120, 120, 140];
@@ -25,7 +24,7 @@ type DogDirection = 'left' | 'right';
 type Food = { id: number; position: number };
 type Pile = { id: number; anchor: number; direction: DogDirection; offset: number };
 type Acid = {id: number; position: number; phase: number};
-type TyranidTravel = {from: number; to: number; startedAt: number; duration: number} | null;
+type TyranidTravel = {from: number; startedAt: number; duration: number} | null;
 
 function clampPosition(position: number): number {
     return Math.min(100, Math.max(0, position));
@@ -48,6 +47,8 @@ export default function PetStrip() {
     const [tyranidPosition, setTyranidPosition] = useState(INITIAL_DOG_POSITION);
     const [tyranidDirection, setTyranidDirection] = useState<DogDirection>('right');
     const [tyranidState, setTyranidState] = useState<PetState>('idle');
+    const [tyranidBiteTarget, setTyranidBiteTarget] = useState<number | null>(null);
+    const [tyranidStateStartedAt, setTyranidStateStartedAt] = useState<number | null>(null);
     const [travelDuration, setTravelDuration] = useState(320);
     const [foods, setFoods] = useState<Food[]>([]);
     const [piles, setPiles] = useState<Pile[]>([]);
@@ -61,6 +62,7 @@ export default function PetStrip() {
     const dogDirectionRef = useRef<DogDirection>('right');
     const tyranidPositionRef = useRef(INITIAL_DOG_POSITION);
     const tyranidDirectionRef = useRef<DogDirection>('right');
+    const tyranidBiteTargetRef = useRef<number | null>(null);
     const foodsRef = useRef<Food[]>([]);
     const activeTargetRef = useRef<Food | null>(null);
     const nextIdRef = useRef(0);
@@ -69,7 +71,7 @@ export default function PetStrip() {
     const usesTyranidRef = useRef(usesTyranid);
     const activeMealUsesTyranidRef = useRef<boolean | null>(null);
     const reducedMotionRef = useRef(false);
-    usesTyranidRef.current = usesTyranid;
+    useLayoutEffect(() => { usesTyranidRef.current = usesTyranid; }, [usesTyranid]);
 
     const setProjectionState = (usesTyranidProjection: boolean, state: PetState) => {
         if (usesTyranidProjection) setTyranidState(state);
@@ -81,7 +83,8 @@ export default function PetStrip() {
         else setDogStatus(nextStatus);
     };
 
-    const currentProjectionPosition = () => usesTyranidRef.current ? tyranidPositionRef.current : dogPositionRef.current;
+    const currentTyranidPosition = () => projectTyranidBitePosition(tyranidBiteTargetRef.current, tyranidDirectionRef.current, trackRef.current?.getBoundingClientRect().width ?? 0, tyranidPositionRef.current);
+    const currentProjectionPosition = () => usesTyranidRef.current ? currentTyranidPosition() : dogPositionRef.current;
 
     const schedule = (callback: () => void, delay: number) => {
         const timer = setTimeout(() => {
@@ -98,14 +101,19 @@ export default function PetStrip() {
         }
     };
 
+    const sleepIfQuiet = useCallback(() => {
+        if (activeTargetRef.current !== null || foodsRef.current.length !== 0) return;
+        setDogState('sleeping');
+        setTyranidState('sleeping');
+        setDogStatus('Pet is sleeping');
+        setTyranidStatus('Pet is sleeping');
+    }, []);
+
     const scheduleSleep = () => {
         cancelSleep();
         sleepTimerRef.current = setTimeout(() => {
             sleepTimerRef.current = null;
-            if (activeTargetRef.current === null && foodsRef.current.length === 0) {
-                setProjectionState(usesTyranidRef.current, 'sleeping');
-                setProjectionStatus(usesTyranidRef.current, 'Pet is sleeping');
-            }
+            sleepIfQuiet();
         }, SLEEP_DELAY_MS);
     };
 
@@ -149,11 +157,14 @@ export default function PetStrip() {
         setProjectionState(mealUsesTyranid, 'running');
         setProjectionStatus(mealUsesTyranid, 'Pet is running to food');
         if (mealUsesTyranid) {
+            const startedAt = performance.now();
             tyranidDirectionRef.current = direction;
+            tyranidBiteTargetRef.current = target.position;
             tyranidPositionRef.current = destination;
             setTyranidDirection(direction);
+            setTyranidBiteTarget(target.position);
             setTyranidPosition(destination);
-            setTyranidTravel({from: departure, to: destination, startedAt: performance.now(), duration: travelDuration});
+            setTyranidTravel({from: departure, startedAt, duration: travelDuration});
         } else {
             dogDirectionRef.current = direction;
             dogPositionRef.current = destination;
@@ -165,6 +176,7 @@ export default function PetStrip() {
         schedule(() => {
             if (activeTargetRef.current?.id !== target.id) return;
             setProjectionState(mealUsesTyranid, 'eating');
+            if (mealUsesTyranid) setTyranidStateStartedAt(performance.now());
             setProjectionStatus(mealUsesTyranid, 'Pet is eating');
             const consumeFood = () => {
                 foodsRef.current = foodsRef.current.filter((food) => food.id !== target.id);
@@ -176,8 +188,9 @@ export default function PetStrip() {
                 if (activeTargetRef.current?.id !== target.id) return;
                 if (mealUsesTyranid) {
                     const currentWidth = trackRef.current?.getBoundingClientRect().width ?? 0;
-                    const acidPosition = tyranidPositionRef.current + (tyranidDirectionRef.current === 'right' ? -1 : 1) * 44 / Math.max(currentWidth, 1) * 100;
+                    const acidPosition = currentTyranidPosition() + (tyranidDirectionRef.current === 'right' ? -1 : 1) * 44 / Math.max(currentWidth, 1) * 100;
                     setProjectionState(true, 'acid');
+                    setTyranidStateStartedAt(performance.now());
                     setProjectionStatus(true, 'Tyranid releases acid');
                     setTyranidTravel(null);
                     setAcidEffects((current) => [...current, {id: target.id, position: acidPosition, phase: reducedMotionRef.current ? 2 : 0}]);
@@ -186,7 +199,7 @@ export default function PetStrip() {
                         TYRANID_ACID_PHASE_DURATIONS.forEach((duration, phase) => {
                             if (phase > 0) schedule(() => {
                                 if (reducedMotionRef.current) return;
-                                setAcidEffects((current) => current.map((acid) => acid.id === target.id ? {...acid, phase} : acid));
+                                setAcidEffects((current) => current.map((acid) => acid.id === target.id ? {...acid, phase: Math.max(acid.phase, phase)} : acid));
                             }, elapsed);
                             elapsed += duration;
                         });
@@ -194,6 +207,11 @@ export default function PetStrip() {
                     schedule(() => {
                         if (activeTargetRef.current?.id !== target.id) return;
                         setAcidEffects((current) => current.map((acid) => acid.id === target.id ? {...acid, phase: 5} : acid));
+                        const settledPosition = currentTyranidPosition();
+                        tyranidPositionRef.current = settledPosition;
+                        tyranidBiteTargetRef.current = null;
+                        setTyranidPosition(settledPosition);
+                        setTyranidBiteTarget(null);
                         activeTargetRef.current = null;
                         activeMealUsesTyranidRef.current = null;
                         setProjectionState(true, 'idle');
@@ -243,17 +261,14 @@ export default function PetStrip() {
         const timers = timersRef.current;
         sleepTimerRef.current = setTimeout(() => {
             sleepTimerRef.current = null;
-            if (activeTargetRef.current === null && foodsRef.current.length === 0) {
-                setProjectionState(usesTyranidRef.current, 'sleeping');
-                setProjectionStatus(usesTyranidRef.current, 'Pet is sleeping');
-            }
+            sleepIfQuiet();
         }, SLEEP_DELAY_MS);
         return () => {
             if (sleepTimerRef.current) clearTimeout(sleepTimerRef.current);
             timers.forEach((timer) => clearTimeout(timer));
             timers.clear();
         };
-    }, []);
+    }, [sleepIfQuiet]);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -305,7 +320,7 @@ export default function PetStrip() {
                     </span>
                 ))}
             </span>
-            {usesTyranid && <TyranidPixiCanvas trackRef={trackRef} position={tyranidPosition} direction={tyranidDirection} state={tyranidState as TyranidAnimation} travel={tyranidTravel}/>}
+            {usesTyranid && <TyranidPixiCanvas trackRef={trackRef} position={tyranidPosition} biteTarget={tyranidBiteTarget} direction={tyranidDirection} state={tyranidState as TyranidAnimation} stateStartedAt={tyranidStateStartedAt} travel={tyranidTravel}/>}
             <button aria-label="Feed pet" className={styles.feedButton} disabled={!isReady} onClick={handleFeedClick} type="button">Feed pet</button>
             <span className={styles.status} role="status">{visibleStatus}</span>
         </section>

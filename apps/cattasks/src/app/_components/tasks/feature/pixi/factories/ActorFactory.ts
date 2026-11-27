@@ -3,14 +3,13 @@ import {ActorModel} from '@/app/_components/tasks/feature/pixi/models/ActorModel
 import {MovementModel} from '@/app/_components/tasks/feature/pixi/models/MovementModel';
 import {PhysicsModel} from '@/app/_components/tasks/feature/pixi/models/PhysicsModel';
 import {ViewFactory} from './ViewFactory';
-import {ActorView} from '@/app/_components/tasks/feature/pixi/views/ActorView';
 import {PlayerController} from '@/app/_components/tasks/feature/pixi/controllers/PlayerController';
 import {MovementController} from '@/app/_components/tasks/feature/pixi/controllers/MovementController';
 import {GravityController} from '@/app/_components/tasks/feature/pixi/controllers/GravityController';
 import type {KeyboardController} from '@/app/_components/tasks/feature/pixi/interactive/KeyboardController';
 import {Assets, type Spritesheet} from 'pixi.js';
 import type {AnimationNameMap, EntityAnimationState} from '@/app/_components/tasks/feature/pixi/systems/animation';
-import type {AnimationConfig} from '@/app/_components/tasks/feature/pixi/views/ActorView';
+import type {ActorView, AnimationConfig} from '@/app/_components/tasks/feature/pixi/views/ActorView';
 
 export interface BaseActorConfig {
     spritesheet: string;
@@ -31,16 +30,18 @@ export interface PlayerActorConfig extends MobileActorConfig {
     sceneBounds: { width: number; height: number };
 }
 
+export interface ActorFromViewConfig {
+    view: ActorView;
+    initialPosition: { x: number; y: number };
+    direction?: Direction;
+}
+
 export class ActorFactory {
     /**
      * Creates an actor around a caller-owned view. This intentionally does not
      * look in global Assets: local hosts retain ownership of their textures.
      */
-    static createActorFromView(config: {
-        view: ActorView;
-        initialPosition: { x: number; y: number };
-        direction?: Direction;
-    }): Actor {
+    static createActorFromView(config: ActorFromViewConfig): Actor {
         const direction = config.direction ?? Direction.Right;
         return new Actor(config.view, new ActorModel({
             position: config.initialPosition,

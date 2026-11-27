@@ -1,11 +1,11 @@
-import {AnimatedSprite, Texture} from 'pixi.js';
+import {AnimatedSprite, type Texture} from 'pixi.js';
 import {ActorFactory} from '../factories/ActorFactory';
-import {IController} from '../controllers/IController';
-import {Direction, Actor} from '../scene/Actor';
+import type {IController} from '../controllers/IController';
+import {Direction, type Actor} from '../scene/Actor';
 import {ActorView} from '../views/ActorView';
 
 export type TyranidAnimation = 'idle' | 'running' | 'eating' | 'acid' | 'sleeping';
-export type TyranidSnapshot = {position: number; groundY: number; direction: 'left' | 'right'; state: TyranidAnimation; reducedMotion: boolean};
+export type TyranidSnapshot = {position: number; groundY: number; direction: 'left' | 'right'; state: TyranidAnimation; reducedMotion: boolean; stateStartedAt: number | null};
 
 const animations: Record<TyranidAnimation, {frames: readonly number[]; durations: readonly number[]; reduced: number}> = {
     idle: {frames: [0, 1, 2, 1, 0, 6, 7, 8, 10, 11], durations: [260, 260, 260, 260, 260, 260, 260, 260, 260, 260], reduced: 0},
@@ -35,6 +35,18 @@ class TyranidProjectionController implements IController {
         const animation = animations[this.snapshot.state];
         if (this.state !== this.snapshot.state) { this.state = this.snapshot.state; this.elapsed = 0; this.cursor = 0; }
         if (this.snapshot.reducedMotion) { sprite.gotoAndStop(animation.reduced); return; }
+        if ((this.snapshot.state === 'eating' || this.snapshot.state === 'acid') && this.snapshot.stateStartedAt !== null) {
+            let elapsed = Math.max(0, performance.now() - this.snapshot.stateStartedAt);
+            let cursor = 0;
+            while (cursor < animation.durations.length - 1 && elapsed >= animation.durations[cursor]) {
+                elapsed -= animation.durations[cursor];
+                cursor += 1;
+            }
+            this.elapsed = elapsed;
+            this.cursor = cursor;
+            sprite.gotoAndStop(animation.frames[cursor]);
+            return;
+        }
         this.elapsed += Math.max(0, Math.min(delta, 50));
         while (this.elapsed >= animation.durations[this.cursor]) {
             this.elapsed -= animation.durations[this.cursor];

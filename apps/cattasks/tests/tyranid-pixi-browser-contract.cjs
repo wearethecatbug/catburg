@@ -55,6 +55,12 @@ async function selectTheme(page, theme) {
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
 
+async function selectThemeDuringClock(page, theme) {
+  await page.getByRole("button", {name: /Choose theme \(current:/}).click();
+  await page.getByRole("button", {name: theme[0].toUpperCase() + theme.slice(1), exact: true}).click();
+  await page.locator(`[data-cattasks-theme='${theme}']`).waitFor({state: "attached", timeout: 5_000});
+}
+
 async function selectPage(page, view) {
   const dashboard = page.locator("[data-cattasks-page]").first();
   const current = async () => dashboard.getAttribute("data-cattasks-page");
@@ -103,12 +109,13 @@ async function assertTyranidLayer(strip, label) {
       return {left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, height: box.height, z: style.zIndex, pointerEvents: style.pointerEvents};
     };
     const trackPrecedesHost = Boolean(track.compareDocumentPosition(hostNode) & Node.DOCUMENT_POSITION_FOLLOWING);
-    return {strip: rect(node), track: rect(track), feed: rect(feed), canvas: rect(canvas), trackPrecedesHost, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth};
+    return {strip: rect(node), track: rect(track), feed: rect(feed), host: rect(hostNode), canvas: rect(canvas), trackPrecedesHost, scrollWidth: document.documentElement.scrollWidth, clientWidth: document.documentElement.clientWidth};
   }, await host.elementHandle());
   assert.equal(geometry.trackPrecedesHost, true, `${label}: the native track precedes the local renderer host in PetStrip`);
   assert.ok(geometry.canvas.width > 0 && geometry.canvas.height > 0, `${label}: canvas has a visible local drawing area`);
   assert.ok(geometry.canvas.left >= geometry.strip.left - 1 && geometry.canvas.right <= geometry.strip.right + 1, `${label}: canvas is clipped to PetStrip`);
   assert.equal(geometry.canvas.pointerEvents, "none", `${label}: canvas cannot consume native feed input`);
+  assert.ok(Number(geometry.feed.z) > Number(geometry.host.z), `${label}: native Feed paints above the Tyranid host independent of pointer hit testing`);
   assert.equal(geometry.scrollWidth, geometry.clientWidth, `${label}: page has no horizontal overflow`);
   const hit = await strip.evaluate(node => {
     const button = node.querySelector("button[aria-label='Feed pet']");
@@ -634,4 +641,179 @@ test("a completed Dark dog meal retains its independent pile clock through a God
     await context.close();
     await browser.close();
   }
+});
+
+async function withTyranidR1Browser(scenario) {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  try {
+    await scenario(browser);
+  } finally {
+    await browser.close();
+  }
+}
+
+test("Tyranid keeps a physical 30px bite anchor after a responsive viewport change", {timeout: 75_000}, async () => {
+  await withTyranidR1Browser(async browser => {
+    const context = await browser.newContext({viewport: {width: 1040, height: 900}});
+    try {
+      const page = await context.newPage();
+      const {diagnostics, strip} = await prepare(context, page);
+      await selectThemeDuringClock(page, "khorne");
+      const {canvas} = await assertTyranidLayer(strip, "responsive bite anchor");
+      await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 60_000);
+      const feed = strip.getByRole("button", {name: "Feed pet", exact: true});
+      await feed.focus();
+      await feed.press("Enter");
+      await page.setViewportSize({width: 623, height: 900});
+      await page.clock.runFor(80);
+      await advanceUntil(page, () => strip.getAttribute("data-pet-state").then(state => state === "eating"), "Tyranid reaches the resized centre forearm", 20_000, 8);
+      const forearm = strip.locator("[data-pet='food'][data-pet-position='50']");
+      const [forearmBox, actor] = await Promise.all([forearm.boundingBox(), renderedCentre(page, canvas)]);
+      assert.ok(forearmBox, "the resized forearm has a visible geometry anchor");
+      const gap = forearmBox.x + forearmBox.width / 2 - actor.x;
+      assert.ok(Math.abs(gap - 30) <= 8, `resizing during travel retains the right-facing 30px bite gap, observed ${gap}`);
+      assertCleanDiagnostics(diagnostics);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+test("Tyranid does not rewind a settled acid effect when controlled motion is restored", {timeout: 75_000}, async () => {
+  await withTyranidR1Browser(async browser => {
+    const context = await browser.newContext({viewport: {width: 1040, height: 900}});
+    try {
+      await context.addInitScript(() => {
+        const nativeMatchMedia = window.matchMedia;
+        window.__tyranidMotionQueries = [];
+        window.matchMedia = query => {
+          const mediaQuery = nativeMatchMedia.call(window, query);
+          if (query.includes("prefers-reduced-motion")) window.__tyranidMotionQueries.push(mediaQuery);
+          return mediaQuery;
+        };
+      });
+      const page = await context.newPage();
+      const {diagnostics, strip} = await prepare(context, page);
+      await selectTheme(page, "khorne");
+      await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 60_000);
+      await strip.getByRole("button", {name: "Feed pet", exact: true}).press("Enter");
+      await advanceUntil(page, () => strip.getAttribute("data-pet-state").then(state => state === "acid"), "acid starts for a reduced-motion crossing", 20_000, 5);
+      const acid = strip.locator("[data-pet='acid']");
+      const changeMotion = async preference => {
+        await page.emulateMedia({reducedMotion: preference});
+        await page.evaluate(() => {
+          for (const mediaQuery of window.__tyranidMotionQueries) mediaQuery.dispatchEvent(new MediaQueryListEvent("change", {matches: mediaQuery.matches, media: mediaQuery.media}));
+        });
+      };
+      await page.clock.runFor(120);
+      await changeMotion("reduce");
+      assert.equal(await acid.getAttribute("data-pet-phase"), "5", "reduced motion settles an active acid effect");
+      await page.clock.runFor(40);
+      await changeMotion("no-preference");
+      await page.clock.runFor(100);
+      assert.equal(await acid.getAttribute("data-pet-phase"), "5", "restoring motion cannot rewind a settled acid effect");
+      assertCleanDiagnostics(diagnostics);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+test("Tyranid preserves the original Dark idle deadline while Chaos is selected", {timeout: 75_000}, async () => {
+  await withTyranidR1Browser(async browser => {
+    const context = await browser.newContext({viewport: {width: 1040, height: 900}});
+    try {
+      const page = await context.newPage();
+      await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
+      const {diagnostics, strip} = await prepare(context, page);
+      await selectThemeDuringClock(page, "dark");
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 250);
+      assert.equal(await strip.locator("[data-pet='dog']").getAttribute("data-pet-state"), "idle", "the original Dark idle deadline has not fired before the cross-theme interval");
+      await selectThemeDuringClock(page, "khorne");
+      await page.clock.runFor(32_000);
+      assert.equal(await strip.getAttribute("data-pet-state"), "sleeping", "the active Chaos projection proves the authoritative idle timer fired while Dark was dormant");
+      await selectThemeDuringClock(page, "dark");
+      assert.equal(await strip.locator("[data-pet='dog']").getAttribute("data-pet-state"), "sleeping", "a dormant Dark projection reaches the original idle sleep deadline after a theme crossing");
+      assertCleanDiagnostics(diagnostics);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+test("Tyranid restores the active eating framebuffer phase after a Capybara round trip", {timeout: 75_000}, async () => {
+  await withTyranidR1Browser(async browser => {
+    const context = await browser.newContext({viewport: {width: 1040, height: 900}});
+    try {
+      await context.addInitScript(() => {
+        window.__tyranidFrameRequest = false;
+        window.__tyranidFrame = null;
+        for (const Constructor of [window.WebGLRenderingContext, window.WebGL2RenderingContext]) {
+          if (!Constructor) continue;
+          for (const method of ["drawElements", "drawArrays", "drawElementsInstanced", "drawArraysInstanced"]) {
+            if (!Object.hasOwn(Constructor.prototype, method)) continue;
+            const nativeDraw = Constructor.prototype[method];
+            Constructor.prototype[method] = function (...args) {
+              const result = nativeDraw.apply(this, args);
+              if (!window.__tyranidFrameRequest || !this.canvas?.closest?.("[data-pet-renderer='tyranid']")) return result;
+              const pixels = new Uint8Array(this.drawingBufferWidth * this.drawingBufferHeight * 4);
+              this.readPixels(0, 0, this.drawingBufferWidth, this.drawingBufferHeight, this.RGBA, this.UNSIGNED_BYTE, pixels);
+              let fingerprint = 2166136261;
+              let opaque = 0;
+              for (let index = 0; index < pixels.length; index += 4) {
+                if (!pixels[index + 3]) continue;
+                opaque += 1;
+                fingerprint = Math.imul(fingerprint ^ index ^ pixels[index] ^ (pixels[index + 1] << 8) ^ (pixels[index + 2] << 16), 16777619);
+              }
+              if (opaque) {
+                window.__tyranidFrame = {fingerprint, opaque};
+                window.__tyranidFrameRequest = false;
+              }
+              return result;
+            };
+          }
+        }
+      });
+      const page = await context.newPage();
+      const {diagnostics, strip} = await prepare(context, page);
+      const frame = async () => {
+        await page.evaluate(() => { window.__tyranidFrame = null; window.__tyranidFrameRequest = true; });
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          await page.clock.runFor(16);
+          const sample = await page.evaluate(() => window.__tyranidFrame);
+          if (sample) return sample;
+        }
+        assert.fail("the local renderer did not expose an eating-frame sample");
+      };
+      await selectTheme(page, "khorne");
+      await assertTyranidLayer(strip, "phase restoration before meal");
+      await page.clock.install({time: new Date("2026-01-01T00:00:00Z")});
+      await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 60_000);
+      await strip.getByRole("button", {name: "Feed pet", exact: true}).press("Enter");
+      await advanceUntil(page, () => strip.getAttribute("data-pet-state").then(state => state === "eating"), "Tyranid enters eating before phase sample", 20_000, 8);
+      const initial = await frame();
+      await page.clock.runFor(210);
+      const late = await frame();
+      assert.notDeepEqual(late, initial, "the original meal clock advances the displayed eating frame");
+      await selectThemeDuringClock(page, "dark");
+      await selectThemeDuringClock(page, "khorne");
+      await assertTyranidLayer(strip, "phase restoration after theme remount");
+      const restored = await frame();
+      assert.deepEqual(restored, late, "returning during the same meal restores its current animation phase instead of frame zero");
+      await advanceUntil(page, () => strip.getAttribute("data-pet-state").then(state => state === "acid"), "Tyranid reaches acid before the second phase sample", 5_000, 8);
+      const acidInitial = await frame();
+      await page.clock.runFor(200);
+      const acidLate = await frame();
+      assert.notDeepEqual(acidLate, acidInitial, "the original acid clock advances the displayed acid frame");
+      await selectThemeDuringClock(page, "dark");
+      await selectThemeDuringClock(page, "khorne");
+      await assertTyranidLayer(strip, "acid phase restoration after theme remount");
+      assert.deepEqual(await frame(), acidLate, "returning during the same acid effect restores its current animation phase instead of frame zero");
+      assertCleanDiagnostics(diagnostics, {allowTyranidAbort: true});
+    } finally {
+      await context.close();
+    }
+  });
 });

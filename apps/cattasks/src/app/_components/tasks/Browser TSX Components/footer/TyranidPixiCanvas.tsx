@@ -1,23 +1,29 @@
 'use client';
 
-import {useEffect, useRef, type RefObject} from 'react';
+import {useEffect, useLayoutEffect, useRef, type RefObject} from 'react';
 import type {TyranidActor as TyranidActorInstance, TyranidAnimation, TyranidSnapshot} from '../../feature/pixi/petstrip/TyranidActor';
 import styles from './PetStrip.module.css';
 
-type Travel = {from: number; to: number; startedAt: number; duration: number} | null;
-type Props = {trackRef: RefObject<HTMLSpanElement | null>; position: number; direction: 'left' | 'right'; state: TyranidAnimation; travel: Travel};
+type Travel = {from: number; startedAt: number; duration: number} | null;
+type Props = {trackRef: RefObject<HTMLSpanElement | null>; position: number; biteTarget: number | null; direction: 'left' | 'right'; state: TyranidAnimation; stateStartedAt: number | null; travel: Travel};
 type Pixi = typeof import('pixi.js');
 const ATLAS = '/cattasks/themes/shared/tyranid/tyranid-all-actions-v3.png';
 const X = [0, 194, 387, 580, 774, 968], Y = [0, 194, 387, 581, 774, 968, 1161];
 const WIDTH = [194, 193, 193, 194, 194, 193], HEIGHT = [194, 193, 194, 193, 194, 193, 194];
 const ORIGIN: Record<number, number> = {0: 157, 1: 157, 2: 157, 6: 159, 7: 159, 8: 159, 10: 159, 11: 159, 12: 152, 13: 152, 14: 152, 15: 152, 16: 152, 17: 152, 18: 146, 19: 147, 20: 146, 21: 145, 22: 146, 23: 146, 24: 136, 25: 136, 26: 136, 27: 136, 28: 136, 29: 136, 36: 109, 37: 109, 41: 109};
+export const TYRANID_BITE_OFFSET_PX = 30;
 
-export default function TyranidPixiCanvas({trackRef, position, direction, state, travel}: Props) {
+export function projectTyranidBitePosition(target: number | null, direction: 'left' | 'right', trackWidth: number, fallback: number): number {
+    if (target === null) return fallback;
+    return target + (direction === 'right' ? -1 : 1) * TYRANID_BITE_OFFSET_PX / Math.max(trackWidth, 1) * 100;
+}
+
+export default function TyranidPixiCanvas({trackRef, position, biteTarget, direction, state, stateStartedAt, travel}: Props) {
     const host = useRef<HTMLSpanElement>(null);
-    const latest = useRef({trackRef, position, direction, state, travel});
+    const latest = useRef({trackRef, position, biteTarget, direction, state, stateStartedAt, travel});
     const renderLatest = useRef<(() => void) | null>(null);
-    latest.current = {trackRef, position, direction, state, travel};
-    useEffect(() => { renderLatest.current?.(); }, [position, direction, state, travel]);
+    useLayoutEffect(() => { latest.current = {trackRef, position, biteTarget, direction, state, stateStartedAt, travel}; }, [trackRef, position, biteTarget, direction, state, stateStartedAt, travel]);
+    useEffect(() => { renderLatest.current?.(); }, [position, biteTarget, direction, state, stateStartedAt, travel]);
 
     useEffect(() => {
         const target = host.current, track = trackRef.current;
@@ -67,15 +73,16 @@ export default function TyranidPixiCanvas({trackRef, position, direction, state,
                 const {TyranidActor} = await import('../../feature/pixi/petstrip/TyranidActor');
                 if (disposed || token !== generation || !target.isConnected) return;
                 reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-                actor = new TyranidActor(textures, {position: 0, groundY: target.clientHeight - 7, direction: 'right', state: 'idle', reducedMotion: reduced.matches});
+                actor = new TyranidActor(textures, {position: 0, groundY: target.clientHeight - 7, direction: 'right', state: 'idle', reducedMotion: reduced.matches, stateStartedAt: null});
                 app.stage.addChild(actor.actor.view.sprite); app.ticker.remove(app.render, app);
                 app.canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none'; target.appendChild(app.canvas);
                 const geometry = {trackLeft: 0, trackWidth: 1, hostWidth: 1, height: target.clientHeight};
                 const project = (deltaMS: number, now: number) => {
                     if (document.hidden) return;
                     const current = latest.current, activeTravel = reduced?.matches ? null : current.travel;
-                    const logicalPosition = activeTravel ? activeTravel.from + (activeTravel.to - activeTravel.from) * Math.min(1, Math.max(0, (now - activeTravel.startedAt) / Math.max(1, activeTravel.duration))) : current.position;
-                    const snapshot: TyranidSnapshot = {position: geometry.trackLeft + geometry.trackWidth * logicalPosition / 100, groundY: geometry.height - 7, direction: current.direction, state: current.state, reducedMotion: reduced?.matches ?? false};
+                    const bitePosition = projectTyranidBitePosition(current.biteTarget, current.direction, geometry.trackWidth, current.position);
+                    const logicalPosition = activeTravel ? activeTravel.from + (bitePosition - activeTravel.from) * Math.min(1, Math.max(0, (now - activeTravel.startedAt) / Math.max(1, activeTravel.duration))) : bitePosition;
+                    const snapshot: TyranidSnapshot = {position: geometry.trackLeft + geometry.trackWidth * logicalPosition / 100, groundY: geometry.height - 7, direction: current.direction, state: current.state, reducedMotion: reduced?.matches ?? false, stateStartedAt: current.stateStartedAt};
                     actor?.update(snapshot, deltaMS); app.render();
                 };
                 const renderStatic = () => project(0, performance.now());
