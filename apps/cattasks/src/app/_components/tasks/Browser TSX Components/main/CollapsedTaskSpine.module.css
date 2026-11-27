@@ -179,6 +179,7 @@
 :global([data-cattasks-theme='slaanesh']) .spine {
     color: #f0eaf1;
 }
+:global([data-cattasks-theme='tzeentch']) .spine { color: #e8e9f1; }
 
 @container cattasks-workspace (max-width: 600px) {
     :global([data-cattasks-theme='slaanesh']) .spine {
@@ -195,6 +196,14 @@
         background-position: center, 50% 47.44%, center;
         background-size: 100% 100%, 205.26px auto, 100% 100%;
     }
+    :global([data-cattasks-theme='tzeentch']) .spine {
+        inline-size: 196px; min-inline-size: 0; block-size: 53.68px; min-block-size: 0;
+        border-radius: var(--task-spine-mobile-radius, 20px);
+        background-image: linear-gradient(180deg, rgb(232 233 241 / .30), rgb(61 142 170 / .12) 45%, rgb(103 81 154 / .20)), var(--task-spine-mobile-image), linear-gradient(180deg, #233f81, #11152b 35%, #1a2551 72%, #0d1022);
+        background-origin: border-box; background-position: center, 50% 47.44%, center; background-size: 100% 100%, 205.26px auto, 100% 100%;
+    }
+    :global([data-cattasks-theme='tzeentch']) .label { transform: translate(-50%, -50%); }
+    :global([data-cattasks-theme='tzeentch']) .chevron { inset-inline-end: 24px; transform: translateY(-50%) rotate(90deg); }
 
     :global([data-cattasks-theme='slaanesh']) .spine::after {
         background-position: var(--task-spine-mobile-band-offset, 14px) center, calc(100% - var(--task-spine-mobile-band-offset, 14px)) center;
@@ -220,6 +229,13 @@
         background-position: center, 50.75% 44%, center;
         background-size: 100% 100%, 63.20px auto, 100% 100%;
     }
+    :global([data-cattasks-theme='tzeentch']) .spine {
+        flex: none; inline-size: 52px; min-inline-size: 52px; block-size: 157.08px; min-block-size: 157.08px;
+        background-image: linear-gradient(90deg, rgb(232 233 241 / .30), rgb(61 142 170 / .12) 45%, rgb(103 81 154 / .20)), var(--task-spine-desktop-image), linear-gradient(90deg, #233f81, #11152b 35%, #1a2551 72%, #0d1022);
+        background-origin: border-box; background-position: center, 50.75% 44%, center; background-size: 100% 100%, 63.20px auto, 100% 100%;
+    }
+    :global([data-cattasks-theme='tzeentch']) .label { inset-block-start: 42%; transform: translate(-50%, -50%) rotate(-90deg); }
+    :global([data-cattasks-theme='tzeentch']) .chevron { inset-block-start: 80%; inset-inline-end: 9px; transform: translateY(-50%); }
 
     :global([data-cattasks-theme='slaanesh']) .label {
         inset-block-start: 42%;

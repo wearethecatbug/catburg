@@ -389,6 +389,9 @@
 :global([data-cattasks-theme='slaanesh']) .hint[open] { background: #35233d; }
 
 :global([data-cattasks-theme='slaanesh']) :is(.hint, .taskDescriptionPre, .challengeHeading) { color: #f7e8f4; }
+:global([data-cattasks-theme='tzeentch']) .hint { border-color: #67519a; background: #1a2551; }
+:global([data-cattasks-theme='tzeentch']) .hint[open] { background: #233f81; }
+:global([data-cattasks-theme='tzeentch']) :is(.hint, .taskDescriptionPre, .challengeHeading) { color: #e8e9f1; }
 
 :global([data-khorne-workspace]) :is(.khorneTab, .khorneTabBar > button) {
     color: #e5e0d4;
@@ -419,6 +422,15 @@
 
 :global([data-khorne-workspace]) :is(.taskDescriptionPre, .challengeHeading) {
     color: #e5e0d4;
+}
+
+:global([data-cattasks-theme='tzeentch']) .taskDetailsContainer {
+    border-color: var(--workspace-panel-border);
+}
+
+:global([data-cattasks-theme='tzeentch']) .btnContainer {
+    border-bottom-color: var(--workspace-panel-border);
+    background-color: var(--workspace-heading-surface);
 }
 
 @container cattasks-workspace (max-width: 520px) {

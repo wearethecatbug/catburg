@@ -468,4 +468,10 @@
         --action-hover-border: #e3bbd2;
         --action-ink: #fff8f5;
     }
+    :global([data-cattasks-theme='tzeentch']) .button[data-variant='run'] {
+        --action-face-top: #1a2551; --action-face-bottom: #11152b; --action-hover-top: #233f81; --action-hover-bottom: #1a2551; --action-border: #67519a; --action-hover-border: #a58b54; --action-ink: #e8e9f1;
+    }
+    :global([data-cattasks-theme='tzeentch']) .button[data-variant='test']:not([data-result]) {
+        --action-face-top: #44245d; --action-face-bottom: #2f183f; --action-hover-top: #5c327a; --action-hover-bottom: #3b204f; --action-border: #8f74aa; --action-hover-border: #c9b6dd; --action-ink: #fff8ff;
+    }
 }

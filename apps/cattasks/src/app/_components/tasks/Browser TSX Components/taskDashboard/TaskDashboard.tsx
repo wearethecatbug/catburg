@@ -19,10 +19,11 @@ function KhorneFigure({figure, src}: {figure: string; src: string}) {
     return <span className={styles.khorneFigure} data-khorne-figure={figure}><img className={styles.khorneFigureArt} src={src} alt="" loading="lazy" decoding="async"/></span>;
 }
 
-function ChaosFigure({theme, figure, src}: {theme: 'nurgle' | 'slaanesh'; figure: string; src: string}) {
-    const className = theme === 'nurgle' ? styles.nurgleFigure : styles.slaaneshFigure;
-    const imageClassName = theme === 'nurgle' ? styles.nurgleFigureArt : styles.slaaneshFigureArt;
-    return <span className={className} {...(theme === 'nurgle' ? {'data-nurgle-figure': figure} : {'data-slaanesh-figure': figure})}><img className={imageClassName} src={src} alt="" loading="lazy" decoding="async"/></span>;
+function ChaosFigure({theme, figure, src}: {theme: 'nurgle' | 'slaanesh' | 'tzeentch'; figure: string; src: string}) {
+    const className = theme === 'nurgle' ? styles.nurgleFigure : theme === 'slaanesh' ? styles.slaaneshFigure : styles.tzeentchFigure;
+    const imageClassName = theme === 'nurgle' ? styles.nurgleFigureArt : theme === 'slaanesh' ? styles.slaaneshFigureArt : styles.tzeentchFigureArt;
+    const figureAttribute = theme === 'nurgle' ? {'data-nurgle-figure': figure} : theme === 'slaanesh' ? {'data-slaanesh-figure': figure} : {'data-tzeentch-figure': figure};
+    return <span className={className} {...figureAttribute}><img className={imageClassName} src={src} alt="" loading="lazy" decoding="async"/></span>;
 }
 
 function readStoredTheme(): CatTasksTheme {
@@ -155,6 +156,7 @@ export default function TaskDashboard() {
                 <div className={styles.khorneScene} data-khorne-scene="all-tasks" aria-hidden="true"/>
                 <div className={styles.nurgleScene} data-nurgle-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true"/>
                 <div className={styles.slaaneshScene} data-slaanesh-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true"/>
+                <div className={styles.tzeentchScene} data-tzeentch-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true"/>
                 {theme === 'khorne' && <div className={styles.khorneFigureLayer} aria-hidden="true">
                     <div data-khorne-figure-scene="task">
                         <KhorneFigure figure="task-marine" src="/cattasks/themes/khorne/task/marine.webp"/>
@@ -237,6 +239,15 @@ export default function TaskDashboard() {
                     </> : <>
                         <ChaosFigure theme="slaanesh" figure="task-marine" src="/cattasks/themes/slaanesh/task/marine.webp"/>
                         <ChaosFigure theme="slaanesh" figure="task-daemon" src="/cattasks/themes/slaanesh/task/daemon.webp"/>
+                    </>}
+                </div>}
+                {theme === 'tzeentch' && <div className={styles.tzeentchFigureStage} data-tzeentch-figure-scene={isAllTasksOpen ? 'all-tasks' : 'task'} aria-hidden="true">
+                    {isAllTasksOpen ? <>
+                        <ChaosFigure theme="tzeentch" figure="catalogue-marine" src="/cattasks/themes/tzeentch/all-tasks/marine.webp"/>
+                        <ChaosFigure theme="tzeentch" figure="catalogue-daemon" src="/cattasks/themes/tzeentch/all-tasks/daemon.webp"/>
+                    </> : <>
+                        <ChaosFigure theme="tzeentch" figure="task-marine" src="/cattasks/themes/tzeentch/task/marine.webp"/>
+                        <ChaosFigure theme="tzeentch" figure="task-daemon" src="/cattasks/themes/tzeentch/task/daemon.webp"/>
                     </>}
                 </div>}
             </div>

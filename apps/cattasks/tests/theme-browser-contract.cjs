@@ -156,9 +156,9 @@ async function expectText(page, roleName, pattern) {
 }
 
 async function expectShippedThemeChoices(choices) {
-  const names = ["Light", "Dark", "Khorne", "Nurgle", "Slaanesh"];
+  const names = ["Light", "Dark", "Khorne", "Nurgle", "Slaanesh", "Tzeentch"];
   const buttons = choices.getByRole("button");
-  assert.equal(await buttons.count(), names.length, "exactly five theme controls are exposed");
+  assert.equal(await buttons.count(), names.length, "exactly six theme controls are exposed");
   for (const [index, name] of names.entries()) {
     const option = choices.getByRole("button", {name, exact: true});
     assert.equal(await option.count(), 1, `${name} is exposed as one accessible theme control`);
@@ -1798,12 +1798,13 @@ test("Slaanesh visual oracle reserves the workspace rail and keeps compact filte
   } finally { await context.close(); await browser.close(); }
 });
 
-test("inline theme boot paints persisted Dark, Khorne, Nurgle, and Slaanesh before blocked React bundles hydrate", {timeout: 90_000}, async () => {
+test("inline theme boot paints persisted Dark, Khorne, Nurgle, Slaanesh, and Tzeentch before blocked React bundles hydrate", {timeout: 90_000}, async () => {
   const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
   const valid = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const khorne = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const nurgle = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const slaanesh = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
+  const tzeentch = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const corrupt = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   const unavailable = await browser.newContext({viewport: {width: 1440, height: 900}, reducedMotion: "reduce"});
   try {
@@ -1811,9 +1812,10 @@ test("inline theme boot paints persisted Dark, Khorne, Nurgle, and Slaanesh befo
     await khorne.addInitScript(([key]) => localStorage.setItem(key, "khorne"), [themeStorageKey]);
     await nurgle.addInitScript(([key]) => localStorage.setItem(key, "nurgle"), [themeStorageKey]);
     await slaanesh.addInitScript(([key]) => localStorage.setItem(key, "slaanesh"), [themeStorageKey]);
+    await tzeentch.addInitScript(([key]) => localStorage.setItem(key, "tzeentch"), [themeStorageKey]);
     await corrupt.addInitScript(([key]) => localStorage.setItem(key, "corrupt"), [themeStorageKey]);
     await unavailable.addInitScript(() => Object.defineProperty(window, "localStorage", {configurable: true, get() { throw new DOMException("blocked", "SecurityError"); }}));
-    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [nurgle, "nurgle", null], [slaanesh, "slaanesh", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
+    for (const [context, expectedTheme, expectedPage] of [[valid, "dark", dark.page], [khorne, "khorne", null], [nurgle, "nurgle", null], [slaanesh, "slaanesh", null], [tzeentch, "tzeentch", null], [corrupt, "light", light.page], [unavailable, "light", light.page]]) {
       let bundles = 0;
       const loadedAssets = [];
       await context.route("**/_next/static/**/*.js", route => { bundles += 1; return route.fulfill({contentType: "application/javascript", body: ""}); });
@@ -1828,6 +1830,8 @@ test("inline theme boot paints persisted Dark, Khorne, Nurgle, and Slaanesh befo
       const lightThemeChooser = page.locator("button[aria-label='Choose theme (current: Light)']");
       if (expectedTheme === "slaanesh") assert.equal(await capybaraHeader.isVisible(), false, "persisted Slaanesh hides the actual Capybara header before blocked Next bundles can hydrate");
       if (expectedTheme === "slaanesh") assert.equal(await lightThemeChooser.isVisible(), false, "persisted Slaanesh hides the old SSR Light theme chooser before blocked Next bundles can hydrate");
+      if (expectedTheme === "tzeentch") assert.equal(await capybaraHeader.isVisible(), false, "persisted Tzeentch hides the actual Capybara header before blocked Next bundles can hydrate");
+      if (expectedTheme === "tzeentch") assert.equal(await lightThemeChooser.isVisible(), false, "persisted Tzeentch hides the old SSR Light theme chooser before blocked Next bundles can hydrate");
       if (expectedTheme === "light") {
         assert.equal(await capybaraHeader.count(), 1, "Light fallback retains one actual Capybara header before blocked Next bundles can hydrate");
         assert.equal(await capybaraHeader.isVisible(), true, "Light fallback visibly retains the actual Capybara header before blocked Next bundles can hydrate");
@@ -1838,16 +1842,17 @@ test("inline theme boot paints persisted Dark, Khorne, Nurgle, and Slaanesh befo
       if (expectedPage) assert.equal(outerPaint, expectedPage, "the visible outer page is painted by inline theme boot before React can hydrate");
       else {
         assert.notEqual(outerPaint, light.page, `${expectedTheme} outer page is painted before React can hydrate`);
+        if (expectedTheme === "tzeentch") assert.equal(outerPaint, "rgb(17, 21, 43)", "Tzeentch paints its approved outer page before React can hydrate");
         const sceneSelector = `[data-cattasks-theme='${expectedTheme}'] [data-${expectedTheme}-scene='task']`;
         assert.match(await page.locator(sceneSelector).evaluate(element => getComputedStyle(element).backgroundImage), new RegExp(`cattasks/themes/${expectedTheme}/`), `${expectedTheme} own scene is painted before React can hydrate`);
         assert.ok(loadedAssets.includes(`/cattasks/themes/${expectedTheme}/task/background-desktop.webp`), `the persisted ${expectedTheme} page loads its own scene before React hydration`);
         assert.ok(!loadedAssets.includes("/cattasks/desktop-meadow.png"), `the persisted ${expectedTheme} page does not load the Light desktop meadow`);
-        if (expectedTheme === "nurgle" || expectedTheme === "slaanesh") assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, `prehydrated ${expectedTheme} leaves no painted legacy shelf or mascot`);
+        if (["nurgle", "slaanesh", "tzeentch"].includes(expectedTheme)) assert.equal(await page.locator("[class*='taskShelf']:visible, [class*='catalogueShelf']:visible, [class*='mascotCanvas']:visible, [class*='mobileFoxBody']:visible, [class*='shelfStickers']:visible").count(), 0, `prehydrated ${expectedTheme} leaves no painted legacy shelf or mascot`);
       }
       assert.ok(bundles > 0, "all external Next static JavaScript bundles were intercepted before React could hydrate");
       await page.close();
     }
-  } finally { await valid.close(); await khorne.close(); await nurgle.close(); await slaanesh.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
+  } finally { await valid.close(); await khorne.close(); await nurgle.close(); await slaanesh.close(); await tzeentch.close(); await corrupt.close(); await unavailable.close(); await browser.close(); }
 });
 
 test("Bad or unavailable storage falls back safely; narrow All tasks scrolls without clipping", {timeout: 60_000}, async () => {
@@ -1897,6 +1902,7 @@ test("v146 body separates the live reader, editor and output while retaining tab
   const themes = [
     {name: "Khorne", kind: "god"},
     {name: "Nurgle", kind: "god"},
+    {name: "Tzeentch", kind: "god"},
     {name: "Dark", kind: "capybara"},
     {name: "Light", kind: "capybara"},
   ];
@@ -1916,7 +1922,7 @@ test("v146 body separates the live reader, editor and output while retaining tab
           };
           const paint = element => {
             const style = getComputedStyle(element);
-            return {background: style.backgroundColor, image: style.backgroundImage, radius: style.borderTopLeftRadius};
+            return {background: style.backgroundColor, image: style.backgroundImage, radius: style.borderTopLeftRadius, divider: style.borderBottomColor};
           };
           const readerControls = required("[aria-label='Режим содержимого']", "real Task controls");
           const reader = readerControls.closest("[class*='taskDetailsContainer']");
@@ -1992,6 +1998,13 @@ test("v146 body separates the live reader, editor and output while retaining tab
           }
         }
 
+        if (theme.name === "Tzeentch") {
+          for (const [name, heading] of headings) {
+            assert.equal(heading.background, "rgb(41, 51, 60)", `Tzeentch ${name} heading uses the approved #29333c band`);
+            assert.equal(heading.divider, "rgb(101, 88, 59)", `Tzeentch ${name} heading keeps the approved #65583b lower divider`);
+          }
+        }
+
         await page.getByRole("button", {name: "All tasks", exact: true}).click();
         await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor();
         await page.getByRole("button", {name: "Next page", exact: true}).click();
@@ -2004,4 +2017,267 @@ test("v146 body separates the live reader, editor and output while retaining tab
       } finally { await context.close(); }
     }
   } finally { await browser.close(); }
+});
+
+test("Tzeentch is the sixth native theme with real v146 Task and catalogue surfaces", {timeout: 180_000, concurrency: false}, async t => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1600, height: 1000}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const variant = "[data-warhammer-variant='tzeentch']";
+  const figureSelector = "[data-tzeentch-figure]";
+  const constructions = ["Industrial", "Gothic", "Armor"];
+  try {
+    const diagnostics = await prepare(page);
+    const trigger = await themeTrigger(page);
+    await trigger.focus();
+    await page.keyboard.press("Enter");
+    const choices = page.getByRole("group", {name: "Themes", exact: true});
+    await choices.waitFor({state: "visible"});
+    await expectShippedThemeChoices(choices);
+    for (let index = 0; index < 5; index += 1) await page.keyboard.press("Tab");
+    const tzeentch = choices.getByRole("button", {name: "Tzeentch", exact: true});
+    assert.equal(await tzeentch.evaluate(element => element === document.activeElement), true, "keyboard traversal reaches the sixth native Tzeentch choice");
+    assert.equal(await themeOptionIcon(tzeentch), "/cattasks/themes/tzeentch/icon.svg", "Tzeentch exposes its supplied faction icon in the real chooser");
+    await page.keyboard.press("Enter");
+    await page.locator("[data-cattasks-theme='tzeentch']").waitFor();
+    await expectCurrentTheme(page, "Tzeentch");
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), themeStorageKey), "tzeentch", "the sixth native choice persists its valid preference");
+
+    const taskHeader = page.locator(`header${variant}[data-v146-header][data-khorne-header='task']`);
+    const taskArtwork = await v146Artwork(taskHeader, "Tzeentch Task");
+    assert.ok(taskArtwork.images.includes("/cattasks-art/v146/classic/panel-armor-blue.png"), "wide Tzeentch Task includes its authored blue shared panel material through the shared renderer");
+    assert.equal(await taskArtwork.ariaHidden, "true", "Tzeentch Task decoration is excluded from the accessibility tree");
+    assert.equal(await taskArtwork.pointerEvents, "none", "Tzeentch Task decoration stays click-through");
+    const taskScene = page.locator("[data-cattasks-theme='tzeentch'] [data-tzeentch-scene='task']");
+    const taskFigures = page.locator(`${figureSelector}:visible img`);
+    await taskScene.waitFor({state: "visible"});
+    await taskFigures.nth(1).waitFor({state: "visible"});
+    assert.deepEqual(
+      (await taskFigures.evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())),
+      ["/cattasks/themes/tzeentch/task/daemon.webp", "/cattasks/themes/tzeentch/task/marine.webp"],
+      "wide Tzeentch Task exposes the supplied Grey Knight and one intact two-Flamer layer",
+    );
+    assert.equal(await page.locator(`${figureSelector}:visible`).count(), 2, "the two Flamers remain one decorative Task layer rather than split figures");
+    assert.match(await taskScene.evaluate(element => getComputedStyle(element).backgroundImage), /tzeentch\/task\/background-desktop\.webp/, "Tzeentch Task paints its supplied desktop background");
+
+    for (const construction of constructions) {
+      await t.test(`${construction} keeps live Task controls and the mapped Tzeentch header`, async () => {
+        const constructionChoices = page.getByRole("group", {name: "Header construction", exact: true});
+        if (!await constructionChoices.isVisible()) {
+          await (await themeTrigger(page)).click();
+          await constructionChoices.waitFor({state: "visible"});
+        }
+        const choice = constructionChoices.getByRole("button", {name: construction, exact: true});
+        await choice.focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+        assert.equal(await choice.evaluate(element => element.matches(":focus-visible")), true, `${construction} exposes keyboard-visible selection focus`);
+        await page.keyboard.press("Enter");
+        assert.equal(await taskHeader.getAttribute("data-v146-construction"), construction.toLowerCase(), `${construction} is the live selected header construction`);
+        assert.equal(await choice.getAttribute("aria-pressed"), "true", `${construction} truthfully exposes the selected construction`);
+        const live = await page.evaluate(() => {
+          const required = (selector, name) => {
+            const element = document.querySelector(selector);
+            if (!element) throw new Error(`missing ${name}`);
+            return element;
+          };
+          const paint = element => ({background: getComputedStyle(element).backgroundColor, radius: getComputedStyle(element).borderTopLeftRadius});
+          const box = element => {
+            const {top, right, bottom, left, width, height} = element.getBoundingClientRect();
+            return {top, right, bottom, left, width, height};
+          };
+          const reader = required("[aria-label='Режим содержимого']", "live reader controls").closest("[class*='taskDetailsContainer']");
+          const editor = required("section[aria-labelledby='taskSolutionHeading']", "live editor");
+          const output = required("section[aria-labelledby='taskOutputHeading']", "live Output");
+          const monaco = required(".monaco-editor", "live Monaco editor");
+          const run = required("button[aria-label='Run Code']", "live Run control");
+          const test = required("button[aria-label='Test Code']", "live Test control");
+          if (!reader) throw new Error("reader controls have no live reader panel");
+          return {
+            reader: paint(reader),
+            editor: paint(editor),
+            output: paint(output),
+            monaco: {paint: paint(monaco), box: box(monaco)},
+            run: box(run),
+            test: box(test),
+            outputBox: box(output),
+          };
+        });
+        assert.deepEqual(
+          {reader: live.reader, editor: live.editor, output: live.output, monaco: live.monaco.paint},
+          {
+            reader: {background: "rgb(26, 30, 29)", radius: "4px"},
+            editor: {background: "rgb(17, 23, 25)", radius: "4px"},
+            output: {background: "rgb(22, 28, 27)", radius: "4px"},
+            monaco: {background: "rgb(16, 21, 23)", radius: "0px"},
+          },
+          `${construction} maps the real reader, editor, Monaco and Output to their approved Tzeentch v146 materials`,
+        );
+        assert.ok(live.run.top >= live.monaco.box.bottom && live.test.top >= live.monaco.box.bottom, `${construction} keeps Run and Test after Monaco without activating code`);
+        assert.ok(live.outputBox.top >= Math.max(live.run.bottom, live.test.bottom), `${construction} keeps Output after the real action strip`);
+      });
+    }
+
+    const industrialChoices = page.getByRole("group", {name: "Header construction", exact: true});
+    if (!await industrialChoices.isVisible()) { await (await themeTrigger(page)).click(); await industrialChoices.waitFor({state: "visible"}); }
+    await industrialChoices.getByRole("button", {name: "Industrial", exact: true}).click();
+    assert.equal(await taskHeader.getAttribute("data-v146-construction"), "industrial", "the live Task returns to Industrial before its matching catalogue ornament is measured");
+
+    const initialModels = (await surface(page)).models;
+    await page.getByRole("tab", {name: "Hint", exact: true}).click();
+    assert.equal(await page.getByRole("tab", {name: "Hint", exact: true}).getAttribute("aria-selected"), "true", "Tzeentch keeps the live Hint tab");
+    await page.getByRole("tab", {name: "My solution", exact: true}).click();
+    await page.getByRole("button", {name: "Save current code", exact: true}).click();
+    await page.getByLabel("Saved solution code", {exact: true}).waitFor({state: "visible"});
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    const catalogueHeader = page.locator(`header${variant}[data-v146-header][data-khorne-header='catalogue']`);
+    const catalogueArtwork = await v146Artwork(catalogueHeader, "Tzeentch catalogue");
+    assert.ok(catalogueArtwork.images.includes("/cattasks-art/v146/industrial/tzeentch-left.png"), "wide Industrial Tzeentch catalogue includes its supplied deity left ornament through the shared renderer");
+    const catalogueScene = page.locator("[data-cattasks-theme='tzeentch'] [data-tzeentch-scene='all-tasks']");
+    const catalogueFigures = page.locator(`${figureSelector}:visible img`);
+    await catalogueScene.waitFor({state: "visible"});
+    await catalogueFigures.nth(1).waitFor({state: "visible"});
+    assert.deepEqual(
+      (await catalogueFigures.evaluateAll(images => images.map(image => new URL(image.currentSrc || image.src).pathname).sort())),
+      ["/cattasks/themes/tzeentch/all-tasks/daemon.webp", "/cattasks/themes/tzeentch/all-tasks/marine.webp"],
+      "wide Tzeentch catalogue uses its supplied Lord of Change and Ultramarine figure layers",
+    );
+    assert.equal(await page.locator(`${figureSelector}:visible`).count(), 2, "Tzeentch catalogue keeps one intact daemon artwork layer");
+    assert.match(await catalogueScene.evaluate(element => getComputedStyle(element).backgroundImage), /tzeentch\/all-tasks\/background-desktop\.webp/, "Tzeentch catalogue paints its supplied desktop background");
+    const catalogueSurface = page.locator("main[data-cattasks-workspace-content]");
+    assert.equal(await catalogueSurface.count(), 1, "Tzeentch catalogue exposes one owning workspace surface");
+    assert.equal(await page.locator("[aria-labelledby='taskListTitle']").count(), 1, "Tzeentch catalogue retains the real task list section");
+    const cataloguePaint = await catalogueSurface.evaluate(element => ({background: getComputedStyle(element).backgroundColor, radius: getComputedStyle(element).borderBottomRightRadius}));
+    assert.deepEqual(cataloguePaint, {background: "rgb(27, 35, 41)", radius: "6px"}, "Tzeentch All tasks uses the approved #1b2329 catalogue body material");
+
+    for (const [width, expectedHeight] of [[700, 52], [430, 54]]) {
+      await page.setViewportSize({width, height: 932}); await nextPaint(page);
+      const filters = page.getByRole("button", {name: "Filters", exact: true});
+      assert.equal(await filters.count(), 1, `${width}px exposes one real compact Tzeentch Filters control`);
+      assert.equal(await filters.evaluate(element => element.getBoundingClientRect().height), expectedHeight, `${width}px Tzeentch Filters preserves the settled compact height`);
+      await filters.focus(); await page.keyboard.press("Enter");
+      assert.equal(await filters.getAttribute("aria-expanded"), "true", `${width}px Tzeentch opens real Filters from the keyboard`);
+      const search = page.getByRole("searchbox", {name: "Search tasks", exact: true});
+      await search.fill("fixture 1");
+      await page.keyboard.press("Escape");
+      assert.equal(await filters.getAttribute("aria-expanded"), "false", `${width}px Escape closes Tzeentch Filters`);
+      assert.equal(await filters.evaluate(element => element === document.activeElement), true, `${width}px Escape restores focus to Tzeentch Filters`);
+      await page.keyboard.press("Enter");
+      assert.equal(await search.inputValue(), "fixture 1", `${width}px reopening Tzeentch Filters retains its real Search value`);
+      await page.getByRole("button", {name: "Reset filters", exact: true}).click();
+      assert.equal(await search.inputValue(), "", `${width}px Reset filters clears the real search state`);
+      await filters.focus(); await page.keyboard.press("Enter");
+      assert.equal(await filters.getAttribute("aria-expanded"), "false", `${width}px closes Tzeentch Filters before the next compact viewport`);
+    }
+    await page.getByRole("button", {name: "Back to task", exact: true}).click();
+    assert.deepEqual((await surface(page)).models, initialModels, "Task/catalogue round trip retains the same Monaco model state");
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Tzeentch keeps each v146 construction inside the approved 3 by 13 by 2 workspace envelope", {timeout: 240_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1600, height: 1000}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  const widths = [320, 360, 430, 622, 623, 700, 834, 933, 1040, 1160, 1280, 1440, 1600];
+  const constructions = ["Industrial", "Gothic", "Armor"];
+  const assertWorkspaceGeometry = async (width, construction, mode) => {
+    const geometry = await page.evaluate(() => {
+      const visible = element => {
+        const style = getComputedStyle(element), box = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && box.width > 0 && box.height > 0;
+      };
+      const owner = document.querySelector("[data-cattasks-workspace]");
+      const content = [...document.querySelectorAll("[data-cattasks-workspace-content]")].filter(visible);
+      if (!owner || content.length !== 1) throw new Error("expected exactly one visible real workspace content surface");
+      const ownerBox = owner.getBoundingClientRect(), contentBox = content[0].getBoundingClientRect();
+      return {owner: {left: ownerBox.left, right: ownerBox.right}, content: {left: contentBox.left, right: contentBox.right}, overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+    });
+    assert.ok(Math.abs(geometry.owner.left - geometry.content.left) <= 2 && Math.abs(geometry.owner.right - geometry.content.right) <= 2,
+      `${construction} ${mode} at ${width}px retains the single owning workspace width (got ${JSON.stringify(geometry)})`);
+    assert.equal(geometry.overflow, 0, `${construction} ${mode} at ${width}px has no horizontal clipping`);
+  };
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Tzeentch");
+    for (const construction of constructions) {
+      const options = page.getByRole("group", {name: "Header construction", exact: true});
+      if (!await options.isVisible()) { await (await themeTrigger(page)).click(); await options.waitFor({state: "visible"}); }
+      await options.getByRole("button", {name: construction, exact: true}).click();
+      const taskHeader = page.locator("header[data-warhammer-variant='tzeentch'][data-v146-header][data-khorne-header='task']");
+      assert.equal(await taskHeader.getAttribute("data-v146-construction"), construction.toLowerCase(), `${construction} becomes the actual Task construction before the matrix`);
+      for (const width of widths) {
+        await page.setViewportSize({width, height: 1000}); await nextPaint(page);
+        assert.equal(await taskHeader.count(), 1, `${construction} Tzeentch Task keeps one integrated header at ${width}px`);
+        await assertWorkspaceGeometry(width, construction, "Task");
+      }
+      await page.getByRole("button", {name: "All tasks", exact: true}).click();
+      await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+      const catalogueHeader = page.locator("header[data-warhammer-variant='tzeentch'][data-v146-header][data-khorne-header='catalogue']");
+      assert.equal(await catalogueHeader.getAttribute("data-v146-construction"), construction.toLowerCase(), `${construction} persists to the actual Tzeentch catalogue header`);
+      for (const width of widths) {
+        await page.setViewportSize({width, height: 1000}); await nextPaint(page);
+        assert.equal(await catalogueHeader.count(), 1, `${construction} Tzeentch catalogue keeps one integrated header at ${width}px`);
+        await assertWorkspaceGeometry(width, construction, "catalogue");
+      }
+      await page.getByRole("button", {name: "Back to task", exact: true}).click();
+      await taskHeader.waitFor({state: "visible"});
+    }
+    assertDiagnostics(diagnostics);
+  } finally { await context.close(); await browser.close(); }
+});
+
+test("Tzeentch collapsed Task keeps the blue recessed controls, keyboard restoration, and forced-colors affordances", {timeout: 120_000, concurrency: false}, async () => {
+  const browser = await playwright.chromium.launch({channel: "chrome", headless: true});
+  const context = await browser.newContext({viewport: {width: 1100, height: 900}, reducedMotion: "reduce"});
+  const page = await context.newPage();
+  try {
+    const diagnostics = await prepare(page);
+    await chooseTheme(page, "Tzeentch");
+    const workspace = page.locator("[data-cattasks-workspace]").first();
+    const models = (await surface(page)).models;
+    await page.getByRole("button", {name: "Hide task", exact: true}).click();
+    const showTask = page.getByRole("button", {name: "Show task", exact: true});
+    await showTask.waitFor({state: "visible"});
+    const measure = async width => {
+      await workspace.evaluate((element, value) => { element.style.width = `${value}px`; element.style.maxWidth = `${value}px`; }, width);
+      await nextPaint(page);
+      return showTask.evaluate(element => {
+        const box = element.getBoundingClientRect();
+        const sources = [element, ...element.querySelectorAll("*")].flatMap(node => [getComputedStyle(node).backgroundImage, node instanceof HTMLImageElement ? (node.currentSrc || node.src) : ""].filter(Boolean));
+        return {width: box.width, height: box.height, sources};
+      });
+    };
+    const horizontal = await measure(600);
+    assert.ok(Math.abs(horizontal.width - 196) <= 1 && Math.abs(horizontal.height - 54) <= 1, "600px Tzeentch workspace exposes the 196 by 54 horizontal blue recessed control");
+    assert.match(horizontal.sources.join(" "), /recessed.*blue|blue.*recessed/i, "600px horizontal control exposes supplied blue recessed art through the actual UI");
+    const vertical = await measure(601);
+    assert.ok(Math.abs(vertical.width - 52) <= 1 && Math.abs(vertical.height - 157) <= 1, "601px Tzeentch workspace exposes the 52 by 157 blue vertical spine");
+    assert.match(vertical.sources.join(" "), /recessed.*blue|blue.*recessed/i, "601px vertical spine exposes supplied blue recessed art through the actual UI");
+    await showTask.focus(); await page.keyboard.press("Enter");
+    const hideTask = page.getByRole("button", {name: "Hide task", exact: true});
+    await hideTask.waitFor({state: "visible"});
+    assert.equal(await hideTask.evaluate(element => element === document.activeElement), true, "keyboard restoration returns focus to the actual Hide task control");
+    assert.deepEqual((await surface(page)).models, models, "Tzeentch collapsed Task restoration retains the Monaco model state");
+    await page.getByRole("button", {name: "All tasks", exact: true}).click();
+    await page.getByRole("heading", {name: "All tasks", exact: true}).waitFor({state: "visible"});
+    await page.setViewportSize({width: 700, height: 1000}); await nextPaint(page);
+    const filters = page.getByRole("button", {name: "Filters", exact: true});
+    await filters.focus(); await page.keyboard.press("Enter");
+    const radio = page.getByRole("radio", {name: "All topics", exact: true});
+    await page.emulateMedia({forcedColors: "active", colorScheme: "dark"});
+    assert.notEqual(await radio.evaluate(element => getComputedStyle(element).appearance), "none", "forced-colors Tzeentch retains native radio affordance");
+    await filters.focus(); await page.keyboard.press("Tab"); await page.keyboard.press("Shift+Tab");
+    const colors = await filters.evaluate(element => {
+      const probe = document.createElement("span"); probe.style.cssText = "position:absolute;color:CanvasText;outline:3px solid Highlight;forced-color-adjust:none"; document.body.append(probe);
+      const expected = getComputedStyle(probe), actual = getComputedStyle(element);
+      const result = {active: matchMedia("(forced-colors: active)").matches, focus: element.matches(":focus-visible"), color: actual.color, outlineColor: actual.outlineColor, outlineStyle: actual.outlineStyle, outlineWidth: actual.outlineWidth, expectedColor: expected.color, expectedOutline: expected.outlineColor}; probe.remove(); return result;
+    });
+    assert.equal(colors.active, true, "forced-colors becomes active for the actual Tzeentch Filters control");
+    assert.equal(colors.focus, true, "forced-colors keeps keyboard-visible focus on the actual Tzeentch Filters control");
+    assert.equal(colors.color, colors.expectedColor, "forced-colors resolves the actual Tzeentch Filters control to CanvasText");
+    assert.equal(colors.outlineColor, colors.expectedOutline, "forced-colors resolves the actual Tzeentch keyboard ring to Highlight");
+    assert.equal(colors.outlineStyle, "solid", "forced-colors retains a solid keyboard ring");
+    assert.equal(colors.outlineWidth, "3px", "forced-colors retains the approved 3px keyboard ring");
+    assertDiagnostics(diagnostics);
+  } finally { await page.emulateMedia({forcedColors: "none"}); await context.close(); await browser.close(); }
 });

@@ -116,9 +116,9 @@ export default function MainTaskContentPanel({className, ...rest}: Props) {
                         controlsId="taskPanelContent"
                         onExpand={handleToggleMinimize}
                         className={styles.collapsedTaskSpine}
-                        assetBasePath={theme === 'slaanesh' ? '/cattasks/themes/shared/recessed-task-toggle' : undefined}
-                        desktopImageName={theme === 'slaanesh' ? 'recessed-violet.png' : undefined}
-                        mobileImageName={theme === 'slaanesh' ? 'recessed-mobile-violet.png' : undefined}
+                        assetBasePath={theme === 'slaanesh' || theme === 'tzeentch' ? '/cattasks/themes/shared/recessed-task-toggle' : undefined}
+                        desktopImageName={theme === 'slaanesh' ? 'recessed-violet.png' : theme === 'tzeentch' ? 'recessed-blue.png' : undefined}
+                        mobileImageName={theme === 'slaanesh' ? 'recessed-mobile-violet.png' : theme === 'tzeentch' ? 'recessed-mobile-blue.png' : undefined}
                     />
                 ) : null}
 

@@ -2,7 +2,7 @@
 
 import {createContext, useContext} from 'react';
 
-export const catTasksThemes = ['light', 'dark', 'khorne', 'nurgle', 'slaanesh'] as const;
+export const catTasksThemes = ['light', 'dark', 'khorne', 'nurgle', 'slaanesh', 'tzeentch'] as const;
 
 export type CatTasksTheme = (typeof catTasksThemes)[number];
 export type WarhammerTheme = Exclude<CatTasksTheme, 'light' | 'dark'>;
@@ -12,7 +12,7 @@ export function getCatTasksTheme(value: string | null): CatTasksTheme {
 }
 
 export function isWarhammerTheme(theme: CatTasksTheme): theme is WarhammerTheme {
-    return theme === 'khorne' || theme === 'nurgle' || theme === 'slaanesh';
+    return theme === 'khorne' || theme === 'nurgle' || theme === 'slaanesh' || theme === 'tzeentch';
 }
 
 export type CatTasksThemeContextValue = {

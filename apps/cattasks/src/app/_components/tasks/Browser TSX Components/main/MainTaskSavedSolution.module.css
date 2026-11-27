@@ -107,3 +107,5 @@
     --action-hover-border: #dba6de;
     --action-ink: #f7e8f4;
 }
+:global([data-cattasks-theme='tzeentch']) .code { background: #101517; color: #e8e9f1; }
+:global([data-cattasks-theme='tzeentch']) .panel .restore { border-color: #67519a; background: #1a2551; color: #e8e9f1; }
